@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="CsvHelper" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\HandyNet.SharedKernel\HandyNet.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\HandyNet.Persistence\HandyNet.Persistence.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Catalog\HandyNet.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Inventory\HandyNet.Modules.Inventory.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Marketplace\HandyNet.Modules.Marketplace.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,169 @@
+@let p = current();
+<section class="hn-card" aria-labelledby="payment-heading" data-testid="payment-section">
+  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+    <h2 id="payment-heading" class="flex flex-wrap items-center gap-2 text-sm">
+      <span>{{ 'payment.title' | t }}</span>
+      @if (p) {
+        <hn-status-badge [status]="p.status" kind="paymentStatus" data-testid="payment-status" />
+      }
+    </h2>
+    @if (action() === 'pay') {
+      <button hnButton variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="pay()" data-testid="pay-online">
+        {{ 'payment.payNow' | t }}
+      </button>
+    } @else if (action() === 'resume') {
+      <button hnButton variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="pay()" data-testid="resume-payment">
+        {{ 'payment.resume' | t }}
+      </button>
+    }
+  </div>
+
+  <div class="space-y-3 p-4 text-sm">
+    <hn-banner [error]="error()" />
+    <hn-banner [error]="paymentsError()" />
+
+    @if (p) {
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 sm:grid-cols-[auto_1fr_auto_1fr]">
+        <dt class="hn-muted">{{ 'payment.provider' | t }}</dt>
+        <dd>{{ p.provider | tEnum: 'paymentProvider' }}</dd>
+        <dt class="hn-muted">{{ 'payment.amount' | t }}</dt>
+        <dd class="tabular-nums" data-testid="payment-amount">{{ p.amountMinor | money: p.currency }}</dd>
+        <dt class="hn-muted">{{ 'payment.createdAt' | t }}</dt>
+        <dd>{{ p.createdAt | hnDate }}</dd>
+        @if (p.paidAt) {
+          <dt class="hn-muted">{{ 'payment.paidAt' | t }}</dt>
+          <dd data-testid="payment-paid-at">{{ p.paidAt | hnDate }}</dd>
+        }
+        @if (p.refundedAt) {
+          <dt class="hn-muted">{{ 'payment.refundedAt' | t }}</dt>
+          <dd data-testid="payment-refunded-at">{{ p.refundedAt | hnDate }}</dd>
+        }
+      </dl>
+      @if (p.provider === 'Simulated') {
+        <p class="text-xs font-medium text-amber-900">{{ 'payment.simulatedNote' | t }}</p>
+      }
+    }
+
+    <!-- Seller: commission and payout -->
+    @if (isSeller() && p && p.sellerShareMinor !== null) {
+      <div class="max-w-md rounded-md border border-slate-200" data-testid="seller-payment">
+        <table class="hn-table">
+          <caption class="sr-only">{{ 'payment.seller.breakdown' | t }}</caption>
+          <tbody>
+            <tr>
+              <th scope="row" class="border-b border-slate-100 px-3 py-1.5 text-start font-normal">{{ 'payment.seller.gross' | t }}</th>
+              <td class="num">{{ p.amountMinor | money: p.currency }}</td>
+            </tr>
+            <tr>
+              <th scope="row" class="border-b border-slate-100 px-3 py-1.5 text-start font-normal">{{ 'payment.seller.commissionNet' | t }}</th>
+              <td class="num" data-testid="commission-net">{{ deduction(p.commissionNetMinor) | money: p.currency }}</td>
+            </tr>
+            <tr>
+              <th scope="row" class="border-b border-slate-100 px-3 py-1.5 text-start font-normal">{{ 'payment.seller.commissionVat' | t }}</th>
+              <td class="num" data-testid="commission-vat">{{ deduction(p.commissionVatMinor) | money: p.currency }}</td>
+            </tr>
+            <tr class="font-semibold">
+              <th scope="row" class="border-b border-slate-100 px-3 py-1.5 text-start">{{ 'payment.seller.share' | t }}</th>
+              <td class="num" data-testid="seller-share">{{ p.sellerShareMinor | money: p.currency }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      @if (canSeeBalance()) {
+        <div class="flex flex-wrap items-center justify-between gap-2" data-testid="payout-state" [attr.data-state]="payoutState()">
+          @switch (payoutState()) {
+            @case ('paidOut') {
+              <p class="text-emerald-800">
+                {{ 'payment.seller.paidOut' | t: { date: (payout()!.createdAt | hnDate), amount: (payout()!.amountMinor | money: payout()!.currency) } }}
+                <span class="hn-mono text-xs text-slate-500">{{ payout()!.providerTransferId }}</span>
+              </p>
+            }
+            @case ('pending') {
+              <p>{{ 'payment.seller.pending' | t }}</p>
+            }
+            @case ('processing') {
+              <p>{{ 'payment.seller.processing' | t }}</p>
+              <button hnButton size="sm" type="button" [loading]="balance.loading()" (click)="reloadBalance()">{{ 'common.refresh' | t }}</button>
+            }
+            @case ('refunded') {
+              <p>{{ 'payment.seller.refunded' | t }}</p>
+            }
+            @case ('onHold') {
+              <p class="text-amber-900">{{ 'payment.seller.onHold' | t }}</p>
+            }
+            @case ('refunding') {
+              <p>{{ 'payment.seller.refunding' | t }}</p>
+            }
+            @default {
+              <p class="hn-muted">{{ 'payment.seller.notPaid' | t }}</p>
+            }
+          }
+          <a class="hn-link text-xs" routerLink="/app/finanzen">{{ 'payment.seller.toFinance' | t }}</a>
+        </div>
+        <hn-banner [error]="balance.error()" />
+      }
+    } @else if (isSeller() && p) {
+      <p class="hn-muted">{{ 'payment.seller.notPaid' | t }}</p>
+    }
+
+    <!-- Explanations -->
+    @if (isBuyer()) {
+      @switch (p?.status) {
+        @case ('Paid') {
+          @if (order().status === 'Refunded') {
+            <p class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-900" data-testid="refund-pending">{{ 'payment.buyer.refundPendingText' | t }}</p>
+          } @else {
+            <p class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">{{ 'payment.buyer.paidText' | t }}</p>
+          }
+        }
+        @case ('Refunded') {
+          <p class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-900">{{ 'payment.buyer.refundedText' | t }}</p>
+        }
+        @case ('Open') {
+          <p>{{ 'payment.buyer.openText' | t }}</p>
+        }
+        @case ('Failed') {
+          <p>{{ 'payment.buyer.failedText' | t }}</p>
+        }
+        @case ('Canceled') {
+          <p>{{ 'payment.buyer.failedText' | t }}</p>
+        }
+        @case ('Expired') {
+          <p>{{ 'payment.buyer.failedText' | t }}</p>
+        }
+      }
+      @if (action() || p) {
+        <p class="hn-muted max-w-prose" data-testid="escrow-note">{{ 'payment.buyer.escrowNote' | t }}</p>
+      }
+      @if (!p && !paymentsLoading()) {
+        <p class="hn-muted max-w-prose" data-testid="no-payment">{{ (action() ? 'payment.buyer.optional' : 'payment.none') | t }}</p>
+      }
+    } @else if (!p && !paymentsLoading()) {
+      <p class="hn-muted max-w-prose" data-testid="no-payment">{{ 'payment.none' | t }}</p>
+    }
+
+    @if (history().length) {
+      <details class="text-xs">
+        <summary class="cursor-pointer text-slate-600">{{ 'payment.history' | t: { n: history().length } }}</summary>
+        <table class="hn-table mt-1">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'payment.createdAt' | t }}</th>
+              <th scope="col">{{ 'common.status' | t }}</th>
+              <th scope="col" class="num">{{ 'payment.amount' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of history(); track h.id) {
+              <tr>
+                <td>{{ h.createdAt | hnDate }}</td>
+                <td><hn-status-badge [status]="h.status" kind="paymentStatus" /></td>
+                <td class="num">{{ h.amountMinor | money: h.currency }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    }
+  </div>
+</section>

@@ -1,0 +1,90 @@
+<hn-auth-layout [wide]="true">
+  <div class="hn-card p-6">
+    <h1 class="text-lg">{{ 'auth.register.title' | t }}</h1>
+    <p class="mt-1 mb-5 text-sm text-slate-500">{{ 'auth.register.subtitle' | t }}</p>
+
+    <hn-banner class="mb-4" [error]="problem()" />
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-6">
+      <fieldset class="space-y-4">
+        <legend class="mb-2 text-sm font-semibold text-slate-900">{{ 'auth.register.company' | t }}</legend>
+        <div formGroupName="organization" class="grid gap-4 sm:grid-cols-2">
+          <hn-field [label]="'auth.register.name' | t" for="reg-name" [required]="true" [errors]="errorsFor('organization.name')"
+            [hint]="'auth.register.nameHint' | t">
+            <input hnInput id="reg-name" formControlName="name" autocomplete="organization"
+              [attr.aria-invalid]="invalid('organization.name')" [attr.aria-describedby]="invalid('organization.name') ? 'reg-name-error' : 'reg-name-hint'" />
+          </hn-field>
+          <hn-field [label]="'auth.register.legalName' | t" for="reg-legal" [required]="true" [errors]="errorsFor('organization.legalName')"
+            [hint]="'auth.register.legalNameHint' | t">
+            <input hnInput id="reg-legal" formControlName="legalName"
+              [attr.aria-invalid]="invalid('organization.legalName')" [attr.aria-describedby]="invalid('organization.legalName') ? 'reg-legal-error' : 'reg-legal-hint'" />
+          </hn-field>
+          <hn-field [label]="'auth.register.vatId' | t" for="reg-vat" [errors]="errorsFor('organization.vatId')" [hint]="'auth.register.vatIdHint' | t">
+            <input hnInput id="reg-vat" formControlName="vatId" placeholder="DE123456789"
+              [attr.aria-invalid]="invalid('organization.vatId')" [attr.aria-describedby]="invalid('organization.vatId') ? 'reg-vat-error' : 'reg-vat-hint'" />
+          </hn-field>
+          <hn-field [label]="'auth.register.country' | t" for="reg-country">
+            <select hnSelect id="reg-country" formControlName="countryCode">
+              <option value="DE">Deutschland</option>
+            </select>
+          </hn-field>
+          <hn-field class="sm:col-span-2" [label]="'auth.register.street' | t" for="reg-street" [required]="true" [errors]="errorsFor('organization.street')">
+            <input hnInput id="reg-street" formControlName="street" autocomplete="street-address"
+              [attr.aria-invalid]="invalid('organization.street')" aria-describedby="reg-street-error" />
+          </hn-field>
+          <hn-field [label]="'auth.register.postalCode' | t" for="reg-zip" [required]="true" [errors]="errorsFor('organization.postalCode')">
+            <input hnInput id="reg-zip" formControlName="postalCode" inputmode="numeric" maxlength="5" autocomplete="postal-code"
+              [attr.aria-invalid]="invalid('organization.postalCode')" aria-describedby="reg-zip-error" />
+          </hn-field>
+          <hn-field [label]="'auth.register.city' | t" for="reg-city" [required]="true" [errors]="errorsFor('organization.city')">
+            <input hnInput id="reg-city" formControlName="city" autocomplete="address-level2"
+              [attr.aria-invalid]="invalid('organization.city')" aria-describedby="reg-city-error" />
+          </hn-field>
+
+          <fieldset class="sm:col-span-2" aria-describedby="reg-types-error">
+            <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'auth.register.businessTypes' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+            <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <label class="flex items-center gap-2"><input type="checkbox" class="hn-checkbox" formControlName="isWholesaler" /> {{ 'businessType.wholesaler' | t }}</label>
+              <label class="flex items-center gap-2"><input type="checkbox" class="hn-checkbox" formControlName="isRetailer" /> {{ 'businessType.retailer' | t }}</label>
+              <label class="flex items-center gap-2"><input type="checkbox" class="hn-checkbox" formControlName="isRepairProvider" /> {{ 'businessType.repair' | t }}</label>
+            </div>
+            @if (typeError()) {
+              <p id="reg-types-error" class="mt-1 text-xs text-red-700" role="alert">{{ typeError() }}</p>
+            }
+          </fieldset>
+        </div>
+      </fieldset>
+
+      <div class="border-t border-slate-200 pt-5">
+      <fieldset class="space-y-4">
+        <legend class="mb-2 text-sm font-semibold text-slate-900">{{ 'auth.register.account' | t }}</legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <hn-field [label]="'auth.register.displayName' | t" for="reg-display" [required]="true" [errors]="errorsFor('displayName')">
+            <input hnInput id="reg-display" formControlName="displayName" autocomplete="name"
+              [attr.aria-invalid]="invalid('displayName')" aria-describedby="reg-display-error" />
+          </hn-field>
+          <hn-field [label]="'auth.email' | t" for="reg-email" [required]="true" [errors]="errorsFor('email')">
+            <input hnInput id="reg-email" type="email" formControlName="email" autocomplete="email"
+              [attr.aria-invalid]="invalid('email')" aria-describedby="reg-email-error" />
+          </hn-field>
+          <hn-field [label]="'auth.password' | t" for="reg-password" [required]="true" [errors]="errorsFor('password')"
+            [hint]="'auth.register.passwordHint' | t">
+            <input hnInput id="reg-password" type="password" formControlName="password" autocomplete="new-password"
+              [attr.aria-invalid]="invalid('password')" [attr.aria-describedby]="invalid('password') ? 'reg-password-error' : 'reg-password-hint'" />
+          </hn-field>
+        </div>
+      </fieldset>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+        <p class="text-xs text-slate-500">{{ 'auth.register.verificationNote' | t }}</p>
+        <button hnButton variant="primary" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="register-submit">
+          {{ 'auth.register.submit' | t }}
+        </button>
+      </div>
+    </form>
+  </div>
+  <p class="mt-4 text-center text-sm text-slate-600">
+    {{ 'auth.register.haveAccount' | t }} <a routerLink="/login" class="hn-link">{{ 'auth.register.loginLink' | t }}</a>
+  </p>
+</hn-auth-layout>

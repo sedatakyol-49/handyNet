@@ -1,0 +1,82 @@
+<hn-page-header [title]="'dashboard.title' | t" [description]="session.membership()?.organizationName ?? null" />
+
+@if (session.membership(); as m) {
+  @switch (m.status) {
+    @case ('PendingVerification') {
+      <hn-banner tone="warning" class="mb-4" [heading]="'dashboard.pending.title' | t" [text]="'dashboard.pending.text' | t">
+        <button hnButton size="sm" class="mt-2" type="button" (click)="refreshStatus()" [loading]="refreshing()">
+          {{ 'dashboard.refreshStatus' | t }}
+        </button>
+      </hn-banner>
+    }
+    @case ('Rejected') {
+      <hn-banner tone="danger" class="mb-4" [heading]="'dashboard.rejected.title' | t" [text]="'dashboard.rejected.text' | t" />
+    }
+    @case ('Suspended') {
+      <hn-banner tone="danger" class="mb-4" [heading]="'dashboard.suspended.title' | t" [text]="'dashboard.suspended.text' | t" />
+    }
+  }
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <section class="hn-card p-4 lg:col-span-1" aria-labelledby="org-heading">
+      <h2 id="org-heading" class="mb-3 text-sm">{{ 'dashboard.organization' | t }}</h2>
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt class="hn-muted">{{ 'common.name' | t }}</dt>
+        <dd class="font-medium">{{ m.organizationName }}</dd>
+        <dt class="hn-muted">{{ 'common.status' | t }}</dt>
+        <dd><hn-status-badge [status]="m.status" kind="orgStatus" /></dd>
+        <dt class="hn-muted">{{ 'dashboard.role' | t }}</dt>
+        <dd>{{ m.role | tEnum: 'role' }}</dd>
+        <dt class="hn-muted">{{ 'dashboard.businessTypes' | t }}</dt>
+        <dd>
+          @if (m.isWholesaler) { <span class="me-2">{{ 'businessType.wholesaler' | t }}</span> }
+          @if (m.isRetailer) { <span class="me-2">{{ 'businessType.retailer' | t }}</span> }
+          @if (m.isRepairProvider) { <span>{{ 'businessType.repair' | t }}</span> }
+        </dd>
+        <dt class="hn-muted">{{ 'dashboard.modules' | t }}</dt>
+        <dd class="flex flex-wrap gap-1">
+          @for (mod of m.modules; track mod) {
+            <hn-status-badge [status]="mod" kind="module" tone="neutral" />
+          } @empty {
+            <span class="hn-muted">{{ 'dashboard.noModules' | t }}</span>
+          }
+        </dd>
+      </dl>
+    </section>
+
+    @if (m.status === 'Verified') {
+      <section class="hn-card p-4 lg:col-span-2" aria-labelledby="links-heading">
+        <h2 id="links-heading" class="mb-3 text-sm">{{ 'dashboard.quickLinks' | t }}</h2>
+        @if (counters().length > 0) {
+          <ul class="mb-4 grid gap-2 sm:grid-cols-3">
+            @for (c of counters(); track c.labelKey) {
+              <li>
+                <a [routerLink]="c.link" [queryParams]="c.queryParams" class="block rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                  <span class="block text-xs text-slate-500">{{ c.labelKey | t }}</span>
+                  <span class="text-lg font-semibold tabular-nums">{{ c.value ?? '–' }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+        <ul class="grid gap-2 sm:grid-cols-2">
+          @for (link of quickLinks(); track link.path) {
+            <li>
+              <a [routerLink]="link.path" class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50">
+                <span class="font-medium">{{ link.labelKey | t }}</span>
+                <span aria-hidden="true" class="text-slate-400 rtl:rotate-180">→</span>
+              </a>
+            </li>
+          } @empty {
+            <li class="hn-muted text-sm">{{ 'dashboard.noModulesHint' | t }}</li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+} @else {
+  <hn-banner tone="info" [heading]="'dashboard.noOrganization.title' | t" [text]="'dashboard.noOrganization.text' | t" />
+  @if (session.isPlatformAdmin()) {
+    <p class="mt-4"><a hnButton variant="primary" routerLink="/app/administration">{{ 'nav.admin' | t }}</a></p>
+  }
+}

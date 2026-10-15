@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HandyNet.Api/HandyNet.Api.csproj" />
+    <Project Path="src/HandyNet.Migrations/HandyNet.Migrations.csproj" />
+    <Project Path="src/HandyNet.Persistence/HandyNet.Persistence.csproj" />
+    <Project Path="src/HandyNet.SharedKernel/HandyNet.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/HandyNet.Modules.Catalog/HandyNet.Modules.Catalog.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Disputes/HandyNet.Modules.Disputes.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Identity/HandyNet.Modules.Identity.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Imports/HandyNet.Modules.Imports.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Inventory/HandyNet.Modules.Inventory.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Ledger/HandyNet.Modules.Ledger.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Marketplace/HandyNet.Modules.Marketplace.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Notifications/HandyNet.Modules.Notifications.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Ordering/HandyNet.Modules.Ordering.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Payments/HandyNet.Modules.Payments.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Shipping/HandyNet.Modules.Shipping.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Tenancy/HandyNet.Modules.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HandyNet.ArchitectureTests/HandyNet.ArchitectureTests.csproj" />
+    <Project Path="tests/HandyNet.IntegrationTests/HandyNet.IntegrationTests.csproj" />
+    <Project Path="tests/HandyNet.UnitTests/HandyNet.UnitTests.csproj" />
+  </Folder>
+</Solution>

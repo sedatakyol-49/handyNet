@@ -1,0 +1,76 @@
+# Local / single-host stack: PostgreSQL 16 → one-shot migrator → API → web (Angular SSR server, proxies /api to the API).
+# Usage: cp .env.example .env  (edit secrets)  &&  docker compose up --build
+name: handynet
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: handynet
+      POSTGRES_USER: handynet_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      HANDYNET_APP_PASSWORD: ${HANDYNET_APP_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U handynet_owner -d handynet"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:5433:5432" # bound to localhost only
+
+  migrator:
+    build: ./backend
+    command: ["migrate"]
+    environment:
+      ConnectionStrings__HandyNetMigrations: Host=postgres;Database=handynet;Username=handynet_owner;Password=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__HandyNet: Host=postgres;Database=handynet;Username=handynet_app;Password=${HANDYNET_APP_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?set in .env}
+      Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      Cors__Origins__0: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      Notifications__PublicBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      Notifications__FromAddress: ${MAIL_FROM:-no-reply@handynet.local}
+      # Local default: Mailpit catches all mail (UI on http://localhost:8025). Production: real SMTP relay.
+      Notifications__Smtp__Host: ${SMTP_HOST:-mailpit}
+      Notifications__Smtp__Port: ${SMTP_PORT:-1025}
+      Notifications__Smtp__Username: ${SMTP_USERNAME:-}
+      Notifications__Smtp__Password: ${SMTP_PASSWORD:-}
+      Notifications__Smtp__Security: ${SMTP_SECURITY:-None}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    expose:
+      - "8080"
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      HN_API_URL: http://api:8080
+    ports:
+      - "8080:4000"
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+
+volumes:
+  pgdata:

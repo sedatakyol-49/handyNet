@@ -1,0 +1,15 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+node_modules/
+dist/
+.angular/
+coverage/
+TestResults/
+*.local.json
+.env
+playwright-report/
+test-results/
+.artifacts/

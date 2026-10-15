@@ -1,0 +1,189 @@
+<hn-page-header [title]="'offers.title' | t" [description]="'offers.subtitle' | t">
+  @if (canManage) {
+    <button hnButton variant="primary" type="button" (click)="openCreate()">{{ 'offers.new' | t }}</button>
+  }
+</hn-page-header>
+
+<form class="mb-3 flex flex-wrap items-end gap-3" role="search" (submit)="$event.preventDefault(); applySearch(searchInput.value)">
+  <hn-field [label]="'common.search' | t" for="offer-search" class="w-full max-w-xs">
+    <input #searchInput hnInput id="offer-search" type="search" [placeholder]="'offers.searchPlaceholder' | t" (change)="applySearch(searchInput.value)" />
+  </hn-field>
+  <hn-field [label]="'common.status' | t" for="offer-status" class="w-44">
+    <select hnSelect id="offer-status" [value]="status()" (change)="status.set($any($event.target).value); page.set(1)">
+      <option value="">{{ 'common.all' | t }}</option>
+      @for (s of statuses; track s) {
+        <option [value]="s">{{ s | tEnum: 'offerStatus' }}</option>
+      }
+    </select>
+  </hn-field>
+</form>
+
+<hn-banner class="mb-3" [error]="offers.error()" />
+@if (editProblem() && editingId()) {
+  <hn-banner class="mb-3" [error]="editProblem()" />
+}
+
+<hn-table [loading]="offers.loading()">
+  <table class="hn-table" data-testid="offers-table">
+    <thead>
+      <tr>
+        <th scope="col">{{ 'common.product' | t }}</th>
+        <th scope="col">{{ 'common.sku' | t }}</th>
+        <th scope="col">{{ 'common.quality' | t }}</th>
+        <th scope="col" class="num">{{ 'offers.priceNet' | t }}</th>
+        <th scope="col" class="num">{{ 'marketplace.moq' | t }}</th>
+        <th scope="col" class="num">{{ 'marketplace.delivery' | t }}</th>
+        <th scope="col">{{ 'common.condition' | t }}</th>
+        <th scope="col" class="num">{{ 'offers.stock' | t }}</th>
+        <th scope="col">{{ 'common.status' | t }}</th>
+        <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of offers.value()?.items ?? []; track o.id) {
+        @if (editingId() === o.id) {
+          <tr class="bg-accent-50/60">
+            <td class="font-medium">{{ o.brand }} {{ o.productName }}</td>
+            <td class="hn-mono">{{ o.supplierSku }}</td>
+            <td>{{ o.quality | tEnum: 'quality' }}</td>
+            <td class="num">
+              <label class="sr-only" for="edit-price">{{ 'offers.priceNet' | t }}</label>
+              <input hnInput id="edit-price" class="ms-auto w-24 py-1 text-end" inputmode="decimal" [(ngModel)]="draft.price" name="price"
+                [attr.aria-invalid]="fieldError(editProblem(), 'price').length > 0" (keydown.enter)="saveEdit(o)" (keydown.escape)="cancelEdit()" />
+            </td>
+            <td class="num">
+              <label class="sr-only" for="edit-moq">{{ 'marketplace.moq' | t }}</label>
+              <input hnInput id="edit-moq" class="ms-auto w-16 py-1 text-end" type="number" min="1" [(ngModel)]="draft.minOrderQuantity" name="moq" />
+            </td>
+            <td class="num">
+              <label class="sr-only" for="edit-days">{{ 'marketplace.delivery' | t }}</label>
+              <input hnInput id="edit-days" class="ms-auto w-16 py-1 text-end" type="number" min="0" [(ngModel)]="draft.deliveryDays" name="days" />
+            </td>
+            <td>
+              <label class="sr-only" for="edit-condition">{{ 'common.condition' | t }}</label>
+              <select hnSelect id="edit-condition" class="py-1" [(ngModel)]="draft.condition" name="condition">
+                @for (c of conditions; track c) {
+                  <option [value]="c">{{ c | tEnum: 'condition' }}</option>
+                }
+              </select>
+            </td>
+            <td class="num">{{ o.onHand }} / {{ o.reserved }}</td>
+            <td>
+              <label class="sr-only" for="edit-status">{{ 'common.status' | t }}</label>
+              <select hnSelect id="edit-status" class="py-1" [(ngModel)]="draft.status" name="status">
+                @if (o.status === 'Draft') {
+                  <option value="">{{ 'Draft' | tEnum: 'offerStatus' }}</option>
+                }
+                <option value="Published">{{ 'Published' | tEnum: 'offerStatus' }}</option>
+                <option value="Paused">{{ 'Paused' | tEnum: 'offerStatus' }}</option>
+                <option value="Archived">{{ 'Archived' | tEnum: 'offerStatus' }}</option>
+              </select>
+            </td>
+            <td class="text-end whitespace-nowrap">
+              <button hnButton size="sm" variant="primary" type="button" [loading]="saving()" [disabled]="saving()" (click)="saveEdit(o)">{{ 'common.save' | t }}</button>
+              <button hnButton size="sm" variant="ghost" type="button" (click)="cancelEdit()">{{ 'common.cancel' | t }}</button>
+            </td>
+          </tr>
+        } @else {
+          <tr>
+            <td>
+              <span class="font-medium">{{ o.brand }} {{ o.productName }}</span>
+              <span class="block text-xs text-slate-500">
+                @if (o.ean) { EAN {{ o.ean }} }
+                @if (o.mpn) { · MPN {{ o.mpn }} }
+              </span>
+            </td>
+            <td class="hn-mono">{{ o.supplierSku }}</td>
+            <td>{{ o.quality | tEnum: 'quality' }}</td>
+            <td class="num font-medium">{{ o.priceMinor | money: o.currency }}</td>
+            <td class="num">{{ o.minOrderQuantity }}</td>
+            <td class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
+            <td>{{ o.condition | tEnum: 'condition' }}</td>
+            <td class="num" [title]="'offers.stockTitle' | t">{{ o.onHand }} / {{ o.reserved }}</td>
+            <td><hn-status-badge [status]="o.status" kind="offerStatus" /></td>
+            <td class="text-end">
+              @if (canManage && o.status !== 'Archived') {
+                <button hnButton size="sm" variant="ghost" type="button" (click)="startEdit(o)" [disabled]="!!editingId()"
+                  [attr.aria-label]="('common.edit' | t) + ': ' + o.productName">{{ 'common.edit' | t }}</button>
+              }
+            </td>
+          </tr>
+        }
+      } @empty {
+        @if (!offers.loading()) {
+          <tr><td colspan="10"><hn-empty-state [title]="'offers.empty' | t" [text]="'offers.emptyText' | t" /></td></tr>
+        }
+      }
+    </tbody>
+  </table>
+  <div footer class="border-t border-slate-200 px-2">
+    <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="offers.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+  </div>
+</hn-table>
+
+<hn-dialog [open]="createOpen()" [title]="'offers.new' | t" (closed)="createOpen.set(false)">
+  <form class="space-y-4" (ngSubmit)="submitCreate()">
+    <hn-banner [error]="createProblem()" />
+    @if (!create.product) {
+      <hn-field [label]="'offers.findProduct' | t" for="create-product-search" [hint]="'offers.findProductHint' | t">
+        <input hnInput id="create-product-search" type="search" (input)="onProductSearch($any($event.target).value)" aria-describedby="create-product-search-hint" />
+      </hn-field>
+      <ul class="max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-md border border-slate-200 text-sm" [attr.aria-busy]="products.loading()">
+        @for (p of products.value()?.items ?? []; track p.id) {
+          <li>
+            <button type="button" class="block w-full px-3 py-2 text-start hover:bg-slate-50" (click)="create.product = p">
+              <span class="font-medium">{{ p.brand }} {{ p.name }}</span>
+              <span class="block text-xs text-slate-500">{{ p.quality | tEnum: 'quality' }} · {{ p.ean ?? p.mpn }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="px-3 py-2 text-slate-500">{{ (products.loading() ? 'common.loading' : 'offers.noProducts') | t }}</li>
+        }
+      </ul>
+    } @else {
+      <div class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm">
+        <span><span class="font-medium">{{ create.product.brand }} {{ create.product.name }}</span>
+          <span class="block text-xs text-slate-500">{{ create.product.quality | tEnum: 'quality' }}</span></span>
+        <button hnButton size="sm" variant="ghost" type="button" (click)="create.product = null">{{ 'common.change' | t }}</button>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <hn-field [label]="'common.sku' | t" for="create-sku" [required]="true" [errors]="fieldError(createProblem(), 'supplierSku')">
+          <input hnInput id="create-sku" name="sku" required [(ngModel)]="create.supplierSku" />
+        </hn-field>
+        <hn-field [label]="'offers.priceNet' | t" for="create-price" [required]="true" [errors]="fieldError(createProblem(), 'price')" [hint]="'offers.priceHint' | t">
+          <input hnInput id="create-price" name="price" inputmode="decimal" required [(ngModel)]="create.price" />
+        </hn-field>
+        <hn-field [label]="'marketplace.moq' | t" for="create-moq" [errors]="fieldError(createProblem(), 'minOrderQuantity')">
+          <input hnInput id="create-moq" name="moq" type="number" min="1" [(ngModel)]="create.minOrderQuantity" />
+        </hn-field>
+        <hn-field [label]="'offers.deliveryDays' | t" for="create-days" [errors]="fieldError(createProblem(), 'deliveryDays')">
+          <input hnInput id="create-days" name="days" type="number" min="0" [(ngModel)]="create.deliveryDays" />
+        </hn-field>
+        <hn-field [label]="'common.condition' | t" for="create-condition">
+          <select hnSelect id="create-condition" name="condition" [(ngModel)]="create.condition">
+            @for (c of conditions; track c) {
+              <option [value]="c">{{ c | tEnum: 'condition' }}</option>
+            }
+          </select>
+        </hn-field>
+        @if (session.hasModule('Inventory')) {
+          <hn-field [label]="'inventory.warehouse' | t" for="create-wh">
+            <select hnSelect id="create-wh" name="wh" [(ngModel)]="create.warehouseId">
+              <option value="">{{ 'offers.defaultWarehouse' | t }}</option>
+              @for (w of warehouses.value() ?? []; track w.id) {
+                <option [value]="w.id">{{ w.code }} – {{ w.name }}</option>
+              }
+            </select>
+          </hn-field>
+        }
+      </div>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" class="hn-checkbox" name="publish" [(ngModel)]="create.publish" /> {{ 'offers.publishNow' | t }}
+      </label>
+    }
+    <div class="flex justify-end gap-2">
+      <button hnButton type="button" (click)="createOpen.set(false)">{{ 'common.cancel' | t }}</button>
+      <button hnButton variant="primary" type="submit" [disabled]="!create.product || creating()" [loading]="creating()">{{ 'common.create' | t }}</button>
+    </div>
+  </form>
+</hn-dialog>

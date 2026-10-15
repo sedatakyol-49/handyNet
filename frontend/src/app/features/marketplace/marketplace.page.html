@@ -1,0 +1,161 @@
+<hn-page-header [title]="'marketplace.title' | t" [description]="'marketplace.subtitle' | t">
+  @if (cart.count() > 0) {
+    <a hnButton variant="primary" routerLink="/app/warenkorb">{{ 'marketplace.toCart' | t: { count: cart.count() } }}</a>
+  }
+</hn-page-header>
+
+<form class="hn-card mb-3 grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]" role="search" (submit)="$event.preventDefault(); applySearch()">
+  <hn-field [label]="'marketplace.search' | t" for="mp-search" [hint]="'marketplace.searchHint' | t">
+    <div class="relative">
+      <input
+        #searchBox
+        hnInput
+        id="mp-search"
+        type="search"
+        autocomplete="off"
+        [placeholder]="'marketplace.searchPlaceholder' | t"
+        [value]="searchText()"
+        (input)="onSearchInput($any($event.target).value)"
+        aria-describedby="mp-search-hint"
+        aria-keyshortcuts="/"
+        data-testid="marketplace-search"
+      />
+      <kbd class="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded border border-slate-300 px-1 text-[10px] text-slate-500" aria-hidden="true">/</kbd>
+    </div>
+  </hn-field>
+  <hn-field [label]="'marketplace.category' | t" for="mp-category">
+    <select hnSelect id="mp-category" [value]="category()" (change)="setFilter(() => category.set($any($event.target).value))">
+      <option value="">{{ 'common.all' | t }}</option>
+      @for (c of categories.value()?.categories ?? []; track c) {
+        <option [value]="c">{{ c | tEnum: 'category' }}</option>
+      }
+    </select>
+  </hn-field>
+  <hn-field [label]="'marketplace.brand' | t" for="mp-brand">
+    <input hnInput id="mp-brand" [value]="brand()" (change)="setFilter(() => brand.set($any($event.target).value.trim()))" placeholder="Apple, Samsung …" />
+  </hn-field>
+  <hn-field [label]="'marketplace.sort' | t" for="mp-sort">
+    <select hnSelect id="mp-sort" [value]="sort()" (change)="setFilter(() => sort.set($any($event.target).value))">
+      <option value="price">{{ 'marketplace.sortPrice' | t }}</option>
+      <option value="price_desc">{{ 'marketplace.sortPriceDesc' | t }}</option>
+      <option value="delivery">{{ 'marketplace.sortDelivery' | t }}</option>
+      <option value="name">{{ 'marketplace.sortName' | t }}</option>
+    </select>
+  </hn-field>
+  <div class="flex items-end gap-3 pb-1.5">
+    <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+      <input type="checkbox" class="hn-checkbox" [checked]="inStockOnly()" (change)="setFilter(() => inStockOnly.set($any($event.target).checked))" />
+      {{ 'marketplace.inStockOnly' | t }}
+    </label>
+    <button hnButton variant="ghost" size="sm" type="button" (click)="resetFilters()">{{ 'common.reset' | t }}</button>
+  </div>
+</form>
+
+@if (results.error()) {
+  <hn-banner class="mb-3" [error]="results.error()" />
+}
+
+<hn-table [loading]="results.loading()">
+  <table class="hn-table" data-testid="marketplace-results">
+    <caption class="sr-only">{{ 'marketplace.title' | t }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'common.product' | t }}</th>
+        <th scope="col">{{ 'common.quality' | t }}</th>
+        <th scope="col">{{ 'common.condition' | t }}</th>
+        <th scope="col">{{ 'marketplace.seller' | t }}</th>
+        <th scope="col" class="num">
+          {{ 'marketplace.netPrice' | t }}<span class="block text-[10px] font-normal normal-case">{{ 'common.netPlusVat' | t }}</span>
+        </th>
+        <th scope="col" class="num">{{ 'marketplace.available' | t }}</th>
+        <th scope="col" class="num">{{ 'marketplace.delivery' | t }}</th>
+        <th scope="col" class="num">{{ 'marketplace.moq' | t }}</th>
+        <th scope="col"><span class="sr-only">{{ 'marketplace.addToCart' | t }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (l of results.value()?.items ?? []; track l.offerId) {
+        <tr>
+          <td class="min-w-56">
+            <span class="font-medium">{{ l.brand }} {{ l.productName }}</span>
+            <span class="block text-xs text-slate-500">
+              {{ l.category | tEnum: 'category' }}
+              @if (l.ean) { · EAN {{ l.ean }} }
+              @if (l.mpn) { · MPN {{ l.mpn }} }
+            </span>
+          </td>
+          <td class="whitespace-nowrap">{{ l.quality | tEnum: 'quality' }}</td>
+          <td class="whitespace-nowrap">{{ l.condition | tEnum: 'condition' }}</td>
+          <td class="whitespace-nowrap">
+            {{ l.sellerName }}<span class="block text-xs text-slate-500">{{ l.sellerCity }}</span>
+          </td>
+          <td class="num font-semibold">{{ l.priceMinor | money: l.currency }}</td>
+          <td class="num" [class.text-red-700]="l.available < l.minOrderQuantity">{{ l.available }}</td>
+          <td class="num">{{ 'marketplace.days' | t: { days: l.deliveryDays } }}</td>
+          <td class="num">{{ l.minOrderQuantity }}</td>
+          <td class="whitespace-nowrap">
+            @if (isOwn(l)) {
+              <span class="text-xs text-slate-500">{{ 'marketplace.ownOffer' | t }}</span>
+            } @else if (canOrder(l)) {
+              <div class="flex items-start gap-1">
+                <div>
+                  <label class="sr-only" [for]="'qty-' + l.offerId">{{ 'common.quantity' | t }}</label>
+                  <input
+                    hnInput
+                    class="w-20 py-1 text-end"
+                    type="number"
+                    [id]="'qty-' + l.offerId"
+                    [min]="l.minOrderQuantity"
+                    [max]="remaining(l)"
+                    step="1"
+                    [value]="quantityFor(l)"
+                    (input)="setQuantity(l, $any($event.target).valueAsNumber)"
+                    (keydown.enter)="$event.preventDefault(); addToCart(l)"
+                    [attr.aria-invalid]="!!quantityError(l)"
+                    [attr.aria-describedby]="quantityError(l) ? 'qty-err-' + l.offerId : null"
+                  />
+                  @if (quantityError(l); as err) {
+                    <p class="mt-0.5 max-w-40 text-[11px] whitespace-normal text-red-700" [id]="'qty-err-' + l.offerId">{{ err }}</p>
+                  } @else if (cart.quantityOf(l.offerId) > 0) {
+                    <p class="mt-0.5 text-[11px] text-slate-500">{{ 'marketplace.inCart' | t: { qty: cart.quantityOf(l.offerId) } }}</p>
+                  }
+                </div>
+                <button
+                  hnButton
+                  size="sm"
+                  variant="primary"
+                  type="button"
+                  class="mt-0.5"
+                  [disabled]="!!quantityError(l)"
+                  (click)="addToCart(l)"
+                  [attr.aria-label]="('marketplace.addToCart' | t) + ': ' + l.brand + ' ' + l.productName"
+                  data-testid="add-to-cart"
+                >
+                  {{ 'marketplace.add' | t }}
+                </button>
+              </div>
+            } @else {
+              <span class="text-xs text-slate-500">{{ 'marketplace.notOrderable' | t }}</span>
+            }
+          </td>
+        </tr>
+      } @empty {
+        @if (!results.loading()) {
+          <tr>
+            <td colspan="9">
+              <hn-empty-state [title]="'marketplace.emptyTitle' | t" [text]="'marketplace.emptyText' | t" />
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+  <div footer class="border-t border-slate-200 px-2">
+    <hn-pagination
+      [page]="page()"
+      [pageSize]="pageSize"
+      [totalCount]="results.value()?.totalCount ?? 0"
+      (pageChange)="page.set($event)"
+    />
+  </div>
+</hn-table>

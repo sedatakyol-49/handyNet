@@ -1,0 +1,171 @@
+@if (order.value(); as o) {
+  <nav class="mb-2 text-sm"><a class="hn-link" [routerLink]="backLink()">← {{ (isSeller() ? 'nav.sales' : 'nav.purchases') | t }}</a></nav>
+  <hn-page-header [title]="('orders.order' | t) + ' ' + o.number" [description]="(isSeller() ? 'orders.youAreSeller' : 'orders.youAreBuyer') | t">
+    <hn-status-badge [status]="o.status" kind="orderStatus" data-testid="order-status" />
+    @if (canConfirm()) {
+      <button hnButton variant="primary" type="button" [loading]="busy() === 'confirm'" [disabled]="!!busy()" (click)="confirm()" data-testid="confirm-order">
+        {{ 'orders.actions.confirm' | t }}
+      </button>
+    }
+    @if (canShip()) {
+      <button hnButton variant="primary" type="button" [loading]="busy() === 'ship'" [disabled]="!!busy()" (click)="ship()" data-testid="ship-order"
+        [title]="'orders.shipWithoutShipmentHint' | t">
+        {{ 'orders.actions.ship' | t }}
+      </button>
+    }
+    @if (canReject()) {
+      <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('reject')">{{ 'orders.actions.reject' | t }}</button>
+    }
+    @if (canCancel()) {
+      <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('cancel')">{{ 'orders.actions.cancel' | t }}</button>
+    }
+  </hn-page-header>
+
+  @if (!reasonDialog()) {
+    <hn-banner class="mb-3" [error]="actionError()" />
+  }
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <section class="hn-card overflow-hidden lg:col-span-2" aria-labelledby="lines-heading">
+      <h2 id="lines-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'orders.positions' | t }}</h2>
+      <div class="overflow-x-auto">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th scope="col" class="num">#</th>
+              <th scope="col">{{ 'common.product' | t }}</th>
+              <th scope="col">{{ 'common.sku' | t }}</th>
+              <th scope="col" class="num">{{ 'common.quantity' | t }}</th>
+              <th scope="col" class="num">{{ 'cart.unitPrice' | t }}</th>
+              <th scope="col" class="num">{{ 'cart.lineNet' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of o.lines; track l.lineNumber) {
+              <tr>
+                <td class="num text-slate-500">{{ l.lineNumber }}</td>
+                <td class="font-medium">{{ l.brand }} {{ l.productName }}</td>
+                <td class="hn-mono">{{ l.supplierSku }}</td>
+                <td class="num">{{ l.quantity }}</td>
+                <td class="num">{{ l.unitPriceMinor | money: o.currency }}</td>
+                <td class="num">{{ l.lineNetMinor | money: o.currency }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="text-sm">
+            <tr>
+              <td colspan="5" class="px-3 py-1 text-end">{{ 'common.net' | t }}</td>
+              <td class="num px-3 py-1">{{ o.netTotalMinor | money: o.currency }}</td>
+            </tr>
+            <tr>
+              <td colspan="5" class="px-3 py-1 text-end">{{ 'common.vat' | t: { rate: o.vatRateBasisPoints / 100 } }}</td>
+              <td class="num px-3 py-1">{{ o.vatTotalMinor | money: o.currency }}</td>
+            </tr>
+            <tr class="font-semibold">
+              <td colspan="5" class="px-3 py-2 text-end">{{ 'common.gross' | t }}</td>
+              <td class="num px-3 py-2" data-testid="order-gross">{{ o.grossTotalMinor | money: o.currency }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="hn-card p-4" aria-labelledby="details-heading">
+      <h2 id="details-heading" class="mb-3 text-sm">{{ 'orders.details' | t }}</h2>
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt class="hn-muted">{{ 'orders.buyer' | t }}</dt>
+        <dd>{{ o.buyerName }}</dd>
+        <dt class="hn-muted">{{ 'orders.seller' | t }}</dt>
+        <dd>{{ o.sellerName }}</dd>
+        <dt class="hn-muted">{{ 'orders.reference' | t }}</dt>
+        <dd>{{ o.buyerReference ?? '–' }}</dd>
+        <dt class="hn-muted">{{ 'orders.placedAt' | t }}</dt>
+        <dd>{{ o.placedAt | hnDate }}</dd>
+        <dt class="hn-muted">{{ 'orders.confirmedAt' | t }}</dt>
+        <dd>{{ o.confirmedAt | hnDate }}</dd>
+        <dt class="hn-muted">{{ 'orders.shippedAt' | t }}</dt>
+        <dd>{{ o.shippedAt | hnDate }}</dd>
+        @if (o.deliveredAt) {
+          <dt class="hn-muted">{{ 'orders.deliveredAt' | t }}</dt>
+          <dd>{{ o.deliveredAt | hnDate }}</dd>
+        }
+        @if (o.inspectionEndsAt && o.status === 'Delivered') {
+          <dt class="hn-muted">{{ 'orders.inspectionEndsAt' | t }}</dt>
+          <dd>{{ o.inspectionEndsAt | hnDate }}</dd>
+        }
+        @if (o.completedAt) {
+          <dt class="hn-muted">{{ 'orders.completedAt' | t }}</dt>
+          <dd>{{ o.completedAt | hnDate }}</dd>
+        }
+        @if (o.closedAt) {
+          <dt class="hn-muted">{{ 'orders.closedAt' | t }}</dt>
+          <dd>{{ o.closedAt | hnDate }}</dd>
+          <dt class="hn-muted">{{ 'orders.closeReason' | t }}</dt>
+          <dd>{{ o.closeReason ?? '–' }}</dd>
+        }
+      </dl>
+    </section>
+  </div>
+
+  <hn-order-dispute
+    class="mt-4 block"
+    [order]="o"
+    [disputes]="disputes.value() ?? []"
+    [disputesLoading]="disputes.loading()"
+    [disputesError]="disputes.error()"
+    [isSeller]="isSeller()"
+    [isBuyer]="isBuyer()"
+    (changed)="onDisputeChanged($event)"
+  />
+
+  @if ((o.status !== 'Cancelled' && o.status !== 'Rejected') || (payments.value() ?? []).length) {
+    <hn-order-payment
+      class="mt-4 block"
+      [order]="o"
+      [payments]="payments.value() ?? []"
+      [paymentsLoading]="payments.loading()"
+      [paymentsError]="payments.error()"
+      [isSeller]="isSeller()"
+      [isBuyer]="isBuyer()"
+      (changed)="payments.reload()"
+    />
+  }
+
+  @if ((o.status !== 'Cancelled' && o.status !== 'Rejected') || (shipments.value() ?? []).length) {
+    <hn-order-shipping
+      class="mt-4 block"
+      [order]="o"
+      [shipments]="shipments.value() ?? []"
+      [shipmentsLoading]="shipments.loading()"
+      [shipmentsError]="shipments.error()"
+      [isSeller]="isSeller()"
+      [isBuyer]="isBuyer()"
+      (changed)="onShippingChanged($event)"
+    />
+  }
+
+  <hn-dialog
+    [open]="!!reasonDialog()"
+    [title]="(reasonDialog() === 'reject' ? 'orders.actions.reject' : 'orders.actions.cancel') | t"
+    (closed)="reasonDialog.set(null)"
+  >
+    <form (ngSubmit)="submitReason()" class="space-y-4">
+      <hn-banner [error]="actionError()" />
+      <hn-field [label]="'orders.reason' | t" for="order-reason" [required]="reasonDialog() === 'reject'"
+        [hint]="(reasonDialog() === 'reject' ? 'orders.reasonRequired' : 'orders.reasonOptional') | t">
+        <textarea hnInput id="order-reason" name="reason" rows="3" [(ngModel)]="reason" [required]="reasonDialog() === 'reject'"
+          aria-describedby="order-reason-hint"></textarea>
+      </hn-field>
+      <div class="flex justify-end gap-2">
+        <button hnButton type="button" (click)="reasonDialog.set(null)">{{ 'common.cancel' | t }}</button>
+        <button hnButton variant="danger" type="submit" [loading]="!!busy()" [disabled]="!!busy() || (reasonDialog() === 'reject' && !reason.trim())">
+          {{ 'common.confirm' | t }}
+        </button>
+      </div>
+    </form>
+  </hn-dialog>
+} @else if (order.error()) {
+  <hn-banner [error]="order.error()" />
+} @else {
+  <p class="hn-muted text-sm">{{ 'common.loading' | t }}</p>
+}

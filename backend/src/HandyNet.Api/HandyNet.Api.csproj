@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>handynet-api-6f1c2d0e</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HandyNet.Migrations\HandyNet.Migrations.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Identity\HandyNet.Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Tenancy\HandyNet.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Catalog\HandyNet.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Inventory\HandyNet.Modules.Inventory.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Marketplace\HandyNet.Modules.Marketplace.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Imports\HandyNet.Modules.Imports.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Ordering\HandyNet.Modules.Ordering.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Notifications\HandyNet.Modules.Notifications.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Shipping\HandyNet.Modules.Shipping.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Ledger\HandyNet.Modules.Ledger.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Payments\HandyNet.Modules.Payments.csproj" />
+    <ProjectReference Include="..\Modules\HandyNet.Modules.Disputes\HandyNet.Modules.Disputes.csproj" />
+  </ItemGroup>
+
+</Project>

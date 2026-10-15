@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      HANDYNET_TEST_PG_ADMIN: Host=localhost;Port=5432;Username=postgres;Password=ci-only-password;Database=postgres
+      DOTNET_NOLOGO: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore HandyNet.slnx
+      - run: dotnet build HandyNet.slnx --no-restore -c Release -warnaserror
+      # Fails if the model changed without a migration.
+      - run: dotnet tool install --global dotnet-ef --version 10.0.*
+      - run: dotnet ef migrations has-pending-model-changes -p src/HandyNet.Migrations -s src/HandyNet.Migrations --no-build -c Release
+      - run: dotnet test HandyNet.slnx --no-build -c Release --logger "trx" --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/TestResults
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: node scripts/check-i18n.mjs
+      - run: npm test
+      - run: npm run build
+      # Playwright e2e needs a running API + database; run it in a later stack job (see docs/roadmap.md).
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t handynet-api:ci backend
+      - run: docker build -t handynet-web:ci frontend

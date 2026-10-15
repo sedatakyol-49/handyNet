@@ -1,0 +1,159 @@
+<hn-page-header [title]="'inventory.title' | t" [description]="'inventory.subtitle' | t">
+  @if (canManage) {
+    <button hnButton type="button" (click)="openWarehouse()">{{ 'inventory.newWarehouse' | t }}</button>
+  }
+</hn-page-header>
+
+<div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+  <div role="tablist" class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" [attr.aria-label]="'inventory.title' | t">
+    <button type="button" role="tab" id="tab-stock" aria-controls="panel-stock" [attr.aria-selected]="tab() === 'stock'"
+      class="rounded px-3 py-1" [class]="tab() === 'stock' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'" (click)="tab.set('stock')">
+      {{ 'inventory.stock' | t }}
+    </button>
+    <button type="button" role="tab" id="tab-movements" aria-controls="panel-movements" [attr.aria-selected]="tab() === 'movements'"
+      class="rounded px-3 py-1" [class]="tab() === 'movements' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'" (click)="tab.set('movements')">
+      {{ 'inventory.movements' | t }}
+    </button>
+  </div>
+  @if (tab() === 'stock') {
+    <hn-field [label]="'inventory.warehouse' | t" for="inv-wh" class="w-56">
+      <select hnSelect id="inv-wh" [value]="warehouseId()" (change)="selectWarehouse($any($event.target).value)">
+        <option value="">{{ 'inventory.allWarehouses' | t }}</option>
+        @for (w of warehouses.value() ?? []; track w.id) {
+          <option [value]="w.id">{{ w.code }} – {{ w.name }}{{ w.isDefault ? ' ★' : '' }}</option>
+        }
+      </select>
+    </hn-field>
+  }
+</div>
+
+@if (tab() === 'stock') {
+  <div id="panel-stock" role="tabpanel" aria-labelledby="tab-stock">
+    <hn-banner class="mb-3" [error]="stock.error()" />
+    <hn-table [loading]="stock.loading()">
+      <table class="hn-table" data-testid="stock-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'common.product' | t }}</th>
+            <th scope="col">EAN / MPN</th>
+            <th scope="col">{{ 'inventory.warehouse' | t }}</th>
+            <th scope="col" class="num">{{ 'inventory.onHand' | t }}</th>
+            <th scope="col" class="num">{{ 'inventory.reserved' | t }}</th>
+            <th scope="col" class="num">{{ 'inventory.available' | t }}</th>
+            <th scope="col">{{ 'common.updatedAt' | t }}</th>
+            <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of stock.value()?.items ?? []; track s.warehouseId + s.productId) {
+            <tr>
+              <td class="font-medium">{{ s.brand }} {{ s.productName }}</td>
+              <td class="hn-mono text-slate-600">{{ s.ean ?? s.mpn ?? '–' }}</td>
+              <td>{{ warehouseCode(s.warehouseId) }}</td>
+              <td class="num">{{ s.onHand }}</td>
+              <td class="num">{{ s.reserved }}</td>
+              <td class="num font-semibold" [class.text-red-700]="s.available <= 0">{{ s.available }}</td>
+              <td class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
+              <td class="text-end whitespace-nowrap">
+                @if (canManage) {
+                  <button hnButton size="sm" variant="ghost" type="button" (click)="openAdjust(s)">{{ 'inventory.adjust' | t }}</button>
+                }
+                <button hnButton size="sm" variant="ghost" type="button" (click)="showMovements(s)">{{ 'inventory.movements' | t }}</button>
+              </td>
+            </tr>
+          } @empty {
+            @if (!stock.loading()) {
+              <tr><td colspan="8"><hn-empty-state [title]="'inventory.empty' | t" [text]="'inventory.emptyText' | t" /></td></tr>
+            }
+          }
+        </tbody>
+      </table>
+      <div footer class="border-t border-slate-200 px-2">
+        <hn-pagination [page]="stockPage()" [pageSize]="pageSize" [totalCount]="stock.value()?.totalCount ?? 0" (pageChange)="stockPage.set($event)" />
+      </div>
+    </hn-table>
+  </div>
+} @else {
+  <div id="panel-movements" role="tabpanel" aria-labelledby="tab-movements">
+    @if (movementProduct(); as p) {
+      <p class="mb-2 flex items-center gap-2 text-sm">
+        {{ 'inventory.movementsFor' | t: { product: p.label } }}
+        <button hnButton size="sm" variant="ghost" type="button" (click)="clearMovementFilter()">{{ 'inventory.showAll' | t }}</button>
+      </p>
+    }
+    <hn-banner class="mb-3" [error]="movements.error()" />
+    <hn-table [loading]="movements.loading()">
+      <table class="hn-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'inventory.occurredAt' | t }}</th>
+            <th scope="col">{{ 'inventory.type' | t }}</th>
+            <th scope="col">{{ 'inventory.warehouse' | t }}</th>
+            <th scope="col" class="num">{{ 'inventory.quantity' | t }}</th>
+            <th scope="col" class="num">{{ 'inventory.onHandAfter' | t }}</th>
+            <th scope="col">{{ 'inventory.reference' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of movements.value()?.items ?? []; track m.id) {
+            <tr>
+              <td class="whitespace-nowrap">{{ m.occurredAt | hnDate }}</td>
+              <td>{{ m.type | tEnum: 'movementType' }}</td>
+              <td>{{ warehouseCode(m.warehouseId) }}</td>
+              <td class="num font-medium" [class.text-emerald-700]="m.quantity > 0" [class.text-red-700]="m.quantity < 0">
+                {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}
+              </td>
+              <td class="num">{{ m.onHandAfter }}</td>
+              <td class="text-slate-600">{{ m.reference ?? '–' }}</td>
+            </tr>
+          } @empty {
+            @if (!movements.loading()) {
+              <tr><td colspan="6"><hn-empty-state [title]="'inventory.noMovements' | t" /></td></tr>
+            }
+          }
+        </tbody>
+      </table>
+      <div footer class="border-t border-slate-200 px-2">
+        <hn-pagination [page]="movementPage()" [pageSize]="pageSize" [totalCount]="movements.value()?.totalCount ?? 0" (pageChange)="movementPage.set($event)" />
+      </div>
+    </hn-table>
+  </div>
+}
+
+<hn-dialog [open]="!!adjusting()" [title]="'inventory.adjustTitle' | t" (closed)="adjusting.set(null)">
+  @if (adjusting(); as row) {
+    <form class="space-y-4" (ngSubmit)="submitAdjust()">
+      <p class="text-sm">
+        <span class="font-medium">{{ row.brand }} {{ row.productName }}</span> · {{ warehouseCode(row.warehouseId) }}<br />
+        <span class="text-slate-500">{{ 'inventory.currentStock' | t: { onHand: row.onHand, reserved: row.reserved } }}</span>
+      </p>
+      <hn-banner [error]="adjustProblem()" />
+      <hn-field [label]="'inventory.delta' | t" for="adj-delta" [required]="true" [hint]="'inventory.deltaHint' | t" [errors]="errors(adjustProblem(), 'delta')">
+        <input hnInput id="adj-delta" name="delta" type="number" step="1" required [(ngModel)]="adjustment.delta" aria-describedby="adj-delta-hint" />
+      </hn-field>
+      <hn-field [label]="'inventory.reason' | t" for="adj-reason" [required]="true" [errors]="errors(adjustProblem(), 'reason')">
+        <input hnInput id="adj-reason" name="reason" required maxlength="200" [(ngModel)]="adjustment.reason" />
+      </hn-field>
+      <div class="flex justify-end gap-2">
+        <button hnButton type="button" (click)="adjusting.set(null)">{{ 'common.cancel' | t }}</button>
+        <button hnButton variant="primary" type="submit" [loading]="adjustBusy()" [disabled]="adjustBusy()">{{ 'common.save' | t }}</button>
+      </div>
+    </form>
+  }
+</hn-dialog>
+
+<hn-dialog [open]="warehouseOpen()" [title]="'inventory.newWarehouse' | t" (closed)="warehouseOpen.set(false)">
+  <form class="space-y-4" (ngSubmit)="submitWarehouse()">
+    <hn-banner [error]="warehouseProblem()" />
+    <hn-field [label]="'inventory.code' | t" for="wh-code" [required]="true" [errors]="errors(warehouseProblem(), 'code')">
+      <input hnInput id="wh-code" name="code" required maxlength="20" [(ngModel)]="newWarehouse.code" />
+    </hn-field>
+    <hn-field [label]="'common.name' | t" for="wh-name" [required]="true" [errors]="errors(warehouseProblem(), 'name')">
+      <input hnInput id="wh-name" name="name" required [(ngModel)]="newWarehouse.name" />
+    </hn-field>
+    <div class="flex justify-end gap-2">
+      <button hnButton type="button" (click)="warehouseOpen.set(false)">{{ 'common.cancel' | t }}</button>
+      <button hnButton variant="primary" type="submit" [loading]="warehouseBusy()" [disabled]="warehouseBusy()">{{ 'common.create' | t }}</button>
+    </div>
+  </form>
+</hn-dialog>

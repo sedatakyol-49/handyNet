@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\HandyNet.SharedKernel\HandyNet.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\HandyNet.Persistence\HandyNet.Persistence.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Identity\HandyNet.Modules.Identity.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Tenancy\HandyNet.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Ordering\HandyNet.Modules.Ordering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MailKit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

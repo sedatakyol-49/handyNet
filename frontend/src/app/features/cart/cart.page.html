@@ -1,0 +1,137 @@
+<hn-page-header [title]="'cart.title' | t" [description]="'cart.subtitle' | t">
+  <a hnButton routerLink="/app/marktplatz">{{ 'cart.continueShopping' | t }}</a>
+</hn-page-header>
+
+@for (order of placed(); track order.id) {
+  <hn-banner tone="success" class="mb-3" [heading]="'cart.placed' | t: { number: order.number, seller: order.sellerName }">
+    <dl class="mt-1 grid max-w-sm grid-cols-[1fr_auto] gap-x-6 text-sm" data-testid="placed-order">
+      <dt>{{ 'common.net' | t }}</dt>
+      <dd class="text-end tabular-nums">{{ order.netTotalMinor | money: order.currency }}</dd>
+      <dt>{{ 'common.vat' | t: { rate: order.vatRateBasisPoints / 100 } }}</dt>
+      <dd class="text-end tabular-nums">{{ order.vatTotalMinor | money: order.currency }}</dd>
+      <dt class="font-semibold">{{ 'common.gross' | t }}</dt>
+      <dd class="text-end font-semibold tabular-nums">{{ order.grossTotalMinor | money: order.currency }}</dd>
+    </dl>
+    <a class="hn-link mt-1 inline-block" [routerLink]="['/app/bestellungen', order.id]">{{ 'cart.viewOrder' | t }}</a>
+  </hn-banner>
+}
+
+@if (cart.groups().length === 0) {
+  <div class="hn-card">
+    <hn-empty-state [title]="'cart.emptyTitle' | t" [text]="'cart.emptyText' | t">
+      <a hnButton variant="primary" routerLink="/app/marktplatz">{{ 'nav.marketplace' | t }}</a>
+    </hn-empty-state>
+  </div>
+}
+
+<div class="space-y-5">
+  @for (group of cart.groups(); track group.sellerOrganizationId) {
+    @let gs = groupState(group.sellerOrganizationId);
+    <section class="hn-card" [attr.aria-labelledby]="'seller-' + group.sellerOrganizationId" data-testid="cart-group">
+      <header class="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-4 py-3">
+        <h2 class="text-base" [id]="'seller-' + group.sellerOrganizationId">
+          {{ group.sellerName }} <span class="text-sm font-normal text-slate-500">· {{ group.sellerCity }}</span>
+        </h2>
+        <span class="text-xs text-slate-500">{{ 'cart.oneOrderPerSeller' | t }}</span>
+      </header>
+
+      <div class="overflow-x-auto">
+        <table class="hn-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'common.product' | t }}</th>
+              <th scope="col">{{ 'common.sku' | t }}</th>
+              <th scope="col" class="num">{{ 'cart.unitPrice' | t }}</th>
+              <th scope="col" class="num">{{ 'common.quantity' | t }}</th>
+              <th scope="col" class="num">{{ 'cart.lineNet' | t }}</th>
+              <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of group.items; track item.offerId) {
+              @let issue = lineIssue(item);
+              <tr [class.bg-red-50]="issue">
+                <td>
+                  <span class="font-medium">{{ item.brand }} {{ item.productName }}</span>
+                  <span class="block text-xs text-slate-500">
+                    {{ item.quality | tEnum: 'quality' }} · {{ item.condition | tEnum: 'condition' }} ·
+                    {{ 'marketplace.days' | t: { days: item.deliveryDays } }}
+                  </span>
+                  @if (issue) {
+                    <span class="block text-xs font-medium text-red-700" role="alert">{{ issue }}</span>
+                  }
+                </td>
+                <td class="hn-mono">{{ item.supplierSku }}</td>
+                <td class="num">
+                  @if (item.previousPriceMinor !== null && item.previousPriceMinor !== undefined) {
+                    <span class="block text-xs text-slate-500 line-through">{{ item.previousPriceMinor | money: item.currency }}</span>
+                  }
+                  <span [class.font-semibold]="item.previousPriceMinor">{{ item.priceMinor | money: item.currency }}</span>
+                </td>
+                <td class="num">
+                  <label class="sr-only" [for]="'cart-qty-' + item.offerId">{{ 'common.quantity' | t }}</label>
+                  <input
+                    hnInput
+                    class="ms-auto w-20 py-1 text-end"
+                    type="number"
+                    step="1"
+                    [id]="'cart-qty-' + item.offerId"
+                    [min]="item.minOrderQuantity"
+                    [max]="item.available"
+                    [value]="item.quantity"
+                    (change)="updateQuantity(item, $any($event.target).valueAsNumber)"
+                    [disabled]="gs.busy"
+                  />
+                  <span class="mt-0.5 block text-[11px] text-slate-500">{{ 'cart.limits' | t: { min: item.minOrderQuantity, available: item.available } }}</span>
+                </td>
+                <td class="num font-medium">{{ item.priceMinor * item.quantity | money: item.currency }}</td>
+                <td class="text-end">
+                  <button hnButton variant="ghost" size="sm" type="button" (click)="cart.remove(item.offerId)" [disabled]="gs.busy"
+                    [attr.aria-label]="('common.remove' | t) + ': ' + item.productName">
+                    {{ 'common.remove' | t }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="grid gap-4 border-t border-slate-200 px-4 py-3 md:grid-cols-[1fr_auto]">
+        <div class="space-y-3">
+          @if (gs.problem) {
+            <hn-banner [tone]="gs.problem.status === 409 ? 'warning' : 'danger'" [heading]="gs.message" [text]="problemText(gs.problem)" />
+          }
+          @if (hasPriceChanges(group)) {
+            <hn-banner tone="warning" [text]="'cart.pricesChanged' | t">
+              <button hnButton size="sm" class="mt-2" type="button" (click)="acknowledge(group)">{{ 'cart.acceptPrices' | t }}</button>
+            </hn-banner>
+          }
+          <hn-field class="max-w-xs" [label]="'cart.reference' | t" [for]="'ref-' + group.sellerOrganizationId" [hint]="'cart.referenceHint' | t">
+            <input hnInput [id]="'ref-' + group.sellerOrganizationId" maxlength="100" [value]="gs.reference"
+              (input)="setReference(group.sellerOrganizationId, $any($event.target).value)" />
+          </hn-field>
+        </div>
+        <div class="min-w-64 space-y-2">
+          <dl class="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
+            <dt>{{ 'cart.netTotal' | t }}</dt>
+            <dd class="text-end font-semibold tabular-nums">{{ group.netTotalMinor | money }}</dd>
+          </dl>
+          <p class="text-xs text-slate-500">{{ 'cart.vatNote' | t }}</p>
+          <button
+            hnButton
+            variant="primary"
+            type="button"
+            class="w-full"
+            [loading]="gs.busy"
+            [disabled]="gs.busy || hasIssues(group) || hasPriceChanges(group)"
+            (click)="checkout(group)"
+            data-testid="checkout"
+          >
+            {{ 'cart.placeOrder' | t: { seller: group.sellerName } }}
+          </button>
+        </div>
+      </footer>
+    </section>
+  }
+</div>

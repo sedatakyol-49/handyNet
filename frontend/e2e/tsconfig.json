@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": ["./**/*.ts", "../playwright.config.ts"]
+}

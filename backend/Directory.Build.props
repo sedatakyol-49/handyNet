@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!-- Module internals are visible to tests only; other modules must go through public Contracts. -->
+  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('HandyNet.Modules.'))">
+    <InternalsVisibleTo Include="HandyNet.UnitTests" />
+    <InternalsVisibleTo Include="HandyNet.IntegrationTests" />
+  </ItemGroup>
+</Project>

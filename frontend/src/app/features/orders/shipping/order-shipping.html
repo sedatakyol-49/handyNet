@@ -1,0 +1,281 @@
+@let o = order();
+<section class="hn-card" aria-labelledby="shipping-heading" data-testid="shipping-section">
+  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+    <h2 id="shipping-heading" class="text-sm">{{ 'shipping.title' | t }}</h2>
+  </div>
+
+  <div class="space-y-4 p-4">
+    @if (!confirmAction()) {
+      <hn-banner [error]="error()" />
+    }
+    <hn-banner [error]="shipmentsError()" />
+
+    <!-- Buyer: receipt and inspection -->
+    @if (isBuyer()) {
+      @if (o.status === 'Shipped') {
+        <div class="flex flex-wrap items-start justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+          <p class="max-w-prose">{{ 'shipping.buyer.shippedText' | t }}</p>
+          @if (canConfirmDelivery()) {
+            <button hnButton variant="primary" type="button" [disabled]="!!busy()" (click)="ask('confirmDelivery')" data-testid="confirm-delivery">
+              {{ 'shipping.buyer.confirmDelivery' | t }}
+            </button>
+          }
+        </div>
+      } @else if (o.status === 'Delivered') {
+        <div class="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" data-testid="inspection">
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <dt class="font-medium">{{ 'shipping.buyer.inspectionEndsAt' | t }}</dt>
+            <dd data-testid="inspection-ends">{{ o.inspectionEndsAt | hnDate }}</dd>
+            <dt class="font-medium">{{ 'shipping.buyer.remaining' | t }}</dt>
+            <dd data-testid="inspection-remaining">{{ remaining() }}</dd>
+          </dl>
+          <p>{{ 'shipping.buyer.inspectionNote' | t }}</p>
+          <p>{{ 'shipping.buyer.problemsNote' | t }}</p>
+          @if (canAccept()) {
+            <div class="flex justify-end">
+              <button hnButton variant="primary" type="button" [disabled]="!!busy()" (click)="ask('accept')" data-testid="accept-goods">
+                {{ 'shipping.buyer.accept' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      } @else if (o.status === 'Completed') {
+        <p class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          {{ 'shipping.buyer.completedText' | t: { date: (o.completedAt | hnDate) } }}
+        </p>
+      }
+    } @else if (isSeller() && o.status === 'Delivered') {
+      <p class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+        {{ 'shipping.seller.inspectionText' | t: { date: (o.inspectionEndsAt | hnDate), remaining: remaining() } }}
+      </p>
+    }
+
+    <!-- Seller: book a shipment -->
+    @if (showForm()) {
+      <form (ngSubmit)="createShipment()" class="space-y-3" novalidate data-testid="shipment-form" aria-labelledby="shipment-form-heading">
+        <h3 id="shipment-form-heading" class="text-sm">{{ 'shipping.form.title' | t }}</h3>
+        <p class="hn-muted text-sm">{{ 'shipping.form.intro' | t }}</p>
+        <hn-banner [error]="profiles.error()" />
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <hn-field [label]="'shipping.carrier' | t" for="ship-carrier" [required]="true" [errors]="fieldError('carrier', 'carrier')"
+            [hint]="form.carrier === 'Manual' ? ('shipping.form.manualHint' | t) : form.carrier === 'Simulated' ? ('shipping.form.simulatedHint' | t) : null">
+            <select hnSelect id="ship-carrier" name="carrier" [(ngModel)]="form.carrier" (ngModelChange)="carrierChanged($event)" required
+              [attr.aria-invalid]="!!fieldError('carrier', 'carrier')"
+              [attr.aria-describedby]="fieldError('carrier', 'carrier') ? 'ship-carrier-error' : form.carrier ? 'ship-carrier-hint' : null">
+              <option value="">{{ 'shipping.form.chooseCarrier' | t }}</option>
+              @for (c of profiles.value() ?? []; track c.carrier) {
+                <option [value]="c.carrier">{{ c.carrier | tEnum: 'carrier' }}</option>
+              }
+            </select>
+          </hn-field>
+
+          <div>
+            <span class="mb-1 block text-xs font-medium text-slate-700" id="ship-value-label">{{ 'shipping.declaredValue' | t }}</span>
+            <p class="py-1.5 text-sm font-medium tabular-nums" aria-labelledby="ship-value-label" data-testid="ship-declared-value">
+              {{ o.grossTotalMinor | money: o.currency }}
+            </p>
+            <p class="text-xs text-slate-500">{{ 'shipping.form.declaredValueHint' | t }}</p>
+          </div>
+
+          @if (limits(); as l) {
+            <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 sm:col-span-2" data-testid="carrier-limits">
+              <p class="font-medium">{{ 'shipping.form.limitsTitle' | t: { carrier: (form.carrier | tEnum: 'carrier') } }}</p>
+              <p>{{ 'shipping.form.limitsText' | t: l }}</p>
+              <p>{{ 'shipping.form.lithiumText' | t: l }}</p>
+            </div>
+          }
+          @if (notInsurable()) {
+            <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 sm:col-span-2" role="alert" data-testid="not-insurable">
+              {{ 'shipping.form.notInsurable' | t: (limits() ?? {}) }}
+            </p>
+          }
+
+          <hn-field [label]="'shipping.form.weightKg' | t" for="ship-weight" [required]="true"
+            [hint]="limits() ? ('shipping.form.weightHintMax' | t: limits()!) : ('shipping.form.weightHint' | t)"
+            [errors]="fieldError('weightKg', 'weightGrams')">
+            <input hnInput id="ship-weight" name="weightKg" inputmode="decimal" autocomplete="off" [(ngModel)]="form.weightKg" (ngModelChange)="revalidate()"
+              required [attr.aria-invalid]="!!fieldError('weightKg', 'weightGrams')"
+              [attr.aria-describedby]="fieldError('weightKg', 'weightGrams') ? 'ship-weight-error' : 'ship-weight-hint'" />
+          </hn-field>
+
+          <fieldset>
+            <legend class="mb-1 block text-xs font-medium text-slate-700">{{ 'shipping.form.dimensions' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+            <div class="grid grid-cols-3 gap-2">
+              <hn-field [label]="'shipping.form.length' | t" for="ship-length" [errors]="fieldError('lengthCm', 'lengthCm')">
+                <input hnInput id="ship-length" name="lengthCm" inputmode="numeric" autocomplete="off" [(ngModel)]="form.lengthCm" (ngModelChange)="revalidate()"
+                  required [attr.aria-invalid]="!!fieldError('lengthCm', 'lengthCm')" [attr.aria-describedby]="fieldError('lengthCm', 'lengthCm') ? 'ship-length-error' : null" />
+              </hn-field>
+              <hn-field [label]="'shipping.form.width' | t" for="ship-width" [errors]="fieldError('widthCm', 'widthCm')">
+                <input hnInput id="ship-width" name="widthCm" inputmode="numeric" autocomplete="off" [(ngModel)]="form.widthCm" (ngModelChange)="revalidate()"
+                  required [attr.aria-invalid]="!!fieldError('widthCm', 'widthCm')" [attr.aria-describedby]="fieldError('widthCm', 'widthCm') ? 'ship-width-error' : null" />
+              </hn-field>
+              <hn-field [label]="'shipping.form.height' | t" for="ship-height" [errors]="fieldError('heightCm', 'heightCm')">
+                <input hnInput id="ship-height" name="heightCm" inputmode="numeric" autocomplete="off" [(ngModel)]="form.heightCm" (ngModelChange)="revalidate()"
+                  required [attr.aria-invalid]="!!fieldError('heightCm', 'heightCm')" [attr.aria-describedby]="fieldError('heightCm', 'heightCm') ? 'ship-height-error' : null" />
+              </hn-field>
+            </div>
+            @if (limits(); as l) {
+              <p class="mt-1 text-xs text-slate-500">{{ 'shipping.form.lengthHintMax' | t: l }}</p>
+            }
+          </fieldset>
+
+          @if (form.carrier === 'Manual') {
+            <hn-field [label]="'shipping.trackingNumber' | t" for="ship-tracking" [required]="true" [hint]="'shipping.form.trackingHint' | t"
+              [errors]="fieldError('trackingNumber', 'trackingNumber')">
+              <input hnInput id="ship-tracking" name="trackingNumber" autocomplete="off" maxlength="100" [(ngModel)]="form.trackingNumber" (ngModelChange)="revalidate()"
+                required [attr.aria-invalid]="!!fieldError('trackingNumber', 'trackingNumber')"
+                [attr.aria-describedby]="fieldError('trackingNumber', 'trackingNumber') ? 'ship-tracking-error' : 'ship-tracking-hint'" />
+            </hn-field>
+          }
+
+          <div class="sm:col-span-2">
+            <label class="flex items-start gap-2 text-sm">
+              <input type="checkbox" class="hn-checkbox mt-0.5" id="ship-insured" name="insured" [(ngModel)]="form.insured" (ngModelChange)="revalidate()"
+                aria-describedby="ship-insured-hint" />
+              <span>{{ 'shipping.form.insured' | t }}</span>
+            </label>
+            <p class="mt-1 text-xs" id="ship-insured-hint" [class]="insuranceNeeded() ? 'text-amber-900' : 'text-slate-500'">
+              @if (limits(); as l) {
+                {{ (insuranceNeeded() ? 'shipping.form.insuranceRequiredHint' : 'shipping.form.insuranceOptionalHint') | t: l }}
+              } @else {
+                {{ 'shipping.form.insuranceChooseCarrier' | t }}
+              }
+            </p>
+            @if (fieldError('insured', 'insured'); as msg) {
+              <p class="mt-1 text-xs text-red-700" role="alert">{{ msg }}</p>
+            }
+          </div>
+        </div>
+
+        <p class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">{{ 'shipping.form.notHandoverNote' | t }}</p>
+
+        <div class="flex justify-end">
+          <button hnButton variant="primary" type="submit" [loading]="busy() === 'create'" [disabled]="!!busy()" data-testid="create-shipment">
+            {{ 'shipping.form.submit' | t }}
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- Shipments -->
+    @for (s of shipments(); track s.id) {
+      <article class="rounded-md border border-slate-200" [attr.aria-labelledby]="'shipment-' + s.id" data-testid="shipment-card" [attr.data-status]="s.status">
+        <header class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+          <h3 class="flex flex-wrap items-center gap-2 text-sm" [id]="'shipment-' + s.id">
+            <span>{{ s.carrier | tEnum: 'carrier' }}</span>
+            <hn-status-badge [status]="s.status" kind="shipmentStatus" data-testid="shipment-status" />
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            @if (canFulfil() && s.hasLabel && s.status !== 'Cancelled') {
+              <button hnButton size="sm" type="button" [loading]="busy() === 'label-' + s.id" [disabled]="!!busy()" (click)="downloadLabel(s)" data-testid="download-label">
+                {{ 'shipping.downloadLabel' | t }}
+              </button>
+            }
+            @if (canFulfil() && s.carrier !== 'Manual' && s.status !== 'LabelCreated' && s.status !== 'Cancelled' && s.status !== 'Delivered') {
+              <button hnButton size="sm" type="button" [loading]="busy() === 'sync-' + s.id" [disabled]="!!busy()" (click)="sync(s)" data-testid="sync-shipment">
+                {{ 'shipping.sync' | t }}
+              </button>
+            }
+            @if (canFulfil() && s.status === 'LabelCreated') {
+              <button hnButton size="sm" variant="danger" type="button" [disabled]="!!busy()" (click)="ask('cancelShipment', s)" data-testid="cancel-shipment">
+                {{ 'shipping.cancel' | t }}
+              </button>
+            }
+          </div>
+        </header>
+
+        <div class="space-y-3 px-3 py-2">
+          @if (s.carrier === 'Simulated' && s.status !== 'Cancelled') {
+            <p class="text-xs font-medium text-amber-900">{{ 'shipping.simulationNote' | t }}</p>
+          }
+
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr_auto_1fr]">
+            <dt class="hn-muted">{{ 'shipping.trackingNumber' | t }}</dt>
+            <dd class="hn-mono" data-testid="shipment-tracking">{{ s.trackingNumber }}</dd>
+            <dt class="hn-muted">{{ 'shipping.weight' | t }}</dt>
+            <dd>{{ weightKg(s.weightGrams) }} kg</dd>
+            <dt class="hn-muted">{{ 'shipping.declaredValue' | t }}</dt>
+            <dd class="tabular-nums">{{ s.declaredValueMinor | money: o.currency }}</dd>
+            <dt class="hn-muted">{{ 'shipping.insured' | t }}</dt>
+            <dd>{{ (s.insured ? 'shipping.yes' : 'shipping.no') | t }}</dd>
+            <dt class="hn-muted">{{ 'shipping.lithium' | t }}</dt>
+            <dd>{{ (s.containsLithiumBatteries ? 'shipping.lithiumYes' : 'shipping.no') | t }}</dd>
+            <dt class="hn-muted">{{ 'shipping.createdAt' | t }}</dt>
+            <dd>{{ s.createdAt | hnDate }}</dd>
+            @if (s.handedOverAt) {
+              <dt class="hn-muted">{{ 'shipping.handedOverAt' | t }}</dt>
+              <dd>{{ s.handedOverAt | hnDate }}</dd>
+            }
+            @if (s.deliveredAt) {
+              <dt class="hn-muted">{{ 'shipping.deliveredAt' | t }}</dt>
+              <dd>{{ s.deliveredAt | hnDate }}</dd>
+            }
+            @if (s.lastSyncedAt) {
+              <dt class="hn-muted">{{ 'shipping.lastSyncedAt' | t }}</dt>
+              <dd>{{ s.lastSyncedAt | hnDate }}</dd>
+            }
+          </dl>
+
+          @if (canFulfil() && s.status === 'LabelCreated') {
+            <div class="flex flex-wrap items-start justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              <p class="max-w-prose">{{ 'shipping.handoverExplain' | t }}</p>
+              <button hnButton variant="primary" type="button" [disabled]="!!busy()" (click)="ask('handover', s)" data-testid="handover-shipment">
+                {{ 'shipping.handover' | t }}
+              </button>
+            </div>
+          } @else if (s.status === 'LabelCreated') {
+            <p class="hn-muted text-sm">{{ 'shipping.buyer.labelCreatedText' | t }}</p>
+          }
+          @if (s.carrier === 'Manual' && s.status !== 'Cancelled' && s.status !== 'LabelCreated') {
+            <p class="hn-muted text-xs">{{ 'shipping.manualTrackingNote' | t }}</p>
+          }
+
+          <div>
+            <h4 class="mb-1 text-xs font-semibold tracking-wide text-slate-600 uppercase">{{ 'shipping.timeline' | t }}</h4>
+            @if (s.events.length) {
+              <ol class="border-s border-slate-200 ps-3 text-sm" data-testid="shipment-timeline">
+                @for (e of timeline(s); track $index) {
+                  <li class="relative py-1">
+                    <span class="absolute -start-[17px] top-2.5 size-2 rounded-full"
+                      [class]="e.kind === 'Exception' ? 'bg-red-600' : e.kind === 'Delivered' ? 'bg-emerald-600' : 'bg-slate-400'" aria-hidden="true"></span>
+                    <div class="flex flex-wrap gap-x-3">
+                      <time class="whitespace-nowrap text-slate-500 tabular-nums" [attr.datetime]="e.occurredAt">{{ e.occurredAt | hnDate }}</time>
+                      <span class="font-medium">{{ e.kind | tEnum: 'trackingKind' }}</span>
+                      <span>{{ e.description }}</span>
+                      @if (e.location) {
+                        <span class="text-slate-500">{{ e.location }}</span>
+                      }
+                    </div>
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="hn-muted text-sm">{{ 'shipping.noEvents' | t }}</p>
+            }
+          </div>
+        </div>
+      </article>
+    } @empty {
+      @if (!showForm() && !shipmentsLoading()) {
+        <p class="hn-muted text-sm" data-testid="no-shipment">
+          {{ (isSeller() && o.status === 'Placed' ? 'shipping.confirmFirst' : 'shipping.none') | t }}
+        </p>
+      }
+    }
+  </div>
+</section>
+
+<hn-dialog [open]="!!confirmAction()" [title]="confirmTitle() | t" (closed)="confirmAction.set(null)">
+  <div class="space-y-4">
+    <hn-banner [error]="confirmAction() ? error() : null" />
+    <p class="text-sm">{{ confirmText() | t }}</p>
+    <div class="flex justify-end gap-2">
+      <button hnButton type="button" (click)="confirmAction.set(null)">{{ 'common.cancel' | t }}</button>
+      <button hnButton [variant]="confirmAction()?.action === 'cancelShipment' ? 'danger' : 'primary'" type="button"
+        [loading]="!!busy()" [disabled]="!!busy()" (click)="confirmed()" data-testid="confirm-action">
+        {{ confirmTitle() | t }}
+      </button>
+    </div>
+  </div>
+</hn-dialog>

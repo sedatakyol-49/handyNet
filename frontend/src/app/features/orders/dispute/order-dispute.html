@@ -1,0 +1,181 @@
+@let o = order();
+@if (visible()) {
+  <section class="hn-card" aria-labelledby="dispute-heading" data-testid="dispute-section">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+      <h2 id="dispute-heading" class="text-sm">{{ 'disputes.title' | t }}</h2>
+      @if (canReport() && !formOpen()) {
+        <button hnButton variant="secondary" type="button" [disabled]="!!busy()" (click)="openForm()" data-testid="report-problem">
+          {{ 'disputes.report' | t }}
+        </button>
+      }
+    </div>
+
+    <div class="space-y-4 p-4">
+      @if (!dialog()) {
+        <hn-banner [error]="error()" />
+      }
+      <hn-banner [error]="disputesError()" />
+
+      @if (canReport() && !formOpen()) {
+        <p class="hn-muted max-w-prose text-sm" data-testid="report-hint">
+          {{ 'disputes.reportHint' | t: { date: (o.inspectionEndsAt | hnDate) } }}
+        </p>
+      }
+
+      <!-- Buyer: report a problem -->
+      @if (formOpen() && canReport()) {
+        <form (ngSubmit)="submitReport()" class="space-y-3" novalidate data-testid="dispute-form" aria-labelledby="dispute-form-heading">
+          <h3 id="dispute-form-heading" class="text-sm">{{ 'disputes.form.title' | t }}</h3>
+          <p class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" data-testid="dispute-hold-note">
+            {{ 'disputes.form.holdNote' | t }}
+          </p>
+          <div class="grid gap-3 sm:grid-cols-[16rem_1fr]">
+            <hn-field [label]="'disputes.reason' | t" for="dispute-reason" [required]="true" [errors]="reportFieldError('reason')">
+              <select hnSelect id="dispute-reason" name="reason" [(ngModel)]="report.reason" (ngModelChange)="revalidate()" required
+                [attr.aria-invalid]="!!reportFieldError('reason')" [attr.aria-describedby]="reportFieldError('reason') ? 'dispute-reason-error' : null">
+                <option value="">{{ 'disputes.form.chooseReason' | t }}</option>
+                @for (r of reasons; track r) {
+                  <option [value]="r">{{ r | tEnum: 'disputeReason' }}</option>
+                }
+              </select>
+            </hn-field>
+            <hn-field [label]="'disputes.description' | t" for="dispute-description" [required]="true"
+              [hint]="'disputes.form.descriptionHint' | t: { n: descriptionLength(), max: maxLength }" [errors]="reportFieldError('description')">
+              <textarea hnInput id="dispute-description" name="description" rows="5" [maxlength]="maxLength" required
+                [(ngModel)]="report.description" (ngModelChange)="descriptionChanged($event)"
+                [attr.aria-invalid]="!!reportFieldError('description')"
+                [attr.aria-describedby]="reportFieldError('description') ? 'dispute-description-error' : 'dispute-description-hint'"></textarea>
+            </hn-field>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button hnButton type="button" [disabled]="!!busy()" (click)="formOpen.set(false)">{{ 'common.cancel' | t }}</button>
+            <button hnButton variant="primary" type="submit" [loading]="busy() === 'report'" [disabled]="!!busy()" data-testid="submit-dispute">
+              {{ 'disputes.form.submit' | t }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @for (d of disputes(); track d.id) {
+        @let a = actions(d);
+        <article class="rounded-md border border-slate-200" [attr.aria-labelledby]="'dispute-' + d.id" data-testid="dispute-card" [attr.data-status]="d.status">
+          <header class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+            <h3 class="flex flex-wrap items-center gap-2 text-sm" [id]="'dispute-' + d.id">
+              <span>{{ d.reason | tEnum: 'disputeReason' }}</span>
+              <hn-status-badge [status]="d.status" kind="disputeStatus" data-testid="dispute-status" />
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              @if (a.refund) {
+                <button hnButton size="sm" variant="danger" type="button" [disabled]="!!busy()" (click)="ask('refund', d)" data-testid="dispute-refund">
+                  {{ 'disputes.refund' | t }}
+                </button>
+              }
+              @if (a.withdraw) {
+                <button hnButton size="sm" type="button" [disabled]="!!busy()" (click)="ask('withdraw', d)" data-testid="dispute-withdraw">
+                  {{ 'disputes.withdraw' | t }}
+                </button>
+              }
+              @if (a.escalate) {
+                <button hnButton size="sm" type="button" [disabled]="!!busy()" (click)="ask('escalate', d)" data-testid="dispute-escalate">
+                  {{ 'disputes.escalate' | t }}
+                </button>
+              }
+            </div>
+          </header>
+
+          <div class="space-y-3 px-3 py-2">
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr_auto_1fr]">
+              <dt class="hn-muted">{{ 'disputes.reason' | t }}</dt>
+              <dd data-testid="dispute-reason">{{ d.reason | tEnum: 'disputeReason' }}</dd>
+              <dt class="hn-muted">{{ 'disputes.openedAt' | t }}</dt>
+              <dd>{{ d.openedAt | hnDate }}</dd>
+              @if (d.escalatedAt) {
+                <dt class="hn-muted">{{ 'disputes.escalatedAt' | t }}</dt>
+                <dd>{{ d.escalatedAt | hnDate }}</dd>
+              }
+              @if (d.resolvedAt) {
+                <dt class="hn-muted">{{ 'disputes.resolvedAt' | t }}</dt>
+                <dd>{{ d.resolvedAt | hnDate }}</dd>
+                <dt class="hn-muted">{{ 'disputes.resolvedBy' | t }}</dt>
+                <dd data-testid="dispute-resolved-by">{{ d.resolvedBy | tEnum: 'disputeParty' }}</dd>
+              }
+            </dl>
+
+            @switch (d.status) {
+              @case ('Open') {
+                <p class="max-w-prose text-sm" data-testid="dispute-explain">
+                  {{ (d.role === 'seller' ? 'disputes.explain.openSeller' : 'disputes.explain.openBuyer') | t }}
+                </p>
+              }
+              @case ('Escalated') {
+                <p class="max-w-prose rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" data-testid="dispute-explain">
+                  {{ 'disputes.explain.escalated' | t }}
+                </p>
+              }
+              @case ('Refunded') {
+                <div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900" data-testid="dispute-resolution">
+                  <p class="font-medium">{{ 'disputes.explain.refunded' | t: { by: (d.resolvedBy | tEnum: 'disputeParty') } }}</p>
+                  @if (d.resolution) {
+                    <p class="mt-1 whitespace-pre-line"><span class="font-medium">{{ 'disputes.resolution' | t }}:</span> {{ d.resolution }}</p>
+                  }
+                </div>
+              }
+              @case ('ClosedWithoutRefund') {
+                <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm" data-testid="dispute-resolution">
+                  <p class="font-medium">{{ 'disputes.explain.closedWithoutRefund' | t: { by: (d.resolvedBy | tEnum: 'disputeParty') } }}</p>
+                  @if (d.resolution) {
+                    <p class="mt-1 whitespace-pre-line"><span class="font-medium">{{ 'disputes.resolution' | t }}:</span> {{ d.resolution }}</p>
+                  }
+                </div>
+              }
+            }
+
+            <div>
+              <h4 class="mb-1 text-xs font-semibold tracking-wide text-slate-600 uppercase">{{ 'disputes.thread' | t }}</h4>
+              <hn-dispute-thread [messages]="d.messages" [own]="own(d)" />
+            </div>
+
+            @if (a.message) {
+              <form class="space-y-2" (ngSubmit)="sendMessage(d)" novalidate data-testid="dispute-message-form">
+                <hn-field [label]="'disputes.newMessage' | t" [for]="'dispute-msg-' + d.id" [errors]="messageError()">
+                  <textarea hnInput [id]="'dispute-msg-' + d.id" name="message" rows="2" [maxlength]="maxLength" [(ngModel)]="messageText"
+                    [attr.aria-invalid]="!!messageError()" [attr.aria-describedby]="messageError() ? 'dispute-msg-' + d.id + '-error' : null"
+                    data-testid="dispute-message-input"></textarea>
+                </hn-field>
+                <div class="flex justify-end">
+                  <button hnButton size="sm" variant="primary" type="submit" [loading]="busy() === 'message-' + d.id" [disabled]="!!busy()" data-testid="dispute-send">
+                    {{ 'disputes.send' | t }}
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+        </article>
+      } @empty {
+        @if (disputesLoading()) {
+          <p class="hn-muted text-sm">{{ 'common.loading' | t }}</p>
+        }
+      }
+    </div>
+  </section>
+}
+
+<hn-dialog [open]="!!dialog()" [title]="dialogTexts().title | t" (closed)="dialog.set(null)">
+  <form class="space-y-4" (ngSubmit)="confirmDialog()" novalidate>
+    <hn-banner [error]="dialog() ? error() : null" />
+    <p class="text-sm" data-testid="dispute-dialog-text">{{ dialogTexts().text | t }}</p>
+    <hn-field [label]="dialogTexts().label | t" for="dispute-dialog-text" [required]="dialogTexts().textRequired"
+      [hint]="(dialogTexts().textRequired ? 'disputes.textRequiredHint' : 'disputes.textOptionalHint') | t" [errors]="dialogTextError()">
+      <textarea hnInput id="dispute-dialog-text" name="dialogText" rows="3" [maxlength]="maxLength" [(ngModel)]="dialogText"
+        [required]="dialogTexts().textRequired" [attr.aria-invalid]="!!dialogTextError()"
+        [attr.aria-describedby]="dialogTextError() ? 'dispute-dialog-text-error' : 'dispute-dialog-text-hint'"></textarea>
+    </hn-field>
+    <div class="flex justify-end gap-2">
+      <button hnButton type="button" (click)="dialog.set(null)">{{ 'common.cancel' | t }}</button>
+      <button hnButton [variant]="dialog()?.action === 'escalate' ? 'primary' : 'danger'" type="submit" [loading]="!!busy()" [disabled]="!!busy()"
+        data-testid="dispute-confirm">
+        {{ dialogTexts().title | t }}
+      </button>
+    </div>
+  </form>
+</hn-dialog>
