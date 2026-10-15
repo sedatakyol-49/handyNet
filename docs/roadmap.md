@@ -40,10 +40,17 @@ Dependencies: Phase 1.
 
 ## Phase 3 — Store operations
 Dependencies: Phase 2 payments + invoicing.
-- ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Open: selling serialized units, blacklist check, seller-data retention.
+- ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Selling serialized units over the counter (POS, §25a margin VAT) ✅. Open: selling serialized units via B2B offers, blacklist check, seller-data retention.
 - ✅ Ankaufbeleg: PDF purchase receipt for a completed intake (`GET /api/ankauf/intakes/{id}/beleg`) with dealer and seller data, masked ID number, device/IMEI/condition, amount and payment method, Eigentumserklärung with signature lines, §25a note; rendered by the shared `SimplePdf` writer (WinAnsiEncoding, multi-page; also used for simulated shipping labels). Open: UI button, legal review of the wording, archiving of issued receipts, signed/countersigned copy upload.
-- POS / Kassensystem (touch UI, barcode, cash/card, returns, daily closing) on the same reservation path;
-  fiskaly TSE integration in sandbox first; DSFinV-K export. No fake signatures.
+- 🟡 POS / Kassensystem backend (ADR-0008): ✅ registers with gapless per-register receipt numbers (DB-enforced),
+  cash sessions with deposits/withdrawals and daily closing (expected vs. counted cash, Z-report totals per payment
+  method and VAT treatment), sales of products (EAN) and IMEI units, cash/card with change, line discounts, 19 % VAT and
+  §25a margin VAT, Storno and partial returns as new negative receipts, stock back incl. IMEI units, immutable receipts
+  (GoBD), idempotent sales/returns, EAN/IMEI lookup, fiscal signer abstraction with a test signer that is refused in
+  Production. Open: ⬜ POS touch UI (frontend), ⬜ real fiskaly TSE adapter (sandbox first) incl. TSE outage handling,
+  ⬜ DSFinV-K export, ⬜ receipt printing (ESC/POS/PDF) and e-receipts, ⬜ card terminal integration (ZVT/OPI),
+  ⬜ till registration with the tax office, ⬜ reduced VAT rate/vouchers, ⬜ external compliance review. No fake
+  signatures, no compliance claimed.
 - ✅ Pricing & Ankauf (ADR-0007): monthly XLSX list, approval rules, immutable price versions (current list only), versioned condition policy with overrides and deductions, dealer quotes with preserved versions. Open: device intake + inspection to final price, §25a documentation, stock entry with IMEI, individual offers, frontend.
 - Repair management and the B2B repair network.
 

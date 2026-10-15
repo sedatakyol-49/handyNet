@@ -4,8 +4,8 @@ namespace HandyNet.Modules.Tenancy.Contracts;
 
 public sealed record OrganizationSummary(Guid Id, string Name, string City, bool IsVerified);
 
-/// <summary>Name and postal address of an organization, e.g. for documents it issues.</summary>
-public sealed record OrganizationAddress(
+/// <summary>Name, legal name, postal address and VAT id of an organization, as printed on documents it issues (till receipts, Ankaufbeleg).</summary>
+public sealed record OrganizationLegalDetails(
     Guid Id,
     string Name,
     string LegalName,
@@ -18,10 +18,10 @@ public sealed record OrganizationAddress(
 /// <summary>Public read API of the Tenancy module for other modules.</summary>
 public interface IOrganizationDirectory
 {
-    Task<IReadOnlyDictionary<Guid, OrganizationSummary>> GetAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken ct);
+    /// <summary>Document details of one organization; null if it does not exist.</summary>
+    Task<OrganizationLegalDetails?> GetLegalDetailsAsync(Guid organizationId, CancellationToken ct);
 
-    /// <summary>Name and address of one organization; null if it does not exist.</summary>
-    Task<OrganizationAddress?> GetAddressAsync(Guid organizationId, CancellationToken ct);
+    Task<IReadOnlyDictionary<Guid, OrganizationSummary>> GetAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken ct);
 
     /// <summary>Users of an organization holding one of the given roles (e.g. who receives order notifications).</summary>
     Task<IReadOnlyList<Guid>> GetMemberUserIdsAsync(Guid organizationId, IReadOnlyCollection<MembershipRole> roles, CancellationToken ct);

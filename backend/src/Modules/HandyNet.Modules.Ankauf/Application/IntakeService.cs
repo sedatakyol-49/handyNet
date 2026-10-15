@@ -205,7 +205,7 @@ internal sealed class IntakeService(
         if (intake.Status != IntakeStatus.Completed)
             return Error.Conflict("ankauf.not_completed", "A purchase receipt is only available for a completed intake.");
 
-        var dealer = await organizations.GetAddressAsync(OrganizationId, ct);
+        var dealer = await organizations.GetLegalDetailsAsync(OrganizationId, ct);
         if (dealer is null)
             return Error.NotFound("organization.not_found", "Organization not found.");
 

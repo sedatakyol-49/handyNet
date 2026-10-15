@@ -17,6 +17,7 @@
     <Project Path="src/Modules/HandyNet.Modules.Notifications/HandyNet.Modules.Notifications.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Ordering/HandyNet.Modules.Ordering.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Payments/HandyNet.Modules.Payments.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Pos/HandyNet.Modules.Pos.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Shipping/HandyNet.Modules.Shipping.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Tenancy/HandyNet.Modules.Tenancy.csproj" />
   </Folder>

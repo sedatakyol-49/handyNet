@@ -63,6 +63,6 @@ file. The wording is a template and has not been legally reviewed; no compliance
 
 ## Open
 
-Legal review of the Ankaufbeleg wording and archiving of issued/signed receipts, stolen-device/blacklist check, retention and deletion of seller
-personal data after the legal period, selling serialized units (POS/B2B) with §25a margin VAT, individual offers for
-unpriced models, and confirmation of all percentages by the business.
+Legal review of the Ankaufbeleg wording and archiving of issued/signed receipts, stolen-device/blacklist check, retention and
+deletion of seller personal data after the legal period, selling serialized units via B2B offers (POS sales with §25a
+margin VAT: see ADR-0008), individual offers for unpriced models, and confirmation of all percentages by the business.

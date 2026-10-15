@@ -81,6 +81,14 @@ internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenant
         return new ProductRef(p.Id, p.Brand, p.Name, p.BrandKey, p.MpnKey, p.Ean, p.Quality);
     }
 
+    public async Task<ProductSummary?> FindByEanAsync(string code, CancellationToken ct)
+    {
+        if (!Gtin.TryNormalize(code, out var ean))
+            return null;
+        var product = await db.Set<Product>().AsNoTracking().FirstOrDefaultAsync(p => p.Ean == ean, ct);
+        return product is null ? null : ToSummary(product);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, ProductSummary>> GetAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct) =>
         (await db.Set<Product>().AsNoTracking().Where(p => productIds.Contains(p.Id)).ToListAsync(ct))
         .ToDictionary(p => p.Id, ToSummary);

@@ -34,6 +34,12 @@ public enum MovementType
 
     /// <summary>A serialized unit (IMEI) entered stock, e.g. bought from a private seller (Ankauf).</summary>
     UnitReceipt,
+
+    /// <summary>Sold over the counter (POS). Never consumes reserved stock.</summary>
+    Sale,
+
+    /// <summary>Came back from a customer (POS return or cancelled receipt).</summary>
+    Return,
 }
 
 /// <summary>

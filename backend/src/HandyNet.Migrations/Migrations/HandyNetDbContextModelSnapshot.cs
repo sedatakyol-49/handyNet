@@ -2195,6 +2195,509 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cash_movements");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_cash_movements_organization_id_session_id");
+
+                    b.ToTable("cash_movements", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cash_movements_amount", "amount_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at");
+
+                    b.Property<Guid?>("ClosedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("closed_by");
+
+                    b.Property<string>("ClosingNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("closing_note");
+
+                    b.Property<long?>("CountedCashMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("counted_cash_minor");
+
+                    b.Property<long?>("DifferenceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("difference_minor");
+
+                    b.Property<long?>("ExpectedCashMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("expected_cash_minor");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opened_at");
+
+                    b.Property<Guid>("OpenedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opened_by");
+
+                    b.Property<long>("OpeningCashMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("opening_cash_minor");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("summary");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cash_sessions");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_cash_sessions_organization_id_id");
+
+                    b.HasIndex("RegisterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cash_sessions_one_open_per_register")
+                        .HasFilter("status = 'Open'");
+
+                    b.HasIndex("OrganizationId", "RegisterId", "OpenedAt")
+                        .HasDatabaseName("ix_cash_sessions_organization_id_register_id_opened_at");
+
+                    b.ToTable("cash_sessions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cash_sessions_closed", "status = 'Open' OR (closed_at IS NOT NULL AND closed_by IS NOT NULL AND summary IS NOT NULL AND counted_cash_minor >= 0 AND expected_cash_minor IS NOT NULL AND difference_minor = counted_cash_minor - expected_cash_minor)");
+
+                            t.HasCheckConstraint("ck_cash_sessions_opening", "opening_cash_minor >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("ChangeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("change_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document");
+
+                    b.Property<DateTimeOffset?>("FiscalFinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fiscal_finished_at");
+
+                    b.Property<string>("FiscalNotice")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("fiscal_notice");
+
+                    b.Property<string>("FiscalSignature")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("fiscal_signature");
+
+                    b.Property<long?>("FiscalSignatureCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("fiscal_signature_counter");
+
+                    b.Property<DateTimeOffset?>("FiscalStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fiscal_started_at");
+
+                    b.Property<string>("FiscalStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fiscal_status");
+
+                    b.Property<long?>("FiscalTransactionNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("fiscal_transaction_number");
+
+                    b.Property<string>("FiscalTseSerialNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("fiscal_tse_serial_number");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("ReferencedReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referenced_receipt_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<string>("RequestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipts");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_receipts_organization_id_id");
+
+                    b.HasIndex("ReferencedReceiptId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_receipts_one_storno")
+                        .HasFilter("kind = 'Storno'");
+
+                    b.HasIndex("OrganizationId", "CreatedAt")
+                        .HasDatabaseName("ix_receipts_organization_id_created_at");
+
+                    b.HasIndex("OrganizationId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipts_organization_id_idempotency_key")
+                        .HasFilter("idempotency_key IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "ReferencedReceiptId")
+                        .HasDatabaseName("ix_receipts_organization_id_referenced_receipt_id");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_receipts_organization_id_register_id");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_receipts_organization_id_session_id");
+
+                    b.HasIndex("OrganizationId", "WarehouseId")
+                        .HasDatabaseName("ix_receipts_organization_id_warehouse_id");
+
+                    b.HasIndex("RegisterId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipts_register_id_number");
+
+                    b.ToTable("receipts", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipts_kind", "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_receipts_number", "number >= 1");
+
+                            t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
+                {
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("description");
+
+                    b.Property<long>("DiscountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("discount_minor");
+
+                    b.Property<string>("Imei")
+                        .HasMaxLength(15)
+                        .HasColumnType("character(15)")
+                        .HasColumnName("imei")
+                        .IsFixedLength();
+
+                    b.Property<long>("LineGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("line_gross_minor");
+
+                    b.Property<long>("NetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_minor");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int?>("OriginalLineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_line_number");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<long?>("PurchasePriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("purchase_price_minor");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid?>("StockUnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("stock_unit_id");
+
+                    b.Property<string>("TaxTreatment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tax_treatment");
+
+                    b.Property<long>("UnitPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_price_minor");
+
+                    b.Property<long>("VatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("vat_minor");
+
+                    b.Property<int>("VatRateBasisPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("vat_rate_basis_points");
+
+                    b.HasKey("ReceiptId", "LineNumber")
+                        .HasName("pk_receipt_lines");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_receipt_lines_product_id");
+
+                    b.HasIndex("StockUnitId")
+                        .HasDatabaseName("ix_receipt_lines_stock_unit_id");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_lines_organization_id_receipt_id");
+
+                    b.ToTable("receipt_lines", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_lines_amounts", "line_gross_minor = unit_price_minor * quantity - discount_minor AND net_minor + vat_minor = line_gross_minor");
+
+                            t.HasCheckConstraint("ck_receipt_lines_margin", "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_receipt_lines_quantity", "quantity <> 0 AND unit_price_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptPayment", b =>
+                {
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Method")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("method");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<long?>("TenderedMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tendered_minor");
+
+                    b.HasKey("ReceiptId", "Method")
+                        .HasName("pk_receipt_payments");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_payments_organization_id_receipt_id");
+
+                    b.ToTable("receipt_payments", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_payments_amount", "amount_minor <> 0 AND (tendered_minor IS NULL OR tendered_minor >= amount_minor)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Register", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<long>("NextReceiptNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_receipt_number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_registers");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_registers_organization_id_id");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_registers_organization_id_name");
+
+                    b.HasIndex("OrganizationId", "WarehouseId")
+                        .HasDatabaseName("ix_registers_organization_id_warehouse_id");
+
+                    b.ToTable("registers", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Shipping.Domain.Shipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2903,6 +3406,108 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_payouts_payments_payment_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashMovement", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cash_movements_cash_sessions_organization_id_session_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashSession", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cash_sessions_registers_organization_id_register_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReferencedReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipts_receipts_organization_id_referenced_receipt_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipts_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipts_cash_sessions_organization_id_session_id");
+
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "WarehouseId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipts_warehouses_organization_id_warehouse_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_lines_products_product_id");
+
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.StockUnit", null)
+                        .WithMany()
+                        .HasForeignKey("StockUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipt_lines_stock_units_stock_unit_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_lines_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptPayment", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany("Payments")
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_payments_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Register", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "WarehouseId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_registers_warehouses_organization_id_warehouse_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Shipping.Domain.Shipment", b =>
                 {
                     b.HasOne("HandyNet.Modules.Ordering.Domain.Order", null)
@@ -2968,6 +3573,13 @@ namespace HandyNet.Migrations.Migrations
             modelBuilder.Entity("HandyNet.Modules.Ordering.Domain.Order", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Shipping.Domain.Shipment", b =>

@@ -152,6 +152,103 @@ internal sealed class InventoryService(
     public async Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct) =>
         await db.Database.SqlQuery<bool>($"SELECT inventory.imei_in_stock({imei}) AS \"Value\"").SingleAsync(ct);
 
+    public async Task<Result> StageSellAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct)
+    {
+        if (quantity <= 0)
+            return Error.Validation("stock.quantity", "Quantity must be positive.");
+        if (await db.Set<StockUnit>().AnyAsync(u => u.OrganizationId == OrganizationId && u.WarehouseId == warehouseId && u.ProductId == productId
+                                                    && (u.Status == UnitStatus.InStock || u.Status == UnitStatus.Reserved), ct))
+            return Error.Validation("stock.serialized_requires_imei", "This product is stocked as serialized devices. Scan the IMEI of the device sold.")
+                .WithDetails(new Dictionary<string, object?> { ["productId"] = productId });
+
+        var level = await FindLevelAsync(warehouseId, productId, ct);
+        var available = level?.Available ?? 0;
+        if (level is null || available < quantity)
+            return Insufficient(productId, quantity, available);
+
+        var result = level.Adjust(-quantity, MovementType.Sale, reference, UserId, clock.UtcNow);
+        if (!result.IsSuccess)
+            return Insufficient(productId, quantity, available);
+        db.Add(result.Value!);
+        return Result.Success();
+    }
+
+    public async Task<Result<UnitSnapshot>> StageSellUnitAsync(Guid warehouseId, string imei, string reference, CancellationToken ct)
+    {
+        var unit = await db.Set<StockUnit>()
+            .FirstOrDefaultAsync(u => u.OrganizationId == OrganizationId && u.Imei == imei && u.Status == UnitStatus.InStock, ct);
+        if (unit is null)
+            return Error.Conflict("unit.not_available", $"No device with IMEI {imei} is in stock.");
+        if (unit.WarehouseId != warehouseId)
+            return Error.Conflict("unit.other_warehouse", $"The device with IMEI {imei} is stocked in another warehouse.");
+
+        var sold = unit.MarkSold(clock.UtcNow);
+        if (!sold.IsSuccess)
+            return sold.Error!;
+        var level = await FindLevelAsync(unit.WarehouseId, unit.ProductId, ct);
+        if (level is null)
+            return Error.Conflict("stock.inconsistent", "The device has no stock level. Correct the stock first.");
+        var movement = level.Adjust(-1, MovementType.Sale, reference, UserId, clock.UtcNow);
+        if (!movement.IsSuccess)
+            return movement.Error!; // e.g. the last unit's quantity is reserved by an order
+        db.Add(movement.Value!);
+        return ToSnapshot(unit);
+    }
+
+    public async Task<Result> StageReturnAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct)
+    {
+        if (quantity <= 0)
+            return Error.Validation("stock.quantity", "Quantity must be positive.");
+        if (!await IsOwnWarehouseAsync(warehouseId, ct))
+            return Error.NotFound("warehouse.not_found", "Warehouse not found.");
+        var level = await GetOrStageLevelAsync(warehouseId, productId, ct);
+        var movement = level.Adjust(quantity, MovementType.Return, reference, UserId, clock.UtcNow);
+        if (!movement.IsSuccess)
+            return movement.Error!;
+        db.Add(movement.Value!);
+        return Result.Success();
+    }
+
+    public async Task<Result> StageReturnUnitAsync(Guid unitId, string reference, CancellationToken ct)
+    {
+        var unit = await db.Set<StockUnit>().FirstOrDefaultAsync(u => u.Id == unitId && u.OrganizationId == OrganizationId, ct);
+        if (unit is null)
+            return Error.NotFound("unit.not_found", "Device not found.");
+        var returned = unit.ReturnToStock(clock.UtcNow);
+        if (!returned.IsSuccess)
+            return returned;
+        var level = await GetOrStageLevelAsync(unit.WarehouseId, unit.ProductId, ct);
+        var movement = level.Adjust(1, MovementType.Return, reference, UserId, clock.UtcNow);
+        if (!movement.IsSuccess)
+            return movement.Error!;
+        db.Add(movement.Value!);
+        return Result.Success();
+    }
+
+    public async Task<UnitSnapshot?> FindOwnUnitByImeiAsync(string imei, CancellationToken ct)
+    {
+        var unit = await db.Set<StockUnit>().AsNoTracking()
+            .FirstOrDefaultAsync(u => u.OrganizationId == OrganizationId && u.Imei == imei && u.Status == UnitStatus.InStock, ct);
+        return unit is null ? null : ToSnapshot(unit);
+    }
+
+    private static UnitSnapshot ToSnapshot(StockUnit u) =>
+        new(u.Id, u.WarehouseId, u.ProductId, u.Imei, u.Status, u.TaxScheme, u.PurchasePriceMinor);
+
+    private static Error Insufficient(Guid productId, int requested, int available) =>
+        Error.Conflict("stock.insufficient", $"Not enough stock available (requested {requested}, available {available}). Reserved stock cannot be sold.")
+            .WithDetails(new Dictionary<string, object?>
+            {
+                ["productId"] = productId,
+                ["requestedQuantity"] = requested,
+                ["availableQuantity"] = available,
+            });
+
+    private async Task<StockLevel?> FindLevelAsync(Guid warehouseId, Guid productId, CancellationToken ct) =>
+        db.ChangeTracker.Entries<StockLevel>().FirstOrDefault(e => e.Entity.WarehouseId == warehouseId && e.Entity.ProductId == productId)?.Entity
+        ?? await db.Set<StockLevel>()
+            .FirstOrDefaultAsync(s => s.OrganizationId == OrganizationId && s.WarehouseId == warehouseId && s.ProductId == productId, ct);
+
     // ---- endpoint operations -------------------------------------------------------------------
 
     public async Task<IReadOnlyList<WarehouseDto>> ListWarehousesAsync(CancellationToken ct) =>

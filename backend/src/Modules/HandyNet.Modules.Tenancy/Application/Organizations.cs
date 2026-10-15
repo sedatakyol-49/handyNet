@@ -207,17 +207,17 @@ internal sealed class OrganizationService(
 
 internal sealed class OrganizationDirectory(HandyNetDbContext db) : IOrganizationDirectory
 {
+    public async Task<OrganizationLegalDetails?> GetLegalDetailsAsync(Guid organizationId, CancellationToken ct) =>
+        await db.Set<Organization>().AsNoTracking()
+            .Where(o => o.Id == organizationId)
+            .Select(o => new OrganizationLegalDetails(o.Id, o.Name, o.LegalName, o.Street, o.PostalCode, o.City, o.CountryCode, o.VatId))
+            .FirstOrDefaultAsync(ct);
+
     public async Task<IReadOnlyDictionary<Guid, OrganizationSummary>> GetAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken ct) =>
         await db.Set<Organization>().AsNoTracking()
             .Where(o => organizationIds.Contains(o.Id))
             .Select(o => new OrganizationSummary(o.Id, o.Name, o.City, o.Status == OrganizationStatus.Verified))
             .ToDictionaryAsync(o => o.Id, ct);
-
-    public async Task<OrganizationAddress?> GetAddressAsync(Guid organizationId, CancellationToken ct) =>
-        await db.Set<Organization>().AsNoTracking()
-            .Where(o => o.Id == organizationId)
-            .Select(o => new OrganizationAddress(o.Id, o.Name, o.LegalName, o.Street, o.PostalCode, o.City, o.CountryCode, o.VatId))
-            .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<Guid>> GetMemberUserIdsAsync(Guid organizationId, IReadOnlyCollection<MembershipRole> roles, CancellationToken ct) =>
         await db.Set<Membership>().AsNoTracking()

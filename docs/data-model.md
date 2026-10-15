@@ -56,3 +56,12 @@ erDiagram
 | `notifications.email_messages` | id, source_id (outbox message), template, recipient, subject, body, status, attempts, next_attempt_at | unique (source_id, recipient) → at-least-once events never send twice; no DELETE grant |
 | `infra.audit_log` | occurred_at, user_id, organization_id, entity_type, entity_id, action, changes jsonb | append-only |
 | `infra.outbox_messages` | id, type, payload jsonb, occurred_at, processed_at, attempts | partial index on unprocessed |
+| `pos.registers` | id, **organization_id**, name, warehouse_id, next_receipt_number, is_active | unique (org, name); FK (org, warehouse); counter only moves by +1 (trigger); deferred trigger: every allocated number has its receipt at commit; no DELETE |
+| `pos.cash_sessions` | id, **organization_id**, register_id, status, opening/expected/counted cash, difference, summary jsonb (Z-report), opened/closed at/by | one open session per register (partial unique index); closed ⇒ figures present and difference = counted − expected; closed rows immutable (trigger) |
+| `pos.cash_movements` | id, **organization_id**, session_id, kind (Deposit/Withdrawal), amount_minor > 0, reason | insert-only; needs an open session (trigger); immutable |
+| `pos.receipts` | id, **organization_id**, register_id, session_id, warehouse_id, number, kind (Sale/Storno/Return), referenced_receipt_id, idempotency_key, request_hash, total gross/net/vat, change, reason, fiscal_* (nullable), document jsonb | unique (register, number); unique (org, idempotency_key); one Storno per sale; Sale > 0, Storno/Return ≤ 0 with reference; number must be the one just allocated and the session open (insert trigger); immutable (no UPDATE/DELETE grant + trigger) |
+| `pos.receipt_lines` | (receipt_id, line_number), **organization_id**, product_id, stock_unit_id, imei, description, quantity (signed), unit_price, discount, line_gross, tax_treatment, vat_rate, vat, net, purchase_price (§25a), original_line_number | line_gross = unit × qty − discount; net + vat = line_gross; §25a needs unit + purchase price; immutable |
+| `pos.receipt_payments` | (receipt_id, method), **organization_id**, amount_minor (signed), tendered_minor | amount ≠ 0; tendered ≥ amount; immutable |
+
+Inventory movement types now include `Sale` and `Return`; `stock_units` go `InStock → Sold` (POS sale) and back to
+`InStock` on Storno/return.
