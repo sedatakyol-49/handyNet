@@ -98,6 +98,7 @@
             <a
               [routerLink]="item.path"
               routerLinkActive="bg-slate-100 text-slate-900 font-semibold"
+              [routerLinkActiveOptions]="{ exact: !!item.exact }"
               #rla="routerLinkActive"
               [attr.aria-current]="rla.isActive ? 'page' : null"
               class="flex items-center justify-between rounded px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"

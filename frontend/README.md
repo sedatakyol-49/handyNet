@@ -72,7 +72,8 @@ src/app
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
    ├─ team/                  staff list + add staff
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
-   │                         (IMEI Luhn check, quote form validation, error text)
+   │                         (IMEI Luhn check, quote form validation, error text); device intake (Ankäufe list +
+   │                         intake page) with intake.logic.ts (age, seller/inspect/amount checks, steps per status)
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
       │                      "Reklamationen" (escalated disputes queue, detail + decision) and "Ankaufspreise"
       └─ ankauf/             price lists (upload, review, publish/discard) and pricing policy versions;
@@ -193,6 +194,20 @@ Module `Ankauf` (enabled per organization in Administration → Unternehmen → 
   condition adjustment, deductions, reference purchase price, platform offer to the dealer, max. consumer price,
   dealer margin with negative margins highlighted), validity, policy number and the API's notice ("Vorläufiges
   Angebot …"); quote history below. No price calculation happens in the browser.
+- **Ankäufe** (device intake; module Ankauf + `inventory.manage`, stock views need the module Inventory as well):
+  "Ankauf starten" on an unexpired quote (result card or history row; quotes with a running/finished intake link to it)
+  opens `/app/ankauf/ankaeufe/neu/:quoteId`. Steps Annahme → Prüfung → Bezahlung & Einlagerung, derived from the status:
+  - Annahme: seller name, address, birth date (age ≥ 18 checked client-side), ID type + number, IMEI (read-only from
+    the quote if it had one, otherwise Luhn-checked), privacy note. `409 unit.imei_in_stock` shows "Gerät nicht
+    ankaufen, Herkunft prüfen". Afterwards the intake lives at `/app/ankauf/ankaeufe/:id`.
+  - Prüfung (repeatable until completed, prefilled from the last inspection or the quote): quoted vs inspected offer
+    side by side with the difference, max. consumer price, and the note that the API recalculates with the quote's
+    price version and policy, not today's prices.
+  - Bezahlung: amount prefilled with the inspected max. consumer price, must be > 0 and ≤ inspected offer (client check
+    in cents), Bar / Überweisung, optional warehouse (default warehouse otherwise), confirmation dialog with IMEI,
+    amount and the §25a margin-scheme stock note. Completed intakes link to Lager. "Ankauf ablehnen" (reason required)
+    while not completed.
+  - `/app/ankauf/ankaeufe` (nav "Ankäufe"): latest 100 intakes with status filter and badges.
 - `ankauf.*` error codes are translated; for codes whose API message names sheets/rows/ranges (`sheet_missing`,
   `duplicate_models`, `unreadable`, `pending_decisions`, `policy_range`) the API text is appended.
 
@@ -258,6 +273,13 @@ Without these variables the tests are skipped. Specs:
   300,00 € → +20 % → −10 % → 324,00 €, max. consumer price 275,40 €, margin −6,00 €. It assumes the default pricing
   policy is active (it only reads it). Price lists are global: each run replaces the current list of the target
   environment.
+
+- `e2e/ankauf-intake.spec.ts` – admin publishes a list via the API (unique brand, right before use) and enables Ankauf +
+  Inventory in the UI; the shop quotes (Gut, generated Luhn-valid IMEI), starts the intake with an adult seller,
+  inspects worse (Akzeptabel + display damage + battery 70 % → 300,00 € becomes 144,00 €), is refused paying above the
+  offer, pays 120,50 € and completes; Lager shows the device with on-hand 1. A second shop: a 16-year-old seller is
+  refused client-side, the stocked IMEI shows the in-stock warning, another intake is rejected with a reason. Same
+  default-policy assumption as ankauf-flow.
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.

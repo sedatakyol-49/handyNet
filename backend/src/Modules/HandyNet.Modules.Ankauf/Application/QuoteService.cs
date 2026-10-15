@@ -1,5 +1,6 @@
 using FluentValidation;
 using HandyNet.Modules.Ankauf.Domain;
+using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
 using HandyNet.SharedKernel.Tenancy;
@@ -54,7 +55,7 @@ internal sealed class CreateQuoteValidator : AbstractValidator<CreateQuoteReques
 }
 
 /// <summary>Dealer-facing buyback quotes. Quotes are preliminary; the final payout follows a physical inspection.</summary>
-internal sealed class QuoteService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IClock clock)
+internal sealed class QuoteService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IInventory inventory, IClock clock)
 {
     public const string Notice =
         "Vorläufiges Angebot. Die endgültige Auszahlung wird erst nach physischer Prüfung des Geräts bestätigt.";
@@ -117,7 +118,11 @@ internal sealed class QuoteService(HandyNetDbContext db, ITenantContext tenant, 
 
         string? imei = null;
         if (request.Imei is { } raw && Imei.TryNormalize(raw, out var normalized))
+        {
+            if (await inventory.IsImeiInStockAnywhereAsync(normalized, ct))
+                return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. Do not buy the device; check its origin.");
             imei = normalized;
+        }
 
         var input = new QuoteInput(request.Condition, request.Defects ?? [], request.BatteryHealthPercent, consumerMinor);
         var brandKey = price.ModelKey.Split('|')[0];

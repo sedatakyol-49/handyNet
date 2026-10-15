@@ -24,8 +24,23 @@
   (max. 7 days) and always states that the final payout is confirmed after physical inspection. Nothing is
   guaranteed for models without a current price.
 
+## Device intake (implemented)
+
+`Quote → Received → Inspected → Completed | Rejected`
+
+- **Received**: the quote must be the dealer's own and unexpired, used at most once; IMEI with valid Luhn digit
+  (must equal the quote's IMEI if one was given); seller name, address, date of birth and ID document are recorded;
+  sellers must be 18 or older. An IMEI that is already in stock anywhere on the platform is refused *before* any money
+  changes hands (yes/no check via `inventory.imei_in_stock`, no other tenant data exposed).
+- **Inspected**: the final offer is recalculated with the **quote's** price version and policy and the inspection
+  findings — never with today's prices.
+- **Completed** (one transaction): the amount paid (≤ inspected offer) and payment method are recorded, the catalog
+  device product is found or created (brand + model + storage as part number), and an **IMEI stock unit** is created
+  with its purchase price and tax scheme **§25a margin scheme** (bought from a private person), +1 stock and a movement.
+  A partial unique index guarantees that an IMEI is in stock (InStock/Reserved) only once platform-wide.
+
 ## Open
 
-Device intake (Ankauf transaction with seller identity/ID check, §25a margin-scheme documentation), inspection
-workflow that turns a quote into a final price, stock entry of bought devices with IMEI, individual offers for
+Ankaufbeleg (purchase receipt document for the seller), stolen-device/blacklist check, retention and deletion of seller
+personal data after the legal period, selling serialized units (POS/B2B) with §25a margin VAT, individual offers for
 unpriced models, and confirmation of all percentages by the business.

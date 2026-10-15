@@ -68,7 +68,16 @@ const DISPUTE_TONES: Record<string, Tone> = {
   ClosedWithoutRefund: 'neutral',
 };
 
+/** Ankauf device intake (Completed/Rejected share names with order statuses). */
+const INTAKE_TONES: Record<string, Tone> = {
+  Received: 'info',
+  Inspected: 'warning',
+  Completed: 'success',
+  Rejected: 'neutral',
+};
+
 const KIND_TONES: Record<string, Record<string, Tone>> = {
+  intakeStatus: INTAKE_TONES,
   shipmentStatus: SHIPMENT_TONES,
   paymentStatus: PAYMENT_TONES,
   disputeStatus: DISPUTE_TONES,

@@ -7,6 +7,10 @@ import {
   AdminOrganization,
   AnkaufModel,
   CreateQuoteRequest,
+  CompleteIntakeRequest,
+  InspectIntakeRequest,
+  Intake,
+  ReceiveIntakeRequest,
   EntryDecision,
   Policy,
   PolicySettings,
@@ -494,5 +498,35 @@ export class AnkaufApi {
 
   quotes(): Observable<Quote[]> {
     return this.http.get<Quote[]>(`${this.url}/quotes`);
+  }
+
+  // ---- device intake (module Ankauf + permission inventory.manage)
+
+  /** Latest 100 intakes of the organization, newest first. */
+  intakes(): Observable<Intake[]> {
+    return this.http.get<Intake[]>(`${this.url}/intakes`);
+  }
+
+  intake(id: string): Observable<Intake> {
+    return this.http.get<Intake>(`${this.url}/intakes/${id}`);
+  }
+
+  /** Records device + seller for a quote (status Received). */
+  receiveIntake(body: ReceiveIntakeRequest): Observable<Intake> {
+    return this.http.post<Intake>(`${this.url}/intakes`, body);
+  }
+
+  /** Recalculates the offer with the quote's price version and policy; repeatable until completed. */
+  inspectIntake(id: string, body: InspectIntakeRequest): Observable<Intake> {
+    return this.http.post<Intake>(`${this.url}/intakes/${id}/inspect`, body);
+  }
+
+  /** Pays the seller and stocks the device (§25a margin scheme). */
+  completeIntake(id: string, body: CompleteIntakeRequest): Observable<Intake> {
+    return this.http.post<Intake>(`${this.url}/intakes/${id}/complete`, body);
+  }
+
+  rejectIntake(id: string, reason: string): Observable<Intake> {
+    return this.http.post<Intake>(`${this.url}/intakes/${id}/reject`, { reason });
   }
 }

@@ -83,6 +83,8 @@ public class ModuleBoundaryTests
     [InlineData("Ledger", "Payments")]
     [InlineData("Ordering", "Payments")]
     [InlineData("Ordering", "Disputes")]
+    [InlineData("Inventory", "Ankauf")]
+    [InlineData("Catalog", "Ankauf")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)
     {
         var result = Types.InAssembly(Module(consumer))

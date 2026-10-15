@@ -642,3 +642,69 @@ export interface Quote {
   validUntil: string;
   notice: string;
 }
+
+// ---------------------------------------------------------------- Ankauf device intake
+
+export type IntakeStatus = 'Received' | 'Inspected' | 'Completed' | 'Rejected';
+export type IdDocumentType = 'IdCard' | 'Passport' | 'ResidencePermit';
+export type IntakePaymentMethod = 'Cash' | 'BankTransfer';
+
+export const ID_DOCUMENT_TYPES: IdDocumentType[] = ['IdCard', 'Passport', 'ResidencePermit'];
+export const INTAKE_PAYMENT_METHODS: IntakePaymentMethod[] = ['Cash', 'BankTransfer'];
+
+export interface SellerDetails {
+  firstName: string;
+  lastName: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  /** yyyy-MM-dd */
+  birthDate: string;
+  idDocumentType: IdDocumentType;
+  idDocumentNumber: string;
+}
+
+export interface ReceiveIntakeRequest {
+  quoteId: string;
+  imei: string;
+  seller: SellerDetails;
+}
+
+export interface InspectIntakeRequest {
+  condition: DeviceCondition;
+  defects: DeviceDefect[];
+  batteryHealthPercent: number | null;
+  notes: string | null;
+}
+
+export interface CompleteIntakeRequest {
+  /** Decimal euros (the API converts to cents). */
+  paidAmount: number;
+  paymentMethod: IntakePaymentMethod;
+  /** Null = the organization's default warehouse. */
+  warehouseId: string | null;
+}
+
+export interface Intake {
+  id: string;
+  quoteId: string;
+  brand: string;
+  model: string;
+  storage: string | null;
+  imei: string;
+  status: IntakeStatus;
+  sellerName: string;
+  receivedAt: string;
+  quotedOfferMinor: number;
+  inspectedCondition: DeviceCondition | null;
+  inspectedDefects: DeviceDefect[];
+  inspectedBatteryHealthPercent: number | null;
+  inspectionNotes: string | null;
+  inspectedOfferMinor: number | null;
+  inspectedMaxConsumerPriceMinor: number | null;
+  paidMinor: number | null;
+  paymentMethod: IntakePaymentMethod | null;
+  stockUnitId: string | null;
+  completedAt: string | null;
+  rejectionReason: string | null;
+}

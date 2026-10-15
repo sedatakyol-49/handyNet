@@ -25,4 +25,14 @@ public interface IInventory
     /// stock owner and for the organization that reserved it.
     /// </summary>
     Task<bool> ReleaseReservationAsync(Guid reservationId, CancellationToken ct);
+
+    /// <summary>
+    /// Stages receipt of one serialized device: a stock unit with its IMEI and purchase price, +1 on the product's
+    /// stock level and a movement. Fails (on save) if the IMEI is already in stock anywhere on the platform.
+    /// </summary>
+    Task<Result<Guid>> StageReceiveUnitAsync(Guid warehouseId, Guid productId, string imei, long purchasePriceMinor,
+        Domain.TaxScheme scheme, string source, CancellationToken ct);
+
+    /// <summary>True if the IMEI is currently in stock (InStock or Reserved) at any organization.</summary>
+    Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct);
 }

@@ -86,6 +86,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/ankauf/ankauf.page').then((m) => m.AnkaufPage),
       },
       {
+        path: 'ankauf/ankaeufe',
+        canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+        loadComponent: () => import('./features/ankauf/intakes.page').then((m) => m.IntakesPage),
+      },
+      {
+        path: 'ankauf/ankaeufe/neu/:quoteId',
+        canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+        loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
+      },
+      {
+        path: 'ankauf/ankaeufe/:id',
+        canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+        loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
+      },
+      {
         path: 'team',
         canActivate: [accessGuard(undefined, 'organization.manage')],
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

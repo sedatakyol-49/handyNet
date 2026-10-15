@@ -128,6 +128,30 @@ internal sealed class InventoryService(
         return released;
     }
 
+    public async Task<Result<Guid>> StageReceiveUnitAsync(Guid warehouseId, Guid productId, string imei, long purchasePriceMinor,
+        TaxScheme scheme, string source, CancellationToken ct)
+    {
+        if (!await IsOwnWarehouseAsync(warehouseId, ct) && !db.ChangeTracker.Entries<Warehouse>().Any(e => e.Entity.Id == warehouseId))
+            return Error.NotFound("warehouse.not_found", "Warehouse not found.");
+        if (await IsImeiInStockAnywhereAsync(imei, ct))
+            return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. The same device cannot be stocked twice.");
+
+        var unit = StockUnit.Receive(OrganizationId, warehouseId, productId, imei, purchasePriceMinor, scheme, source, clock.UtcNow);
+        if (!unit.IsSuccess)
+            return unit.Error!;
+        var level = await GetOrStageLevelAsync(warehouseId, productId, ct);
+        var movement = level.Adjust(1, MovementType.UnitReceipt, source, UserId, clock.UtcNow);
+        if (!movement.IsSuccess)
+            return movement.Error!;
+        db.Add(unit.Value);
+        db.Add(movement.Value!);
+        return unit.Value.Id;
+    }
+
+    /// <summary>Checked through an id-free SECURITY DEFINER function: units of other organizations stay invisible.</summary>
+    public async Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct) =>
+        await db.Database.SqlQuery<bool>($"SELECT inventory.imei_in_stock({imei}) AS \"Value\"").SingleAsync(ct);
+
     // ---- endpoint operations -------------------------------------------------------------------
 
     public async Task<IReadOnlyList<WarehouseDto>> ListWarehousesAsync(CancellationToken ct) =>

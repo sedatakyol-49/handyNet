@@ -45,3 +45,10 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 
 - `GET /health/live` (process), `GET /health/ready` (database).
 - Structured logs via Serilog (console). Traces via OpenTelemetry; set `OTEL_EXPORTER_OTLP_ENDPOINT` to export.
+
+## Personal data (GDPR)
+
+`ankauf.intakes.seller` holds sellers' names, addresses, dates of birth and ID document numbers, collected for the
+second-hand trade record-keeping duty. It is tenant-isolated (RLS) and never exposed to other organizations. A retention
+job that deletes or anonymizes this data after the legally required period is **not implemented yet** — the period
+must be confirmed by legal review before go-live.

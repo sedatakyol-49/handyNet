@@ -218,3 +218,60 @@ export function localTime(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+/** Random 15-digit IMEI with a valid Luhn check digit (TAC prefix 35, practically unique per run). */
+export function randomImei(): string {
+  const digits = [3, 5, ...Array.from({ length: 12 }, () => Math.floor(Math.random() * 10))];
+  const sum = digits.reduce((acc, d, i) => {
+    if (i % 2 === 0) return acc + d;
+    const x = d * 2;
+    return acc + (x > 9 ? x - 9 : x);
+  }, 0);
+  return digits.join('') + ((10 - (sum % 10)) % 10);
+}
+
+/** yyyy-MM-dd of the date `years` years before today (local time zone), for birth dates. */
+export function yearsAgo(years: number, extraDays = 0): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  d.setDate(d.getDate() - extraDays);
+  return localDate(d);
+}
+
+/**
+ * Platform admin uploads an Ankauf price list via the API (valid from one minute ago → it becomes the current list),
+ * approves all pending entries and publishes it. Use a unique brand per run; publish right before the quotes are made,
+ * because every run replaces the current list of the target environment.
+ */
+export async function publishAnkaufList(label: string, rows: AnkaufRow[]): Promise<void> {
+  const ctx = await request.newContext({ baseURL: API_URL });
+  try {
+    const login = await ctx.post('/api/auth/login', { data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
+    expect(login.status(), await login.text()).toBe(200);
+    const headers = { Authorization: `Bearer ${(await login.json()).accessToken}` };
+    const now = Date.now();
+    const up = await ctx.post('/api/admin/ankauf/price-lists', {
+      headers,
+      timeout: 60_000, // the first XLSX upload after an API start can take ~10 s
+      multipart: {
+        file: { name: `${label}.xlsx`, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await ankaufPriceListXlsx(rows) },
+        label,
+        validFrom: new Date(now - 60_000).toISOString(),
+        validUntil: new Date(now + 5 * 24 * 3600_000).toISOString(),
+      },
+    });
+    expect(up.status(), await up.text()).toBe(201);
+    const list = await up.json();
+    const entries = await ctx.get(`/api/admin/ankauf/price-lists/${list.id}/entries`, { headers, params: { decision: 'Pending', pageSize: 100 } });
+    expect(entries.status(), await entries.text()).toBe(200);
+    const ids = (await entries.json()).items.map((e: { id: number }) => e.id);
+    if (ids.length) {
+      const d = await ctx.post(`/api/admin/ankauf/price-lists/${list.id}/decisions`, { headers, data: { entryIds: ids, approve: true } });
+      expect(d.status(), await d.text()).toBe(200);
+    }
+    const p = await ctx.post(`/api/admin/ankauf/price-lists/${list.id}/publish`, { headers });
+    expect(p.status(), await p.text()).toBe(200);
+  } finally {
+    await ctx.dispose();
+  }
+}

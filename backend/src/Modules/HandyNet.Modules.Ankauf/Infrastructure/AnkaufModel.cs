@@ -67,6 +67,32 @@ public sealed class AnkaufModel : IModuleModel
             b.HasIndex(x => x.EffectiveFrom);
         });
 
+        modelBuilder.Entity<Intake>(b =>
+        {
+            b.ToTable("intakes", Schema, t => t.HasCheckConstraint("ck_intakes_paid", "paid_minor IS NULL OR paid_minor > 0"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Imei).HasMaxLength(15).IsFixedLength().IsRequired();
+            // Personal data of the seller, kept as one document; see docs/operations.md for retention.
+            b.Property(x => x.Seller).HasJsonConversion();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.InspectedCondition).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.InspectedDefects).HasConversion(
+                    v => v.Select(d => d.ToString()).ToArray(),
+                    v => v.Select(Enum.Parse<DeviceDefect>).ToList(),
+                    new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<DeviceDefect>>(
+                        (a, c) => a!.SequenceEqual(c!), v => v.Aggregate(0, (h, d) => HashCode.Combine(h, d)), v => v.ToList()))
+                .HasColumnType("text[]");
+            b.Property(x => x.InspectionNotes).HasMaxLength(2000);
+            b.Property(x => x.PaymentMethod).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.RejectionReason).HasMaxLength(1000);
+            b.Property(x => x.Version).IsRowVersion();
+            // A quote can be turned into at most one live intake.
+            b.HasIndex(x => x.QuoteId).IsUnique().HasFilter("status <> 'Rejected'").HasDatabaseName("ux_intakes_one_per_quote");
+            b.HasIndex(x => new { x.OrganizationId, x.ReceivedAt });
+            b.HasIndex(x => x.Imei);
+            b.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<Quote>(b =>
         {
             b.ToTable("quotes", Schema, t =>

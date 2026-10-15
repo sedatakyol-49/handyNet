@@ -19,6 +19,7 @@ public static class AnkaufModule
         services.AddSingleton<IModuleModel, AnkaufModel>();
         services.AddScoped<PriceListService>();
         services.AddScoped<QuoteService>();
+        services.AddScoped<IntakeService>();
         services.AddValidatorsFromAssemblyContaining<QuoteService>(includeInternalTypes: true);
         return services;
     }
@@ -73,6 +74,27 @@ public static class AnkaufModule
             await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.CreateAsync(request, ct))
                 .ToHttp(q => Results.Created($"/api/ankauf/quotes/{q.Id}", q)))
             .RequirePermission(Permissions.OrdersPlace);
+
+        var intakes = dealer.MapGroup("/intakes").RequirePermission(Permissions.InventoryManage);
+
+        intakes.MapGet("/", async (IntakeService service, CancellationToken ct) => Results.Ok(await service.ListAsync(ct)));
+
+        intakes.MapGet("/{id:guid}", async (Guid id, IntakeService service, CancellationToken ct) =>
+            (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
+
+        intakes.MapPost("/", async (ReceiveIntakeRequest request, IValidator<ReceiveIntakeRequest> validator, IntakeService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.ReceiveAsync(request, ct))
+                .ToHttp(i => Results.Created($"/api/ankauf/intakes/{i.Id}", i)));
+
+        intakes.MapPost("/{id:guid}/inspect", async (Guid id, InspectIntakeRequest request, IntakeService service, CancellationToken ct) =>
+            (await service.InspectAsync(id, request, ct)).ToHttp(Results.Ok));
+
+        intakes.MapPost("/{id:guid}/complete", async (Guid id, CompleteIntakeRequest request, IntakeService service, CancellationToken ct) =>
+            (await service.CompleteAsync(id, request, ct)).ToHttp(Results.Ok));
+
+        intakes.MapPost("/{id:guid}/reject", async (Guid id, RejectIntakeRequest request, IntakeService service, CancellationToken ct) =>
+            (await service.RejectAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
 
         return app;
     }

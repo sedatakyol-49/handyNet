@@ -2,7 +2,7 @@
   "_meta": { "todo": "TODO: русский перевод не завершён – отсутствующие ключи показываются на немецком (de.json)." },
   "shell": { "language": "Язык", "logout": "Выйти", "organization": "Компания", "skipToContent": "Перейти к содержимому" },
   "nav": {
-    "ankauf": "Выкуп", "finance": "Финансы", "admin": "Администрирование", "cart": "Корзина", "dashboard": "Обзор", "imports": "Импорт", "inventory": "Склад",
+    "ankauf": "Выкуп", "intakes": "Закупки", "finance": "Финансы", "admin": "Администрирование", "cart": "Корзина", "dashboard": "Обзор", "imports": "Импорт", "inventory": "Склад",
     "marketplace": "Маркетплейс", "offers": "Предложения", "purchases": "Закупки", "sales": "Продажи", "team": "Команда"
   }
 }

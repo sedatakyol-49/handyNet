@@ -2,7 +2,7 @@
   "_meta": { "todo": "TODO: traducción al español incompleta – las claves que faltan se muestran en alemán (de.json)." },
   "shell": { "language": "Idioma", "logout": "Cerrar sesión", "organization": "Empresa", "skipToContent": "Saltar al contenido" },
   "nav": {
-    "ankauf": "Recompra", "finance": "Finanzas", "admin": "Administración", "cart": "Carrito", "dashboard": "Resumen", "imports": "Importaciones", "inventory": "Almacén",
+    "ankauf": "Recompra", "intakes": "Compras", "finance": "Finanzas", "admin": "Administración", "cart": "Carrito", "dashboard": "Resumen", "imports": "Importaciones", "inventory": "Almacén",
     "marketplace": "Mercado", "offers": "Ofertas", "purchases": "Compras", "sales": "Ventas", "team": "Equipo"
   }
 }

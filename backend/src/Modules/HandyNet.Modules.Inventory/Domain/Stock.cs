@@ -31,6 +31,9 @@ public enum MovementType
     Adjustment,
     ImportSync,
     Shipment,
+
+    /// <summary>A serialized unit (IMEI) entered stock, e.g. bought from a private seller (Ankauf).</summary>
+    UnitReceipt,
 }
 
 /// <summary>

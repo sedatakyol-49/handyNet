@@ -54,6 +54,24 @@ public sealed class InventoryModel : IModuleModel
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<StockUnit>(b =>
+        {
+            b.ToTable("stock_units", Schema, t => t.HasCheckConstraint("ck_stock_units_purchase_price", "purchase_price_minor >= 0"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Imei).HasMaxLength(15).IsFixedLength().IsRequired();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.TaxScheme).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Currency).HasMaxLength(3).IsFixedLength();
+            b.Property(x => x.Source).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Version).IsRowVersion();
+            // One physical device can be in stock only once on the whole platform.
+            b.HasIndex(x => x.Imei).IsUnique().HasFilter("status IN ('InStock', 'Reserved')").HasDatabaseName("ux_stock_units_imei_in_stock");
+            b.HasIndex(x => new { x.OrganizationId, x.ProductId, x.Status });
+            b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
+                .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<StockReservation>(b =>
         {
             b.ToTable("stock_reservations", Schema, t => t.HasCheckConstraint("ck_stock_reservations_quantity", "quantity > 0"));

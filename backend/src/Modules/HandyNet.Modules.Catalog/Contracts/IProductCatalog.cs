@@ -23,5 +23,11 @@ public interface IProductCatalog
     /// <summary>Adds a product to the shared unit of work; the caller commits.</summary>
     Result<ProductRef> StageNewProduct(NewProduct product, Guid? createdByOrganizationId);
 
+    /// <summary>
+    /// Finds or stages the catalog product for a whole device (e.g. a phone bought back from a consumer). Used devices
+    /// rarely come with an EAN, so the identity is brand + model designation (+ storage) as manufacturer part number.
+    /// </summary>
+    Task<Result<ProductRef>> FindOrStageDeviceAsync(string brand, string model, string? storage, Guid? createdByOrganizationId, CancellationToken ct);
+
     Task<IReadOnlyDictionary<Guid, ProductSummary>> GetAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct);
 }

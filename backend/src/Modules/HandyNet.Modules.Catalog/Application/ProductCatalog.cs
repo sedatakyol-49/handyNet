@@ -53,6 +53,24 @@ internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenant
         return new ProductMatcher(candidates);
     }
 
+    public async Task<Result<ProductRef>> FindOrStageDeviceAsync(string brand, string model, string? storage, Guid? createdByOrganizationId,
+        CancellationToken ct)
+    {
+        var designation = string.IsNullOrWhiteSpace(storage) ? model.Trim() : $"{model.Trim()} {storage.Trim()}";
+        var key = new ProductKey(Text.NormalizeKey(brand), Text.NormalizeKey(designation), null, PartQuality.NotApplicable);
+        var match = (await CreateMatcherAsync([key], ct)).Match(key);
+        return match.Kind switch
+        {
+            MatchKind.Existing => (await db.Set<Product>().AsNoTracking().Where(p => p.Id == match.ProductId)
+                    .Select(p => new ProductRef(p.Id, p.Brand, p.Name, p.BrandKey, p.MpnKey, p.Ean, p.Quality)).FirstOrDefaultAsync(ct))
+                ?? db.ChangeTracker.Entries<Product>().Select(e => e.Entity).Where(p => p.Id == match.ProductId)
+                    .Select(p => new ProductRef(p.Id, p.Brand, p.Name, p.BrandKey, p.MpnKey, p.Ean, p.Quality)).First(),
+            MatchKind.New => StageNewProduct(new NewProduct(brand, designation, ProductCategory.Smartphone,
+                PartQuality.NotApplicable, designation, null, model.Trim()), createdByOrganizationId),
+            _ => Error.Conflict("product.identifier_conflict", match.Reason!),
+        };
+    }
+
     public Result<ProductRef> StageNewProduct(NewProduct product, Guid? createdByOrganizationId)
     {
         var created = Product.Create(product, createdByOrganizationId, clock.UtcNow);

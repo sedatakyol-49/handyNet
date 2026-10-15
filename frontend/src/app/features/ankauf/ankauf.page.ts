@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { debounceTime, distinctUntilChanged, firstValueFrom, of } from 'rxjs';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { fieldErrors, toApiProblem } from '../../core/api/api-problem';
 import { AnkaufApi } from '../../core/api/handynet-api';
@@ -12,11 +13,12 @@ import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { formatBp } from '../admin/ankauf/ankauf-admin.logic';
 import { QuoteForm, ankaufProblemText, modelLabel, validateQuoteForm } from './ankauf.logic';
+import { intakeByQuote, isQuoteUsable } from './intake.logic';
 
 /** Dealer: preliminary buyback quotes for used devices (module Ankauf). */
 @Component({
   selector: 'hn-ankauf-page',
-  imports: [FormsModule, ...UI],
+  imports: [FormsModule, RouterLink, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ankauf.page.html',
 })
@@ -56,7 +58,20 @@ export class AnkaufPage {
     () => this.api.quotes(),
   );
 
+  /** Device intake ("Ankauf starten") needs inventory.manage, like the API. */
+  protected readonly canIntake = computed(() => this.session.can('inventory.manage'));
+  private readonly intakes = createQuery(
+    () => this.canIntake(),
+    (allowed) => (allowed ? this.api.intakes() : of([])),
+  );
+  /** Quote id → its running/finished intake (rejected intakes free the quote again). */
+  protected readonly intakeFor = computed(() => intakeByQuote(this.intakes.value() ?? []));
+
   protected label = modelLabel;
+
+  protected usable(q: Quote): boolean {
+    return isQuoteUsable(q);
+  }
 
   protected selectModel(m: AnkaufModel): void {
     this.selectedModel.set(m);

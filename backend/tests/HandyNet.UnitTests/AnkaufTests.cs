@@ -149,3 +149,53 @@ public class PriceListReaderTests
     public void Missing_sheet_is_reported_with_available_names() =>
         Assert.Contains("Mobilfunk", PriceListReader.Read(Workbook(_ => { }, sheet: "Tablets"), null).Error!.Message);
 }
+
+public class IntakeRulesTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 15, 12, 0, 0, TimeSpan.Zero);
+    private static readonly Guid Org = Guid.NewGuid();
+
+    private static Quote NewQuote(string? imei = null, int validDays = 7)
+    {
+        var list = PriceList.Create("Okt", "f.xlsx", new string('0', 64), "Mobilfunk", Now.AddDays(-1), Now.AddDays(validDays), [], Guid.NewGuid(), Now).Value;
+        var entry = PriceListEntry.Create(list.Id, 2, "Apple", "iPhone 13", "128 GB", 300_00, null);
+        var version = PriceVersion.From(entry, list, Now);
+        var policy = ConditionPolicy.Create(1, PolicySettings.Default, Now, Guid.NewGuid(), Now).Value;
+        var input = new QuoteInput(DeviceCondition.Gut, [], null, null);
+        var calc = BuybackCalculator.Calculate(300_00, policy.Settings, "APPLE", version.ModelKey, input);
+        return Quote.Create(Org, Guid.NewGuid(), version, policy, input, calc, imei, Now);
+    }
+
+    private static SellerDetails Seller(DateOnly birth) =>
+        new("Max", "Mustermann", "Hauptstr. 5", "10115", "Berlin", birth, IdDocumentType.IdCard, "L01X00T47");
+
+    [Fact]
+    public void Sellers_must_be_adults_on_the_day_of_purchase()
+    {
+        Assert.Equal("ankauf.seller_minor", Intake.Receive(Org, NewQuote(), "490154203237518", Seller(new DateOnly(2008, 10, 16)), Guid.NewGuid(), Now).Error!.Code);
+        Assert.True(Intake.Receive(Org, NewQuote(), "490154203237518", Seller(new DateOnly(2008, 10, 15)), Guid.NewGuid(), Now).IsSuccess);
+    }
+
+    [Fact]
+    public void Quote_must_be_valid_own_and_match_the_imei()
+    {
+        Assert.Equal("ankauf.quote_not_found", Intake.Receive(Guid.NewGuid(), NewQuote(), "490154203237518", Seller(new DateOnly(1990, 1, 1)), Guid.NewGuid(), Now).Error!.Code);
+        Assert.Equal("ankauf.quote_expired", Intake.Receive(Org, NewQuote(), "490154203237518", Seller(new DateOnly(1990, 1, 1)), Guid.NewGuid(), Now.AddDays(8)).Error!.Code);
+        Assert.Equal("ankauf.imei_mismatch", Intake.Receive(Org, NewQuote(imei: "356938035643809"), "490154203237518", Seller(new DateOnly(1990, 1, 1)), Guid.NewGuid(), Now).Error!.Code);
+    }
+
+    [Fact]
+    public void Seller_is_never_paid_more_than_the_inspected_offer()
+    {
+        var intake = Intake.Receive(Org, NewQuote(), "490154203237518", Seller(new DateOnly(1990, 1, 1)), Guid.NewGuid(), Now).Value;
+        Assert.Equal("ankauf.not_inspected", intake.Complete(100_00, PaymentMethod.Cash, Guid.NewGuid(), Now).Error!.Code);
+
+        var calc = BuybackCalculator.Calculate(300_00, PolicySettings.Default, "APPLE", "APPLE|IPHONE13|128GB",
+            new QuoteInput(DeviceCondition.Akzeptabel, [], null, null));
+        intake.Inspect(new QuoteInput(DeviceCondition.Akzeptabel, [], null, null), calc, null, Now);
+        Assert.Equal(240_00, intake.InspectedOfferMinor);
+        Assert.Equal("ankauf.paid_above_offer", intake.Complete(240_01, PaymentMethod.Cash, Guid.NewGuid(), Now).Error!.Code);
+        Assert.True(intake.Complete(240_00, PaymentMethod.Cash, Guid.NewGuid(), Now).IsSuccess);
+        Assert.False(intake.Reject("zu spät", Now).IsSuccess);
+    }
+}
