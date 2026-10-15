@@ -34,6 +34,9 @@ flowchart TD
     Ordering --> Marketplace
     Ordering --> Inventory
     Ordering --> Tenancy
+    Ankauf --> Inventory
+    Ankauf --> Catalog
+    Ankauf --> Tenancy
     Imports --> Marketplace
     Imports --> Inventory
     Imports --> Catalog
@@ -59,7 +62,7 @@ flowchart TD
 | Shipping | `shipping` | shipments, carrier adapters (Manual, Simulated), labels, tracking events, parcel/insurance/lithium rules, tracking sync job | – (top-level; uses `IOrderFulfilment`) |
 | Payments | `payments` | payments via PSP adapter (Simulated today), webhooks (status re-fetched), commission, refunds, payouts after completion | – (top-level) |
 | Disputes | `disputes` | buyer complaints within the inspection window, message thread, seller refund / buyer withdrawal / escalation, platform decision | – (top-level; uses `IOrderFulfilment`) |
-| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes | – (self-contained) |
+| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake, Ankaufbeleg (PDF) | – (top-level; uses `IProductCatalog`, `IInventory`, `IOrganizationDirectory`) |
 | Ledger | `ledger` | immutable double-entry journal; single write path `ledger.post_entry`; tenant-visible own accounts | `ILedger` |
 | Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified), SMTP delivery with retry | – (consumes events only) |
 | Persistence | `infra` | DbContext, RLS session interceptor, audit log, outbox | `IModuleModel` |

@@ -39,8 +39,30 @@
   with its purchase price and tax scheme **§25a margin scheme** (bought from a private person), +1 stock and a movement.
   A partial unique index guarantees that an IMEI is in stock (InStock/Reserved) only once platform-wide.
 
+## Ankaufbeleg (implemented)
+
+`GET /api/ankauf/intakes/{id}/beleg` (module Ankauf, permission `inventory.manage`, own organization only; other
+tenants' intakes → 404, intakes not yet completed → 409 `ankauf.not_completed`) returns a German PDF labelled
+"Ankaufbeleg":
+
+- document number `AB-<purchase date>-<last 8 hex digits of the intake id>` (the start of a v7 id is a timestamp, so
+  the random tail is used) and purchase date/time in German local time;
+- dealer (buyer): name, legal name, address and VAT id from the Tenancy contract (`IOrganizationDirectory.GetAddressAsync`);
+- seller: name, address, date of birth, ID document type and number **masked except the last 4 characters**;
+- device: brand, model, storage, IMEI, inspected condition, defects, battery health and inspection note;
+- amount paid and payment method (cash: the seller confirms receipt; transfer: payment by bank transfer);
+- note that the purchase from a private person contains no separately shown VAT and is documented for the margin
+  scheme (§ 25a UStG);
+- the seller's declaration of ownership (Eigentumserklärung: sole owner, free of third-party rights) and signature
+  lines for seller and dealer.
+
+The content is built in the domain (`Ankaufbeleg.Build`, unit-tested) and laid out by the shared
+`SharedKernel.Documents.SimplePdf` writer (standard Helvetica fonts with WinAnsiEncoding, so ä ö ü ß € render; automatic
+page breaks with page numbers). The receipt is generated on demand from the stored intake and is not archived as a
+file. The wording is a template and has not been legally reviewed; no compliance claim is made.
+
 ## Open
 
-Ankaufbeleg (purchase receipt document for the seller), stolen-device/blacklist check, retention and deletion of seller
+Legal review of the Ankaufbeleg wording and archiving of issued/signed receipts, stolen-device/blacklist check, retention and deletion of seller
 personal data after the legal period, selling serialized units (POS/B2B) with §25a margin VAT, individual offers for
 unpriced models, and confirmation of all percentages by the business.

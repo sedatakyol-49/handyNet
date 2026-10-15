@@ -36,9 +36,11 @@ public class ModuleBoundaryTests
         { "Ordering", "HandyNet.Modules.Ledger" },
         { "Ordering", "HandyNet.Modules.Disputes" },
         { "Payments", "HandyNet.Modules.Disputes" },
-        // Ankauf is self-contained (platform price lists + dealer quotes).
+        // Ankauf sits on top (uses Catalog, Inventory and Tenancy contracts); nothing below depends on it.
         { "Catalog", "HandyNet.Modules.Ankauf" },
         { "Ordering", "HandyNet.Modules.Ankauf" },
+        { "Tenancy", "HandyNet.Modules.Ankauf" },
+        { "Inventory", "HandyNet.Modules.Ankauf" },
     };
 
     [Theory]
@@ -85,6 +87,7 @@ public class ModuleBoundaryTests
     [InlineData("Ordering", "Disputes")]
     [InlineData("Inventory", "Ankauf")]
     [InlineData("Catalog", "Ankauf")]
+    [InlineData("Tenancy", "Ankauf")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)
     {
         var result = Types.InAssembly(Module(consumer))

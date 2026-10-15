@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
-using System.Text;
 using HandyNet.Modules.Shipping.Domain;
 using HandyNet.SharedKernel;
+using HandyNet.SharedKernel.Documents;
 using Microsoft.Extensions.Options;
 
 namespace HandyNet.Modules.Shipping.Infrastructure;
@@ -72,11 +72,14 @@ internal sealed class SimulatedCarrierAdapter(IOptions<ShippingOptions> options,
     public Task<Result<LabelResult>> CreateLabelAsync(LabelRequest request, CancellationToken ct)
     {
         var tracking = "SIM" + Convert.ToHexString(RandomNumberGenerator.GetBytes(6));
-        var pdf = MinimalPdf.Create(
-            "SIMULATION - KEIN GUELTIGES VERSANDETIKETT",
-            $"Sendung {tracking}",
-            $"Bestellung {request.OrderNumber}",
-            $"Gewicht {request.Parcel.WeightGrams / 1000m:0.00} kg  Versichert: {(request.Insured ? "ja" : "nein")}");
+        var pdf = new SimplePdf(420, 420, margin: 40) { Title = "SIMULATION – Versandetikett" }
+            .Text("SIMULATION", 20, PdfFont.Bold)
+            .Text("KEIN GÜLTIGES VERSANDETIKETT", 14, PdfFont.Bold)
+            .Rule()
+            .Text($"Sendung {tracking}", 14)
+            .Text($"Bestellung {request.OrderNumber}", 14)
+            .Text($"Gewicht {request.Parcel.WeightGrams / 1000m:0.00} kg  Versichert: {(request.Insured ? "ja" : "nein")}", 14)
+            .ToBytes();
         return Task.FromResult<Result<LabelResult>>(new LabelResult(tracking, pdf));
     }
 
@@ -96,42 +99,5 @@ internal sealed class SimulatedCarrierAdapter(IOptions<ShippingOptions> options,
             new($"{trackingNumber}-DL", start + transit, TrackingKind.Delivered, "Sendung zugestellt", "Empfänger"),
         };
         return Task.FromResult<IReadOnlyList<CarrierTrackingEvent>>(all.Where(e => e.OccurredAt <= now).ToList());
-    }
-}
-
-/// <summary>Writes a one-page PDF with plain text lines (enough for a clearly marked simulation label).</summary>
-internal static class MinimalPdf
-{
-    public static byte[] Create(params string[] lines)
-    {
-        static string Escape(string s) => s.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
-        var content = new StringBuilder("BT /F1 14 Tf 40 360 Td 18 TL\n");
-        foreach (var line in lines)
-            content.Append('(').Append(Escape(line)).Append(") Tj T*\n");
-        content.Append("ET");
-
-        var objects = new[]
-        {
-            "<< /Type /Catalog /Pages 2 0 R >>",
-            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 420] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-            $"<< /Length {content.Length} >>\nstream\n{content}\nendstream",
-            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        };
-
-        var pdf = new StringBuilder("%PDF-1.4\n");
-        var offsets = new List<int>();
-        for (var i = 0; i < objects.Length; i++)
-        {
-            offsets.Add(Encoding.ASCII.GetByteCount(pdf.ToString()));
-            pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
-        }
-
-        var xref = Encoding.ASCII.GetByteCount(pdf.ToString());
-        pdf.Append($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
-        foreach (var offset in offsets)
-            pdf.Append($"{offset:D10} 00000 n \n");
-        pdf.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF");
-        return Encoding.ASCII.GetBytes(pdf.ToString());
     }
 }

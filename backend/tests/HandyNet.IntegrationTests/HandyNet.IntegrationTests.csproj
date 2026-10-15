@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\HandyNet.UnitTests\Support\PdfText.cs" Link="Support\PdfText.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="testsettings.local.json" Condition="Exists('testsettings.local.json')" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

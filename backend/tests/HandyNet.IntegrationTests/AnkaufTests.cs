@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using ClosedXML.Excel;
 using HandyNet.IntegrationTests.Infrastructure;
+using HandyNet.Tests.Support;
 using Npgsql;
 
 namespace HandyNet.IntegrationTests;
@@ -324,5 +325,53 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
 
         // And it cannot see the first shop's intake.
         Assert.Equal(HttpStatusCode.NotFound, (await otherShop.GetAsync($"/api/ankauf/intakes/{intakeId}")).Status);
+    }
+
+    [Fact]
+    public async Task Ankaufbeleg_is_issued_for_completed_purchases_of_the_own_shop_only()
+    {
+        var (dealer, key, _, brand) = await PricedModelAsync();
+        var imei = NewImei();
+        var quoteId = (await dealer.PostAsync("/api/ankauf/quotes", new { modelKey = key, condition = "Gut" }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+        var intakeId = (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei, seller = AdultSeller }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+
+        // Not paid yet → no receipt.
+        var early = await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}/beleg");
+        Assert.Equal(HttpStatusCode.Conflict, early.Status);
+        Assert.Equal("ankauf.not_completed", early.Code);
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut", defects = new[] { "HousingDamage" } }))
+            .Expect(HttpStatusCode.OK);
+        Assert.Equal("ankauf.not_completed", (await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Code);
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 219.5m, paymentMethod = "Cash" }))
+            .Expect(HttpStatusCode.OK);
+
+        var (status, mediaType, fileName, body) = await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg");
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("application/pdf", mediaType);
+        Assert.StartsWith("AB-", fileName);
+        Assert.StartsWith("%PDF-1.4", System.Text.Encoding.ASCII.GetString(body, 0, 8));
+        var lines = PdfText.Lines(body);
+        var text = string.Join("\n", lines);
+        Assert.Contains("Ankaufbeleg", lines);
+        Assert.Contains("Max Mustermann", lines);
+        Assert.Contains(imei, lines);
+        Assert.Contains("219,50 €", lines);
+        Assert.Contains("Barzahlung", lines);
+        Assert.Contains(brand, lines);
+        Assert.Contains("Gehäuseschaden", lines);
+        Assert.Contains(lines, l => l.StartsWith("ankaufshop ", StringComparison.Ordinal));
+        Assert.Contains("Hauptstraße 1, 10115 Berlin", lines); // dealer address from Tenancy, with ß
+        Assert.Contains("*****0T47", lines);
+        Assert.DoesNotContain("L01X00T47", text);
+        Assert.Contains("§ 25a UStG", text.Replace("\n", " "));
+
+        // Another shop cannot fetch it (not revealed), nor can anyone fetch an unknown intake.
+        var otherShop = await DealerAsync();
+        var foreign = await otherShop.GetAsync($"/api/ankauf/intakes/{intakeId}/beleg");
+        Assert.Equal(HttpStatusCode.NotFound, foreign.Status);
+        Assert.Equal("ankauf.intake_not_found", foreign.Code);
+        Assert.Equal(HttpStatusCode.NotFound, (await dealer.GetAsync($"/api/ankauf/intakes/{Guid.NewGuid()}/beleg")).Status);
     }
 }

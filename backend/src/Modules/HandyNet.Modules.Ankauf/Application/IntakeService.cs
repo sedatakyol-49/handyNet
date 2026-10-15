@@ -3,6 +3,7 @@ using HandyNet.Modules.Ankauf.Domain;
 using HandyNet.Modules.Catalog.Contracts;
 using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Modules.Inventory.Domain;
+using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
 using HandyNet.SharedKernel.Tenancy;
@@ -17,6 +18,8 @@ public sealed record InspectIntakeRequest(DeviceCondition Condition, DeviceDefec
 public sealed record CompleteIntakeRequest(decimal PaidAmount, PaymentMethod PaymentMethod, Guid? WarehouseId);
 
 public sealed record RejectIntakeRequest(string Reason);
+
+public sealed record BelegFile(string FileName, byte[] Content);
 
 public sealed record IntakeDto(
     Guid Id,
@@ -71,6 +74,7 @@ internal sealed class IntakeService(
     ICurrentUser currentUser,
     IProductCatalog catalog,
     IInventory inventory,
+    IOrganizationDirectory organizations,
     IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
@@ -192,9 +196,31 @@ internal sealed class IntakeService(
         return intake is null ? Error.NotFound("ankauf.intake_not_found", "Intake not found.") : ToDto(intake, quote!);
     }
 
-    private async Task<(Intake? Intake, Quote? Quote)> LoadAsync(Guid id, CancellationToken ct)
+    /// <summary>Purchase receipt (PDF) for the seller of a completed intake.</summary>
+    public async Task<Result<BelegFile>> GetBelegAsync(Guid id, CancellationToken ct)
     {
-        var intake = await db.Set<Intake>().FirstOrDefaultAsync(i => i.Id == id && i.OrganizationId == OrganizationId, ct);
+        var (intake, quote) = await LoadAsync(id, ct, tracking: false);
+        if (intake is null)
+            return Error.NotFound("ankauf.intake_not_found", "Intake not found.");
+        if (intake.Status != IntakeStatus.Completed)
+            return Error.Conflict("ankauf.not_completed", "A purchase receipt is only available for a completed intake.");
+
+        var dealer = await organizations.GetAddressAsync(OrganizationId, ct);
+        if (dealer is null)
+            return Error.NotFound("organization.not_found", "Organization not found.");
+
+        var content = Ankaufbeleg.Build(intake, quote!,
+            new BelegDealer(dealer.Name, dealer.LegalName, dealer.Street, dealer.PostalCode, dealer.City, dealer.CountryCode, dealer.VatId),
+            Ankaufbeleg.GermanTimeZone);
+        if (!content.IsSuccess)
+            return content.Error!;
+        return new BelegFile($"{content.Value.DocumentNumber}.pdf", AnkaufbelegPdf.Render(content.Value));
+    }
+
+    private async Task<(Intake? Intake, Quote? Quote)> LoadAsync(Guid id, CancellationToken ct, bool tracking = true)
+    {
+        var intakes = tracking ? db.Set<Intake>() : db.Set<Intake>().AsNoTracking();
+        var intake = await intakes.FirstOrDefaultAsync(i => i.Id == id && i.OrganizationId == OrganizationId, ct);
         if (intake is null)
             return (null, null);
         var quote = await db.Set<Quote>().AsNoTracking().FirstAsync(q => q.Id == intake.QuoteId, ct);

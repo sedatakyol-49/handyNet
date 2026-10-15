@@ -42,7 +42,11 @@ public sealed class ShippingTests(HandyNetFixture fixture)
             Headers = { { "Authorization", $"Bearer {supplier.Token}" }, { "X-Organization-Id", supplier.OrganizationId.ToString() } },
         });
         Assert.Equal("application/pdf", label.Content.Headers.ContentType!.MediaType);
-        Assert.StartsWith("%PDF", await label.Content.ReadAsStringAsync());
+        var labelPdf = await label.Content.ReadAsByteArrayAsync();
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(labelPdf, 0, 4));
+        var labelLines = HandyNet.Tests.Support.PdfText.Lines(labelPdf);
+        Assert.Equal("SIMULATION", labelLines[0]);
+        Assert.Equal("KEIN GÜLTIGES VERSANDETIKETT", labelLines[1]);
         Assert.Equal("Confirmed", (await shop.GetAsync($"/api/orders/{orderId}")).Json["status"]!.GetValue<string>());
 
         (await supplier.PostAsync($"/api/shipments/{shipmentId}/handover")).Expect(HttpStatusCode.OK);

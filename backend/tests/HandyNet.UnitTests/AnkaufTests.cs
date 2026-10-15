@@ -152,10 +152,10 @@ public class PriceListReaderTests
 
 public class IntakeRulesTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 10, 15, 12, 0, 0, TimeSpan.Zero);
-    private static readonly Guid Org = Guid.NewGuid();
+    internal static readonly DateTimeOffset Now = new(2026, 10, 15, 12, 0, 0, TimeSpan.Zero);
+    internal static readonly Guid Org = Guid.NewGuid();
 
-    private static Quote NewQuote(string? imei = null, int validDays = 7)
+    internal static Quote NewQuote(string? imei = null, int validDays = 7)
     {
         var list = PriceList.Create("Okt", "f.xlsx", new string('0', 64), "Mobilfunk", Now.AddDays(-1), Now.AddDays(validDays), [], Guid.NewGuid(), Now).Value;
         var entry = PriceListEntry.Create(list.Id, 2, "Apple", "iPhone 13", "128 GB", 300_00, null);

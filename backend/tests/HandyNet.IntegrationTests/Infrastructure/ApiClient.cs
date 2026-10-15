@@ -51,6 +51,19 @@ public sealed class ApiClient(HttpClient http)
         SendAsync(HttpMethod.Post, path, body ?? new { }, headers: headers);
     public Task<ApiResponse> PutAsync(string path, object body) => SendAsync(HttpMethod.Put, path, body);
 
+    /// <summary>GET of a binary resource (e.g. a PDF): status, media type and raw body.</summary>
+    public async Task<(HttpStatusCode Status, string? MediaType, string? FileName, byte[] Body)> GetFileAsync(string path)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        if (Token is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        if (OrganizationId is { } org)
+            request.Headers.Add("X-Organization-Id", org.ToString());
+        using var response = await http.SendAsync(request);
+        return (response.StatusCode, response.Content.Headers.ContentType?.MediaType, response.Content.Headers.ContentDisposition?.FileName,
+            await response.Content.ReadAsByteArrayAsync());
+    }
+
     public async Task LoginAsync(string email, string password)
     {
         var response = (await PostAsync("/api/auth/login", new { email, password })).Expect(HttpStatusCode.OK);

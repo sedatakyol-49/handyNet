@@ -82,6 +82,9 @@ public static class AnkaufModule
         intakes.MapGet("/{id:guid}", async (Guid id, IntakeService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
 
+        intakes.MapGet("/{id:guid}/beleg", async (Guid id, IntakeService service, CancellationToken ct) =>
+            (await service.GetBelegAsync(id, ct)).ToHttp(f => Results.File(f.Content, "application/pdf", f.FileName)));
+
         intakes.MapPost("/", async (ReceiveIntakeRequest request, IValidator<ReceiveIntakeRequest> validator, IntakeService service,
                 CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.ReceiveAsync(request, ct))

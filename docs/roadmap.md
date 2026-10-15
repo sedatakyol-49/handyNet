@@ -40,7 +40,8 @@ Dependencies: Phase 1.
 
 ## Phase 3 — Store operations
 Dependencies: Phase 2 payments + invoicing.
-- ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Open: selling serialized units, Ankaufbeleg, blacklist check, seller-data retention.
+- ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Open: selling serialized units, blacklist check, seller-data retention.
+- ✅ Ankaufbeleg: PDF purchase receipt for a completed intake (`GET /api/ankauf/intakes/{id}/beleg`) with dealer and seller data, masked ID number, device/IMEI/condition, amount and payment method, Eigentumserklärung with signature lines, §25a note; rendered by the shared `SimplePdf` writer (WinAnsiEncoding, multi-page; also used for simulated shipping labels). Open: UI button, legal review of the wording, archiving of issued receipts, signed/countersigned copy upload.
 - POS / Kassensystem (touch UI, barcode, cash/card, returns, daily closing) on the same reservation path;
   fiskaly TSE integration in sandbox first; DSFinV-K export. No fake signatures.
 - ✅ Pricing & Ankauf (ADR-0007): monthly XLSX list, approval rules, immutable price versions (current list only), versioned condition policy with overrides and deductions, dealer quotes with preserved versions. Open: device intake + inspection to final price, §25a documentation, stock entry with IMEI, individual offers, frontend.
