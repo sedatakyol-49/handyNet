@@ -13,3 +13,4 @@ TestResults/
 playwright-report/
 test-results/
 .artifacts/
+.claude/worktrees/
