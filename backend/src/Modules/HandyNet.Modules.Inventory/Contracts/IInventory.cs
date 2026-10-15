@@ -35,4 +35,36 @@ public interface IInventory
 
     /// <summary>True if the IMEI is currently in stock (InStock or Reserved) at any organization.</summary>
     Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct);
+
+    /// <summary>
+    /// Stages an over-the-counter sale of a non-serialized product: on-hand decreases with a <c>Sale</c> movement.
+    /// Same availability rule as B2B orders: reserved stock is never sold (available = on hand − reserved).
+    /// Products with serialized units in the warehouse must be sold by IMEI. Concurrent changes fail on save (xmin).
+    /// </summary>
+    Task<Result> StageSellAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct);
+
+    /// <summary>Stages the sale of one own in-stock IMEI unit in the warehouse: unit → Sold, −1 on its stock level.</summary>
+    Task<Result<UnitSnapshot>> StageSellUnitAsync(Guid warehouseId, string imei, string reference, CancellationToken ct);
+
+    /// <summary>Stages a customer return of a non-serialized product: on-hand increases with a <c>Return</c> movement.</summary>
+    Task<Result> StageReturnAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct);
+
+    /// <summary>
+    /// Stages the return of a sold unit: Sold → InStock, +1 on its stock level. Saving fails if the same IMEI has been
+    /// stocked anywhere on the platform in the meantime (unique index).
+    /// </summary>
+    Task<Result> StageReturnUnitAsync(Guid unitId, string reference, CancellationToken ct);
+
+    /// <summary>The current tenant's in-stock (sellable) unit with this IMEI, or null. Never returns other tenants' units.</summary>
+    Task<UnitSnapshot?> FindOwnUnitByImeiAsync(string imei, CancellationToken ct);
 }
+
+/// <summary>A serialized unit as other modules see it. The purchase price is the basis for §25a margin VAT.</summary>
+public sealed record UnitSnapshot(
+    Guid UnitId,
+    Guid WarehouseId,
+    Guid ProductId,
+    string Imei,
+    Domain.UnitStatus Status,
+    Domain.TaxScheme TaxScheme,
+    long PurchasePriceMinor);

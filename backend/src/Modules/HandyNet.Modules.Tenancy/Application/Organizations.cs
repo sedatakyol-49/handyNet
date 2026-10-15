@@ -207,6 +207,12 @@ internal sealed class OrganizationService(
 
 internal sealed class OrganizationDirectory(HandyNetDbContext db) : IOrganizationDirectory
 {
+    public async Task<OrganizationLegalDetails?> GetLegalDetailsAsync(Guid organizationId, CancellationToken ct) =>
+        await db.Set<Organization>().AsNoTracking()
+            .Where(o => o.Id == organizationId)
+            .Select(o => new OrganizationLegalDetails(o.Id, o.Name, o.LegalName, o.Street, o.PostalCode, o.City, o.CountryCode, o.VatId))
+            .FirstOrDefaultAsync(ct);
+
     public async Task<IReadOnlyDictionary<Guid, OrganizationSummary>> GetAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken ct) =>
         await db.Set<Organization>().AsNoTracking()
             .Where(o => organizationIds.Contains(o.Id))

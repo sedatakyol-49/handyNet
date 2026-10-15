@@ -39,6 +39,18 @@ public class ModuleBoundaryTests
         // Ankauf is self-contained (platform price lists + dealer quotes).
         { "Catalog", "HandyNet.Modules.Ankauf" },
         { "Ordering", "HandyNet.Modules.Ankauf" },
+        // POS sits on top of Inventory, Catalog and Tenancy; nothing depends on it, and it does not use the B2B money flow.
+        { "Inventory", "HandyNet.Modules.Pos" },
+        { "Catalog", "HandyNet.Modules.Pos" },
+        { "Tenancy", "HandyNet.Modules.Pos" },
+        { "Ordering", "HandyNet.Modules.Pos" },
+        { "Ankauf", "HandyNet.Modules.Pos" },
+        { "Payments", "HandyNet.Modules.Pos" },
+        { "Pos", "HandyNet.Modules.Ordering" },
+        { "Pos", "HandyNet.Modules.Payments" },
+        { "Pos", "HandyNet.Modules.Ledger" },
+        { "Pos", "HandyNet.Modules.Ankauf" },
+        { "Pos", "HandyNet.Modules.Marketplace" },
     };
 
     [Theory]
@@ -63,6 +75,7 @@ public class ModuleBoundaryTests
     [InlineData("Payments")]
     [InlineData("Disputes")]
     [InlineData("Ankauf")]
+    [InlineData("Pos")]
     public void Domain_is_free_of_infrastructure_and_web(string module)
     {
         var result = Types.InAssembly(Module(module))
@@ -85,6 +98,9 @@ public class ModuleBoundaryTests
     [InlineData("Ordering", "Disputes")]
     [InlineData("Inventory", "Ankauf")]
     [InlineData("Catalog", "Ankauf")]
+    [InlineData("Inventory", "Pos")]
+    [InlineData("Catalog", "Pos")]
+    [InlineData("Tenancy", "Pos")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)
     {
         var result = Types.InAssembly(Module(consumer))
@@ -96,7 +112,7 @@ public class ModuleBoundaryTests
     [Fact]
     public void Money_is_never_floating_point()
     {
-        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf" }.Select(Module))
+        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf", "Pos" }.Select(Module))
             .GetTypes()
             .SelectMany(t => t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             .Where(p => (p.Name.Contains("Price") || p.Name.Contains("Total") || p.Name.EndsWith("Minor"))

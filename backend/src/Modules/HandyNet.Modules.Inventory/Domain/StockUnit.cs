@@ -68,4 +68,27 @@ public sealed class StockUnit : IAuditable
             ReceivedAt = now,
         };
     }
+
+    /// <summary>InStock → Sold. Reserved units belong to a pending order and cannot be sold over the counter.</summary>
+    public Result MarkSold(DateTimeOffset now)
+    {
+        if (Status != UnitStatus.InStock)
+            return Error.Conflict("unit.not_available", $"The device with IMEI {Imei} is not available for sale ({Status}).");
+        Status = UnitStatus.Sold;
+        ClosedAt = now;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Sold → InStock (customer return or cancelled receipt). The platform-wide unique index on in-stock IMEIs still
+    /// applies: if the same device was stocked elsewhere in the meantime, saving fails.
+    /// </summary>
+    public Result ReturnToStock(DateTimeOffset now)
+    {
+        if (Status != UnitStatus.Sold)
+            return Error.Conflict("unit.not_sold", $"The device with IMEI {Imei} is not sold ({Status}) and cannot be returned.");
+        Status = UnitStatus.InStock;
+        ClosedAt = null;
+        return Result.Success();
+    }
 }

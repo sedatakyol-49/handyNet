@@ -12,6 +12,9 @@ public enum PlatformModule
     B2BPurchasing,
     B2BSales,
     Ankauf,
+
+    /// <summary>Point of sale (Kassensystem) for the organization's own store sales.</summary>
+    Pos,
 }
 
 public enum MembershipRole
@@ -32,14 +35,20 @@ public static class Permissions
     public const string OrdersPlace = "orders.place";
     public const string OrdersFulfil = "orders.fulfil";
 
+    /// <summary>Sell at the register: open/close cash sessions, cash movements, sales, returns, lookup.</summary>
+    public const string PosSell = "pos.sell";
+
+    /// <summary>Manage registers and cancel whole receipts (Storno).</summary>
+    public const string PosManage = "pos.manage";
+
     private static readonly string[] All =
-        [OrganizationManage, ImportsManage, OffersManage, InventoryManage, MarketplaceBrowse, OrdersRead, OrdersPlace, OrdersFulfil];
+        [OrganizationManage, ImportsManage, OffersManage, InventoryManage, MarketplaceBrowse, OrdersRead, OrdersPlace, OrdersFulfil, PosSell, PosManage];
 
     public static IReadOnlySet<string> ForRole(MembershipRole role) => role switch
     {
         MembershipRole.Owner => All.ToHashSet(),
         MembershipRole.Manager => All.Where(p => p != OrganizationManage).ToHashSet(),
-        MembershipRole.Staff => new HashSet<string> { MarketplaceBrowse, OrdersRead, OrdersPlace },
+        MembershipRole.Staff => new HashSet<string> { MarketplaceBrowse, OrdersRead, OrdersPlace, PosSell },
         _ => new HashSet<string>(),
     };
 }

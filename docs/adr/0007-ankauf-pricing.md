@@ -42,5 +42,5 @@
 ## Open
 
 Ankaufbeleg (purchase receipt document for the seller), stolen-device/blacklist check, retention and deletion of seller
-personal data after the legal period, selling serialized units (POS/B2B) with §25a margin VAT, individual offers for
-unpriced models, and confirmation of all percentages by the business.
+personal data after the legal period, selling serialized units via B2B offers (POS sales with §25a margin VAT: see
+ADR-0008), individual offers for unpriced models, and confirmation of all percentages by the business.

@@ -23,6 +23,11 @@ Arrows point from a module to what it may depend on. Enforced by project referen
 
 ```mermaid
 flowchart TD
+    Pos --> Inventory
+    Pos --> Catalog
+    Pos --> Tenancy
+    Ankauf --> Inventory
+    Ankauf --> Catalog
     Disputes --> Ordering
     Payments --> Ordering
     Payments --> Ledger
@@ -52,14 +57,15 @@ flowchart TD
 | Identity | `identity` | users, password hashing, lockout, JWT | `IUserAccounts` |
 | Tenancy | `tenancy` | organizations, verification, memberships/roles, module activation, tenant resolution | `IOrganizationDirectory` |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules | `IProductCatalog`, `ProductMatcher` |
-| Inventory | `inventory` | warehouses, stock levels, movements, reservations | `IInventory` |
+| Inventory | `inventory` | warehouses, stock levels, movements, reservations, serialized units (IMEI), sell/return staging for POS | `IInventory` |
 | Marketplace | `marketplace` | supplier offers, B2B listing view, reservation function | `IOfferReservations`, `IOfferSync` |
 | Imports | `imports` | CSV/XLSX parsing, mapping, preview (dry run), commit | – (top-level) |
 | Ordering | `ordering` | B2B orders, idempotency, lifecycle incl. delivery + inspection window, completion job | `IOrderFulfilment` |
 | Shipping | `shipping` | shipments, carrier adapters (Manual, Simulated), labels, tracking events, parcel/insurance/lithium rules, tracking sync job | – (top-level; uses `IOrderFulfilment`) |
 | Payments | `payments` | payments via PSP adapter (Simulated today), webhooks (status re-fetched), commission, refunds, payouts after completion | – (top-level) |
 | Disputes | `disputes` | buyer complaints within the inspection window, message thread, seller refund / buyer withdrawal / escalation, platform decision | – (top-level; uses `IOrderFulfilment`) |
-| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes | – (self-contained) |
+| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake (IMEI stock with §25a purchase price) | – (top-level; uses `IInventory`, `IProductCatalog`) |
+| POS | `pos` | registers (gapless receipt numbers), cash sessions + daily closing (Z-report), immutable receipts with Storno/returns, §25a margin VAT, fiscal signer abstraction (test signer only, ADR-0008) | – (top-level; uses `IInventory`, `IProductCatalog`, `IOrganizationDirectory`) |
 | Ledger | `ledger` | immutable double-entry journal; single write path `ledger.post_entry`; tenant-visible own accounts | `ILedger` |
 | Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified), SMTP delivery with retry | – (consumes events only) |
 | Persistence | `infra` | DbContext, RLS session interceptor, audit log, outbox | `IModuleModel` |
@@ -68,8 +74,8 @@ flowchart TD
 
 | Planned module | Depends on |
 |---|---|
-| POS / Kassensystem | Inventory (same reservation path), Catalog, Payments, Fiscal (fiskaly TSE adapter) |
 | Repairs | Catalog, Inventory (parts consumption), Ordering (parts orders), Shipping |
+| Fiscal adapter (fiskaly TSE) + DSFinV-K export | POS (`IFiscalSigner`) |
 | Invoicing & Accounting | Ordering, Payments, POS (XRechnung/ZUGFeRD, DATEV export) |
 | Returns & Warranty (return shipments, restocking, partial refunds) | Disputes, Shipping, Inventory, Payments |
 | B2C Marketplace | Catalog, Marketplace (separate B2C visibility), Payments |

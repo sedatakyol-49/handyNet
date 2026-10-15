@@ -12,6 +12,7 @@ using HandyNet.Modules.Shipping;
 using HandyNet.Modules.Payments;
 using HandyNet.Modules.Disputes;
 using HandyNet.Modules.Ankauf;
+using HandyNet.Modules.Pos;
 using HandyNet.Modules.Ordering;
 using HandyNet.Modules.Tenancy;
 using HandyNet.Persistence;
@@ -62,7 +63,8 @@ builder.Services
     .AddShippingModule(builder.Configuration, builder.Environment)
     .AddPaymentsModule(builder.Configuration, builder.Environment)
     .AddDisputesModule()
-    .AddAnkaufModule();
+    .AddAnkaufModule()
+    .AddPosModule(builder.Configuration, builder.Environment);
 
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
@@ -141,7 +143,8 @@ app.MapIdentityEndpoints()
     .MapShippingEndpoints()
     .MapPaymentsEndpoints()
     .MapDisputesEndpoints()
-    .MapAnkaufEndpoints();
+    .MapAnkaufEndpoints()
+    .MapPosEndpoints();
 
 if (app.Configuration["Bootstrap:AdminEmail"] is { Length: > 0 } adminEmail)
 {

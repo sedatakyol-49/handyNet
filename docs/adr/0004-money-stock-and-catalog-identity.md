@@ -8,8 +8,9 @@
 - All amounts are `long` **euro cents** (`*_minor` columns, `Money` value object). No `float`/`double` anywhere
   near money (architecture test). Input with sub-cent precision is rejected, never rounded silently.
 - VAT is computed once per order on the net total with `MidpointRounding.AwayFromZero`; B2B prices are net.
-  Only the 19 % standard rate exists so far. Reduced rate, §25a UStG margin scheme, reverse charge and
-  invoice/GoBD requirements are **not implemented** and no compliance is claimed.
+  Only the 19 % standard rate exists so far. Reduced rate, reverse charge and B2B invoice/GoBD requirements are
+  **not implemented** and no compliance is claimed. (POS receipts: gross prices, §25a margin scheme and immutable
+  receipts — ADR-0008.)
 - Order lines snapshot SKU, product name and unit price at placement; the client may send the price it saw
   (`expectedUnitPriceMinor`) and gets `409 order.price_changed` instead of a silently different price.
 
@@ -21,9 +22,11 @@
 - Reservations are created by one conditional `UPDATE` inside the order transaction, so concurrent checkouts
   cannot oversell (25 parallel orders against 5 units → exactly 5 succeed, tested). Shipping consumes the
   reservation; cancel/reject releases it. Optimistic concurrency (`xmin`) protects other updates.
-- POS and B2C will use the same reservation path when built.
-- Serialized units (IMEI) are **not** implemented yet; the planned model is a `stock_units` table with a partial
-  unique index on IMEI for units in sellable states, so one device cannot be sold twice.
+- POS (ADR-0008) applies the same availability rule: only `on_hand − reserved` can be sold over the counter, so a B2B
+  reservation is never sold at the till. B2C will use the same reservation path when built.
+- Serialized units (IMEI) live in `inventory.stock_units` with a partial unique index on IMEI for units in stock
+  (InStock/Reserved) platform-wide (ADR-0007), so one device cannot be stocked twice; selling marks the unit Sold under
+  optimistic concurrency, so it cannot be sold twice either (ADR-0008).
 
 ## Catalog identity
 
