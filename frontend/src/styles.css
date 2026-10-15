@@ -72,3 +72,40 @@
     @apply font-mono text-xs;
   }
 }
+
+/*
+ * Receipt printing (window.print on POS pages): only the element marked .hn-print-area is printed, on a narrow
+ * 80 mm receipt roll. Pages without a print area print normally.
+ */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+  body:has(.hn-print-area) {
+    background: #fff;
+  }
+  body:has(.hn-print-area) * {
+    visibility: hidden;
+  }
+  body:has(.hn-print-area) .hn-print-area,
+  body:has(.hn-print-area) .hn-print-area * {
+    visibility: visible;
+  }
+  body:has(.hn-print-area) .hn-print-area {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 74mm;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    font-size: 8.5pt;
+    color: #000;
+  }
+  .hn-no-print {
+    display: none !important;
+  }
+}

@@ -11,7 +11,7 @@ export interface NavItem {
   badge?: 'cart';
   /** Active only on exactly this path (not on child paths that have their own entry). */
   exact?: boolean;
-  section: 'main' | 'purchasing' | 'sales' | 'settings';
+  section: 'main' | 'purchasing' | 'sales' | 'pos' | 'settings';
 }
 
 /** Single source of truth for the side navigation; visibility mirrors the API's module/permission checks. */
@@ -27,8 +27,9 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/angebote', labelKey: 'nav.offers', module: 'B2BSales', section: 'sales' },
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
+  { path: '/app/kasse', labelKey: 'nav.pos', module: 'Pos', permission: 'pos.sell', section: 'pos' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
   { path: '/app/administration', labelKey: 'nav.admin', adminOnly: true, section: 'settings' },
 ];
 
-export const NAV_SECTIONS: NavItem['section'][] = ['main', 'purchasing', 'sales', 'settings'];
+export const NAV_SECTIONS: NavItem['section'][] = ['main', 'purchasing', 'sales', 'pos', 'settings'];

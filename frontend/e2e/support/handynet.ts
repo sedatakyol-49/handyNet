@@ -178,6 +178,13 @@ export class Api {
     expect(res.status(), await res.text()).toBe(200);
   }
 
+  /** Generic tenant-scoped JSON call for test data setup; asserts the expected status and returns the body. */
+  async call<T = unknown>(method: 'GET' | 'POST' | 'PUT', path: string, organizationId: string, data?: unknown, expected = method === 'POST' ? 201 : 200): Promise<T> {
+    const res = await this.ctx.fetch(path, { method, headers: this.headers(organizationId), data });
+    expect(res.status(), `${method} ${path}: ${await res.text()}`).toBe(expected);
+    return (await res.json()) as T;
+  }
+
   async dispose(): Promise<void> {
     await this.ctx.dispose();
   }

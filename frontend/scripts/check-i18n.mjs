@@ -31,6 +31,8 @@ const patterns = [
   // Ankauf keys are referenced from TS logic (validators, blocked reasons) and error codes.
   /'((?:ankauf|ankaufAdmin)(?:\.\w+)+)'/g,
   /'(errors\.codes\.ankauf\.\w+)'/g,
+  // POS keys are referenced from TS logic (error texts, validation, shortcut labels) as well.
+  /'((?:pos|posPaymentMethod|receiptKind|taxTreatment|posSessionStatus|posRegisterStatus|cashMovementKind)(?:\.[A-Za-z0-9]+)+)'/g, // not API codes like pos.no_open_session
 ];
 for (const f of files) {
   const src = readFileSync(f, 'utf8');
@@ -50,7 +52,7 @@ const de = loc('de');
 const en = loc('en');
 
 if (process.argv.includes('--list')) console.log([...used].sort().join('\n'));
-const IGNORE = new Set(['imports.manage','inventory.manage','offers.manage','orders.fulfil','orders.place','orders.read','cart.items']);
+const IGNORE = new Set(['pos.sell','pos.manage','imports.manage','inventory.manage','offers.manage','orders.fulfil','orders.place','orders.read','cart.items']);
 for (const k of IGNORE) used.delete(k);
 const missingDe = [...used].filter((k) => !(k in de)).sort();
 const missingEn = Object.keys(de).filter((k) => !(k in en)).sort();

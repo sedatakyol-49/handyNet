@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DOCUMENT, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
@@ -41,7 +41,7 @@ import {
   validateReceiveForm,
 } from './intake.logic';
 
-type Action = 'receive' | 'inspect' | 'complete' | 'reject';
+type Action = 'receive' | 'inspect' | 'complete' | 'reject' | 'beleg';
 
 /** API field path for each seller form field (422 `errors` keys, case-insensitive). */
 const SELLER_API_FIELDS: Record<SellerField, string> = {
@@ -75,6 +75,7 @@ export class IntakePage {
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
   protected readonly session = inject(SessionStore);
 
   /** Route parameters (component input binding); exactly one is set. */
@@ -243,6 +244,21 @@ export class IntakePage {
       this.intakeQuery.set(done);
       this.dialog.set(null);
       this.toast.success(this.i18n.t('ankauf.intake.completed'));
+    });
+  }
+
+  // ---- Ankaufbeleg (PDF, completed intakes; fetched with the auth headers as a blob)
+  protected async downloadBeleg(i: Intake): Promise<void> {
+    await this.run('beleg', async () => {
+      const blob = await firstValueFrom(this.api.beleg(i.id));
+      const url = URL.createObjectURL(blob);
+      const a = this.document.createElement('a');
+      a.href = url;
+      a.download = `ankaufbeleg-${i.imei}.pdf`;
+      this.document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     });
   }
 

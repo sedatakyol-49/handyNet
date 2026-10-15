@@ -101,6 +101,36 @@ export const routes: Routes = [
         loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
       },
       {
+        path: 'kasse',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/registers.page').then((m) => m.PosRegistersPage),
+      },
+      {
+        path: 'kasse/belege/:id',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/receipt-detail.page').then((m) => m.PosReceiptDetailPage),
+      },
+      {
+        path: 'kasse/sitzungen/:id',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/session.page').then((m) => m.PosSessionPage),
+      },
+      {
+        path: 'kasse/:registerId',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/till.page').then((m) => m.TillPage),
+      },
+      {
+        path: 'kasse/:registerId/belege',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/receipts.page').then((m) => m.PosReceiptsPage),
+      },
+      {
+        path: 'kasse/:registerId/sitzungen',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage),
+      },
+      {
         path: 'team',
         canActivate: [accessGuard(undefined, 'organization.manage')],
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

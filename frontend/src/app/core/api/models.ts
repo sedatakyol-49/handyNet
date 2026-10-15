@@ -7,8 +7,8 @@ export interface Paged<T> {
   totalCount: number;
 }
 
-export type ModuleName = 'ProductImport' | 'Inventory' | 'B2BPurchasing' | 'B2BSales' | 'Ankauf';
-export const ALL_MODULES: ModuleName[] = ['ProductImport', 'Inventory', 'B2BPurchasing', 'B2BSales', 'Ankauf'];
+export type ModuleName = 'ProductImport' | 'Inventory' | 'B2BPurchasing' | 'B2BSales' | 'Ankauf' | 'Pos';
+export const ALL_MODULES: ModuleName[] = ['ProductImport', 'Inventory', 'B2BPurchasing', 'B2BSales', 'Ankauf', 'Pos'];
 
 export type Permission =
   | 'organization.manage'
@@ -18,7 +18,9 @@ export type Permission =
   | 'marketplace.browse'
   | 'orders.read'
   | 'orders.place'
-  | 'orders.fulfil';
+  | 'orders.fulfil'
+  | 'pos.sell'
+  | 'pos.manage';
 
 export type OrganizationStatus = 'PendingVerification' | 'Verified' | 'Rejected' | 'Suspended';
 
@@ -707,4 +709,241 @@ export interface Intake {
   stockUnitId: string | null;
   completedAt: string | null;
   rejectionReason: string | null;
+}
+
+// ---------------------------------------------------------------- POS (Kasse)
+
+export type PosPaymentMethod = 'Cash' | 'Card';
+export const POS_PAYMENT_METHODS: PosPaymentMethod[] = ['Cash', 'Card'];
+export type ReceiptKind = 'Sale' | 'Storno' | 'Return';
+export type TaxTreatment = 'Standard19' | 'Margin25a';
+export type CashMovementKind = 'Deposit' | 'Withdrawal';
+
+export interface PosRegister {
+  id: string;
+  name: string;
+  warehouseId: string;
+  isActive: boolean;
+  nextReceiptNumber: number;
+  openSessionId: string | null;
+  createdAt: string;
+}
+
+export interface CashMovement {
+  id: string;
+  kind: CashMovementKind;
+  amountMinor: number;
+  reason: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface PaymentTotal {
+  method: PosPaymentMethod;
+  amountMinor: number;
+}
+
+export interface TaxTotal {
+  treatment: TaxTreatment;
+  vatRateBasisPoints: number;
+  grossMinor: number;
+  netMinor: number;
+  vatMinor: number;
+}
+
+/** Z-report figures (live for an open session, stored for a closed one). */
+export interface SessionSummary {
+  receiptCount: number;
+  saleCount: number;
+  stornoCount: number;
+  returnCount: number;
+  totalGrossMinor: number;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  byPaymentMethod: PaymentTotal[];
+  byTaxTreatment: TaxTotal[];
+  openingCashMinor: number;
+  cashPaymentsMinor: number;
+  depositsMinor: number;
+  withdrawalsMinor: number;
+  expectedCashMinor: number;
+  firstReceiptNumber: number | null;
+  lastReceiptNumber: number | null;
+}
+
+export interface CashSession {
+  id: string;
+  registerId: string;
+  registerName: string;
+  status: 'Open' | 'Closed';
+  openedAt: string;
+  openedBy: string;
+  openingCashMinor: number;
+  closedAt: string | null;
+  closedBy: string | null;
+  expectedCashMinor: number;
+  countedCashMinor: number | null;
+  differenceMinor: number | null;
+  closingNote: string | null;
+  summary: SessionSummary;
+  movements: CashMovement[];
+}
+
+export interface PosLookup {
+  kind: 'Product' | 'Unit';
+  productId: string;
+  brand: string;
+  name: string;
+  ean: string | null;
+  imei: string | null;
+  stockUnitId: string | null;
+  taxTreatment: TaxTreatment | null;
+  warehouseId: string | null;
+  onHand: number | null;
+  reserved: number | null;
+  available: number | null;
+}
+
+export interface SaleLineRequest {
+  productId?: string | null;
+  imei?: string | null;
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor?: number | null;
+}
+
+export interface SalePayment {
+  method: PosPaymentMethod;
+  amountMinor: number;
+}
+
+export interface CreateSaleRequest {
+  registerId: string;
+  lines: SaleLineRequest[];
+  payments: SalePayment[];
+}
+
+export interface ReturnRequest {
+  lines: { lineNumber: number; quantity: number }[];
+  refundMethod: PosPaymentMethod;
+  reason: string;
+  registerId?: string | null;
+}
+
+export interface ReceiptLine {
+  lineNumber: number;
+  productId: string;
+  stockUnitId: string | null;
+  imei: string | null;
+  description: string;
+  /** Negative on Storno/Return receipts. */
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor: number;
+  lineGrossMinor: number;
+  taxTreatment: TaxTreatment;
+  vatRateBasisPoints: number;
+  /** Null for §25a lines (the margin VAT is never exposed). */
+  vatMinor: number | null;
+  originalLineNumber: number | null;
+  returnedQuantity: number;
+}
+
+export interface ReceiptPayment {
+  method: PosPaymentMethod;
+  amountMinor: number;
+  tenderedMinor: number | null;
+}
+
+export interface ReceiptVat {
+  label: string;
+  rateBasisPoints: number;
+  grossMinor: number;
+  netMinor: number;
+  vatMinor: number;
+}
+
+export interface ReceiptFiscal {
+  status: string;
+  notice: string | null;
+  tseSerialNumber: string | null;
+  transactionNumber: number | null;
+  signatureCounter: number | null;
+  signature: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface ReceiptSeller {
+  name: string;
+  legalName: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode: string;
+  vatId: string | null;
+}
+
+export interface ReceiptDocumentLine {
+  description: string;
+  imei: string | null;
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor: number;
+  lineGrossMinor: number;
+  /** "A" (19 %) or "§25a". */
+  taxLabel: string;
+}
+
+/** The printable receipt exactly as issued (stored with the receipt; a reprint always shows the original). */
+export interface ReceiptDocument {
+  title: string;
+  seller: ReceiptSeller;
+  registerName: string;
+  receiptNumber: number;
+  kind: ReceiptKind;
+  referencedReceiptNumber: number | null;
+  issuedAt: string;
+  currency: string;
+  lines: ReceiptDocumentLine[];
+  vat: ReceiptVat[];
+  totalGrossMinor: number;
+  payments: ReceiptPayment[];
+  changeMinor: number;
+  notes: string[];
+  fiscal: ReceiptFiscal;
+}
+
+export interface Receipt {
+  id: string;
+  registerId: string;
+  registerName: string;
+  sessionId: string;
+  number: number;
+  kind: ReceiptKind;
+  referencedReceiptId: string | null;
+  referencedReceiptNumber: number | null;
+  cancelledByReceiptId: string | null;
+  createdAt: string;
+  createdBy: string;
+  currency: string;
+  totalGrossMinor: number;
+  changeMinor: number;
+  reason: string | null;
+  lines: ReceiptLine[];
+  payments: ReceiptPayment[];
+  vat: ReceiptVat[];
+  fiscal: ReceiptFiscal | null;
+  document: ReceiptDocument;
+}
+
+export interface ReceiptSummary {
+  id: string;
+  registerId: string;
+  sessionId: string;
+  number: number;
+  kind: ReceiptKind;
+  referencedReceiptId: string | null;
+  createdAt: string;
+  totalGrossMinor: number;
 }

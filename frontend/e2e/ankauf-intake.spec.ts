@@ -146,6 +146,16 @@ test.describe.serial('Ankauf intake', () => {
     await expect(page.getByTestId('intake-inspect')).toHaveCount(0);
     await expect(page.getByTestId('in-reject')).toHaveCount(0);
 
+    // Ankaufbeleg: authenticated blob request returning a PDF, downloaded as a file.
+    const [belegResponse, beleg] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/api/ankauf/intakes/') && r.url().endsWith('/beleg')),
+      page.waitForEvent('download'),
+      page.getByTestId('intake-beleg').click(),
+    ]);
+    expect(belegResponse.status()).toBe(200);
+    expect(belegResponse.headers()['content-type']).toContain('application/pdf');
+    expect(beleg.suggestedFilename()).toBe(`ankaufbeleg-${imei}.pdf`);
+
     // List "Ankäufe" in the navigation.
     await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Ankäufe' }).click();
     await expect(page).toHaveURL(/\/app\/ankauf\/ankaeufe$/);

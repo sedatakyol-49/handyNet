@@ -143,6 +143,14 @@
             {{ 'ankauf.intake.completedText' | t: { amount: (i.paidMinor | money), method: (i.paymentMethod | tEnum: 'intakePaymentMethod'), date: (i.completedAt | hnDate) } }}
           </p>
           <p class="mt-1 text-xs text-slate-600">{{ 'ankauf.intake.marginScheme' | t }}</p>
+          <div class="mt-3">
+            <button hnButton type="button" [loading]="busy() === 'beleg'" [disabled]="!!busy()" (click)="downloadBeleg(i)" data-testid="intake-beleg">
+              {{ 'ankauf.intake.belegDownload' | t }}
+            </button>
+            @if (errorFor('beleg'); as err) {
+              <p class="mt-2 text-sm text-red-700" role="alert" data-testid="intake-beleg-error">{{ err }}</p>
+            }
+          </div>
           @if (canSeeStock()) {
             <p class="mt-3"><a class="hn-link text-sm font-medium" routerLink="/app/lager" data-testid="intake-stock-link">{{ 'ankauf.intake.toStock' | t }} →</a></p>
           }

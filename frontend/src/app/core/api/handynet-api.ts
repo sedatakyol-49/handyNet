@@ -4,6 +4,15 @@ import { Observable, catchError, from, switchMap, throwError } from 'rxjs';
 import { API_BASE_URL } from './api-config';
 import { queryParams } from './http-params';
 import {
+  CashMovement,
+  CashMovementKind,
+  CashSession,
+  CreateSaleRequest,
+  PosLookup,
+  PosRegister,
+  Receipt,
+  ReceiptSummary,
+  ReturnRequest,
   AdminOrganization,
   AnkaufModel,
   CreateQuoteRequest,
@@ -528,5 +537,88 @@ export class AnkaufApi {
 
   rejectIntake(id: string, reason: string): Observable<Intake> {
     return this.http.post<Intake>(`${this.url}/intakes/${id}/reject`, { reason });
+  }
+
+  /** Ankaufbeleg PDF of a completed intake (409 `ankauf.not_completed` otherwise). */
+  beleg(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/intakes/${id}/beleg`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+}
+
+/** Point of sale (module Pos, tenant-scoped). `pos.sell`: sessions, sales, returns, lookup; `pos.manage`: registers, Storno. */
+@Injectable({ providedIn: 'root' })
+export class PosApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/pos`;
+
+  // ---- registers
+  registers(): Observable<PosRegister[]> {
+    return this.http.get<PosRegister[]>(`${this.url}/registers`);
+  }
+
+  register(id: string): Observable<PosRegister> {
+    return this.http.get<PosRegister>(`${this.url}/registers/${id}`);
+  }
+
+  createRegister(body: { name: string; warehouseId?: string | null }): Observable<PosRegister> {
+    return this.http.post<PosRegister>(`${this.url}/registers`, body);
+  }
+
+  updateRegister(id: string, body: { name: string; isActive: boolean }): Observable<PosRegister> {
+    return this.http.put<PosRegister>(`${this.url}/registers/${id}`, body);
+  }
+
+  // ---- cash sessions
+  openSession(registerId: string, openingCashMinor: number): Observable<CashSession> {
+    return this.http.post<CashSession>(`${this.url}/registers/${registerId}/sessions`, { openingCashMinor });
+  }
+
+  /** 404 `pos.no_open_session` when the register has no open session. */
+  currentSession(registerId: string): Observable<CashSession> {
+    return this.http.get<CashSession>(`${this.url}/registers/${registerId}/sessions/current`);
+  }
+
+  sessions(q: { registerId?: string | null; page?: number; pageSize?: number }): Observable<Paged<CashSession>> {
+    return this.http.get<Paged<CashSession>>(`${this.url}/sessions`, { params: queryParams(q) });
+  }
+
+  session(id: string): Observable<CashSession> {
+    return this.http.get<CashSession>(`${this.url}/sessions/${id}`);
+  }
+
+  addMovement(sessionId: string, body: { kind: CashMovementKind; amountMinor: number; reason: string }): Observable<CashMovement> {
+    return this.http.post<CashMovement>(`${this.url}/sessions/${sessionId}/cash-movements`, body);
+  }
+
+  closeSession(sessionId: string, body: { countedCashMinor: number; note?: string | null }): Observable<CashSession> {
+    return this.http.post<CashSession>(`${this.url}/sessions/${sessionId}/close`, body);
+  }
+
+  // ---- sales
+  /** EAN (product) or 15-digit IMEI (own in-stock device); stock figures refer to the register's warehouse. */
+  lookup(code: string, registerId: string): Observable<PosLookup> {
+    return this.http.get<PosLookup>(`${this.url}/lookup`, { params: queryParams({ code, registerId }) });
+  }
+
+  /** The idempotency key must be reused when retrying the same checkout attempt (a replay answers 200 with the original). */
+  sell(body: CreateSaleRequest, idempotencyKey: string): Observable<Receipt> {
+    return this.http.post<Receipt>(`${this.url}/sales`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
+  }
+
+  receipts(q: { registerId?: string | null; sessionId?: string | null; page?: number; pageSize?: number }): Observable<Paged<ReceiptSummary>> {
+    return this.http.get<Paged<ReceiptSummary>>(`${this.url}/sales`, { params: queryParams(q) });
+  }
+
+  receipt(id: string): Observable<Receipt> {
+    return this.http.get<Receipt>(`${this.url}/sales/${id}`);
+  }
+
+  storno(id: string, body: { reason: string; registerId?: string | null }): Observable<Receipt> {
+    return this.http.post<Receipt>(`${this.url}/sales/${id}/storno`, body);
+  }
+
+  returnItems(id: string, body: ReturnRequest, idempotencyKey: string): Observable<Receipt> {
+    return this.http.post<Receipt>(`${this.url}/sales/${id}/returns`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
   }
 }

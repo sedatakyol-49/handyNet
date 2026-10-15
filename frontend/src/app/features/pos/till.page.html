@@ -1,0 +1,238 @@
+<hn-pos-subnav [registerId]="registerId()" />
+
+<div class="hn-no-print mb-3 flex flex-wrap items-end justify-between gap-2">
+  <h1 class="text-xl">{{ 'pos.till.title' | t: { name: register.value()?.name ?? '…' } }}</h1>
+</div>
+
+<hn-banner class="mb-3" [error]="register.error() || sessionQuery.error()" />
+
+@if (register.value(); as reg) {
+  @if (!reg.isActive) {
+    <hn-banner class="mb-3" tone="warning" [heading]="'pos.till.inactiveHeading' | t" [text]="'pos.till.inactiveText' | t" data-testid="pos-inactive" />
+  }
+}
+
+@if (sessionQuery.loading() && sessionQuery.value() === null) {
+  <p class="text-sm text-slate-500">{{ 'common.loading' | t }}</p>
+} @else if (!session()) {
+  @if (!sessionQuery.error() && register.value()?.isActive) {
+    <!-- ================================================================= open a cash session -->
+    <section class="hn-card max-w-md p-4" aria-labelledby="pos-open-heading" data-testid="pos-open-session">
+      <h2 id="pos-open-heading" class="mb-1 text-base">{{ 'pos.till.openTitle' | t }}</h2>
+      <p class="mb-3 text-sm text-slate-600">{{ 'pos.till.openText' | t }}</p>
+      <form (ngSubmit)="openSession()" novalidate>
+        <hn-field [label]="'pos.till.openingCash' | t" for="pos-opening" [required]="true" [errors]="openingError()">
+          <input hnInput id="pos-opening" name="opening" inputmode="decimal" autocomplete="off" class="h-12 text-end text-lg tabular-nums"
+            placeholder="0,00" [(ngModel)]="openingCash" [attr.aria-invalid]="!!openingError()"
+            [attr.aria-describedby]="openingError() ? 'pos-opening-error' : null" data-testid="pos-opening" />
+        </hn-field>
+        <button hnButton variant="primary" type="submit" class="mt-3 min-h-12 w-full text-base" [loading]="paying()" [disabled]="paying()" data-testid="pos-open">
+          {{ 'pos.till.openButton' | t }}
+        </button>
+      </form>
+    </section>
+  }
+} @else {
+  @let s = session()!;
+  <!-- ================================================================= session banner -->
+  <div class="hn-no-print mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status" data-testid="pos-session-banner">
+    <span class="font-semibold">{{ 'pos.till.sessionOpen' | t: { since: (s.openedAt | hnDate) } }}</span>
+    <span>{{ 'pos.till.sessionReceipts' | t: { count: s.summary.receiptCount } }}</span>
+    <span>{{ 'pos.till.expectedCash' | t }}: <span class="font-semibold tabular-nums">{{ s.expectedCashMinor | money }}</span></span>
+    <a class="hn-link ms-auto" [routerLink]="['/app/kasse/sitzungen', s.id]" data-testid="pos-session-link">{{ 'pos.till.sessionActions' | t }} <span class="inline-block rtl:-scale-x-100" aria-hidden="true">→</span></a>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]" (click)="onSurfaceClick($event)">
+    <!-- ================================================================= scan + cart -->
+    <section class="hn-no-print min-w-0 space-y-3" aria-labelledby="pos-cart-heading">
+      <form (ngSubmit)="scan()" novalidate class="flex gap-2">
+        <label for="pos-code" class="sr-only">{{ 'pos.till.codeLabel' | t }}</label>
+        <input #codeField id="pos-code" name="code" autocomplete="off" spellcheck="false" inputmode="numeric"
+          class="hn-control h-14 flex-1 font-mono text-xl" [placeholder]="'pos.till.codePlaceholder' | t" [(ngModel)]="code"
+          (keydown)="onCodeKeydown($event)" aria-describedby="pos-code-help" [attr.aria-invalid]="!!scanError()" data-testid="pos-code" />
+        <button hnButton variant="secondary" type="submit" class="min-h-14 px-5 text-base" [loading]="lookups() > 0">{{ 'pos.till.add' | t }}</button>
+      </form>
+      <p id="pos-code-help" class="text-xs text-slate-500">{{ 'pos.till.codeHelp' | t }}</p>
+      @if (scanError()) {
+        <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-scan-error">{{ scanError() }}</p>
+      }
+
+      <h2 id="pos-cart-heading" class="sr-only">{{ 'pos.till.cart' | t }}</h2>
+      <div class="hn-card overflow-x-auto">
+        @if (lines().length === 0) {
+          <p class="px-4 py-10 text-center text-sm text-slate-500" data-testid="pos-cart-empty">{{ 'pos.till.cartEmpty' | t }}</p>
+        } @else {
+          <table class="hn-table" data-testid="pos-cart">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'common.product' | t }}</th>
+                <th scope="col" class="text-center">{{ 'common.quantity' | t }}</th>
+                <th scope="col" class="num">{{ 'pos.till.unitPrice' | t }}</th>
+                <th scope="col" class="num">{{ 'pos.till.discount' | t }}</th>
+                <th scope="col" class="num">{{ 'pos.till.lineTotal' | t }}</th>
+                <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of lines(); track l.key) {
+                @let a = lineAmounts(l);
+                <tr [class.bg-accent-50]="selectedKey() === l.key" [class.bg-red-50]="errorLineKey() === l.key" [attr.data-line]="l.imei ?? l.productId">
+                  <td class="min-w-48">
+                    <span class="block font-medium">{{ l.description }}</span>
+                    <span class="flex flex-wrap gap-x-2 text-xs text-slate-500">
+                      @if (l.imei) {
+                        <span class="hn-mono">IMEI {{ l.imei }}</span>
+                      }
+                      @if (l.taxTreatment === 'Margin25a') {
+                        <span>{{ 'taxTreatment.Margin25a' | t }}</span>
+                      }
+                      @if (l.kind === 'Product' && l.available !== null) {
+                        <span>{{ 'pos.till.available' | t: { count: l.available } }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td>
+                    @if (l.kind === 'Unit') {
+                      <span class="block text-center tabular-nums">1</span>
+                    } @else {
+                      <span class="flex items-center justify-center gap-1">
+                        <button type="button" class="grid size-11 place-items-center rounded-md border border-slate-300 bg-white text-lg hover:bg-slate-50 disabled:opacity-40"
+                          [disabled]="l.quantity <= 1" (click)="changeQty(l.key, -1)" [attr.aria-label]="'pos.till.decrease' | t: { name: l.description }" data-testid="pos-qty-minus">−</button>
+                        <span class="w-10 text-center text-base font-semibold tabular-nums" data-testid="pos-qty">{{ l.quantity }}</span>
+                        <button type="button" class="grid size-11 place-items-center rounded-md border border-slate-300 bg-white text-lg hover:bg-slate-50 disabled:opacity-40"
+                          [disabled]="l.quantity >= maxQuantity(l)" (click)="changeQty(l.key, 1)" [attr.aria-label]="'pos.till.increase' | t: { name: l.description }" data-testid="pos-qty-plus">+</button>
+                      </span>
+                    }
+                  </td>
+                  <td class="num">
+                    <label class="sr-only" [for]="'pos-price-' + l.key">{{ 'pos.till.unitPriceFor' | t: { name: l.description } }}</label>
+                    <input [id]="'pos-price-' + l.key" class="hn-control h-11 w-28 text-end tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                      [value]="l.priceInput" (input)="setPrice(l.key, $any($event.target).value)" (keydown.enter)="priceEnter($event)"
+                      [attr.aria-invalid]="a.error === 'price'" data-testid="pos-price" />
+                  </td>
+                  <td class="num">
+                    <label class="sr-only" [for]="'pos-discount-' + l.key">{{ 'pos.till.discountFor' | t: { name: l.description } }}</label>
+                    <input [id]="'pos-discount-' + l.key" class="hn-control h-11 w-24 text-end tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                      [value]="l.discountInput" (input)="setDiscount(l.key, $any($event.target).value)" (keydown.enter)="priceEnter($event)"
+                      [attr.aria-invalid]="a.error === 'discount' || a.error === 'discountTooHigh'" data-testid="pos-discount" />
+                    @if (a.error === 'discountTooHigh') {
+                      <span class="block text-xs text-red-700">{{ 'pos.till.discountTooHigh' | t }}</span>
+                    }
+                  </td>
+                  <td class="num text-base font-semibold" data-testid="pos-line-total">{{ a.grossMinor === null ? '–' : (a.grossMinor | money) }}</td>
+                  <td class="text-end">
+                    <button type="button" class="grid size-11 place-items-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-700"
+                      (click)="removeLine(l.key)" [attr.aria-label]="'pos.till.remove' | t: { name: l.description }" data-testid="pos-remove">✕</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <details class="text-xs text-slate-600">
+        <summary class="cursor-pointer select-none">{{ 'pos.till.shortcutsTitle' | t }}</summary>
+        <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1" data-testid="pos-shortcuts">
+          @for (s of shortcuts; track s.key) {
+            <dt><kbd class="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">{{ s.key === 'Escape' ? 'Esc' : s.key }}</kbd></dt>
+            <dd>{{ 'pos.till.shortcut.' + s.action | t }}</dd>
+          }
+          <dt><kbd class="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">+ / −</kbd></dt>
+          <dd>{{ 'pos.till.shortcut.quantity' | t }}</dd>
+          <dt><kbd class="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">Enter</kbd></dt>
+          <dd>{{ 'pos.till.shortcut.enter' | t }}</dd>
+        </dl>
+      </details>
+    </section>
+
+    <!-- ================================================================= totals, payment, receipt -->
+    <aside class="space-y-3" aria-labelledby="pos-pay-heading">
+      @if (lastReceipt(); as r) {
+        <div class="hn-no-print rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status" data-testid="pos-sale-done">
+          <p class="font-semibold">{{ 'pos.till.saleDone' | t: { number: r.number } }}</p>
+          @if (r.changeMinor) {
+            <p class="mt-1 text-2xl font-bold tabular-nums">{{ 'pos.till.changeDue' | t }}: {{ r.changeMinor | money }}</p>
+          }
+        </div>
+        <hn-receipt-view [doc]="r.document" />
+        <div class="hn-no-print flex gap-2">
+          <button hnButton type="button" class="min-h-12 flex-1 text-base" (click)="print()" data-testid="pos-print">{{ 'pos.receipt.print' | t }}</button>
+          <button hnButton variant="primary" type="button" class="min-h-12 flex-1 text-base" (click)="newSale()" data-testid="pos-new-sale">{{ 'pos.till.newSale' | t }}</button>
+        </div>
+      } @else {
+        <div class="hn-card p-4">
+          <h2 id="pos-pay-heading" class="sr-only">{{ 'pos.till.payment' | t }}</h2>
+          <div class="flex items-baseline justify-between">
+            <span class="text-sm text-slate-600">{{ 'pos.till.total' | t }}</span>
+            <span class="text-3xl font-bold tabular-nums" data-testid="pos-total">{{ totals().totalMinor | money }}</span>
+          </div>
+          <p class="text-end text-xs text-slate-500">
+            {{ 'pos.till.items' | t: { count: totals().itemCount } }}
+            @if (totals().discountMinor) {
+              · {{ 'pos.till.discountTotal' | t }} {{ totals().discountMinor | money }}
+            }
+          </p>
+
+          <div class="mt-4 space-y-3">
+            <div>
+              <label for="pos-cash" class="mb-1 block text-xs font-medium text-slate-700">{{ 'pos.till.cashTendered' | t }}</label>
+              <input id="pos-cash" class="hn-control h-12 text-end text-lg tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                [value]="cash()" (input)="cash.set($any($event.target).value); checkoutError.set(null)" (keydown.enter)="$event.preventDefault(); checkout()"
+                [attr.aria-invalid]="settlement().error === 'invalidAmount' || settlement().error === 'cashNotNeeded'" data-testid="pos-cash" />
+              @if (suggestions().length) {
+                <div class="mt-2 grid grid-cols-4 gap-1">
+                  @for (v of suggestions(); track v) {
+                    <button type="button" class="min-h-11 rounded-md border border-slate-300 bg-white text-sm tabular-nums hover:bg-slate-50" (click)="setCashMinor(v)"
+                      data-testid="pos-cash-suggestion">{{ v | money }}</button>
+                  }
+                </div>
+              }
+            </div>
+            <div>
+              <label for="pos-card" class="mb-1 block text-xs font-medium text-slate-700">{{ 'pos.till.cardAmount' | t }}</label>
+              <div class="flex gap-2">
+                <input id="pos-card" class="hn-control h-12 flex-1 text-end text-lg tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                  [value]="card()" (input)="card.set($any($event.target).value); checkoutError.set(null)" (keydown.enter)="$event.preventDefault(); checkout()"
+                  [attr.aria-invalid]="settlement().error === 'cardExceedsTotal'" aria-describedby="pos-card-hint" data-testid="pos-card" />
+                <button hnButton type="button" class="min-h-12" (click)="applyCardRest()" [disabled]="!totals().totalMinor" data-testid="pos-card-rest">{{ 'pos.till.cardRest' | t }} (F4)</button>
+              </div>
+              <p id="pos-card-hint" class="mt-1 text-xs text-slate-500">{{ 'pos.till.cardHint' | t }}</p>
+            </div>
+            <button hnButton type="button" class="min-h-11 w-full" (click)="applyExactCash()" [disabled]="!totals().totalMinor" data-testid="pos-cash-exact">{{ 'pos.till.cashExact' | t }} (F8)</button>
+          </div>
+
+          <dl class="mt-4 space-y-1 border-t border-slate-200 pt-3 text-sm">
+            <div class="flex justify-between"><dt>{{ 'pos.till.paid' | t }}</dt><dd class="tabular-nums">{{ settlement().paidMinor | money }}</dd></div>
+            @if (settlement().remainingMinor > 0 && totals().totalMinor > 0) {
+              <div class="flex justify-between font-semibold text-amber-800"><dt>{{ 'pos.till.remaining' | t }}</dt><dd class="tabular-nums" data-testid="pos-remaining">{{ settlement().remainingMinor | money }}</dd></div>
+            }
+            <div class="flex items-baseline justify-between text-lg font-bold" [class.text-emerald-800]="settlement().changeMinor > 0">
+              <dt>{{ 'pos.till.change' | t }}</dt><dd class="tabular-nums" data-testid="pos-change">{{ settlement().changeMinor | money }}</dd>
+            </div>
+          </dl>
+
+          @if (checkoutError()) {
+            <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
+          }
+
+          <button hnButton variant="primary" type="button" class="mt-4 min-h-14 w-full text-lg" [loading]="paying()" [disabled]="paying() || !lines().length"
+            (click)="checkout()" data-testid="pos-pay">
+            {{ 'pos.till.pay' | t }} (F9)
+          </button>
+          @if (lines().length) {
+            <button hnButton variant="ghost" type="button" class="mt-2 min-h-11 w-full" (click)="confirmDiscard.set(true)" data-testid="pos-discard">{{ 'pos.till.discard' | t }} (Esc)</button>
+          }
+        </div>
+      }
+    </aside>
+  </div>
+}
+
+<hn-dialog [title]="'pos.till.discardTitle' | t" [open]="confirmDiscard()" (closed)="confirmDiscard.set(false); focusCode()">
+  <p class="text-sm">{{ 'pos.till.discardText' | t: { count: lines().length } }}</p>
+  <div class="mt-4 flex justify-end gap-2">
+    <button hnButton type="button" class="min-h-11" (click)="confirmDiscard.set(false); focusCode()">{{ 'common.cancel' | t }}</button>
+    <button hnButton variant="danger" type="button" class="min-h-11" autofocus (click)="discardCart()" data-testid="pos-discard-confirm">{{ 'pos.till.discard' | t }}</button>
+  </div>
+</hn-dialog>

@@ -34,7 +34,7 @@ CORS on the API already allows `http://localhost:4200`).
 | `npm test` | Unit tests once (Vitest via `ng test --watch=false`) |
 | `npm run test:watch` | Unit tests in watch mode |
 | `npm run e2e` | Playwright e2e tests (see below) |
-| `node scripts/check-i18n.mjs` | Verifies that every translation key used in the code exists in `de.json` and `en.json` |
+| `node scripts/check-i18n.mjs` | Verifies the translation keys of all seven locale files (see i18n) |
 
 For SSR deployments the Angular server only accepts known `Host` headers (SSRF protection). `localhost` is allowed in
 `angular.json` (`security.allowedHosts`); add your production host there or set `NG_ALLOWED_HOSTS`.
@@ -74,6 +74,9 @@ src/app
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
    │                         (IMEI Luhn check, quote form validation, error text); device intake (Ankäufe list +
    │                         intake page) with intake.logic.ts (age, seller/inspect/amount checks, steps per status)
+   ├─ pos/                   Kasse: registers, till, receipts (Storno/Return), cash sessions with closing and Z-report;
+   │                         pos.logic.ts (cart totals, payments/change, idempotency, returnable quantities, shortcuts),
+   │                         receipt-view (printable 80 mm receipt), z-report
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
       │                      "Reklamationen" (escalated disputes queue, detail + decision) and "Ankaufspreise"
       └─ ankauf/             price lists (upload, review, publish/discard) and pricing policy versions;
@@ -206,10 +209,43 @@ Module `Ankauf` (enabled per organization in Administration → Unternehmen → 
   - Bezahlung: amount prefilled with the inspected max. consumer price, must be > 0 and ≤ inspected offer (client check
     in cents), Bar / Überweisung, optional warehouse (default warehouse otherwise), confirmation dialog with IMEI,
     amount and the §25a margin-scheme stock note. Completed intakes link to Lager. "Ankauf ablehnen" (reason required)
-    while not completed.
+    while not completed. Completed intakes offer "Ankaufbeleg (PDF)" (`GET /api/ankauf/intakes/{id}/beleg`, fetched
+    with the auth headers as a blob and downloaded like the shipping label).
   - `/app/ankauf/ankaeufe` (nav "Ankäufe"): latest 100 intakes with status filter and badges.
 - `ankauf.*` error codes are translated; for codes whose API message names sheets/rows/ranges (`sheet_missing`,
   `duplicate_models`, `unreadable`, `pending_decisions`, `policy_range`) the API text is appended.
+
+### Kasse (POS)
+
+Module `Pos` (enabled per organization by the platform admin; sells stock of the Inventory module). Business rules:
+`../docs/adr/0008-pos-fiscal-and-receipts.md`. Navigation section "Ladenverkauf" → **Kasse** (`pos.sell`: Owner,
+Manager, Staff). Register management and Storno need `pos.manage` (Owner, Manager) and are hidden otherwise.
+
+- `/app/kasse`: registers (session open/closed, warehouse, next receipt number). With `pos.manage`: create (name +
+  warehouse, default warehouse otherwise), rename, deactivate/activate (the API refuses while a session is open).
+- `/app/kasse/:registerId` (till): without an open session, the opening cash count opens one. The code input keeps the
+  focus (scanners type code + Enter; printable keys typed outside any field are routed to it). EAN → product line
+  (scanning again adds 1, limited to the available stock of the register's warehouse); 15 digits → own in-stock device
+  (quantity fixed 1, IMEI shown, §25a marked). The cashier types the unit price; it is prefilled with the last price used
+  for that product in this browser session (`sessionStorage`). Line discount, +/−, remove. Payment: cash tendered
+  (quick amounts) → change, card (≤ total), split payments; the API's rules are mirrored client-side (`settle()`).
+  Shortcuts, listed on the screen: F2 code field, F4 card for the rest, F8 exact cash, F9 pay, Esc cancels step by step
+  (code → payments → discard cart with confirmation), +/− in the empty code field. Checkout sends an `Idempotency-Key`
+  created per attempt and reused when the same cart is retried after a network error / 5xx (a changed cart gets a new
+  key). After the sale the receipt is shown and the next scan starts a new sale.
+- Receipts show the API's stored document exactly as issued: seller, number, date, lines with tax label (A / §25a), VAT
+  breakdown, notes (§25a), payments/tendered/change and, prominently on top, the fiscal notice ("TSE nicht angebunden –
+  Testbetrieb" in dev; TSE data is printed only for signed receipts). "Beleg drucken" uses `window.print()`; the print
+  stylesheet in `styles.css` prints only the `.hn-print-area` (receipt or Z-report) on an 80 mm roll.
+- `/app/kasse/:registerId/belege` (current session or all) and `/app/kasse/belege/:id`: Storno (`pos.manage`, reason,
+  confirmation; not offered once items were returned) and Return (quantity per line up to sold − returned, refund
+  preview allocated exactly like the API, cash or card, reason, confirmation, own Idempotency-Key).
+- `/app/kasse/sitzungen/:id`: live interim figures, deposits/withdrawals with reason, closing with the counted cash
+  (difference to the expected cash shown before and in the confirmation, which re-reads the session first); afterwards
+  the printable Z-report (receipt number range, counts, totals, by payment method and by taxation, cash
+  reconciliation). `/app/kasse/:registerId/sitzungen` lists the sessions.
+- Money stays in integer cents (`parseMoneyToMinor`) and is displayed with Intl de-DE. `pos.*`, `stock.insufficient`
+  (with the available quantity), `stock.serialized_requires_imei` and `unit.*` codes are translated.
 
 ## i18n
 
@@ -279,9 +315,15 @@ Without these variables the tests are skipped. Specs:
 - `e2e/ankauf-intake.spec.ts` – admin publishes a list via the API (unique brand, right before use) and enables Ankauf +
   Inventory in the UI; the shop quotes (Gut, generated Luhn-valid IMEI), starts the intake with an adult seller,
   inspects worse (Akzeptabel + display damage + battery 70 % → 300,00 € becomes 144,00 €), is refused paying above the
-  offer, pays 120,50 € and completes; Lager shows the device with on-hand 1. A second shop: a 16-year-old seller is
-  refused client-side, the stocked IMEI shows the in-stock warning, another intake is rejected with a reason. Same
-  default-policy assumption as ankauf-flow.
+  offer, pays 120,50 € and completes, downloads the Ankaufbeleg (asserts a PDF response); Lager shows the device with
+  on-hand 1. A second shop: a 16-year-old seller is refused client-side, the stocked IMEI shows the in-stock warning,
+  another intake is rejected with a reason. Same default-policy assumption as ankauf-flow.
+
+- `e2e/pos-flow.spec.ts` – shop with Pos + Inventory + ProductImport; a product with an EAN and 5 units received are
+  created via the API. The shop creates a register, opens a session with 100,00 €, scans the EAN, enters 12,50 €,
+  quantity 2, pays 50,00 € cash (F9) → receipt no. 1 with 25,00 € change and "TSE nicht angebunden – Testbetrieb";
+  returns one item in cash → receipt no. 2 with −12,50 €; closes with counted = expected (112,50 €) → difference
+  0,00 €, Z-report: receipts 1 to 2, 12,50 € gross, cash and standard taxation.
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.
