@@ -43,8 +43,7 @@ Dependencies: Phase 2 payments + invoicing.
 - Serialized stock (IMEI/serial) with partial unique index; device lifecycle.
 - POS / Kassensystem (touch UI, barcode, cash/card, returns, daily closing) on the same reservation path;
   fiskaly TSE integration in sandbox first; DSFinV-K export. No fake signatures.
-- Pricing & Ankauf: monthly XLSX price list import (Mobilfunk sheet), versioned condition multipliers,
-  deductions, approval rules (increase / >30 % decrease / new model), immutable price versions.
+- ✅ Pricing & Ankauf (ADR-0007): monthly XLSX list, approval rules, immutable price versions (current list only), versioned condition policy with overrides and deductions, dealer quotes with preserved versions. Open: device intake + inspection to final price, §25a documentation, stock entry with IMEI, individual offers, frontend.
 - Repair management and the B2B repair network.
 
 ## Phase 4 — Public

@@ -182,3 +182,39 @@ export class Api {
     await this.ctx.dispose();
   }
 }
+
+// ---------------------------------------------------------------- Ankauf
+
+export interface AnkaufRow {
+  brand: string;
+  model: string;
+  storage: string;
+  /** Number = euro amount cell; string = text cell (e.g. "auf Anfrage" → skipped row). */
+  price: number | string;
+}
+
+/**
+ * Monthly Ankauf price list as XLSX (sheet "Mobilfunk", a title row above the header so header detection is
+ * exercised). The list price is the reference price for condition "Gut".
+ */
+export async function ankaufPriceListXlsx(rows: AnkaufRow[]): Promise<Buffer> {
+  const { default: ExcelJS } = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('Hinweise').addRow(['Interne Notizen – wird nicht gelesen']);
+  const sheet = workbook.addWorksheet('Mobilfunk');
+  sheet.addRow(['Ankaufspreisliste (E2E)']);
+  sheet.addRow(['Hersteller', 'Modell', 'Speicher', 'Ankaufspreis']);
+  for (const r of rows) sheet.addRow([r.brand, r.model, r.storage, r.price]);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+/** yyyy-MM-dd / HH:mm in the local time zone (the browser of the e2e run uses the same zone). */
+export function localDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function localTime(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}

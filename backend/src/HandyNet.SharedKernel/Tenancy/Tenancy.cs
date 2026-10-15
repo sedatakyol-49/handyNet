@@ -11,6 +11,7 @@ public enum PlatformModule
     Inventory,
     B2BPurchasing,
     B2BSales,
+    Ankauf,
 }
 
 public enum MembershipRole

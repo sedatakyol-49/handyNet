@@ -6,6 +6,7 @@ using HandyNet.Modules.Imports.Domain;
 using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Modules.Marketplace.Contracts;
 using HandyNet.Modules.Marketplace.Domain;
+using HandyNet.SharedKernel;
 
 namespace HandyNet.UnitTests;
 

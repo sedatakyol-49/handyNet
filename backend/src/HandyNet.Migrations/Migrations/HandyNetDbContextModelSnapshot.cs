@@ -26,6 +26,409 @@ namespace HandyNet.Migrations.Migrations
             modelBuilder.HasSequence("order_number_seq", "ordering")
                 .StartsAt(1000L);
 
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.ConditionPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("EffectiveFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("effective_from");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings");
+
+                    b.HasKey("Id")
+                        .HasName("pk_condition_policies");
+
+                    b.HasIndex("EffectiveFrom")
+                        .HasDatabaseName("ix_condition_policies_effective_from");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_condition_policies_number");
+
+                    b.ToTable("condition_policies", "ankauf");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceList", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("file_sha256")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<Guid>("ImportedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("imported_by");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("label");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<Guid?>("PublishedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_by");
+
+                    b.Property<string>("SheetName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("sheet_name");
+
+                    b.Property<string>("SkippedRows")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("skipped_rows");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("ValidFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateTimeOffset>("ValidUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_until");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_lists");
+
+                    b.HasIndex("ImportedAt")
+                        .HasDatabaseName("ix_price_lists_imported_at");
+
+                    b.ToTable("price_lists", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_price_lists_validity", "valid_until > valid_from");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceListEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("brand");
+
+                    b.Property<string>("Change")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("change");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("decision");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("ModelKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("model_key");
+
+                    b.Property<long?>("PreviousPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("previous_price_minor");
+
+                    b.Property<Guid>("PriceListId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("price_list_id");
+
+                    b.Property<long>("PriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("price_minor");
+
+                    b.Property<int>("RowNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_number");
+
+                    b.Property<string>("Storage")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("storage");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_list_entries");
+
+                    b.HasIndex("PriceListId", "Decision")
+                        .HasDatabaseName("ix_price_list_entries_price_list_id_decision");
+
+                    b.HasIndex("PriceListId", "ModelKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_price_list_entries_price_list_id_model_key");
+
+                    b.ToTable("price_list_entries", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_price_list_entries_price", "price_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("brand");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("ModelKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("model_key");
+
+                    b.Property<Guid>("PriceListId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("price_list_id");
+
+                    b.Property<long>("PriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("price_minor");
+
+                    b.Property<string>("Storage")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("storage");
+
+                    b.Property<DateTimeOffset>("ValidFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateTimeOffset>("ValidUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_until");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_versions");
+
+                    b.HasIndex("ModelKey", "ValidFrom")
+                        .HasDatabaseName("ix_price_versions_model_key_valid_from");
+
+                    b.HasIndex("PriceListId", "ModelKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_price_versions_price_list_id_model_key");
+
+                    b.ToTable("price_versions", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_price_versions_price", "price_minor > 0");
+
+                            t.HasCheckConstraint("ck_price_versions_validity", "valid_until > valid_from");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.Quote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("BatteryHealthPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("battery_health_percent");
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("brand");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("condition");
+
+                    b.Property<int>("ConditionAdjustment")
+                        .HasColumnType("integer")
+                        .HasColumnName("condition_adjustment");
+
+                    b.Property<Guid>("ConditionPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("condition_policy_id");
+
+                    b.Property<long?>("ConsumerPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("consumer_price_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<long?>("DealerMarginMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("dealer_margin_minor");
+
+                    b.Property<string[]>("Defects")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("defects");
+
+                    b.Property<string>("Imei")
+                        .HasMaxLength(15)
+                        .HasColumnType("character(15)")
+                        .HasColumnName("imei")
+                        .IsFixedLength();
+
+                    b.Property<long>("MaxConsumerPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("max_consumer_price_minor");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("ModelKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("model_key");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<long>("PlatformOfferMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_offer_minor");
+
+                    b.Property<Guid>("PriceVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("price_version_id");
+
+                    b.Property<long>("ReferenceGutMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("reference_gut_minor");
+
+                    b.Property<long>("ReferencePurchasePriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("reference_purchase_price_minor");
+
+                    b.Property<string>("Storage")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("storage");
+
+                    b.Property<int>("TotalDeduction")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_deduction");
+
+                    b.Property<DateTimeOffset>("ValidUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_until");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quotes");
+
+                    b.HasIndex("ConditionPolicyId")
+                        .HasDatabaseName("ix_quotes_condition_policy_id");
+
+                    b.HasIndex("PriceVersionId")
+                        .HasDatabaseName("ix_quotes_price_version_id");
+
+                    b.HasIndex("OrganizationId", "CreatedAt")
+                        .HasDatabaseName("ix_quotes_organization_id_created_at");
+
+                    b.ToTable("quotes", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_quotes_amounts", "reference_purchase_price_minor >= 0 AND platform_offer_minor >= 0 AND max_consumer_price_minor >= 0");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Catalog.Domain.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2024,6 +2427,43 @@ namespace HandyNet.Migrations.Migrations
                         .HasFilter("processed_at IS NULL");
 
                     b.ToTable("outbox_messages", "infra");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceListEntry", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.PriceList", null)
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_price_list_entries_price_lists_price_list_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceVersion", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.PriceList", null)
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_price_versions_price_lists_price_list_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.Quote", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.ConditionPolicy", null)
+                        .WithMany()
+                        .HasForeignKey("ConditionPolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quotes_condition_policies_condition_policy_id");
+
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.PriceVersion", null)
+                        .WithMany()
+                        .HasForeignKey("PriceVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quotes_price_versions_price_version_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Disputes.Domain.Dispute", b =>

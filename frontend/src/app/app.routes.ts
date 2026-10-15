@@ -81,6 +81,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/imports/import-wizard.page').then((m) => m.ImportWizardPage),
       },
       {
+        path: 'ankauf',
+        canActivate: [accessGuard('Ankauf')],
+        loadComponent: () => import('./features/ankauf/ankauf.page').then((m) => m.AnkaufPage),
+      },
+      {
         path: 'team',
         canActivate: [accessGuard(undefined, 'organization.manage')],
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),
@@ -99,6 +104,21 @@ export const routes: Routes = [
         path: 'administration/reklamationen/:id',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/admin-dispute-detail.page').then((m) => m.AdminDisputeDetailPage),
+      },
+      {
+        path: 'administration/ankauf',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/ankauf/admin-price-lists.page').then((m) => m.AdminPriceListsPage),
+      },
+      {
+        path: 'administration/ankauf/preisregeln',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/ankauf/admin-policies.page').then((m) => m.AdminPoliciesPage),
+      },
+      {
+        path: 'administration/ankauf/preislisten/:id',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/ankauf/admin-price-list-review.page').then((m) => m.AdminPriceListReviewPage),
       },
     ],
   },

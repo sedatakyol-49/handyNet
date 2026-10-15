@@ -36,6 +36,9 @@ public class ModuleBoundaryTests
         { "Ordering", "HandyNet.Modules.Ledger" },
         { "Ordering", "HandyNet.Modules.Disputes" },
         { "Payments", "HandyNet.Modules.Disputes" },
+        // Ankauf is self-contained (platform price lists + dealer quotes).
+        { "Catalog", "HandyNet.Modules.Ankauf" },
+        { "Ordering", "HandyNet.Modules.Ankauf" },
     };
 
     [Theory]
@@ -59,6 +62,7 @@ public class ModuleBoundaryTests
     [InlineData("Ledger")]
     [InlineData("Payments")]
     [InlineData("Disputes")]
+    [InlineData("Ankauf")]
     public void Domain_is_free_of_infrastructure_and_web(string module)
     {
         var result = Types.InAssembly(Module(module))
@@ -90,7 +94,7 @@ public class ModuleBoundaryTests
     [Fact]
     public void Money_is_never_floating_point()
     {
-        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes" }.Select(Module))
+        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf" }.Select(Module))
             .GetTypes()
             .SelectMany(t => t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             .Where(p => (p.Name.Contains("Price") || p.Name.Contains("Total") || p.Name.EndsWith("Minor"))

@@ -7,8 +7,8 @@ export interface Paged<T> {
   totalCount: number;
 }
 
-export type ModuleName = 'ProductImport' | 'Inventory' | 'B2BPurchasing' | 'B2BSales';
-export const ALL_MODULES: ModuleName[] = ['ProductImport', 'Inventory', 'B2BPurchasing', 'B2BSales'];
+export type ModuleName = 'ProductImport' | 'Inventory' | 'B2BPurchasing' | 'B2BSales' | 'Ankauf';
+export const ALL_MODULES: ModuleName[] = ['ProductImport', 'Inventory', 'B2BPurchasing', 'B2BSales', 'Ankauf'];
 
 export type Permission =
   | 'organization.manage'
@@ -513,4 +513,132 @@ export interface EscalatedDispute {
   sellerName: string;
   reason: DisputeReason;
   escalatedAt: string;
+}
+
+// ---------------------------------------------------------------- Ankauf (used-device buyback)
+
+export type PriceListStatus = 'Review' | 'Published' | 'Discarded';
+export type PriceChange = 'New' | 'Unchanged' | 'Increase' | 'Decrease' | 'LargeDecrease';
+export type EntryDecision = 'AutoAccepted' | 'Pending' | 'Approved' | 'Rejected';
+export type DeviceCondition = 'Neu' | 'WieNeu' | 'SehrGut' | 'Gut' | 'Akzeptabel';
+export type DeviceDefect = 'ScreenDamage' | 'HousingDamage' | 'CameraDefect' | 'BiometricDefect' | 'MissingFunction';
+
+export const DEVICE_CONDITIONS: DeviceCondition[] = ['Neu', 'WieNeu', 'SehrGut', 'Gut', 'Akzeptabel'];
+export const DEVICE_DEFECTS: DeviceDefect[] = ['ScreenDamage', 'HousingDamage', 'CameraDefect', 'BiometricDefect', 'MissingFunction'];
+export const PRICE_CHANGES: PriceChange[] = ['New', 'Unchanged', 'Increase', 'Decrease', 'LargeDecrease'];
+export const ENTRY_DECISIONS: EntryDecision[] = ['Pending', 'Approved', 'Rejected', 'AutoAccepted'];
+
+export interface PriceListSummary {
+  total: number;
+  new: number;
+  unchanged: number;
+  increases: number;
+  decreases: number;
+  largeDecreases: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  autoAccepted: number;
+  skipped: number;
+}
+
+export interface SkippedPriceRow {
+  rowNumber: number;
+  text: string;
+  reason: string;
+}
+
+export interface PriceList {
+  id: string;
+  label: string;
+  fileName: string;
+  sheetName: string;
+  validFrom: string;
+  validUntil: string;
+  status: PriceListStatus;
+  importedAt: string;
+  publishedAt: string | null;
+  summary: PriceListSummary;
+  skippedRows: SkippedPriceRow[];
+}
+
+export interface PriceListEntry {
+  id: number;
+  rowNumber: number;
+  brand: string;
+  model: string;
+  storage: string | null;
+  priceMinor: number;
+  previousPriceMinor: number | null;
+  change: PriceChange;
+  decision: EntryDecision;
+  decidedAt: string | null;
+}
+
+/** Condition → basis points (100 = 1 %). */
+export type ConditionMap = Partial<Record<DeviceCondition, number>>;
+
+/** Pricing policy parameters; all percentages are basis points (100 = 1 %). */
+export interface PolicySettings {
+  conditionAdjustments: Record<DeviceCondition, number>;
+  /** Normalized brand key (e.g. "APPLE") → condition overrides. */
+  brandOverrides: Record<string, ConditionMap>;
+  /** Normalized model key ("BRAND|MODEL|STORAGE") → condition overrides. */
+  modelOverrides: Record<string, ConditionMap>;
+  defectDeductions: Record<DeviceDefect, number>;
+  batteryHealthThresholdPercent: number;
+  batteryDeduction: number;
+  platformMargin: number;
+  minDealerMargin: number;
+}
+
+export interface Policy {
+  id: string;
+  number: number;
+  settings: PolicySettings;
+  effectiveFrom: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface AnkaufModel {
+  modelKey: string;
+  brand: string;
+  model: string;
+  storage: string | null;
+  priceValidUntil: string;
+}
+
+export interface CreateQuoteRequest {
+  modelKey: string;
+  condition: DeviceCondition;
+  defects?: DeviceDefect[];
+  batteryHealthPercent?: number | null;
+  /** Decimal euros (the API converts to cents). */
+  consumerPrice?: number | null;
+  imei?: string | null;
+}
+
+export interface Quote {
+  id: string;
+  brand: string;
+  model: string;
+  storage: string | null;
+  condition: DeviceCondition;
+  defects: DeviceDefect[];
+  batteryHealthPercent: number | null;
+  imei: string | null;
+  referenceGutMinor: number;
+  conditionAdjustmentBasisPoints: number;
+  totalDeductionBasisPoints: number;
+  referencePurchasePriceMinor: number;
+  platformOfferMinor: number;
+  maxConsumerPriceMinor: number;
+  consumerPriceMinor: number | null;
+  dealerMarginMinor: number | null;
+  priceVersionId: string;
+  policyNumber: number;
+  createdAt: string;
+  validUntil: string;
+  notice: string;
 }

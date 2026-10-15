@@ -5,6 +5,15 @@ import { API_BASE_URL } from './api-config';
 import { queryParams } from './http-params';
 import {
   AdminOrganization,
+  AnkaufModel,
+  CreateQuoteRequest,
+  EntryDecision,
+  Policy,
+  PolicySettings,
+  PriceChange,
+  PriceList,
+  PriceListEntry,
+  Quote,
   CarrierProfile,
   CatalogCategories,
   CatalogProduct,
@@ -408,5 +417,82 @@ export class AdminDisputesApi {
 
   decide(id: string, refund: boolean, resolution: string): Observable<Dispute> {
     return this.http.post<Dispute>(`${this.url}/${id}/decide`, { refund, resolution });
+  }
+}
+
+/** Platform administration of Ankauf price lists and pricing policies (platform data, no X-Organization-Id). */
+@Injectable({ providedIn: 'root' })
+export class AdminAnkaufApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/admin/ankauf`;
+
+  /** Uploads a monthly XLSX list; it starts in Review with an approval decision per entry. */
+  upload(body: { file: File; label: string; validFrom: string; validUntil: string; sheet?: string | null }): Observable<PriceList> {
+    const form = new FormData();
+    form.append('file', body.file, body.file.name);
+    form.append('label', body.label);
+    form.append('validFrom', body.validFrom);
+    form.append('validUntil', body.validUntil);
+    if (body.sheet) form.append('sheet', body.sheet);
+    return this.http.post<PriceList>(`${this.url}/price-lists`, form);
+  }
+
+  lists(): Observable<PriceList[]> {
+    return this.http.get<PriceList[]>(`${this.url}/price-lists`);
+  }
+
+  list(id: string): Observable<PriceList> {
+    return this.http.get<PriceList>(`${this.url}/price-lists/${id}`);
+  }
+
+  entries(
+    id: string,
+    q: { decision?: EntryDecision | null; change?: PriceChange | null; search?: string; page?: number; pageSize?: number },
+  ): Observable<Paged<PriceListEntry>> {
+    return this.http.get<Paged<PriceListEntry>>(`${this.url}/price-lists/${id}/entries`, { params: queryParams(q) });
+  }
+
+  /** Approve or reject 1..1000 entries (only while the list is in Review; auto-accepted entries are refused). */
+  decide(id: string, entryIds: number[], approve: boolean): Observable<PriceList> {
+    return this.http.post<PriceList>(`${this.url}/price-lists/${id}/decisions`, { entryIds, approve });
+  }
+
+  publish(id: string): Observable<PriceList> {
+    return this.http.post<PriceList>(`${this.url}/price-lists/${id}/publish`, {});
+  }
+
+  discard(id: string): Observable<PriceList> {
+    return this.http.post<PriceList>(`${this.url}/price-lists/${id}/discard`, {});
+  }
+
+  policies(): Observable<Policy[]> {
+    return this.http.get<Policy[]>(`${this.url}/policies`);
+  }
+
+  /** Creates a new immutable policy version (effective immediately when `effectiveFrom` is null). */
+  createPolicy(settings: PolicySettings, effectiveFrom: string | null): Observable<Policy> {
+    return this.http.post<Policy>(`${this.url}/policies`, { settings, effectiveFrom });
+  }
+}
+
+/** Dealer side of Ankauf (module Ankauf, tenant-scoped). */
+@Injectable({ providedIn: 'root' })
+export class AnkaufApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/ankauf`;
+
+  /** Models with a price in the current published list (max. 100). */
+  models(search: string): Observable<AnkaufModel[]> {
+    return this.http.get<AnkaufModel[]>(`${this.url}/models`, { params: queryParams({ search }) });
+  }
+
+  createQuote(body: CreateQuoteRequest): Observable<Quote> {
+    return this.http.post<Quote>(`${this.url}/quotes`, body);
+  }
+
+  quotes(): Observable<Quote[]> {
+    return this.http.get<Quote[]>(`${this.url}/quotes`);
   }
 }

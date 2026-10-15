@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
-/** Sub-navigation of the platform administration (Unternehmen / Reklamationen). */
+/** Sub-navigation of the platform administration (Unternehmen / Reklamationen / Ankaufspreise). */
 @Component({
   selector: 'hn-admin-tabs',
   imports: [RouterLink, RouterLinkActive, TranslatePipe],
@@ -28,5 +28,6 @@ export class AdminTabsComponent {
   protected readonly tabs = [
     { path: '/app/administration', labelKey: 'admin.tabs.organizations', exact: true },
     { path: '/app/administration/reklamationen', labelKey: 'admin.tabs.disputes', exact: false },
+    { path: '/app/administration/ankauf', labelKey: 'admin.tabs.ankauf', exact: false },
   ];
 }

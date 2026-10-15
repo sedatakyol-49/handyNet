@@ -2,7 +2,7 @@
   "_meta": { "todo": "TODO: ترجمه فارسی کامل نیست – کلیدهای ناموجود به آلمانی (de.json) نمایش داده می‌شوند. جهت RTL فعال است." },
   "shell": { "language": "زبان", "logout": "خروج", "organization": "شرکت", "skipToContent": "رفتن به محتوا" },
   "nav": {
-    "finance": "مالی", "admin": "مدیریت", "cart": "سبد خرید", "dashboard": "نمای کلی", "imports": "واردسازی", "inventory": "انبار",
+    "ankauf": "بازخرید", "finance": "مالی", "admin": "مدیریت", "cart": "سبد خرید", "dashboard": "نمای کلی", "imports": "واردسازی", "inventory": "انبار",
     "marketplace": "بازار", "offers": "پیشنهادها", "purchases": "خرید", "sales": "فروش", "team": "تیم"
   }
 }

@@ -1,0 +1,232 @@
+<hn-page-header [title]="'ankauf.title' | t" [description]="'ankauf.subtitle' | t" />
+
+<div class="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <section class="hn-card p-4" aria-labelledby="ak-form-heading">
+    <h2 id="ak-form-heading" class="mb-3 text-sm">{{ 'ankauf.formTitle' | t }}</h2>
+
+    @if (!canQuote()) {
+      <hn-banner class="mb-3" tone="info" [text]="'ankauf.noPermission' | t" />
+    }
+
+    <form class="space-y-4" (ngSubmit)="submit()" novalidate>
+      <hn-banner [text]="submitErrorText()" />
+
+      <!-- Model -->
+      <div>
+        @if (selectedModel(); as m) {
+          <p class="mb-1 block text-xs font-medium text-slate-700" id="ak-model-label">{{ 'ankauf.model' | t }} <span class="text-red-700" aria-hidden="true">*</span></p>
+          <div class="flex flex-wrap items-center gap-2 rounded-md border border-accent-600 bg-accent-50 px-3 py-2 text-sm" aria-labelledby="ak-model-label" data-testid="ak-selected-model">
+            <span class="font-medium">{{ label(m) }}</span>
+            <span class="text-xs text-slate-600">{{ 'ankauf.priceValidUntil' | t: { date: (m.priceValidUntil | hnDate) } }}</span>
+            <button hnButton size="sm" variant="ghost" type="button" class="ms-auto" (click)="clearModel()">{{ 'common.change' | t }}</button>
+          </div>
+        } @else {
+          <hn-field [label]="'ankauf.model' | t" for="ak-search" [required]="true" [hint]="'ankauf.searchHint' | t" [errors]="fieldError('model', 'modelKey')">
+            <input hnInput id="ak-search" type="search" autocomplete="off" [placeholder]="'ankauf.searchPlaceholder' | t"
+              [value]="searchText()" (input)="searchText.set($any($event.target).value)" aria-controls="ak-models" data-testid="ak-search" />
+          </hn-field>
+          <div class="hn-card mt-2 max-h-64 overflow-y-auto" [attr.aria-busy]="models.loading()">
+            <hn-banner [error]="models.error()" />
+            <ul id="ak-models" class="divide-y divide-slate-100" [attr.aria-label]="'ankauf.results' | t" data-testid="ak-models">
+              @for (m of models.value() ?? []; track m.modelKey) {
+                <li>
+                  <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-sm hover:bg-slate-50 focus-visible:bg-accent-50 focus-visible:outline-2 focus-visible:outline-accent-600"
+                    (click)="selectModel(m)" [attr.data-model-key]="m.modelKey">
+                    <span>{{ label(m) }}</span>
+                    <span class="text-xs text-slate-500">{{ 'ankauf.until' | t: { date: (m.priceValidUntil | hnDate: 'date') } }}</span>
+                  </button>
+                </li>
+              } @empty {
+                @if (!models.loading()) {
+                  <li class="px-3 py-3 text-sm text-slate-600">{{ 'ankauf.noModels' | t }}</li>
+                }
+              }
+            </ul>
+          </div>
+          @if ((models.value()?.length ?? 0) >= 100) {
+            <p class="mt-1 text-xs text-slate-500">{{ 'ankauf.moreResults' | t }}</p>
+          }
+        }
+      </div>
+
+      <!-- Condition -->
+      <fieldset [attr.aria-describedby]="fieldError('condition', 'condition') ? 'ak-condition-error' : null">
+        <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.condition' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
+          @for (c of conditions; track c) {
+            <label class="flex items-center gap-1.5 text-sm">
+              <input type="radio" name="condition" [value]="c" [(ngModel)]="form.condition" [attr.data-condition]="c" />
+              {{ c | tEnum: 'deviceCondition' }}
+            </label>
+          }
+        </div>
+        @if (fieldError('condition', 'condition'); as e) {
+          <p class="mt-1 text-xs text-red-700" id="ak-condition-error" role="alert">{{ e }}</p>
+        }
+      </fieldset>
+
+      <!-- Defects -->
+      <fieldset>
+        <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.defects' | t }}</legend>
+        <div class="grid gap-1.5 sm:grid-cols-2">
+          @for (d of defects; track d) {
+            <label class="flex items-center gap-1.5 text-sm">
+              <input type="checkbox" class="hn-checkbox" [name]="'defect-' + d" [(ngModel)]="form.defects[d]" [attr.data-defect]="d" />
+              {{ d | tEnum: 'deviceDefect' }}
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="grid gap-3 sm:grid-cols-3">
+        <hn-field [label]="'ankauf.battery' | t" for="ak-battery" [hint]="'ankauf.batteryHint' | t" [errors]="fieldError('battery', 'batteryHealthPercent')">
+          <div class="flex items-center gap-1">
+            <input hnInput id="ak-battery" name="battery" inputmode="numeric" class="text-end" [(ngModel)]="form.batteryHealth"
+              [attr.aria-invalid]="!!fieldError('battery', 'batteryHealthPercent')" data-testid="ak-battery" />
+            <span class="text-sm text-slate-500" aria-hidden="true">%</span>
+          </div>
+        </hn-field>
+        <hn-field [label]="'ankauf.consumerPrice' | t" for="ak-consumer" [hint]="'ankauf.consumerPriceHint' | t" [errors]="fieldError('consumerPrice', 'consumerPrice')">
+          <div class="flex items-center gap-1">
+            <input hnInput id="ak-consumer" name="consumer" inputmode="decimal" class="text-end" [(ngModel)]="form.consumerPrice"
+              [attr.aria-invalid]="!!fieldError('consumerPrice', 'consumerPrice')" data-testid="ak-consumer" />
+            <span class="text-sm text-slate-500" aria-hidden="true">€</span>
+          </div>
+        </hn-field>
+        <hn-field [label]="'ankauf.imei' | t" for="ak-imei" [hint]="'ankauf.imeiHint' | t" [errors]="fieldError('imei', 'imei')">
+          <input hnInput id="ak-imei" name="imei" inputmode="numeric" autocomplete="off" maxlength="20" class="hn-mono" [(ngModel)]="form.imei"
+            [attr.aria-invalid]="!!fieldError('imei', 'imei')" data-testid="ak-imei" />
+        </hn-field>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        @if (result()) {
+          <button hnButton type="button" (click)="newQuote()">{{ 'ankauf.reset' | t }}</button>
+        }
+        <button hnButton variant="primary" type="submit" [loading]="submitting()" [disabled]="submitting() || !canQuote()" data-testid="ak-submit">
+          {{ 'ankauf.calculate' | t }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section aria-labelledby="ak-result-heading" aria-live="polite">
+    <h2 id="ak-result-heading" class="sr-only">{{ 'ankauf.resultTitle' | t }}</h2>
+    @if (result(); as q) {
+      <div class="hn-card" data-testid="ak-result">
+        <div class="border-b border-slate-200 px-4 py-3">
+          <p class="text-xs text-slate-500">{{ 'ankauf.resultTitle' | t }}</p>
+          <p class="text-base font-semibold">{{ label(q) }}</p>
+          <p class="text-xs text-slate-600">
+            {{ q.condition | tEnum: 'deviceCondition' }}
+            @for (d of q.defects; track d) { · {{ d | tEnum: 'deviceDefect' }} }
+            @if (q.batteryHealthPercent !== null) { · {{ 'ankauf.batteryValue' | t: { value: q.batteryHealthPercent } }} }
+            @if (q.imei) { · IMEI <span class="hn-mono">{{ q.imei }}</span> }
+          </p>
+        </div>
+        <div class="px-4 pt-3">
+          <hn-banner tone="warning" [heading]="'ankauf.noticeHeading' | t" [text]="q.notice" data-testid="ak-notice" />
+        </div>
+        <dl class="divide-y divide-slate-100 px-4 py-2 text-sm">
+          <div class="flex justify-between gap-3 py-1.5">
+            <dt>{{ 'ankauf.referenceGut' | t }}</dt>
+            <dd class="tabular-nums" data-testid="ak-reference-gut">{{ q.referenceGutMinor | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-1.5">
+            <dt>{{ 'ankauf.conditionAdjustment' | t: { condition: (q.condition | tEnum: 'deviceCondition') } }}</dt>
+            <dd class="tabular-nums" data-testid="ak-condition-adjustment">{{ pct(q.conditionAdjustmentBasisPoints) }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-1.5">
+            <dt>{{ 'ankauf.deductions' | t }}</dt>
+            <dd class="tabular-nums" data-testid="ak-deductions">{{ pct(-q.totalDeductionBasisPoints) }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-1.5">
+            <dt class="font-medium">{{ 'ankauf.referencePurchasePrice' | t }}</dt>
+            <dd class="tabular-nums font-medium" data-testid="ak-reference-purchase">{{ q.referencePurchasePriceMinor | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 bg-accent-50 px-2 py-2 -mx-2">
+            <dt class="font-semibold">{{ 'ankauf.platformOffer' | t }}</dt>
+            <dd class="text-base font-semibold tabular-nums" data-testid="ak-platform-offer">{{ q.platformOfferMinor | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 py-1.5">
+            <dt>{{ 'ankauf.maxConsumerPrice' | t }}</dt>
+            <dd class="tabular-nums font-medium" data-testid="ak-max-consumer">{{ q.maxConsumerPriceMinor | money }}</dd>
+          </div>
+          @if (q.consumerPriceMinor !== null) {
+            <div class="flex justify-between gap-3 py-1.5">
+              <dt>{{ 'ankauf.consumerPriceGiven' | t }}</dt>
+              <dd class="tabular-nums" data-testid="ak-consumer-price">{{ q.consumerPriceMinor | money }}</dd>
+            </div>
+            <div class="flex justify-between gap-3 py-1.5" [class.text-red-700]="(q.dealerMarginMinor ?? 0) < 0">
+              <dt class="font-medium">{{ 'ankauf.dealerMargin' | t }}</dt>
+              <dd class="tabular-nums font-semibold" data-testid="ak-dealer-margin">{{ q.dealerMarginMinor | signedMoney }}</dd>
+            </div>
+            @if ((q.dealerMarginMinor ?? 0) < 0) {
+              <hn-banner class="my-2" tone="danger" [text]="'ankauf.negativeMargin' | t" data-testid="ak-negative-margin" />
+            } @else if (q.consumerPriceMinor > q.maxConsumerPriceMinor) {
+              <hn-banner class="my-2" tone="warning" [text]="'ankauf.belowMinMargin' | t" />
+            }
+          }
+        </dl>
+        <p class="border-t border-slate-200 px-4 py-2 text-xs text-slate-600">
+          {{ 'ankauf.validUntil' | t: { date: (q.validUntil | hnDate) } }} · {{ 'ankauf.policyNumber' | t: { number: q.policyNumber } }} ·
+          {{ 'ankauf.createdAt' | t: { date: (q.createdAt | hnDate) } }}
+        </p>
+      </div>
+    } @else {
+      <div class="hn-card">
+        <hn-empty-state [title]="'ankauf.noResult' | t" [text]="'ankauf.noResultText' | t" />
+      </div>
+    }
+  </section>
+</div>
+
+<section aria-labelledby="ak-history-heading">
+  <div class="mb-2 flex items-center justify-between gap-2">
+    <h2 id="ak-history-heading" class="text-sm">{{ 'ankauf.history' | t }}</h2>
+    <button hnButton size="sm" type="button" [loading]="quotes.loading()" (click)="quotes.reload()">{{ 'common.refresh' | t }}</button>
+  </div>
+  <hn-banner class="mb-3" [error]="quotes.error()" />
+  <hn-table [loading]="quotes.loading()">
+    <table class="hn-table" data-testid="ak-history">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'ankauf.createdAtColumn' | t }}</th>
+          <th scope="col">{{ 'ankauf.model' | t }}</th>
+          <th scope="col">{{ 'ankauf.condition' | t }}</th>
+          <th scope="col">{{ 'ankauf.defects' | t }}</th>
+          <th scope="col">IMEI</th>
+          <th scope="col" class="text-end">{{ 'ankauf.platformOfferShort' | t }}</th>
+          <th scope="col" class="text-end">{{ 'ankauf.maxConsumerShort' | t }}</th>
+          <th scope="col" class="text-end">{{ 'ankauf.dealerMargin' | t }}</th>
+          <th scope="col">{{ 'ankauf.validUntilColumn' | t }}</th>
+          <th scope="col" class="text-end">{{ 'ankauf.policyColumn' | t }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (q of quotes.value() ?? []; track q.id) {
+          <tr>
+            <td class="whitespace-nowrap text-xs">{{ q.createdAt | hnDate }}</td>
+            <td>{{ label(q) }}</td>
+            <td>{{ q.condition | tEnum: 'deviceCondition' }}</td>
+            <td class="text-xs">
+              @for (d of q.defects; track d; let last = $last) { {{ d | tEnum: 'deviceDefect' }}@if (!last) {, } } @empty { – }
+            </td>
+            <td class="hn-mono text-xs">{{ q.imei ?? '–' }}</td>
+            <td class="text-end tabular-nums whitespace-nowrap font-medium">{{ q.platformOfferMinor | money }}</td>
+            <td class="text-end tabular-nums whitespace-nowrap">{{ q.maxConsumerPriceMinor | money }}</td>
+            <td class="text-end tabular-nums whitespace-nowrap" [class.text-red-700]="(q.dealerMarginMinor ?? 0) < 0">
+              {{ q.dealerMarginMinor === null ? '–' : (q.dealerMarginMinor | signedMoney) }}
+            </td>
+            <td class="whitespace-nowrap text-xs">{{ q.validUntil | hnDate }}</td>
+            <td class="text-end tabular-nums">#{{ q.policyNumber }}</td>
+          </tr>
+        } @empty {
+          @if (!quotes.loading()) {
+            <tr><td colspan="10"><hn-empty-state [title]="'ankauf.historyEmpty' | t" /></td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </hn-table>
+</section>

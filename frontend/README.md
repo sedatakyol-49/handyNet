@@ -71,8 +71,13 @@ src/app
    ├─ inventory/             stock table, adjustment dialog, movements, warehouses
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
    ├─ team/                  staff list + add staff
-   └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles) and
-                             "Reklamationen" (escalated disputes queue, detail + decision)
+   ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
+   │                         (IMEI Luhn check, quote form validation, error text)
+   └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
+      │                      "Reklamationen" (escalated disputes queue, detail + decision) and "Ankaufspreise"
+      └─ ankauf/             price lists (upload, review, publish/discard) and pricing policy versions;
+                             ankauf-admin.logic.ts (basis points ↔ %, change %, selectable rows, default validity,
+                             policy form validation)
 ```
 
 ### Tenancy, modules and permissions
@@ -164,6 +169,33 @@ Order detail, **Reklamation** section (`features/orders/dispute`, data from `GET
 - Which actions are shown per role/status/permission, validation and label keys are pure and unit-tested in
   `dispute.logic.ts`; the API stays authoritative (`dispute.*` / `order.inspection_over` codes are translated).
 
+### Ankauf (used-device buyback)
+
+Module `Ankauf` (enabled per organization in Administration → Unternehmen → Module; the list comes from
+`GET /api/admin/modules`). Business rules: `../docs/adr/0007-ankauf-pricing.md`.
+
+- Administration → **Ankaufspreise** (`/app/administration/ankauf`, platform admins, no `X-Organization-Id`):
+  - Upload a monthly XLSX (label, optional sheet, default "Mobilfunk"). Validity defaults to the 1st – last day of next
+    month; date and time are local to the browser (the time zone is shown) and sent as ISO instants: "gültig ab" date +
+    time, "gültig bis" = end of that day (23:59:59.999). Client checks mirror the API (.xlsx, 10 MB, ≤ 92 days).
+  - Review (`/app/administration/ankauf/preislisten/:id`): summary tiles, approval rules, filters (decision / change /
+    search), table with previous → new price, Δ % and badges, checkbox multi-select (only Pending/Approved/Rejected
+    rows, never auto-accepted ones) with bulk "Freigeben" / "Ablehnen", skipped rows panel. "Veröffentlichen" is
+    disabled with an explanation while prices are pending and asks for confirmation (models missing from the list or
+    rejected have no price – no carry-over); "Verwerfen" asks as well.
+  - **Preisregeln** (`/app/administration/ankauf/preisregeln`): values of the active version in %, version history
+    (active / scheduled / superseded), form for a new immutable version prefilled from the active one. Percentages are
+    parsed as text into integer basis points (100 bp = 1 %) and validated against the API ranges; brand/model overrides
+    are rows (brand or "Marke|Modell|Speicher" key, normalized like the API, + condition + %).
+- **Ankauf** (`/app/ankauf`, module Ankauf; creating quotes needs `orders.place`): search models with a current price,
+  choose the condition (names only – policy percentages are not exposed to dealers), defects, battery health, optional
+  consumer price and IMEI (Luhn-checked client-side). The result card shows the API's numbers (reference price Gut,
+  condition adjustment, deductions, reference purchase price, platform offer to the dealer, max. consumer price,
+  dealer margin with negative margins highlighted), validity, policy number and the API's notice ("Vorläufiges
+  Angebot …"); quote history below. No price calculation happens in the browser.
+- `ankauf.*` error codes are translated; for codes whose API message names sheets/rows/ranges (`sheet_missing`,
+  `duplicate_models`, `unreadable`, `pending_decisions`, `policy_range`) the API text is appended.
+
 ## i18n
 
 `I18nService` holds the active dictionary in a signal; templates use `{{ 'nav.marketplace' | t }}` and
@@ -220,6 +252,12 @@ Without these variables the tests are skipped. Specs:
   problem in the UI, seller writes a message and escalates, the platform admin decides "Keine Erstattung" in the
   administration → order Completed; second order: buyer reports, seller grants a refund → "Erstattet"; third order paid
   online: payout on hold while disputed, payment shows "Erstattet" after the refund job.
+- `e2e/ankauf-flow.spec.ts` – admin uploads a generated XLSX (`exceljs`, devDependency; unique brand per run, valid
+  from now so it becomes the current list), approves the pending prices and publishes; admin enables the module Ankauf
+  for a shop; the shop searches the model and creates a quote (Neu + housing damage, consumer price 330 €) and sees
+  300,00 € → +20 % → −10 % → 324,00 €, max. consumer price 275,40 €, margin −6,00 €. It assumes the default pricing
+  policy is active (it only reads it). Price lists are global: each run replaces the current list of the target
+  environment.
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.

@@ -26,6 +26,9 @@ const patterns = [
   // Dispute keys are referenced from TS maps and validators as well (e.g. `'disputes.validation.required'`).
   /'((?:disputes|disputeReason|disputeStatus|disputeParty)(?:\.\w+)+)'/g,
   /'(admin\.(?:tabs|disputes)(?:\.\w+)+)'/g,
+  // Ankauf keys are referenced from TS logic (validators, blocked reasons) and error codes.
+  /'((?:ankauf|ankaufAdmin)(?:\.\w+)+)'/g,
+  /'(errors\.codes\.ankauf\.\w+)'/g,
 ];
 for (const f of files) {
   const src = readFileSync(f, 'utf8');

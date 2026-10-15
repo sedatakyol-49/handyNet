@@ -46,6 +46,10 @@ erDiagram
 | `payments.payouts` | id, payment_id (unique), **seller_organization_id**, amount_minor, provider_transfer_id | one payout per payment |
 | `disputes.disputes` | id, order_id, **buyer/seller_organization_id**, reason, status, escalated/resolved_at, resolved_by, resolution | one active dispute per order; RLS: buyer opens, both read/update |
 | `disputes.dispute_messages` | dispute_id, from, user_id, text, sent_at | append-only; RLS via dispute |
+| `ankauf.price_lists` / `price_list_entries` | list: label, validity, status, skipped rows; entry: model key, price, previous price, change, decision | platform data (admin only); one entry per model per list |
+| `ankauf.price_versions` | model key, price_minor (Gut), valid_from/until, price_list_id | immutable (trigger) |
+| `ankauf.condition_policies` | number, settings jsonb, effective_from | immutable; version 1 seeded |
+| `ankauf.quotes` | **organization_id**, model, price_version_id, policy id, condition, defects, battery, IMEI, all computed amounts, valid_until | immutable; RLS per dealer |
 | `ledger.accounts` / `journal_entries` / `postings` | account per (organization?, type, currency); entry with idempotency_key; postings amount_minor ≠ 0 | written only via `ledger.post_entry`; immutable (triggers); balanced per entry |
 | `notifications.email_messages` | id, source_id (outbox message), template, recipient, subject, body, status, attempts, next_attempt_at | unique (source_id, recipient) → at-least-once events never send twice; no DELETE grant |
 | `infra.audit_log` | occurred_at, user_id, organization_id, entity_type, entity_id, action, changes jsonb | append-only |

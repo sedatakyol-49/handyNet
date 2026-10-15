@@ -2,7 +2,7 @@
   "_meta": { "todo": "TODO: Türkçe çeviri eksik – eksik anahtarlar Almanca (de.json) olarak gösterilir. Tam anahtar listesi için de.json'a bakın." },
   "shell": { "language": "Dil", "logout": "Çıkış yap", "organization": "Şirket", "skipToContent": "İçeriğe geç" },
   "nav": {
-    "finance": "Finans", "admin": "Yönetim", "cart": "Sepet", "dashboard": "Genel bakış", "imports": "İçe aktarma", "inventory": "Depo",
+    "ankauf": "Geri alım", "finance": "Finans", "admin": "Yönetim", "cart": "Sepet", "dashboard": "Genel bakış", "imports": "İçe aktarma", "inventory": "Depo",
     "marketplace": "Pazar yeri", "offers": "Teklifler", "purchases": "Satın alma", "sales": "Satış", "team": "Ekip"
   }
 }

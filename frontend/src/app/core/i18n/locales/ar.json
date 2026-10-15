@@ -2,7 +2,7 @@
   "_meta": { "todo": "TODO: الترجمة العربية غير مكتملة – تظهر المفاتيح المفقودة باللغة الألمانية (de.json). الاتجاه RTL مفعّل." },
   "shell": { "language": "اللغة", "logout": "تسجيل الخروج", "organization": "الشركة", "skipToContent": "انتقل إلى المحتوى" },
   "nav": {
-    "finance": "المالية", "admin": "الإدارة", "cart": "سلة التسوق", "dashboard": "نظرة عامة", "imports": "الاستيراد", "inventory": "المستودع",
+    "ankauf": "إعادة الشراء", "finance": "المالية", "admin": "الإدارة", "cart": "سلة التسوق", "dashboard": "نظرة عامة", "imports": "الاستيراد", "inventory": "المستودع",
     "marketplace": "السوق", "offers": "العروض", "purchases": "المشتريات", "sales": "المبيعات", "team": "الفريق"
   }
 }

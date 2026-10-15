@@ -9,6 +9,7 @@ using HandyNet.Modules.Shipping.Infrastructure;
 using HandyNet.Modules.Ledger.Infrastructure;
 using HandyNet.Modules.Payments.Infrastructure;
 using HandyNet.Modules.Disputes.Infrastructure;
+using HandyNet.Modules.Ankauf.Infrastructure;
 using HandyNet.Modules.Tenancy.Infrastructure;
 using HandyNet.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,7 @@ public static class DatabaseMigrator
         new LedgerModel(),
         new PaymentsModel(),
         new DisputesModel(),
+        new AnkaufModel(),
     ];
 
     public static HandyNetDbContext CreateContext(string ownerConnectionString)
