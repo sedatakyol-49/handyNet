@@ -221,11 +221,13 @@ SSR; other languages are lazy-loaded JSON chunks. Missing keys fall back to Germ
 | --- | --- | --- |
 | Deutsch | `de.json` | complete |
 | English | `en.json` | complete |
-| Türkçe, Español, Русский | `tr.json`, `es.json`, `ru.json` | scaffold (navigation only) – TODO |
-| العربية, فارسی | `ar.json`, `fa.json` | scaffold (navigation only) – TODO, sets `dir="rtl"` |
+| Türkçe, Español, Русский | `tr.json`, `es.json`, `ru.json` | complete |
+| العربية, فارسی | `ar.json`, `fa.json` | complete, sets `dir="rtl"` (number ranges worded as "from … to …"; two literal input examples keep a left-to-right mark) |
 
 The selected language is stored in `localStorage` and applied to `<html lang dir>`. Layout uses logical CSS properties
-(`ms-*`, `start-*`, `border-e`) so RTL mirrors correctly. Run `node scripts/check-i18n.mjs` after adding strings.
+(`ms-*`, `start-*`, `border-e`) so RTL mirrors correctly. Run `node scripts/check-i18n.mjs` after adding strings: it fails
+when a key used in code is missing in de/en, when any language lacks a key of `de.json` or has extra keys, or when
+`{placeholders}` differ from the German text. **New strings must be added to all seven files.**
 
 Money is always formatted with `Intl.NumberFormat('de-DE', { style: 'currency' })` from integer cents
 (`1.234,56 €`), independent of the UI language; dates follow the UI language.
