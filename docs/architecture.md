@@ -23,6 +23,8 @@ Arrows point from a module to what it may depend on. Enforced by project referen
 
 ```mermaid
 flowchart TD
+    Invoicing --> Payments
+    Invoicing --> Tenancy
     Pos --> Inventory
     Pos --> Catalog
     Pos --> Tenancy
@@ -65,9 +67,10 @@ flowchart TD
 | Imports | `imports` | CSV/XLSX parsing, mapping, preview (dry run), commit | – (top-level) |
 | Ordering | `ordering` | B2B orders, idempotency, lifecycle incl. delivery + inspection window, completion job | `IOrderFulfilment` |
 | Shipping | `shipping` | shipments, carrier adapters (Manual, Simulated), labels, tracking events, parcel/insurance/lithium rules, tracking sync job | – (top-level; uses `IOrderFulfilment`) |
-| Payments | `payments` | payments via PSP adapter (Simulated today), webhooks (status re-fetched), commission, refunds, payouts after completion | – (top-level) |
+| Payments | `payments` | payments via PSP adapter (Simulated today), webhooks (status re-fetched), commission, refunds, payouts after completion | `ICommissionStatements` (commission per payment, for invoicing) |
+| Invoicing | `invoicing` | monthly commission invoices to sellers, corrections (Rechnungskorrektur) for later refunds, gapless platform-wide numbers per series and year (DB-enforced), immutable documents, German PDF, monthly job + admin issuing (ADR-0009) | – (top-level; uses `ICommissionStatements`, `IOrganizationDirectory`) |
 | Disputes | `disputes` | buyer complaints within the inspection window, message thread, seller refund / buyer withdrawal / escalation, platform decision | – (top-level; uses `IOrderFulfilment`) |
-| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake (IMEI stock with §25a purchase price), Ankaufbeleg (PDF) | – (top-level; uses `IProductCatalog`, `IInventory`, `IOrganizationDirectory`) |
+| Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake (IMEI stock with §25a purchase price), Ankaufbeleg (PDF), seller-data retention job (anonymization, ADR-0009) | – (top-level; uses `IProductCatalog`, `IInventory`, `IOrganizationDirectory`) |
 | POS | `pos` | registers (gapless receipt numbers), cash sessions + daily closing (Z-report), immutable receipts with Storno/returns, §25a margin VAT, fiscal signer abstraction (test signer only, ADR-0008) | – (top-level; uses `IInventory`, `IProductCatalog`, `IOrganizationDirectory`) |
 | Ledger | `ledger` | immutable double-entry journal; single write path `ledger.post_entry`; tenant-visible own accounts | `ILedger` |
 | Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified), SMTP delivery with retry | – (consumes events only) |
@@ -79,7 +82,7 @@ flowchart TD
 |---|---|
 | Repairs | Catalog, Inventory (parts consumption), Ordering (parts orders), Shipping |
 | Fiscal adapter (fiskaly TSE) + DSFinV-K export | POS (`IFiscalSigner`) |
-| Invoicing & Accounting | Ordering, Payments, POS (XRechnung/ZUGFeRD, DATEV export) |
+| Accounting exports (XRechnung/ZUGFeRD e-invoices, DATEV) | Invoicing, Payments, POS |
 | Returns & Warranty (return shipments, restocking, partial refunds) | Disputes, Shipping, Inventory, Payments |
 | B2C Marketplace | Catalog, Marketplace (separate B2C visibility), Payments |
 

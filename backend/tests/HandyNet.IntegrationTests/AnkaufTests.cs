@@ -3,7 +3,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using ClosedXML.Excel;
 using HandyNet.IntegrationTests.Infrastructure;
+using HandyNet.Modules.Ankauf.Application;
 using HandyNet.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace HandyNet.IntegrationTests;
@@ -373,5 +378,92 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
         Assert.Equal(HttpStatusCode.NotFound, foreign.Status);
         Assert.Equal("ankauf.intake_not_found", foreign.Code);
         Assert.Equal(HttpStatusCode.NotFound, (await dealer.GetAsync($"/api/ankauf/intakes/{Guid.NewGuid()}/beleg")).Status);
+    }
+
+    private async Task<string> CompletedIntakeAsync(ApiClient dealer, string key)
+    {
+        var quoteId = (await dealer.PostAsync("/api/ankauf/quotes", new { modelKey = key, condition = "Gut" }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+        var intakeId = (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei = NewImei(), seller = AdultSeller }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut" })).Expect(HttpStatusCode.OK);
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 150m, paymentMethod = "Cash" })).Expect(HttpStatusCode.OK);
+        return intakeId;
+    }
+
+    private SellerDataRetention RetentionJob(int? years) => new(
+        fixture.Factory.Services.GetRequiredService<IServiceScopeFactory>(),
+        Options.Create(new AnkaufOptions { SellerDataRetentionYears = years }),
+        fixture.Factory.Services.GetRequiredService<IHostEnvironment>(),
+        fixture.Factory.Services.GetRequiredService<HandyNet.SharedKernel.IClock>(),
+        NullLogger<SellerDataRetention>.Instance);
+
+    [Fact]
+    public async Task Seller_data_retention_anonymizes_only_intakes_past_the_period_and_keeps_the_purchase()
+    {
+        var (dealer, key, _, _) = await PricedModelAsync();
+        var oldId = await CompletedIntakeAsync(dealer, key);
+        var recentId = await CompletedIntakeAsync(dealer, key);
+
+        await using var owner = new NpgsqlConnection(fixture.OwnerConnectionString);
+        await owner.OpenAsync();
+        async Task<object?> Scalar(NpgsqlConnection connection, string sql)
+        {
+            await using var command = new NpgsqlCommand(sql, connection);
+            return await command.ExecuteScalarAsync();
+        }
+
+        // Backdate one purchase by eleven years. Timestamps of a closed intake are protected by a trigger, so the test
+        // bypasses triggers for this one statement (superuser session setting, test only).
+        await Scalar(owner, $"""
+            SET session_replication_role = replica;
+            UPDATE ankauf.intakes SET received_at = received_at - interval '11 years', completed_at = completed_at - interval '11 years'
+            WHERE id = '{oldId}';
+            SET session_replication_role = origin;
+            """);
+
+        // Disabled (no confirmed period): nothing happens.
+        Assert.Equal(0, await RetentionJob(null).RunOnceAsync(CancellationToken.None));
+        Assert.Equal("Max Mustermann", (await dealer.GetAsync($"/api/ankauf/intakes/{oldId}")).Json["sellerName"]!.GetValue<string>());
+
+        // Ten years: only the old intake is due.
+        Assert.True(await RetentionJob(10).RunOnceAsync(CancellationToken.None) >= 1);
+        var old = (await dealer.GetAsync($"/api/ankauf/intakes/{oldId}")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal("anonymisiert", old["sellerName"]!.GetValue<string>());
+        Assert.NotNull(old["sellerAnonymizedAt"]);
+        Assert.Equal("Completed", old["status"]!.GetValue<string>());
+        Assert.Equal(15000, old["paidMinor"]!.GetValue<long>());
+        var recent = (await dealer.GetAsync($"/api/ankauf/intakes/{recentId}")).Json;
+        Assert.Equal("Max Mustermann", recent["sellerName"]!.GetValue<string>());
+        Assert.Null(recent["sellerAnonymizedAt"]);
+        Assert.Equal(0, await RetentionJob(10).RunOnceAsync(CancellationToken.None)); // idempotent
+
+        // Stored data: placeholder only, nothing left in the audit log either.
+        Assert.Equal("anonymisiert", await Scalar(owner, $"SELECT seller->>'lastName' FROM ankauf.intakes WHERE id = '{oldId}'"));
+        Assert.Equal(0L, await Scalar(owner,
+            $"SELECT count(*) FROM infra.audit_log WHERE entity_type = 'Intake' AND entity_id IN ('{oldId}', '{recentId}') AND changes::text LIKE '%Mustermann%'"));
+
+        // The Ankaufbeleg still works and shows "anonymisiert".
+        var (status, _, _, body) = await dealer.GetFileAsync($"/api/ankauf/intakes/{oldId}/beleg");
+        Assert.Equal(HttpStatusCode.OK, status);
+        var text = PdfText.All(body);
+        Assert.Contains("anonymisiert", text);
+        Assert.DoesNotContain("Mustermann", text);
+        Assert.DoesNotContain("0T47", text);
+        Assert.Contains("150,00 €", text);
+
+        // The database allows seller changes only by anonymization, and never back.
+        await using var app = new NpgsqlConnection(fixture.AppConnectionString);
+        await app.OpenAsync();
+        await Scalar(app, $"SELECT set_config('app.current_org', '{dealer.OrganizationId}', false)");
+        var edit = await Assert.ThrowsAsync<PostgresException>(() =>
+            Scalar(app, $"UPDATE ankauf.intakes SET seller = jsonb_set(seller, '{{lastName}}', '\"Anders\"') WHERE id = '{recentId}'"));
+        Assert.Equal("42501", edit.SqlState);
+        var undo = await Assert.ThrowsAsync<PostgresException>(() => Scalar(owner, $"UPDATE ankauf.intakes SET anonymized_at = NULL WHERE id = '{oldId}'"));
+        Assert.Equal("42501", undo.SqlState);
+        var fake = await Assert.ThrowsAsync<PostgresException>(() =>
+            Scalar(owner, $"SET session_replication_role = replica; UPDATE ankauf.intakes SET anonymized_at = now() WHERE id = '{recentId}'"));
+        await Scalar(owner, "SET session_replication_role = origin");
+        Assert.Equal("23514", fake.SqlState); // anonymized_at without the placeholder violates ck_intakes_anonymized
     }
 }

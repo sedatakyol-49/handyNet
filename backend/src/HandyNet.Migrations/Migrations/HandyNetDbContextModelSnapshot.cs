@@ -74,6 +74,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("AnonymizedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("anonymized_at");
+
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
@@ -183,6 +187,8 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("intakes", "ankauf", t =>
                         {
+                            t.HasCheckConstraint("ck_intakes_anonymized", "anonymized_at IS NULL OR seller = '{\"firstName\":\"anonymisiert\",\"lastName\":\"anonymisiert\",\"street\":\"anonymisiert\",\"postalCode\":\"00000\",\"city\":\"anonymisiert\",\"birthDate\":\"1900-01-01\",\"idDocumentType\":0,\"idDocumentNumber\":\"ANONYMISIERT\"}'::jsonb");
+
                             t.HasCheckConstraint("ck_intakes_paid", "paid_minor IS NULL OR paid_minor > 0");
                         });
                 });
@@ -1409,6 +1415,250 @@ namespace HandyNet.Migrations.Migrations
                         .HasDatabaseName("ix_warehouses_organization_id_code");
 
                     b.ToTable("warehouses", "inventory");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Domain.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("BillingMonth")
+                        .HasColumnType("date")
+                        .HasColumnName("billing_month");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issue_date");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("issuer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
+                    b.Property<int>("NumberYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("number_year");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateOnly?>("ReferencedInvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("referenced_invoice_date");
+
+                    b.Property<Guid?>("ReferencedInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referenced_invoice_id");
+
+                    b.Property<string>("ReferencedInvoiceNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("referenced_invoice_number");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<DateOnly>("ServicePeriodEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("service_period_end");
+
+                    b.Property<DateOnly>("ServicePeriodStart")
+                        .HasColumnType("date")
+                        .HasColumnName("service_period_start");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<int>("VatRateBasisPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("vat_rate_basis_points");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoices");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_invoices_organization_id_id");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_number");
+
+                    b.HasIndex("BillingMonth", "Kind")
+                        .HasDatabaseName("ix_invoices_billing_month_kind");
+
+                    b.HasIndex("OrganizationId", "BillingMonth")
+                        .IsUnique()
+                        .HasDatabaseName("ux_invoices_one_per_seller_month")
+                        .HasFilter("kind = 'Invoice'");
+
+                    b.HasIndex("OrganizationId", "ReferencedInvoiceId")
+                        .HasDatabaseName("ix_invoices_organization_id_referenced_invoice_id");
+
+                    b.HasIndex("ReferencedInvoiceId", "BillingMonth")
+                        .IsUnique()
+                        .HasDatabaseName("ux_invoices_one_credit_note_per_invoice_month")
+                        .HasFilter("kind = 'CreditNote'");
+
+                    b.HasIndex("Kind", "NumberYear", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_kind_number_year_sequence_number");
+
+                    b.ToTable("invoices", "invoicing", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoices_kind", "(kind = 'Invoice' AND total_net_minor > 0 AND total_vat_minor >= 0 AND referenced_invoice_id IS NULL) OR (kind = 'CreditNote' AND total_net_minor < 0 AND total_vat_minor <= 0 AND referenced_invoice_id IS NOT NULL AND referenced_invoice_number IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_invoices_number", "sequence_number BETWEEN 1 AND 999999 AND number_year = extract(year FROM issue_date) AND number = (CASE kind WHEN 'Invoice' THEN 'HN-' ELSE 'HN-RK-' END) || lpad(number_year::text, 4, '0') || '-' || lpad(sequence_number::text, 6, '0')");
+
+                            t.HasCheckConstraint("ck_invoices_period", "service_period_end >= service_period_start AND extract(day FROM billing_month) = 1");
+
+                            t.HasCheckConstraint("ck_invoices_totals", "total_net_minor + total_vat_minor = total_gross_minor");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Domain.InvoiceLine", b =>
+                {
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
+
+                    b.Property<Guid?>("CreditedInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credited_invoice_id");
+
+                    b.Property<int?>("CreditedLineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("credited_line_number");
+
+                    b.Property<long>("GrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_minor");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("NetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_minor");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("order_number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<long>("VatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("vat_minor");
+
+                    b.HasKey("InvoiceId", "LineNumber")
+                        .HasName("pk_invoice_lines");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_invoice_lines_organization_id");
+
+                    b.HasIndex("CreditedInvoiceId", "CreditedLineNumber")
+                        .HasDatabaseName("ix_invoice_lines_credited_invoice_id_credited_line_number");
+
+                    b.HasIndex("OrganizationId", "InvoiceId")
+                        .HasDatabaseName("ix_invoice_lines_organization_id_invoice_id");
+
+                    b.HasIndex("PaymentId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_lines_payment_id_kind");
+
+                    b.ToTable("invoice_lines", "invoicing", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoice_lines_amounts", "gross_minor = net_minor + vat_minor");
+
+                            t.HasCheckConstraint("ck_invoice_lines_kind", "(kind = 'Invoice' AND net_minor > 0 AND vat_minor >= 0 AND credited_invoice_id IS NULL AND credited_line_number IS NULL) OR (kind = 'CreditNote' AND net_minor < 0 AND vat_minor <= 0 AND credited_invoice_id IS NOT NULL AND credited_line_number IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Infrastructure.NumberSequence", b =>
+                {
+                    b.Property<string>("Kind")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<long>("NextNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_number");
+
+                    b.HasKey("Kind", "Year")
+                        .HasName("pk_number_sequences");
+
+                    b.ToTable("number_sequences", "invoicing", t =>
+                        {
+                            t.HasCheckConstraint("ck_number_sequences_next", "next_number >= 1");
+                        });
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Ledger.Infrastructure.JournalEntry", b =>
@@ -3304,6 +3554,33 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_stock_units_warehouses_organization_id_warehouse_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Domain.Invoice", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Invoicing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReferencedInvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_invoices_invoices_organization_id_referenced_invoice_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Domain.InvoiceLine", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Invoicing.Domain.InvoiceLine", null)
+                        .WithMany()
+                        .HasForeignKey("CreditedInvoiceId", "CreditedLineNumber")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_invoice_lines_invoice_lines_credited_invoice_id_credited_li");
+
+                    b.HasOne("HandyNet.Modules.Invoicing.Domain.Invoice", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("OrganizationId", "InvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_lines_invoices_organization_id_invoice_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Ledger.Infrastructure.Posting", b =>
                 {
                     b.HasOne("HandyNet.Modules.Ledger.Infrastructure.LedgerAccount", null)
@@ -3568,6 +3845,11 @@ namespace HandyNet.Migrations.Migrations
             modelBuilder.Entity("HandyNet.Modules.Disputes.Domain.Dispute", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Invoicing.Domain.Invoice", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Ordering.Domain.Order", b =>

@@ -30,7 +30,7 @@ public enum PaymentMethod
     BankTransfer,
 }
 
-/// <summary>Who sold the device. Personal data: kept only as long as legal record-keeping requires (see docs).</summary>
+/// <summary>Who sold the device. Personal data: kept only as long as legal record-keeping requires (ADR-0009).</summary>
 public sealed record SellerDetails(
     string FirstName,
     string LastName,
@@ -39,7 +39,17 @@ public sealed record SellerDetails(
     string City,
     DateOnly BirthDate,
     IdDocumentType IdDocumentType,
-    string IdDocumentNumber);
+    string IdDocumentNumber)
+{
+    public const string AnonymizedText = "anonymisiert";
+
+    /// <summary>
+    /// Fixed placeholder that replaces the seller's data after the retention period. The database checks these values
+    /// (constraint <c>ck_intakes_anonymized</c>) — change both together.
+    /// </summary>
+    public static readonly SellerDetails Anonymized = new(AnonymizedText, AnonymizedText, AnonymizedText, "00000", AnonymizedText,
+        new DateOnly(1900, 1, 1), IdDocumentType.IdCard, "ANONYMISIERT");
+}
 
 /// <summary>
 /// The physical purchase of a used device from a private seller, based on a preliminary quote. The final price is
@@ -58,7 +68,14 @@ public sealed class Intake : IAuditable
     public Guid OrganizationId { get; private set; }
     public Guid QuoteId { get; private set; }
     public string Imei { get; private set; } = null!;
+    [PersonalData]
     public SellerDetails Seller { get; private set; } = null!;
+
+    /// <summary>When the seller's personal data was replaced by <see cref="SellerDetails.Anonymized"/> (retention job).</summary>
+    public DateTimeOffset? AnonymizedAt { get; private set; }
+
+    public bool IsAnonymized => AnonymizedAt is not null;
+
     public IntakeStatus Status { get; private set; }
     public DateTimeOffset ReceivedAt { get; private set; }
     public Guid ReceivedBy { get; private set; }
@@ -111,8 +128,32 @@ public sealed class Intake : IAuditable
         };
     }
 
+    /// <summary>Intakes whose retention start lies before this instant are due for anonymization.</summary>
+    public static DateTimeOffset RetentionCutoff(DateTimeOffset now, int retentionYears) =>
+        retentionYears >= 1 ? now.AddYears(-retentionYears) : throw new ArgumentOutOfRangeException(nameof(retentionYears));
+
+    /// <summary>The date from which the retention period runs: completion/rejection, or receipt for intakes never closed.</summary>
+    public DateTimeOffset RetentionStart => CompletedAt ?? ReceivedAt;
+
+    /// <summary>
+    /// Replaces the seller's personal data with a fixed placeholder once the retention period is over. Everything else
+    /// (device, amounts, payment method, stock unit) stays for bookkeeping. Idempotent.
+    /// </summary>
+    public Result AnonymizeSeller(DateTimeOffset cutoff, DateTimeOffset now)
+    {
+        if (IsAnonymized)
+            return Result.Success();
+        if (RetentionStart >= cutoff)
+            return Error.Conflict("ankauf.retention_not_over", "The retention period of this intake is not over.");
+        Seller = SellerDetails.Anonymized;
+        AnonymizedAt = now;
+        return Result.Success();
+    }
+
     public Result Inspect(QuoteInput findings, QuoteCalculation calculation, string? notes, DateTimeOffset now)
     {
+        if (IsAnonymized)
+            return Error.Conflict("ankauf.intake_anonymized", "The seller data of this intake was anonymized; it cannot be continued.");
         if (Status is not (IntakeStatus.Received or IntakeStatus.Inspected))
             return Error.Conflict("ankauf.intake_closed", $"An intake in status {Status} cannot be inspected.");
         if (notes?.Length > MaxNotesLength)
@@ -130,6 +171,8 @@ public sealed class Intake : IAuditable
 
     public Result Complete(long paidMinor, PaymentMethod method, Guid stockUnitId, DateTimeOffset now)
     {
+        if (IsAnonymized)
+            return Error.Conflict("ankauf.intake_anonymized", "The seller data of this intake was anonymized; it cannot be continued.");
         if (Status != IntakeStatus.Inspected)
             return Error.Conflict("ankauf.not_inspected", "Inspect the device before paying the seller.");
         if (paidMinor <= 0)

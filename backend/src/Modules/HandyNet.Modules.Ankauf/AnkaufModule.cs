@@ -8,14 +8,21 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace HandyNet.Modules.Ankauf;
 
 public static class AnkaufModule
 {
-    public static IServiceCollection AddAnkaufModule(this IServiceCollection services)
+    public static IServiceCollection AddAnkaufModule(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        services.AddOptions<AnkaufOptions>().Bind(configuration.GetSection(AnkaufOptions.Section))
+            .Validate(o => o.SellerDataRetentionYears is null or (>= 1 and <= 30), "Ankauf:SellerDataRetentionYears must be between 1 and 30 (or null).")
+            .ValidateOnStart();
+        services.AddSingleton<SellerDataRetention>();
+        services.AddHostedService(sp => sp.GetRequiredService<SellerDataRetention>());
         services.AddSingleton<IModuleModel, AnkaufModel>();
         services.AddScoped<PriceListService>();
         services.AddScoped<QuoteService>();

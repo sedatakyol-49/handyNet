@@ -1,6 +1,7 @@
 using HandyNet.Modules.Ledger;
 using HandyNet.Modules.Ledger.Contracts;
 using HandyNet.Modules.Payments.Application;
+using HandyNet.Modules.Payments.Contracts;
 using HandyNet.Modules.Payments.Domain;
 using HandyNet.Modules.Payments.Infrastructure;
 using HandyNet.Persistence;
@@ -30,6 +31,7 @@ public static class PaymentsModule
         services.AddSingleton<IModuleModel, PaymentsModel>();
         services.AddScoped<PaymentService>();
         services.AddScoped<PaymentProcessor>();
+        services.AddScoped<ICommissionStatements, CommissionStatements>();
         services.AddSingleton<PaymentRunner>();
         services.AddScoped<IPaymentProvider, SimulatedPaymentProvider>();
         services.AddScoped<IOutboxHandler, OrderStatusPaymentHandler>();

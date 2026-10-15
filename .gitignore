@@ -12,5 +12,5 @@ TestResults/
 .env
 playwright-report/
 test-results/
-.artifacts/
+.artifacts*/
 .claude/worktrees/

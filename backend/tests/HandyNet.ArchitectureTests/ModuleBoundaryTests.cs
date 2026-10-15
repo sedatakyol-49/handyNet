@@ -53,7 +53,31 @@ public class ModuleBoundaryTests
         { "Pos", "HandyNet.Modules.Ledger" },
         { "Pos", "HandyNet.Modules.Ankauf" },
         { "Pos", "HandyNet.Modules.Marketplace" },
+        // Invoicing sits on top of Payments and Tenancy contracts; nothing depends on it.
+        { "Payments", "HandyNet.Modules.Invoicing" },
+        { "Tenancy", "HandyNet.Modules.Invoicing" },
+        { "Ordering", "HandyNet.Modules.Invoicing" },
+        { "Ledger", "HandyNet.Modules.Invoicing" },
+        { "Pos", "HandyNet.Modules.Invoicing" },
+        { "Ankauf", "HandyNet.Modules.Invoicing" },
+        { "Disputes", "HandyNet.Modules.Invoicing" },
+        { "Shipping", "HandyNet.Modules.Invoicing" },
+        { "Invoicing", "HandyNet.Modules.Ordering" },
+        { "Invoicing", "HandyNet.Modules.Ledger" },
+        { "Invoicing", "HandyNet.Modules.Pos" },
+        { "Invoicing", "HandyNet.Modules.Ankauf" },
     };
+
+    [Fact]
+    public void Invoicing_uses_only_the_contracts_of_payments_and_tenancy()
+    {
+        var result = Types.InAssembly(Module("Invoicing"))
+            .ShouldNot().HaveDependencyOnAny(
+                "HandyNet.Modules.Payments.Domain", "HandyNet.Modules.Payments.Application", "HandyNet.Modules.Payments.Infrastructure",
+                "HandyNet.Modules.Tenancy.Domain", "HandyNet.Modules.Tenancy.Application", "HandyNet.Modules.Tenancy.Infrastructure")
+            .GetResult();
+        Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
+    }
 
     [Theory]
     [MemberData(nameof(ForbiddenDependencies))]
@@ -78,6 +102,7 @@ public class ModuleBoundaryTests
     [InlineData("Disputes")]
     [InlineData("Ankauf")]
     [InlineData("Pos")]
+    [InlineData("Invoicing")]
     public void Domain_is_free_of_infrastructure_and_web(string module)
     {
         var result = Types.InAssembly(Module(module))
@@ -104,6 +129,8 @@ public class ModuleBoundaryTests
     [InlineData("Inventory", "Pos")]
     [InlineData("Catalog", "Pos")]
     [InlineData("Tenancy", "Pos")]
+    [InlineData("Payments", "Invoicing")]
+    [InlineData("Tenancy", "Invoicing")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)
     {
         var result = Types.InAssembly(Module(consumer))
@@ -115,7 +142,7 @@ public class ModuleBoundaryTests
     [Fact]
     public void Money_is_never_floating_point()
     {
-        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf", "Pos" }.Select(Module))
+        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf", "Pos", "Invoicing" }.Select(Module))
             .GetTypes()
             .SelectMany(t => t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             .Where(p => (p.Name.Contains("Price") || p.Name.Contains("Total") || p.Name.EndsWith("Minor"))

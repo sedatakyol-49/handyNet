@@ -21,3 +21,10 @@ public abstract class Entity
 
 /// <summary>Entities whose changes are written to the append-only audit log.</summary>
 public interface IAuditable;
+
+/// <summary>
+/// Marks a property holding personal data (GDPR). Its value is never copied into the audit log, so erasing or
+/// anonymizing the entity really removes the data.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class PersonalDataAttribute : Attribute;

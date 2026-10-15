@@ -42,7 +42,8 @@ public sealed record IntakeDto(
     string? PaymentMethod,
     Guid? StockUnitId,
     DateTimeOffset? CompletedAt,
-    string? RejectionReason);
+    string? RejectionReason,
+    DateTimeOffset? SellerAnonymizedAt);
 
 internal sealed class ReceiveIntakeValidator : AbstractValidator<ReceiveIntakeRequest>
 {
@@ -241,8 +242,9 @@ internal sealed class IntakeService(
     }
 
     private static IntakeDto ToDto(Intake i, Quote q) => new(
-        i.Id, i.QuoteId, q.Brand, q.Model, q.Storage, i.Imei, i.Status.ToString(), $"{i.Seller.FirstName} {i.Seller.LastName}", i.ReceivedAt,
+        i.Id, i.QuoteId, q.Brand, q.Model, q.Storage, i.Imei, i.Status.ToString(),
+        i.IsAnonymized ? SellerDetails.AnonymizedText : $"{i.Seller.FirstName} {i.Seller.LastName}", i.ReceivedAt,
         q.PlatformOfferMinor, i.InspectedCondition?.ToString(), i.InspectedDefects.Select(d => d.ToString()).ToList(), i.InspectedBatteryHealthPercent,
         i.InspectionNotes, i.InspectedOfferMinor, i.InspectedMaxConsumerPriceMinor, i.PaidMinor, i.PaymentMethod?.ToString(), i.StockUnitId,
-        i.CompletedAt, i.RejectionReason);
+        i.CompletedAt, i.RejectionReason, i.AnonymizedAt);
 }

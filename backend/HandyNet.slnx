@@ -12,6 +12,7 @@
     <Project Path="src/Modules/HandyNet.Modules.Identity/HandyNet.Modules.Identity.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Imports/HandyNet.Modules.Imports.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Inventory/HandyNet.Modules.Inventory.csproj" />
+    <Project Path="src/Modules/HandyNet.Modules.Invoicing/HandyNet.Modules.Invoicing.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Ledger/HandyNet.Modules.Ledger.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Marketplace/HandyNet.Modules.Marketplace.csproj" />
     <Project Path="src/Modules/HandyNet.Modules.Notifications/HandyNet.Modules.Notifications.csproj" />

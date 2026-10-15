@@ -102,14 +102,27 @@ public static class Ankaufbeleg
         var sections = new List<BelegSection>
         {
             new("Käufer (Händler)", dealerFields, []),
-            new("Verkäufer/in (Privatperson)",
-            [
-                new("Name", $"{seller.FirstName} {seller.LastName}"),
-                new("Anschrift", Address(seller.Street, seller.PostalCode, seller.City, null)),
-                new("Geburtsdatum", seller.BirthDate.ToString("dd.MM.yyyy", German)),
-                new("Ausweisdokument", IdDocumentName(seller.IdDocumentType)),
-                new("Ausweisnummer", MaskIdNumber(seller.IdDocumentNumber)),
-            ], []),
+            intake.AnonymizedAt is { } anonymizedAt
+                ? new("Verkäufer/in (Privatperson)",
+                [
+                    new("Name", SellerDetails.AnonymizedText),
+                    new("Anschrift", SellerDetails.AnonymizedText),
+                    new("Geburtsdatum", SellerDetails.AnonymizedText),
+                    new("Ausweisdokument", SellerDetails.AnonymizedText),
+                    new("Ausweisnummer", SellerDetails.AnonymizedText),
+                ],
+                [
+                    $"Die personenbezogenen Daten des Verkäufers / der Verkäuferin wurden am "
+                    + $"{TimeZoneInfo.ConvertTime(anonymizedAt, zone).ToString("dd.MM.yyyy", German)} nach Ablauf der Aufbewahrungsfrist anonymisiert.",
+                ])
+                : new("Verkäufer/in (Privatperson)",
+                [
+                    new("Name", $"{seller.FirstName} {seller.LastName}"),
+                    new("Anschrift", Address(seller.Street, seller.PostalCode, seller.City, null)),
+                    new("Geburtsdatum", seller.BirthDate.ToString("dd.MM.yyyy", German)),
+                    new("Ausweisdokument", IdDocumentName(seller.IdDocumentType)),
+                    new("Ausweisnummer", MaskIdNumber(seller.IdDocumentNumber)),
+                ], []),
             new("Gerät", deviceFields, []),
             new("Ankaufpreis und Zahlung",
             [

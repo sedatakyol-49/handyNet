@@ -93,6 +93,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("Shipping:SimulatedTransitMinutes", "0");
             web.UseSetting("Payments:EnabledProviders:0", "Simulated");
             web.UseSetting("Pos:FiscalSigner", "Disabled");
+            // Tests issue invoices explicitly (admin endpoint / job instance with a fixed clock).
+            web.UseSetting("Invoicing:AutoIssue", "false");
             web.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         });
         _ = Factory.Server; // start host now (runs admin bootstrap)

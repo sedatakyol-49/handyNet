@@ -41,6 +41,9 @@ public sealed class AuditInterceptor(IClock clock, ICurrentUser currentUser, ITe
 {
     private const int MaxValueLength = 2000;
 
+    /// <summary>Written instead of values of <see cref="PersonalDataAttribute"/> properties.</summary>
+    public const string Redacted = "[personal data]";
+
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
@@ -89,17 +92,18 @@ public sealed class AuditInterceptor(IClock clock, ICurrentUser currentUser, ITe
         {
             if (property.Metadata.IsConcurrencyToken || property.Metadata.Name.Contains("Password", StringComparison.OrdinalIgnoreCase))
                 continue;
+            var personal = property.Metadata.PropertyInfo?.IsDefined(typeof(PersonalDataAttribute), inherit: true) == true;
 
             switch (entry.State)
             {
                 case EntityState.Added:
-                    result[property.Metadata.Name] = Trim(property.CurrentValue);
+                    result[property.Metadata.Name] = personal ? Redacted : Trim(property.CurrentValue);
                     break;
                 case EntityState.Deleted:
-                    result[property.Metadata.Name] = Trim(property.OriginalValue);
+                    result[property.Metadata.Name] = personal ? Redacted : Trim(property.OriginalValue);
                     break;
                 case EntityState.Modified when property.IsModified && !Equals(property.OriginalValue, property.CurrentValue):
-                    result[property.Metadata.Name] = new { from = Trim(property.OriginalValue), to = Trim(property.CurrentValue) };
+                    result[property.Metadata.Name] = personal ? Redacted : new { from = Trim(property.OriginalValue), to = Trim(property.CurrentValue) };
                     break;
             }
         }

@@ -39,5 +39,5 @@ payout `Dr SellerPayable / Cr PspClearing`; refund = reverse capture.
 
 ## Not yet done (no compliance claimed)
 
-Commission invoices to sellers (and their numbering/GoBD archive), reconciliation against PSP settlement reports,
+GoBD archive of commission invoices (the invoices themselves: ADR-0009), reconciliation against PSP settlement reports,
 disputes/chargebacks, partial refunds, seller onboarding/KYC at the PSP, DATEV export, and the real Mollie adapter.

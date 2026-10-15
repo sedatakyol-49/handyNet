@@ -49,6 +49,15 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 ## Personal data (GDPR)
 
 `ankauf.intakes.seller` holds sellers' names, addresses, dates of birth and ID document numbers, collected for the
-second-hand trade record-keeping duty. It is tenant-isolated (RLS) and never exposed to other organizations. A retention
-job that deletes or anonymizes this data after the legally required period is **not implemented yet** — the period
-must be confirmed by legal review before go-live.
+second-hand trade record-keeping duty. It is tenant-isolated (RLS), never exposed to other organizations and not copied
+into the audit log (`[PersonalData]`). A daily job anonymizes it once `Ankauf:SellerDataRetentionYears` have passed since
+completion (ADR-0009). **The setting is null (disabled) by default** because the legal period must be confirmed by legal
+review; the API logs a warning at startup in Production while it is unset. Backups keep anonymized data until they age out.
+
+## Commission invoices
+
+Set `Invoicing:Issuer` (name, legal name, address, VAT id, tax number) before go-live — in Production the shipped
+`PLATZHALTER` values make every issuing attempt fail with `invoicing.issuer_not_configured`. The job issues the previous
+month automatically (`Invoicing:AutoIssue`, checked every `Invoicing:AutoIssueCheckMinutes`); a platform admin can
+(re-)issue any completed month with `POST /api/admin/invoices/issue {"month":"YYYY-MM"}` — it is idempotent.
+`Invoicing:VatRateBasisPoints` must equal `Payments:CommissionVatBasisPoints`.

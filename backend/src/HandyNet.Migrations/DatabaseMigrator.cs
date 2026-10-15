@@ -11,6 +11,7 @@ using HandyNet.Modules.Payments.Infrastructure;
 using HandyNet.Modules.Disputes.Infrastructure;
 using HandyNet.Modules.Ankauf.Infrastructure;
 using HandyNet.Modules.Pos.Infrastructure;
+using HandyNet.Modules.Invoicing.Infrastructure;
 using HandyNet.Modules.Tenancy.Infrastructure;
 using HandyNet.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ public static class DatabaseMigrator
         new DisputesModel(),
         new AnkaufModel(),
         new PosModel(),
+        new InvoicingModel(),
     ];
 
     public static HandyNetDbContext CreateContext(string ownerConnectionString)
