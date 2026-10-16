@@ -88,6 +88,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             web.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             web.UseSetting("RateLimits:AuthPerMinute", "10000");
+            web.UseSetting("RateLimits:RefreshPerMinute", "10000");
+            web.UseSetting("RateLimits:AccountEmailsPerHour", "10000");
             web.UseSetting("Shipping:EnabledCarriers:0", "Manual");
             web.UseSetting("Shipping:EnabledCarriers:1", "Simulated");
             web.UseSetting("Shipping:SimulatedTransitMinutes", "0");

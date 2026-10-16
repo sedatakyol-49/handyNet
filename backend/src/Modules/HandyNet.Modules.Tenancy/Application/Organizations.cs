@@ -25,7 +25,8 @@ public sealed record OrganizationInput(
         new(Name, LegalName, VatId, Street, PostalCode, City, CountryCode ?? "DE", IsWholesaler, IsRetailer, IsRepairProvider);
 }
 
-public sealed record RegisterBusinessRequest(string Email, string DisplayName, string Password, OrganizationInput Organization);
+/// <param name="Language">Language of the verification email ("de" default, "en").</param>
+public sealed record RegisterBusinessRequest(string Email, string DisplayName, string Password, OrganizationInput Organization, string? Language = null);
 
 public sealed record AddStaffRequest(string Email, string DisplayName, string? Password, MembershipRole Role);
 
@@ -40,7 +41,7 @@ public sealed record MembershipDto(
     bool IsRetailer,
     bool IsRepairProvider);
 
-public sealed record MeResponse(Guid UserId, string Email, string DisplayName, bool IsPlatformAdmin, IReadOnlyList<MembershipDto> Memberships);
+public sealed record MeResponse(Guid UserId, string Email, string DisplayName, bool IsPlatformAdmin, bool EmailVerified, IReadOnlyList<MembershipDto> Memberships);
 
 public sealed record RegistrationResult(Guid UserId, Guid OrganizationId);
 
@@ -70,6 +71,7 @@ internal sealed class RegisterBusinessValidator : AbstractValidator<RegisterBusi
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Password).NotEmpty();
         RuleFor(x => x.Organization).NotNull().SetValidator(new OrganizationInputValidator());
+        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be 'de' or 'en'.");
     }
 }
 
@@ -92,7 +94,7 @@ internal sealed class OrganizationService(
 {
     public async Task<Result<RegistrationResult>> RegisterBusinessAsync(RegisterBusinessRequest request, CancellationToken ct)
     {
-        var staged = await users.StageNewUserAsync(request.Email, request.DisplayName, request.Password, ct);
+        var staged = await users.StageNewUserAsync(request.Email, request.DisplayName, request.Password, request.Language, ct);
         if (!staged.IsSuccess)
             return staged.Error!;
 
@@ -167,7 +169,7 @@ internal sealed class OrganizationService(
                 o.IsRepairProvider))
             .ToList();
 
-        return new MeResponse(user.Id, user.Email, user.DisplayName, user.IsPlatformAdmin, memberships);
+        return new MeResponse(user.Id, user.Email, user.DisplayName, user.IsPlatformAdmin, user.EmailVerified, memberships);
     }
 
     public async Task<Result<Guid>> AddStaffAsync(AddStaffRequest request, CancellationToken ct)
@@ -181,7 +183,7 @@ internal sealed class OrganizationService(
         if (string.IsNullOrEmpty(request.Password))
             return Error.Validation("staff.password_required", "A new staff account needs an initial password.");
 
-        var staged = await users.StageNewUserAsync(request.Email, request.DisplayName, request.Password, ct);
+        var staged = await users.StageNewUserAsync(request.Email, request.DisplayName, request.Password, language: null, ct);
         if (!staged.IsSuccess)
             return staged.Error!;
         var userId = staged.Value;

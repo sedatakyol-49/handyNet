@@ -776,6 +776,152 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("dispute_messages", "disputes");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Identity.Domain.AccountToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("purpose");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_tokens");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_account_tokens_token_hash");
+
+                    b.HasIndex("UserId", "Purpose")
+                        .HasDatabaseName("ix_account_tokens_open_by_user")
+                        .HasFilter("used_at IS NULL AND revoked_at IS NULL");
+
+                    b.ToTable("account_tokens", "identity", t =>
+                        {
+                            t.HasCheckConstraint("ck_account_tokens_lifetime", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_account_tokens_single_outcome", "used_at IS NULL OR revoked_at IS NULL");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Identity.Domain.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<Guid?>("ReplacedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_id");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("revocation_reason");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refresh_tokens");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("ix_refresh_tokens_family_id");
+
+                    b.HasIndex("ReplacedById")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_tokens_replaced_by_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_tokens_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_refresh_tokens_active_by_user")
+                        .HasFilter("revoked_at IS NULL AND used_at IS NULL");
+
+                    b.ToTable("refresh_tokens", "identity", t =>
+                        {
+                            t.HasCheckConstraint("ck_refresh_tokens_lifetime", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_refresh_tokens_revocation", "(revoked_at IS NULL) = (revocation_reason IS NULL)");
+
+                            t.HasCheckConstraint("ck_refresh_tokens_rotation", "(used_at IS NULL) = (replaced_by_id IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Identity.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -798,6 +944,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasMaxLength(320)
                         .HasColumnType("character varying(320)")
                         .HasColumnName("email");
+
+                    b.Property<DateTimeOffset?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_verified_at");
 
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("integer")
@@ -824,6 +974,14 @@ namespace HandyNet.Migrations.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("password_hash");
+
+                    b.Property<DateTimeOffset?>("PasswordResetRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("password_reset_requested_at");
+
+                    b.Property<DateTimeOffset?>("VerificationEmailRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verification_email_requested_at");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
@@ -3459,6 +3617,26 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_dispute_messages_disputes_dispute_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Identity.Domain.AccountToken", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_account_tokens_users_user_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Identity.Domain.RefreshToken", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_tokens_users_user_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Imports.Domain.ImportBatch", b =>

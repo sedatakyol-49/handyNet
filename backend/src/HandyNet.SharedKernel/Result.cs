@@ -6,6 +6,9 @@ public enum ErrorKind
     NotFound,
     Conflict,
     Forbidden,
+
+    /// <summary>The presented credential (e.g. a refresh token) is not valid; HTTP 401.</summary>
+    Unauthorized,
 }
 
 public sealed record Error(string Code, string Message, ErrorKind Kind = ErrorKind.Validation)
@@ -19,6 +22,7 @@ public sealed record Error(string Code, string Message, ErrorKind Kind = ErrorKi
     public static Error Conflict(string code, string message) => new(code, message, ErrorKind.Conflict);
     public static Error Forbidden(string code, string message) => new(code, message, ErrorKind.Forbidden);
     public static Error Validation(string code, string message) => new(code, message, ErrorKind.Validation);
+    public static Error Unauthorized(string code, string message) => new(code, message, ErrorKind.Unauthorized);
 }
 
 public class Result
