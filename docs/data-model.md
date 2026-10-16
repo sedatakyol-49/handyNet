@@ -25,7 +25,9 @@ erDiagram
 
 | Table | Key columns | Constraints / notes |
 |---|---|---|
-| `identity.users` | id, email, password_hash, is_platform_admin, failed_login_count, locked_until | unique email |
+| `identity.users` | id, email, password_hash, is_platform_admin, failed_login_count, locked_until, email_verified_at, verification_email_requested_at, password_reset_requested_at | unique email |
+| `identity.refresh_tokens` | id, user_id, family_id, token_hash (SHA-256 hex), expires_at, used_at, replaced_by_id, revoked_at, revocation_reason | unique token_hash; unique replaced_by_id; used ⇔ replaced, revoked ⇔ reason (checks); xmin concurrency; no DELETE grant (ADR-0010) |
+| `identity.account_tokens` | id, user_id, purpose (EmailVerification/PasswordReset), token_hash, expires_at, used_at, revoked_at | unique token_hash; not both used and revoked; xmin concurrency; no DELETE grant |
 | `tenancy.organizations` | id, name, legal_name, vat_id, address, is_wholesaler/is_retailer/is_repair_provider, status | unique vat_id; at least one capability |
 | `tenancy.memberships` | organization_id, user_id, role | unique (org, user) |
 | `tenancy.organization_modules` | (organization_id, module), enabled_by, enabled_at | removal is the only app-level DELETE |
