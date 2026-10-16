@@ -56,6 +56,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finance/finance.page').then((m) => m.FinancePage),
       },
       {
+        path: 'finanzen/rechnungen',
+        canActivate: [accessGuard('B2BSales', 'orders.fulfil')],
+        loadComponent: () => import('./features/finance/invoices/invoices.page').then((m) => m.InvoicesPage),
+      },
+      {
+        path: 'finanzen/rechnungen/:id',
+        canActivate: [accessGuard('B2BSales', 'orders.fulfil')],
+        loadComponent: () => import('./features/finance/invoices/invoice-detail.page').then((m) => m.InvoiceDetailPage),
+      },
+      {
         path: 'angebote',
         canActivate: [accessGuard('B2BSales')],
         loadComponent: () => import('./features/offers/offers.page').then((m) => m.OffersPage),
@@ -144,6 +154,11 @@ export const routes: Routes = [
         path: 'administration/reklamationen',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/admin-disputes.page').then((m) => m.AdminDisputesPage),
+      },
+      {
+        path: 'administration/rechnungen',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/admin-invoices.page').then((m) => m.AdminInvoicesPage),
       },
       {
         path: 'administration/reklamationen/:id',

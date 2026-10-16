@@ -15,6 +15,7 @@ import { ledgerKind, ledgerKindKey, sellerSignedMinor } from '../orders/payment/
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-page-header [title]="'finance.title' | t" [description]="'finance.subtitle' | t">
+      <a hnButton routerLink="/app/finanzen/rechnungen" data-testid="finance-invoices">{{ 'finance.invoicesLink' | t }}</a>
       <button hnButton type="button" [loading]="balance.loading() || ledger.loading()" (click)="refresh()" data-testid="finance-refresh">
         {{ 'common.refresh' | t }}
       </button>

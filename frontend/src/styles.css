@@ -52,6 +52,13 @@
   .hn-table tbody tr:hover {
     @apply bg-slate-50;
   }
+  .hn-table tfoot th,
+  .hn-table tfoot td {
+    @apply px-3 py-1.5 align-middle;
+  }
+  .hn-table tfoot tr:first-child > * {
+    @apply border-t border-slate-300;
+  }
   .hn-table .num {
     @apply text-end tabular-nums whitespace-nowrap;
   }

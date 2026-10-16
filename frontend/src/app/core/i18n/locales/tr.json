@@ -65,7 +65,8 @@
     "finance": "Finans",
     "ankauf": "Geri alım",
     "intakes": "Geri alımlar",
-    "pos": "Kasa"
+    "pos": "Kasa",
+    "invoices": "Faturalar"
   },
   "auth": {
     "email": "E-posta adresi",
@@ -256,7 +257,16 @@
       "stock.insufficient": "Yeterli stok yok. Rezerve edilmiş ürünler satılamaz.",
       "stock.serialized_requires_imei": "Bu ürün tekil cihaz olarak stokta tutuluyor. Lütfen satılan cihazın IMEI numarasını tarayın.",
       "unit.not_available": "Bu cihaz stokta değil (artık yok).",
-      "unit.other_warehouse": "Bu cihaz kasanın deposundan farklı bir depoda bulunuyor."
+      "unit.other_warehouse": "Bu cihaz kasanın deposundan farklı bir depoda bulunuyor.",
+      "invoicing.month_not_over": "Bu ay henüz bitmedi. Faturalar yalnızca geçmiş aylar için düzenlenir.",
+      "invoicing.month": "Lütfen ayı YYYY-AA biçiminde girin.",
+      "invoicing.issuer_not_configured": "Faturalar için düzenleyen bilgileri henüz yapılandırılmadı (yer tutucu). Hiç fatura düzenlenmedi.",
+      "invoicing.issuer_incomplete": "Faturalar için düzenleyen bilgileri eksik (ad, adres ve KDV kimlik no. veya vergi numarası gerekli).",
+      "invoicing.not_found": "Fatura bulunamadı.",
+      "invoicing.concurrent": "Şu anda paralel bir faturalandırma çalışıyor. Lütfen yeniden çalıştırın.",
+      "invoicing.failed": "Beklenmeyen hata; ayrıntılar sunucu günlüğünde.",
+      "invoicing.vat_mismatch": "Bir ödemenin KDV’si KDV oranıyla uyuşmuyor; fatura düzenlenmedi.",
+      "invoicing.number_range": "Bu yılın numara aralığı tükendi."
     }
   },
   "dashboard": {
@@ -556,7 +566,8 @@
       "label": "Yönetim bölümleri",
       "organizations": "Şirketler",
       "disputes": "Şikâyetler",
-      "ankauf": "Geri alım fiyatları"
+      "ankauf": "Geri alım fiyatları",
+      "invoices": "Komisyon faturaları"
     },
     "disputes": {
       "subtitle": "HandyNet'e devredilen şikâyetleri inceleyin ve karara bağlayın.",
@@ -871,7 +882,8 @@
       "credit": "Alacak kaydı",
       "debit": "Hak ediş ödemesi"
     },
-    "openOrderNumber": "{number} numaralı siparişi aç"
+    "openOrderNumber": "{number} numaralı siparişi aç",
+    "invoicesLink": "Komisyon faturaları"
   },
   "disputeReason": {
     "Damaged": "Mal hasarlı",
@@ -1604,6 +1616,96 @@
       "print": "Z raporunu yazdır",
       "openedBy": "Açan: {name}",
       "closedBy": "Kapatan: {name}"
+    }
+  },
+  "invoiceKind": {
+    "Invoice": "Fatura",
+    "CreditNote": "Fatura düzeltmesi"
+  },
+  "invoices": {
+    "title": "Komisyon faturaları",
+    "subtitle": "Online ödenen satışlardaki aracılık komisyonu için HandyNet faturaları; her ay, ay bittikten sonra düzenlenir.",
+    "hint": "Fatura numaraları HN-YYYY-nnnnnn, düzeltmeler HN-RK-YYYY-nnnnnn. Düzenlenen belgeler asla değiştirilmez: faturalanmış bir ödeme iade edilirse, iadenin yapıldığı ayda bir fatura düzeltmesi kalemi dengeler.",
+    "backToFinance": "Finansa dön",
+    "back": "Faturalara dön",
+    "number": "Numara",
+    "kind": "Tür",
+    "billingMonth": "Fatura ayı",
+    "issueDate": "Fatura tarihi",
+    "servicePeriod": "Hizmet dönemi",
+    "periodRange": "{from} – {to}",
+    "lineCount": "Kalemler",
+    "lines": "Kalemler",
+    "net": "Net",
+    "vat": "KDV",
+    "gross": "Brüt",
+    "pdf": "PDF",
+    "downloadPdf": "PDF indir",
+    "downloadPdfLabel": "{number} PDF dosyasını indir",
+    "openLabel": "{number} aç",
+    "corrects": "{number} faturasını düzeltir",
+    "empty": "Henüz komisyon faturası yok",
+    "emptyText": "Faturalar, bir ay sona erdikten sonra o ay online ödenen satışlar için düzenlenir.",
+    "detail": {
+      "subtitle": "Belge, düzenlendiği haliyle. Düzenlenen faturalar değiştirilmez.",
+      "document": "Belge",
+      "issuer": "Faturayı düzenleyen",
+      "recipient": "Fatura alıcısı",
+      "vatId": "KDV kimlik no.",
+      "taxNumber": "Vergi numarası",
+      "vatRate": "KDV oranı",
+      "correctsInvoice": "Düzeltilen fatura",
+      "serviceText": "HandyNet üzerinden online ödenen siparişler için aracılık komisyonu, her sipariş için bir kalem.",
+      "correctionNote": "Bu fatura düzeltmesi, ödemeler iade edildiği için {number} faturasının aşağıdaki kalemlerini iptal eder.",
+      "withheldNote": "Komisyon ödeme sırasında zaten kesildi; ödenmesi gereken bir tutar yok.",
+      "placeholder": "ÖRNEK: Düzenleyen bilgileri hâlâ yer tutucu. Bu belge geçerli bir fatura değildir.",
+      "line": "Sıra",
+      "order": "Sipariş",
+      "paidAt": "Ödeme tarihi",
+      "totalNet": "Net toplam",
+      "totalVat": "KDV {rate}",
+      "totalGross": "Toplam tutar",
+      "issuedAt": "Düzenlenme: {date}"
+    },
+    "admin": {
+      "subtitle": "Tamamlanmış bir ay için komisyon faturalarını ve fatura düzeltmelerini düzenleyin ve kontrol edin.",
+      "issueHeading": "Ayı faturalandır",
+      "month": "Fatura ayı",
+      "monthHint": "Yalnızca tamamlanmış aylar (Almanya saati). Önceki ay önerilir.",
+      "issue": "Faturaları düzenle",
+      "helpHeading": "Düzenleme nasıl çalışır",
+      "autoHint": "Bir arka plan işi önceki ayı otomatik olarak, normalde ayın 1’inin ilk saatinde düzenler. Burada bir ayı elle veya sonradan faturalandırabilirsiniz, örn. bir kesintiden sonra.",
+      "idempotentHint": "Tekrar çalıştırmak güvenlidir: Satıcı ve ay başına en fazla bir fatura, düzeltilen fatura ve iade ayı başına en fazla bir düzeltme oluşur. Mevcut belgeler değiştirilmeden döndürülür ve \"Zaten düzenlendi\" olarak sayılır. Hatalardan sonra yeniden çalıştırmanız yeterlidir.",
+      "correctionHint": "Fatura düzeltmeleri, asıl faturanın ayında değil, iadenin yapıldığı ayın çalıştırmasında oluşturulur.",
+      "pdfHint": "Satıcılar PDF dosyalarını Finans → Faturalar altında indirebilir.",
+      "confirmTitle": "Faturalar düzenlensin mi?",
+      "confirmText": "{month} için komisyonu veya iadesi olan tüm satıcılara faturalar ve fatura düzeltmeleri düzenlenecek. Düzenlenen belgeler kesindir ve sıralı numaralanır; değiştirilemez veya silinemez.",
+      "idempotentShort": "Bu aya ait mevcut belgeler ikinci kez düzenlenmez.",
+      "result": "{month} sonucu",
+      "sellersChecked": "Kontrol edilen satıcılar",
+      "invoicesIssued": "Yeni faturalar",
+      "creditNotesIssued": "Yeni düzeltmeler",
+      "alreadyIssued": "Zaten düzenlendi",
+      "outcome": {
+        "issued": "Yeni belgeler düzenlendi.",
+        "unchanged": "Yeni bir şey yok: bu ayın tüm belgeleri zaten düzenlenmişti.",
+        "empty": "Bu ay komisyonu veya iadesi olan satıcı yok.",
+        "failed": "{count} satıcı için düzenleme başarısız oldu. Diğer belgeler düzenlendi; nedeni giderip yeniden çalıştırın."
+      },
+      "failures": "Başarısız",
+      "organization": "Şirket (ID)",
+      "code": "Kod",
+      "message": "Mesaj",
+      "monthDocuments": "{month} belgeleri",
+      "monthDocumentsHint": "Bu fatura ayına ait tüm faturalar ve düzeltmeler, tüm satıcılar için. Toplam, negatif tutarlı düzeltmeleri içerir.",
+      "recipient": "Alıcı",
+      "noDocuments": "Bu ay için belge yok",
+      "total": "Toplam",
+      "validation": {
+        "required": "Lütfen bir ay seçin.",
+        "format": "Lütfen ayı YYYY-AA biçiminde girin.",
+        "notOver": "Bu ay henüz bitmedi. Yalnızca geçmiş aylar faturalandırılabilir."
+      }
     }
   }
 }

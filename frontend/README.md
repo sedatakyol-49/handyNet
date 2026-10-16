@@ -67,6 +67,8 @@ src/app
    │  ├─ payment/            "Zahlung" section (buyer pays online, seller sees commission/payout) and payment.logic.ts
    │  └─ dispute/            "Reklamation" section, message thread component and dispute.logic.ts (actions per role/status)
    ├─ finance/               Finanzen (seller): open balance, recent payouts, paged ledger
+   │  └─ invoices/           Provisionsrechnungen (seller list + detail + PDF) and invoice.logic.ts (Berlin months,
+   │                         month validation, date-only/month formatting, issue-run outcome, cent sums)
    ├─ offers/                own offers with inline price/status editing, create offer from catalog
    ├─ inventory/             stock table, adjustment dialog, movements, warehouses
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
@@ -78,7 +80,8 @@ src/app
    │                         pos.logic.ts (cart totals, payments/change, idempotency, returnable quantities, shortcuts),
    │                         receipt-view (printable 80 mm receipt), z-report
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
-      │                      "Reklamationen" (escalated disputes queue, detail + decision) and "Ankaufspreise"
+      │                      "Reklamationen" (escalated disputes queue, detail + decision), "Ankaufspreise" and
+      │                      "Provisionsrechnungen" (issue a month, run result, documents of the month)
       └─ ankauf/             price lists (upload, review, publish/discard) and pricing policy versions;
                              ankauf-admin.logic.ts (basis points ↔ %, change %, selectable rows, default validity,
                              policy form validation)
@@ -151,6 +154,30 @@ blocked. In dev the provider is `Simulated` (a test checkout page served by the 
 - Seller payout state also covers disputes: "on hold" while the order is Disputed, "refunding" after a refund decision
   until the background job has refunded the payment (the page re-reads the payments once ~5 s after the decision).
 - Decision logic (which button, payout state, ledger sign) is pure and unit-tested in `payment.logic.ts`.
+
+### Commission invoices (Provisionsrechnungen)
+
+Business rules: `../docs/adr/0009-commission-invoices-and-seller-data-retention.md`. Documents are immutable; the UI only
+reads them (and lets the platform admin trigger issuing).
+
+- **Rechnungen** (`/app/finanzen/rechnungen`, nav entry under "Verkauf & Lager", also linked from Finanzen; B2BSales +
+  `orders.fulfil` like Finanzen): paged list from `GET /api/invoices` – number (`HN-YYYY-nnnnnn`, corrections
+  `HN-RK-YYYY-nnnnnn` with "Korrigiert HN-…"), type badge (Rechnung / Rechnungskorrektur), billing month, invoice date,
+  line count, net / VAT / gross and a PDF button per row.
+- Detail (`/app/finanzen/rechnungen/:id`): header (number, type, dates, service period, VAT rate, link to the corrected
+  invoice), issuer and recipient exactly as snapshotted, lines (order link, paid at, net/VAT/gross), totals and
+  "PDF herunterladen" (`GET /api/invoices/{id}/pdf`, fetched with the auth headers as a blob, saved as `<number>.pdf`).
+  While the issuer data still contain `PLATZHALTER` (dev) a warning says the document is only a sample.
+- Administration → **Provisionsrechnungen** (`/app/administration/rechnungen`, platform admins): month picker (default =
+  previous month in German time; the current/future month is refused client-side like the API's
+  `invoicing.month_not_over`), confirmation dialog (documents are final), run result (sellers checked, new invoices,
+  new corrections, already issued, failures with translated codes) and all documents of the month
+  (`GET /api/admin/invoices?month=`) with a cent-exact total. The page explains that re-running is safe (idempotent per
+  seller and month; corrections land in the refund month) and that the monthly job normally does this on the 1st.
+- Dates without time (`issueDate`, service period) are formatted as calendar dates without time-zone shift; months use
+  Europe/Berlin like the API. Pure helpers are unit-tested in `invoice.logic.spec.ts`; the detail rendering and the API
+  clients in `invoice-detail.page.spec.ts`. Money cells are wrapped in `<bdi dir="ltr">` so negative amounts keep their
+  order in ar/fa.
 
 ### Disputes (Reklamationen)
 
@@ -324,6 +351,12 @@ Without these variables the tests are skipped. Specs:
   quantity 2, pays 50,00 € cash (F9) → receipt no. 1 with 25,00 € change and "TSE nicht angebunden – Testbetrieb";
   returns one item in cash → receipt no. 2 with −12,50 €; closes with counted = expected (112,50 €) → difference
   0,00 €, Z-report: receipts 1 to 2, 12,50 € gross, cash and standard taxation.
+
+- `e2e/invoices.spec.ts` – a new seller (B2BSales) opens "Rechnungen" from the navigation and from Finanzen (empty list
+  from the real API, only that nav entry active), an unknown id shows "Rechnung nicht gefunden."; a buyer-only company
+  has no entry. The admin opens Administration → Provisionsrechnungen, the current month is refused client-side, the
+  previous month is issued (confirmation) and issued again: the second run creates nothing new and the month listing
+  matches the run. This issues real documents for the previous month in the target environment (as the monthly job does).
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.

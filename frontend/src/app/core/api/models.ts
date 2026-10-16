@@ -953,3 +953,97 @@ export interface ReceiptSummary {
   createdAt: string;
   totalGrossMinor: number;
 }
+
+// ---------------------------------------------------------------- Invoicing (commission invoices, ADR-0009)
+
+/** `Invoice` = monthly commission invoice (HN-YYYY-nnnnnn); `CreditNote` = correction/Storno (HN-RK-YYYY-nnnnnn, negative amounts). */
+export type InvoiceKind = 'Invoice' | 'CreditNote';
+
+/** Issuer or recipient as printed on the document (immutable snapshot). */
+export interface InvoiceParty {
+  name: string;
+  legalName: string | null;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode: string;
+  vatId: string | null;
+  taxNumber: string | null;
+}
+
+/** List row (`GET /api/invoices`, admin month listing, issue run result). */
+export interface InvoiceSummary {
+  id: string;
+  kind: InvoiceKind;
+  number: string;
+  /** German local calendar date, `yyyy-MM-dd`. */
+  issueDate: string;
+  /** `yyyy-MM`; for corrections the month in which the refunds happened. */
+  billingMonth: string;
+  servicePeriodStart: string;
+  servicePeriodEnd: string;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  totalGrossMinor: number;
+  currency: string;
+  /** Corrections: the corrected invoice. */
+  referencedInvoiceId: string | null;
+  referencedInvoiceNumber: string | null;
+  organizationId: string;
+  recipientName: string;
+  lineCount: number;
+}
+
+export interface InvoiceLine {
+  lineNumber: number;
+  orderId: string;
+  orderNumber: string;
+  paymentId: string;
+  paidAt: string;
+  netMinor: number;
+  vatMinor: number;
+  grossMinor: number;
+  /** Credit lines: the invoice whose line they negate. */
+  creditedInvoiceId: string | null;
+}
+
+/** `GET /api/invoices/{id}` */
+export interface Invoice {
+  id: string;
+  kind: InvoiceKind;
+  number: string;
+  issueDate: string;
+  issuedAt: string;
+  billingMonth: string;
+  servicePeriodStart: string;
+  servicePeriodEnd: string;
+  /** 1900 = 19 %. */
+  vatRateBasisPoints: number;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  totalGrossMinor: number;
+  currency: string;
+  referencedInvoiceId: string | null;
+  referencedInvoiceNumber: string | null;
+  issuer: InvoiceParty;
+  recipient: InvoiceParty;
+  lines: InvoiceLine[];
+}
+
+export interface IssueFailure {
+  organizationId: string;
+  code: string;
+  message: string;
+}
+
+/** `POST /api/admin/invoices/issue` — idempotent: existing documents are returned and counted in `alreadyIssued`. */
+export interface IssueRunResult {
+  month: string;
+  sellersChecked: number;
+  invoicesIssued: number;
+  creditNotesIssued: number;
+  alreadyIssued: number;
+  /** Created and already existing documents of the run, ordered by number. */
+  documents: InvoiceSummary[];
+  failures: IssueFailure[];
+}

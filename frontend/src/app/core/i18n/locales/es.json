@@ -65,7 +65,8 @@
     "finance": "Finanzas",
     "ankauf": "Recompra",
     "intakes": "Recompras",
-    "pos": "Caja"
+    "pos": "Caja",
+    "invoices": "Facturas"
   },
   "auth": {
     "email": "Correo electrónico",
@@ -256,7 +257,16 @@
       "stock.insufficient": "No hay suficiente stock disponible. La mercancía reservada no se puede vender.",
       "stock.serialized_requires_imei": "Este artículo se gestiona como dispositivo individual. Escanee el IMEI del dispositivo vendido.",
       "unit.not_available": "Este dispositivo no está (ya) en stock.",
-      "unit.other_warehouse": "Este dispositivo está en un almacén distinto al de la caja."
+      "unit.other_warehouse": "Este dispositivo está en un almacén distinto al de la caja.",
+      "invoicing.month_not_over": "Este mes aún no ha terminado. Las facturas solo se emiten para meses pasados.",
+      "invoicing.month": "Indique el mes con el formato AAAA-MM.",
+      "invoicing.issuer_not_configured": "Los datos del emisor de las facturas aún no están configurados (marcadores de posición). No se emitió ninguna factura.",
+      "invoicing.issuer_incomplete": "Los datos del emisor de las facturas están incompletos (se requieren nombre, dirección y NIF-IVA o número fiscal).",
+      "invoicing.not_found": "Factura no encontrada.",
+      "invoicing.concurrent": "Hay otra facturación en curso. Vuelva a ejecutarlo.",
+      "invoicing.failed": "Error inesperado; consulte el registro del servidor.",
+      "invoicing.vat_mismatch": "El IVA de un pago no corresponde al tipo de IVA; la factura no se emitió.",
+      "invoicing.number_range": "La serie de numeración de este año está agotada."
     }
   },
   "dashboard": {
@@ -556,7 +566,8 @@
       "label": "Áreas de administración",
       "organizations": "Empresas",
       "disputes": "Reclamaciones",
-      "ankauf": "Precios de recompra"
+      "ankauf": "Precios de recompra",
+      "invoices": "Facturas de comisión"
     },
     "disputes": {
       "subtitle": "Revisar y resolver las reclamaciones remitidas a HandyNet.",
@@ -871,7 +882,8 @@
       "credit": "Abono",
       "debit": "Liquidación"
     },
-    "openOrderNumber": "Abrir pedido {number}"
+    "openOrderNumber": "Abrir pedido {number}",
+    "invoicesLink": "Facturas de comisión"
   },
   "disputeReason": {
     "Damaged": "Mercancía dañada",
@@ -1604,6 +1616,96 @@
       "print": "Imprimir informe Z",
       "openedBy": "Abierta por {name}",
       "closedBy": "Cerrada por {name}"
+    }
+  },
+  "invoiceKind": {
+    "Invoice": "Factura",
+    "CreditNote": "Factura rectificativa"
+  },
+  "invoices": {
+    "title": "Facturas de comisión",
+    "subtitle": "Facturas de HandyNet por la comisión de intermediación de las ventas pagadas en línea, emitidas mensualmente al terminar el mes.",
+    "hint": "Números de factura HN-AAAA-nnnnnn, rectificativas HN-RK-AAAA-nnnnnn. Los documentos emitidos nunca se modifican: si se reembolsa un pago ya facturado, una factura rectificativa en el mes del reembolso compensa la línea.",
+    "backToFinance": "Volver a finanzas",
+    "back": "Volver a las facturas",
+    "number": "Número",
+    "kind": "Tipo",
+    "billingMonth": "Mes de facturación",
+    "issueDate": "Fecha de factura",
+    "servicePeriod": "Periodo de servicio",
+    "periodRange": "{from} a {to}",
+    "lineCount": "Líneas",
+    "lines": "Líneas",
+    "net": "Neto",
+    "vat": "IVA",
+    "gross": "Bruto",
+    "pdf": "PDF",
+    "downloadPdf": "Descargar PDF",
+    "downloadPdfLabel": "Descargar el PDF de {number}",
+    "openLabel": "Abrir {number}",
+    "corrects": "Rectifica {number}",
+    "empty": "Aún no hay facturas de comisión",
+    "emptyText": "Las facturas se emiten al terminar un mes para las ventas pagadas en línea en ese mes.",
+    "detail": {
+      "subtitle": "El documento exactamente como se emitió. Las facturas emitidas no se modifican.",
+      "document": "Documento",
+      "issuer": "Emisor",
+      "recipient": "Destinatario",
+      "vatId": "NIF-IVA",
+      "taxNumber": "Número fiscal",
+      "vatRate": "Tipo de IVA",
+      "correctsInvoice": "Factura rectificada",
+      "serviceText": "Comisión de intermediación por pedidos pagados en línea a través de HandyNet, una línea por pedido.",
+      "correctionNote": "Esta factura rectificativa anula las siguientes líneas de la factura {number} porque los pagos se reembolsaron.",
+      "withheldNote": "La comisión ya se retuvo en el pago; no hay ningún importe pendiente.",
+      "placeholder": "MUESTRA: los datos del emisor siguen siendo marcadores de posición. Este documento no es una factura válida.",
+      "line": "N.º",
+      "order": "Pedido",
+      "paidAt": "Pagado el",
+      "totalNet": "Total neto",
+      "totalVat": "IVA {rate}",
+      "totalGross": "Importe total",
+      "issuedAt": "Emitida el {date}"
+    },
+    "admin": {
+      "subtitle": "Emitir y revisar facturas de comisión y facturas rectificativas de un mes terminado.",
+      "issueHeading": "Facturar un mes",
+      "month": "Mes de facturación",
+      "monthHint": "Solo meses terminados (hora de Alemania). Se propone el mes anterior.",
+      "issue": "Emitir facturas",
+      "helpHeading": "Cómo funciona la emisión",
+      "autoHint": "Un proceso en segundo plano emite automáticamente el mes anterior, normalmente en la primera hora del día 1. Aquí puede facturar un mes manualmente o recuperarlo, p. ej. tras una interrupción.",
+      "idempotentHint": "Volver a ejecutarlo es seguro: como máximo se crea una factura por vendedor y mes, y como máximo una rectificativa por factura rectificada y mes de reembolso. Los documentos ya existentes se devuelven sin cambios y se cuentan como \"Ya emitidas\". Tras un error, basta con ejecutarlo de nuevo.",
+      "correctionHint": "Las facturas rectificativas se crean en la ejecución del mes en que se produjo el reembolso, no en el mes de la factura original.",
+      "pdfHint": "Los vendedores pueden descargar los PDF en Finanzas → Facturas.",
+      "confirmTitle": "¿Emitir facturas?",
+      "confirmText": "Se emitirán facturas y facturas rectificativas de {month} para todos los vendedores con comisión o reembolsos. Los documentos emitidos son definitivos y tienen numeración correlativa; no se pueden modificar ni eliminar.",
+      "idempotentShort": "Los documentos ya existentes de este mes no se emiten dos veces.",
+      "result": "Resultado de {month}",
+      "sellersChecked": "Vendedores revisados",
+      "invoicesIssued": "Facturas nuevas",
+      "creditNotesIssued": "Rectificativas nuevas",
+      "alreadyIssued": "Ya emitidas",
+      "outcome": {
+        "issued": "Se emitieron documentos nuevos.",
+        "unchanged": "Nada nuevo: todos los documentos de este mes ya estaban emitidos.",
+        "empty": "Ningún vendedor con comisión o reembolsos en este mes.",
+        "failed": "La emisión falló para {count} vendedores. Los demás documentos están emitidos; corrija la causa y vuelva a ejecutarlo."
+      },
+      "failures": "Fallidos",
+      "organization": "Empresa (ID)",
+      "code": "Código",
+      "message": "Mensaje",
+      "monthDocuments": "Documentos de {month}",
+      "monthDocumentsHint": "Todas las facturas y rectificativas con este mes de facturación, de todos los vendedores. El total incluye las rectificativas con importe negativo.",
+      "recipient": "Destinatario",
+      "noDocuments": "No hay documentos para este mes",
+      "total": "Total",
+      "validation": {
+        "required": "Elija un mes.",
+        "format": "Indique el mes con el formato AAAA-MM.",
+        "notOver": "Este mes aún no ha terminado. Solo se pueden facturar meses pasados."
+      }
     }
   }
 }

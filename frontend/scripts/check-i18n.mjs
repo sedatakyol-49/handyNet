@@ -31,6 +31,9 @@ const patterns = [
   // Ankauf keys are referenced from TS logic (validators, blocked reasons) and error codes.
   /'((?:ankauf|ankaufAdmin)(?:\.\w+)+)'/g,
   /'(errors\.codes\.ankauf\.\w+)'/g,
+  // Commission invoice keys are referenced from TS logic (validation, run outcome) as well.
+  /'((?:invoices|invoiceKind)(?:\.\w+)+)'/g,
+  /'(errors\.codes\.invoicing\.\w+)'/g,
   // POS keys are referenced from TS logic (error texts, validation, shortcut labels) as well.
   /'((?:pos|posPaymentMethod|receiptKind|taxTreatment|posSessionStatus|posRegisterStatus|cashMovementKind)(?:\.[A-Za-z0-9]+)+)'/g, // not API codes like pos.no_open_session
 ];
