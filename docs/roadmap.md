@@ -60,6 +60,30 @@ Dependencies: Phase 1 catalog/inventory/marketplace, Imports pipeline.
   filters persisted in the URL, collapsible on mobile, supporting DB indexes. "VKVK" filter: meaning to be confirmed
   with the product owner (assumed VK = Verkaufspreis range).
 
+## Phase 2c — Standalone POS app, Odoo-POS parity (requested 2026-10-16)
+Benchmark: Odoo 18 Point of Sale. Restaurant-only features (tables, kitchen display, self-ordering, food delivery)
+are out of scope for phone shops unless requested.
+- ⬜ **A. Standalone app**: POS leaves the back-office shell/menus; own full-screen route `/kasse` with its own
+  minimal top bar (register, session, cashier, online state, close), launched from the dashboard/registers list;
+  touch-first, tablet + desktop, keyboard/scanner shortcuts kept.
+- ⬜ **B. Selling screen like Odoo**: product grid with category tabs and images, search/scan, cart with numpad
+  (Qty / % Disc / Price modes, +/-), line notes, price override with permission, parked orders (hold/resume,
+  several open tickets), customer selection/creation at the till, payment screen with multiple methods, split,
+  quick cash amounts, change, edit payment before finalizing, receipt screen (print / email / new order).
+- ⬜ **C. Staff**: cashier switching with PIN on a shared device, per-cashier permissions (discount limit, price
+  change, refund, cash in/out, closing), manager approval PIN.
+- ⬜ **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
+  loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding.
+- ⬜ **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
+  e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order.
+- ⬜ **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
+  differences, session report, all-orders analytics, product/cashier/payment reports.
+- ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
+  cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
+  offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).
+- ⬜ **H. Design**: design spec and screens at least on par with Odoo POS (visual reference review before build),
+  light/dark, RTL, large touch targets, Playwright visual checks.
+
 ## Phase 3 — Store operations
 Dependencies: Phase 2 payments + invoicing.
 - ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Selling serialized units over the counter (POS, §25a margin VAT) ✅. Open: selling serialized units via B2B offers, blacklist check. ✅ Seller-data retention job (ADR-0009): anonymizes seller data after `Ankauf:SellerDataRetentionYears` (disabled until the legal period is confirmed; warning in Production), Ankaufbeleg shows "anonymisiert", seller data no longer copied into the audit log.
