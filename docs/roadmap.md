@@ -38,16 +38,38 @@ Dependencies: Phase 1.
 - Translations for tr, es, ru, ar, fa (only scaffolds today).
 - Production host names in `frontend/angular.json` `security.allowedHosts` (Angular SSR host check).
 
+## Phase 2b — Lager & Marketplace usability (requested 2026-10-16)
+Dependencies: Phase 1 catalog/inventory/marketplace, Imports pipeline.
+- ⬜ **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
+  1) identify — EAN scan/typing or MPN, conservative catalog match (same `ProductMatcher` as the import); no match →
+  create a canonical product (brand, name, category, quality, EAN/MPN, model, compatible models, images);
+  2) stock — warehouse, quantity or one IMEI per unit for serialized categories, optional purchase price (EK);
+  3) offer (optional) — SKU (suggested), VK net price, MOQ, delivery days, condition, publish toggle.
+  One idempotent backend command that runs the same validation/matching/apply path as a one-row import (atomic,
+  audited); "Speichern & nächster Artikel" with scanner focus for fast entry.
+- ⬜ **Marketplace stays read-only for products**: no "add product" there by design (products enter only via Lager
+  manual entry or import); e2e asserts no create action on the marketplace page.
+- ⬜ **Marketplace detail modal**: clicking a row (or Enter on a focused row) opens a dialog with all product data
+  (brand, name, category, quality, EAN, MPN, model, compatible models), offer data (seller + city, SKU, condition,
+  net + gross price, available, delivery days, MOQ, last update), image gallery (placeholder if none), other
+  sellers' offers for the same product, quantity + add to cart; deep link `?offer={id}`. Needs product images:
+  `IFileStorage` abstraction (local disk dev, S3-compatible object storage prod), JPEG/PNG/WebP ≤ 5 MB, EXIF
+  stripped, thumbnails, MIT-licensed image library.
+- ⬜ **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
+  max delivery days, seller, compatible model ("passend für …"), "with images"; facet endpoint, active-filter chips,
+  filters persisted in the URL, collapsible on mobile, supporting DB indexes. "VKVK" filter: meaning to be confirmed
+  with the product owner (assumed VK = Verkaufspreis range).
+
 ## Phase 3 — Store operations
 Dependencies: Phase 2 payments + invoicing.
 - ✅ Serialized stock (IMEI) with platform-wide uniqueness; Ankauf device intake (quote → receive → inspect → pay + stock, §25a purchase price recorded). Selling serialized units over the counter (POS, §25a margin VAT) ✅. Open: selling serialized units via B2B offers, blacklist check. ✅ Seller-data retention job (ADR-0009): anonymizes seller data after `Ankauf:SellerDataRetentionYears` (disabled until the legal period is confirmed; warning in Production), Ankaufbeleg shows "anonymisiert", seller data no longer copied into the audit log.
-- ✅ Ankaufbeleg: PDF purchase receipt for a completed intake (`GET /api/ankauf/intakes/{id}/beleg`) with dealer and seller data, masked ID number, device/IMEI/condition, amount and payment method, Eigentumserklärung with signature lines, §25a note; rendered by the shared `SimplePdf` writer (WinAnsiEncoding, multi-page; also used for simulated shipping labels). Open: UI button, legal review of the wording, archiving of issued receipts, signed/countersigned copy upload.
-- 🟡 POS / Kassensystem backend (ADR-0008): ✅ registers with gapless per-register receipt numbers (DB-enforced),
+- ✅ Ankaufbeleg: PDF purchase receipt for a completed intake (`GET /api/ankauf/intakes/{id}/beleg`) with dealer and seller data, masked ID number, device/IMEI/condition, amount and payment method, Eigentumserklärung with signature lines, §25a note; rendered by the shared `SimplePdf` writer (WinAnsiEncoding, multi-page; also used for simulated shipping labels). ✅ UI download button. Open: legal review of the wording, archiving of issued receipts, signed/countersigned copy upload.
+- 🟡 POS / Kassensystem (ADR-0008): ✅ registers with gapless per-register receipt numbers (DB-enforced),
   cash sessions with deposits/withdrawals and daily closing (expected vs. counted cash, Z-report totals per payment
   method and VAT treatment), sales of products (EAN) and IMEI units, cash/card with change, line discounts, 19 % VAT and
   §25a margin VAT, Storno and partial returns as new negative receipts, stock back incl. IMEI units, immutable receipts
   (GoBD), idempotent sales/returns, EAN/IMEI lookup, fiscal signer abstraction with a test signer that is refused in
-  Production. Open: ⬜ POS touch UI (frontend), ⬜ real fiskaly TSE adapter (sandbox first) incl. TSE outage handling,
+  Production. ✅ POS touch UI (registers, till, receipts, sessions, Z-report). Open: ⬜ real fiskaly TSE adapter (sandbox first) incl. TSE outage handling,
   ⬜ DSFinV-K export, ⬜ receipt printing (ESC/POS/PDF) and e-receipts, ⬜ card terminal integration (ZVT/OPI),
   ⬜ till registration with the tax office, ⬜ reduced VAT rate/vouchers, ⬜ external compliance review. No fake
   signatures, no compliance claimed.
