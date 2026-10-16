@@ -316,6 +316,50 @@ public sealed class PosTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task Scanning_the_ean_of_a_serialized_product_asks_for_the_imei()
+    {
+        var shop = await PosShopAsync();
+        // A new phone with a test barcode (EAN), stocked as one serialized device with an IMEI.
+        var ean = Scenario.NewEan();
+        var productId = Id((await shop.PostAsync("/api/catalog/products", new
+        {
+            brand = "TestPhone", name = "Testgerät " + Scenario.UniqueSuffix(), category = "Smartphone", quality = "Original", ean,
+        })).Expect(HttpStatusCode.Created).Json);
+        var imei = NewImei();
+        await using (var scope = fixture.Factory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<TenantContext>().SetSystemActor(shop.OrganizationId!.Value);
+            var inventory = scope.ServiceProvider.GetRequiredService<IInventory>();
+            var warehouseId = await inventory.GetOrStageDefaultWarehouseAsync(CancellationToken.None);
+            var unit = await inventory.StageReceiveUnitAsync(warehouseId, productId, imei, 400_00, TaxScheme.Standard, "test:direct", CancellationToken.None);
+            Assert.True(unit.IsSuccess, unit.Error?.Message);
+            await scope.ServiceProvider.GetRequiredService<HandyNetDbContext>().SaveChangesAsync();
+        }
+        var register = await RegisterWithSessionAsync(shop, "Kasse IMEI");
+
+        // The barcode is found, but the till is told right away that the IMEI must be scanned.
+        var byEan = (await shop.GetAsync($"/api/pos/lookup?code={ean}&registerId={register}")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Product", productId, true), (byEan["kind"]!.GetValue<string>(), Id(byEan, "productId"), byEan["requiresImei"]!.GetValue<bool>()));
+
+        // Selling it by quantity is refused by the API as well; nothing is sold.
+        object Sale(object line) => new
+        {
+            registerId = register, lines = new[] { line }, payments = new[] { new { method = "Card", amountMinor = 499_00 } },
+        };
+        Assert.Equal("stock.serialized_requires_imei",
+            (await shop.PostAsync("/api/pos/sales", Sale(new { productId, quantity = 1, unitPriceMinor = 499_00 }), Key())).Code);
+        Assert.Equal("InStock", await AsOwnerAsync<string>($"SELECT status FROM inventory.stock_units WHERE imei = '{imei}'"));
+
+        // Scanning the IMEI sells exactly that device; afterwards the barcode no longer requires an IMEI (nothing serialized left).
+        var byImei = (await shop.GetAsync($"/api/pos/lookup?code={imei}&registerId={register}")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Unit", productId, false), (byImei["kind"]!.GetValue<string>(), Id(byImei, "productId"), byImei["requiresImei"]!.GetValue<bool>()));
+        (await shop.PostAsync("/api/pos/sales", Sale(new { imei, quantity = 1, unitPriceMinor = 499_00 }), Key())).Expect(HttpStatusCode.Created);
+        Assert.Equal("Sold", await AsOwnerAsync<string>($"SELECT status FROM inventory.stock_units WHERE imei = '{imei}'"));
+        var after = (await shop.GetAsync($"/api/pos/lookup?code={ean}&registerId={register}")).Expect(HttpStatusCode.OK).Json;
+        Assert.False(after["requiresImei"]!.GetValue<bool>());
+    }
+
+    [Fact]
     public async Task The_same_device_cannot_be_sold_twice_even_concurrently()
     {
         var shop = await PosShopAsync();
