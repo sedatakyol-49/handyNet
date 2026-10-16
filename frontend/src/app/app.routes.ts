@@ -110,36 +110,13 @@ export const routes: Routes = [
         canActivate: [accessGuard('Ankauf', 'inventory.manage')],
         loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
       },
-      {
-        path: 'kasse',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/registers.page').then((m) => m.PosRegistersPage),
-      },
-      {
-        path: 'kasse/belege/:id',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/receipt-detail.page').then((m) => m.PosReceiptDetailPage),
-      },
-      {
-        path: 'kasse/sitzungen/:id',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/session.page').then((m) => m.PosSessionPage),
-      },
-      {
-        path: 'kasse/:registerId',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/till.page').then((m) => m.TillPage),
-      },
-      {
-        path: 'kasse/:registerId/belege',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/receipts.page').then((m) => m.PosReceiptsPage),
-      },
-      {
-        path: 'kasse/:registerId/sitzungen',
-        canActivate: [accessGuard('Pos', 'pos.sell')],
-        loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage),
-      },
+      // The POS moved to the standalone app under /kasse (old bookmarks keep working).
+      { path: 'kasse', pathMatch: 'full', redirectTo: '/kasse' },
+      { path: 'kasse/belege/:id', redirectTo: '/kasse/belege/:id' },
+      { path: 'kasse/sitzungen/:id', redirectTo: '/kasse/sitzungen/:id' },
+      { path: 'kasse/:registerId', redirectTo: '/kasse/:registerId' },
+      { path: 'kasse/:registerId/belege', redirectTo: '/kasse/:registerId/belege' },
+      { path: 'kasse/:registerId/sitzungen', redirectTo: '/kasse/:registerId/sitzungen' },
       {
         path: 'team',
         canActivate: [accessGuard(undefined, 'organization.manage')],
@@ -179,6 +156,26 @@ export const routes: Routes = [
         path: 'administration/ankauf/preislisten/:id',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/ankauf/admin-price-list-review.page').then((m) => m.AdminPriceListReviewPage),
+      },
+    ],
+  },
+  {
+    // Standalone, full-screen POS app (not inside the back-office shell). Guards run after authGuard has loaded /api/me.
+    path: 'kasse',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/pos/pos-app').then((m) => m.PosAppComponent),
+    children: [
+      {
+        path: '',
+        canActivateChild: [accessGuard('Pos', 'pos.sell')],
+        children: [
+          { path: '', pathMatch: 'full', loadComponent: () => import('./features/pos/registers.page').then((m) => m.PosRegistersPage) },
+          { path: 'belege/:id', loadComponent: () => import('./features/pos/receipt-detail.page').then((m) => m.PosReceiptDetailPage) },
+          { path: 'sitzungen/:id', loadComponent: () => import('./features/pos/session.page').then((m) => m.PosSessionPage) },
+          { path: ':registerId', loadComponent: () => import('./features/pos/till.page').then((m) => m.TillPage) },
+          { path: ':registerId/belege', loadComponent: () => import('./features/pos/receipts.page').then((m) => m.PosReceiptsPage) },
+          { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },
+        ],
       },
     ],
   },

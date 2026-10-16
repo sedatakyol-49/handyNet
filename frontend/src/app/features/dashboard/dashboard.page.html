@@ -17,6 +17,16 @@
     }
   }
 
+  @if (canUsePos()) {
+    <section class="hn-card mb-4 flex flex-wrap items-center justify-between gap-3 p-4" aria-labelledby="pos-launch-heading" data-testid="pos-launch">
+      <div class="min-w-0">
+        <h2 id="pos-launch-heading" class="text-sm">{{ 'pos.launch.title' | t }}</h2>
+        <p class="mt-0.5 text-sm text-slate-600">{{ 'pos.launch.text' | t }}</p>
+      </div>
+      <a hnButton variant="primary" routerLink="/kasse" class="min-h-11 px-5 text-base" data-testid="pos-launch-open">{{ 'pos.launch.open' | t }}</a>
+    </section>
+  }
+
   <div class="grid gap-4 lg:grid-cols-3">
     <section class="hn-card p-4 lg:col-span-1" aria-labelledby="org-heading">
       <h2 id="org-heading" class="mb-3 text-sm">{{ 'dashboard.organization' | t }}</h2>

@@ -1366,6 +1366,87 @@
     "Withdrawal": "Entnahme"
   },
   "pos": {
+    "app": {
+      "title": "Kasse",
+      "registerSelection": "Kassenauswahl",
+      "sell": "Verkauf",
+      "online": "Online",
+      "offline": "Offline",
+      "menu": "Kassenmenü",
+      "receipts": "Belege",
+      "sessions": "Sitzungen",
+      "cashAndClosing": "Einlage/Entnahme & Abschluss",
+      "theme": "Darstellung",
+      "themes": {
+        "system": "System",
+        "light": "Hell",
+        "dark": "Dunkel"
+      },
+      "backOffice": "Zum Back-Office",
+      "noSession": "Keine offene Sitzung"
+    },
+    "launch": {
+      "title": "Kasse (Ladenverkauf)",
+      "text": "Die Kasse läuft als eigene Vollbild-Anwendung für Touch, Tastatur und Scanner.",
+      "open": "Kasse starten"
+    },
+    "numpad": {
+      "label": "Ziffernblock",
+      "mode": "Eingabemodus",
+      "minus": "Menge verringern",
+      "plus": "Menge erhöhen",
+      "backspace": "Letzte Ziffer löschen",
+      "clear": "Eingabe leeren",
+      "comma": "Komma",
+      "modes": {
+        "quantity": "Menge",
+        "discount": "% Rabatt",
+        "price": "Preis"
+      },
+      "for": {
+        "quantity": "Menge: {name}",
+        "discount": "Rabatt in %: {name}",
+        "price": "Einzelpreis: {name}"
+      }
+    },
+    "sell": {
+      "products": "Produkte",
+      "categories": "Kategorien",
+      "allCategories": "Alle",
+      "noProducts": "Keine Produkte im Lager dieser Kasse.",
+      "noProductsHint": "Scannen Sie EAN oder IMEI oder buchen Sie Ware im Lager ein.",
+      "noMatch": "Keine passenden Produkte.",
+      "soldOut": "nicht verfügbar",
+      "stock": "Bestand {count}",
+      "truncated": "Angezeigt werden {count} Lagerpositionen. Weitere Produkte finden Sie per Scan.",
+      "openOrders": "Offene Bestellungen",
+      "orderLabel": "Bestellung {number} ({count} Artikel)",
+      "newOrder": "Neue Bestellung (aktuelle parken)",
+      "discardOrder": "Bestellung verwerfen",
+      "tooManyOrders": "Es können höchstens 20 Bestellungen gleichzeitig offen sein.",
+      "cartEmpty": "Noch keine Artikel. Tippen Sie auf ein Produkt oder scannen Sie EAN/IMEI.",
+      "priceMissing": "Preis fehlt",
+      "discountInvalid": "Rabatt ungültig",
+      "net": "Netto",
+      "vat19": "USt. 19 %",
+      "margin25a": "§25a-Geräte (USt. nicht ausgewiesen)",
+      "payment": "Bezahlen",
+      "unitQuantity": "Ein Gerät (IMEI) wird immer mit Menge 1 verkauft.",
+      "quantityClamped": "Höchstens {max} verfügbar – Menge angepasst.",
+      "searchLabel": "Produkt suchen oder EAN/IMEI scannen",
+      "searchPlaceholder": "Suchen oder EAN/IMEI scannen …",
+      "searchHelp": "Text filtert die Produkte, Enter übernimmt einen einzelnen Treffer. Scanner: Code + Enter.",
+      "shortcutEnter": "Code übernehmen oder einzigen Treffer hinzufügen; im Zahlenfeld zurück zum Scannen",
+      "view": "Ansicht",
+      "back": "Zurück",
+      "methods": "Zahlungsart",
+      "removePayment": "Zahlung {method} entfernen",
+      "choosePayment": "Wählen Sie eine Zahlungsart. Mehrere Zahlungen (Split) sind möglich.",
+      "quickCash": "Bargeld",
+      "validate": "Abschließen",
+      "newOrderAfterSale": "Neue Bestellung",
+      "nextScanHint": "Der nächste Scan beginnt automatisch eine neue Bestellung."
+    },
     "subnav": {
       "label": "Kassenbereiche",
       "registers": "Alle Kassen",

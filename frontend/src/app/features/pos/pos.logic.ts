@@ -6,6 +6,7 @@ import {
   Receipt,
   ReceiptLine,
   SalePayment,
+  StockRow,
   TaxTreatment,
 } from '../../core/api/models';
 import { formatMoney, parseMoneyToMinor } from '../../core/format/money';
@@ -59,8 +60,10 @@ export interface CartLine {
   quantity: number;
   /** Unit price as typed by the cashier (German or English decimal). */
   priceInput: string;
-  /** Line discount in euros (optional). */
+  /** Line discount (optional): euros, or a percentage of quantity × price when `discountKind` is 'percent'. */
   discountInput: string;
+  /** Missing (older stored orders) = 'amount'. */
+  discountKind?: 'amount' | 'percent';
   /** Available quantity in the register's warehouse at lookup time (null when unknown). */
   available: number | null;
   taxTreatment: TaxTreatment | null;
@@ -76,14 +79,76 @@ export interface LineAmounts {
   error: LineError;
 }
 
-export function lineAmounts(line: Pick<CartLine, 'quantity' | 'priceInput' | 'discountInput'>): LineAmounts {
+export function lineAmounts(line: Pick<CartLine, 'quantity' | 'priceInput' | 'discountInput' | 'discountKind'>): LineAmounts {
   const unit = parseAmount(line.priceInput, null);
-  const discount = parseAmount(line.discountInput, 0);
-  if (unit === null || unit <= 0) return { unitPriceMinor: null, discountMinor: discount ?? 0, grossMinor: null, error: 'price' };
-  if (discount === null) return { unitPriceMinor: unit, discountMinor: 0, grossMinor: null, error: 'discount' };
+  const percent = line.discountKind === 'percent';
+  if (unit === null || unit <= 0) {
+    const fallback = percent ? 0 : (parseAmount(line.discountInput, 0) ?? 0);
+    return { unitPriceMinor: null, discountMinor: fallback, grossMinor: null, error: 'price' };
+  }
   const gross = unit * line.quantity;
+  let discount: number | null;
+  if (percent) {
+    const bp = parsePercentToBasisPoints(line.discountInput);
+    discount = bp === null ? null : percentOf(gross, bp);
+  } else {
+    discount = parseAmount(line.discountInput, 0);
+  }
+  if (discount === null) return { unitPriceMinor: unit, discountMinor: 0, grossMinor: null, error: 'discount' };
   if (discount > gross) return { unitPriceMinor: unit, discountMinor: discount, grossMinor: null, error: 'discountTooHigh' };
   return { unitPriceMinor: unit, discountMinor: discount, grossMinor: gross - discount, error: null };
+}
+
+/** "10", "12,5", "7.25" → basis points (1 % = 100 bp), 0..100 %. Empty → 0. Null for invalid input. */
+export function parsePercentToBasisPoints(input: string | null | undefined): number | null {
+  const s = (input ?? '').trim().replace(/\s|%/g, '').replace(',', '.');
+  if (!s) return 0;
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(s)) return null;
+  const [whole, frac = ''] = s.split('.');
+  const bp = Number(whole) * 100 + Number((frac + '00').slice(0, 2));
+  return bp > 10_000 ? null : bp;
+}
+
+/** `bp` basis points of `amountMinor`, rounded half away from zero (BigInt: quantity × price × bp can exceed 2^53). */
+export function percentOf(amountMinor: number, bp: number): number {
+  const sign = amountMinor < 0 ? -1n : 1n;
+  const magnitude = BigInt(Math.abs(amountMinor)) * BigInt(bp);
+  return Number(sign * ((2n * magnitude + 10_000n) / 20_000n));
+}
+
+/** VAT contained in a 19 % gross amount, exactly like the API's VatCalculator.StandardVatFromGross. */
+export function standardVatFromGross(grossMinor: number): number {
+  const sign = grossMinor < 0 ? -1 : 1;
+  const g = BigInt(Math.abs(grossMinor));
+  const net = (2n * g * 10_000n + 11_900n) / 23_800n;
+  return sign * Number(g - net);
+}
+
+export interface CartTax {
+  /** Gross of lines with regular 19 % VAT and their net/VAT (per line, summed like the receipt). */
+  standardGrossMinor: number;
+  standardNetMinor: number;
+  standardVatMinor: number;
+  /** Gross of §25a devices: VAT only on the margin and never shown separately (the API computes it). */
+  marginGrossMinor: number;
+}
+
+/** Tax preview of the valid lines; the receipt's figures always come from the API. */
+export function cartTax(lines: readonly CartLine[]): CartTax {
+  const out: CartTax = { standardGrossMinor: 0, standardNetMinor: 0, standardVatMinor: 0, marginGrossMinor: 0 };
+  for (const line of lines) {
+    const gross = lineAmounts(line).grossMinor;
+    if (gross === null) continue;
+    if (line.taxTreatment === 'Margin25a') {
+      out.marginGrossMinor += gross;
+    } else {
+      const vat = standardVatFromGross(gross);
+      out.standardGrossMinor += gross;
+      out.standardVatMinor += vat;
+      out.standardNetMinor += gross - vat;
+    }
+  }
+  return out;
 }
 
 export interface CartTotals {
@@ -227,8 +292,11 @@ export interface Settlement {
  * already covers the total. Inputs are the cashier's texts (empty = 0).
  */
 export function settle(totalMinor: number, cashInput: string, cardInput: string): Settlement {
-  const cash = parseAmount(cashInput);
-  const card = parseAmount(cardInput);
+  return settleMinor(totalMinor, parseAmount(cashInput), parseAmount(cardInput));
+}
+
+/** `settle()` on cents (null = invalid input). */
+export function settleMinor(totalMinor: number, cash: number | null, card: number | null): Settlement {
   const base: Settlement = { cashMinor: cash ?? 0, cardMinor: card ?? 0, paidMinor: 0, remainingMinor: totalMinor, changeMinor: 0, payments: [], error: null };
   if (totalMinor <= 0) return { ...base, error: 'emptyCart' };
   if (cash === null || card === null) return { ...base, error: 'invalidAmount' };
@@ -460,4 +528,350 @@ export class LastPrices {
   private key(): string {
     return `hn.pos.prices.${this.scope}`;
   }
+}
+
+// ---------------------------------------------------------------- numpad (Odoo-style: Qty / % Disc / Price)
+
+export type NumpadMode = 'quantity' | 'discount' | 'price';
+export type NumpadKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | ',' | 'backspace' | 'clear';
+
+export interface NumpadState {
+  buffer: string;
+  /** The next digit replaces the shown value (after selecting a line or a mode) instead of appending to it. */
+  fresh: boolean;
+}
+
+export interface NumpadResult extends NumpadState {
+  /** Backspace on an already empty quantity: remove the line (like Odoo). */
+  remove: boolean;
+}
+
+/** Max. integer digits: amounts (PosLimits.MaxAmountMinor = 1.000.000,00 €), quantities, percentages. */
+const AMOUNT_DIGITS = 7;
+const QUANTITY_DIGITS = 5;
+const PERCENT_DIGITS = 3;
+
+/**
+ * Applies one numpad key to the input buffer. Amount modes accept one decimal comma with up to two decimals; the
+ * quantity accepts digits only. Pure; the caller writes the buffer into the line or payment.
+ */
+export function pressNumpadKey(state: NumpadState, key: NumpadKey, mode: NumpadMode | 'amount'): NumpadResult {
+  const decimals = mode !== 'quantity';
+  if (key === 'clear') return { buffer: '', fresh: false, remove: false };
+  if (key === 'backspace') {
+    if (state.fresh) return { buffer: '', fresh: false, remove: false };
+    if (state.buffer === '') return { buffer: '', fresh: false, remove: mode === 'quantity' };
+    return { buffer: state.buffer.slice(0, -1), fresh: false, remove: false };
+  }
+  const current = state.fresh ? '' : state.buffer;
+  if (key === ',') {
+    if (!decimals || current.includes(',')) return { buffer: current, fresh: false, remove: false };
+    return { buffer: (current || '0') + ',', fresh: false, remove: false };
+  }
+  const [whole, frac] = current.split(',');
+  if (frac !== undefined) {
+    return { buffer: frac.length >= 2 ? current : current + key, fresh: false, remove: false };
+  }
+  const maxDigits = mode === 'quantity' ? QUANTITY_DIGITS : mode === 'discount' ? PERCENT_DIGITS : AMOUNT_DIGITS;
+  if (whole.length >= maxDigits) return { buffer: current, fresh: false, remove: false };
+  return { buffer: whole === '0' ? key : whole + key, fresh: false, remove: false };
+}
+
+/** Value of a line shown on the numpad display for a mode. */
+export function numpadValue(line: CartLine, mode: NumpadMode): string {
+  if (mode === 'quantity') return String(line.quantity);
+  if (mode === 'price') return line.priceInput;
+  return line.discountKind === 'percent' ? line.discountInput : '';
+}
+
+/** Keeps typed text numpad-compatible (digits and one comma; a '.' typed on a keyboard counts as the comma). */
+export function sanitizeNumpadText(text: string, mode: NumpadMode | 'amount'): string {
+  let state: NumpadState = { buffer: '', fresh: false };
+  for (const ch of text.replace(/\./g, ',')) {
+    if (/[0-9,]/.test(ch)) state = pressNumpadKey(state, ch as NumpadKey, mode);
+  }
+  return state.buffer;
+}
+
+export interface NumpadApply {
+  lines: CartLine[];
+  /** The typed quantity exceeded the limit (available stock / API maximum) and was clamped. */
+  clamped: boolean;
+}
+
+/** Writes a numpad buffer into a line. An empty quantity keeps the line until backspace removes it. */
+export function applyNumpad(lines: readonly CartLine[], key: string, mode: NumpadMode, buffer: string): NumpadApply {
+  let clamped = false;
+  const value = buffer.replace(/,$/, '');
+  const next = lines.map((l) => {
+    if (l.key !== key) return l;
+    if (mode === 'quantity') {
+      if (l.kind === 'Unit' || value === '') return l;
+      const wanted = Number(value);
+      if (!Number.isInteger(wanted)) return l;
+      const q = Math.min(Math.max(wanted, 1), maxQuantity(l));
+      clamped = wanted > q;
+      return q === l.quantity ? l : { ...l, quantity: q };
+    }
+    if (mode === 'price') return { ...l, priceInput: value };
+    return { ...l, discountInput: value, discountKind: 'percent' as const };
+  });
+  return { lines: next, clamped };
+}
+
+// ---------------------------------------------------------------- payment lines (split payments)
+
+export interface PaymentLine {
+  id: string;
+  method: PosPaymentMethod;
+  /** Amount as typed (numpad/keyboard), German decimal. */
+  input: string;
+}
+
+export interface PaymentLinesSettlement extends Settlement {
+  /** Lines whose amount is empty, zero or invalid. */
+  invalidIds: string[];
+}
+
+function paymentMinor(p: PaymentLine): number | null {
+  const minor = parseAmount(p.input.replace(/,$/, ''), null);
+  return minor !== null && minor > 0 ? minor : null;
+}
+
+/** Sums the payment lines per method and applies the API's rules (see `settle`). */
+export function settlePayments(totalMinor: number, lines: readonly PaymentLine[]): PaymentLinesSettlement {
+  let cash = 0;
+  let card = 0;
+  const invalid: string[] = [];
+  for (const p of lines) {
+    const minor = paymentMinor(p);
+    if (minor === null) invalid.push(p.id);
+    else if (p.method === 'Cash') cash += minor;
+    else card += minor;
+  }
+  const result = settleMinor(totalMinor, cash, card);
+  if (invalid.length && result.error !== 'emptyCart') return { ...result, invalidIds: invalid, error: 'invalidAmount' };
+  return { ...result, invalidIds: invalid };
+}
+
+/** Amount still due, ignoring the line `excludeId` (e.g. the one being edited). */
+export function remainingFor(totalMinor: number, lines: readonly PaymentLine[], excludeId: string | null = null): number {
+  let paid = 0;
+  for (const p of lines) if (p.id !== excludeId) paid += paymentMinor(p) ?? 0;
+  return Math.max(totalMinor - paid, 0);
+}
+
+/** Adds a payment line prefilled with the remaining amount like Odoo (empty when nothing is left). */
+export function addPaymentLine(lines: readonly PaymentLine[], method: PosPaymentMethod, totalMinor: number, id: string): PaymentLine[] {
+  const rest = remainingFor(totalMinor, lines);
+  return [...lines, { id, method, input: rest > 0 ? minorToPlain(rest) : '' }];
+}
+
+// ---------------------------------------------------------------- parked orders (several open tickets per register)
+
+export const MAX_OPEN_ORDERS = 20;
+
+export interface PosOrder {
+  id: string;
+  /** Display number per register ("Bestellung 3"). */
+  seq: number;
+  createdAt: string;
+  lines: CartLine[];
+  payments: PaymentLine[];
+  /** Checkout attempt whose outcome is unknown (network error / 5xx): retried with the same key. */
+  pending: PendingAttempt | null;
+}
+
+export interface OrdersState {
+  nextSeq: number;
+  activeId: string;
+  orders: PosOrder[];
+}
+
+export function emptyOrder(id: string, seq: number, now: string): PosOrder {
+  return { id, seq, createdAt: now, lines: [], payments: [], pending: null };
+}
+
+export function initialOrders(id: string, now: string): OrdersState {
+  return { nextSeq: 2, activeId: id, orders: [emptyOrder(id, 1, now)] };
+}
+
+/** Starts a new ticket; the current one stays parked. Null when MAX_OPEN_ORDERS are already open. */
+export function addOrder(state: OrdersState, id: string, now: string): OrdersState | null {
+  if (state.orders.length >= MAX_OPEN_ORDERS) return null;
+  return { nextSeq: state.nextSeq + 1, activeId: id, orders: [...state.orders, emptyOrder(id, state.nextSeq, now)] };
+}
+
+/** Removes a ticket (sold or discarded). Its neighbour becomes active; a new empty ticket starts when none is left. */
+export function removeOrder(state: OrdersState, id: string, newId: string, now: string): OrdersState {
+  const index = state.orders.findIndex((o) => o.id === id);
+  if (index < 0) return state;
+  const orders = state.orders.filter((o) => o.id !== id);
+  if (!orders.length) return { nextSeq: state.nextSeq + 1, activeId: newId, orders: [emptyOrder(newId, state.nextSeq, now)] };
+  const activeId = state.activeId === id ? orders[Math.min(index, orders.length - 1)].id : state.activeId;
+  return { ...state, activeId, orders };
+}
+
+export function updateOrder(state: OrdersState, id: string, patch: Partial<Omit<PosOrder, 'id' | 'seq'>>): OrdersState {
+  return { ...state, orders: state.orders.map((o) => (o.id === id ? { ...o, ...patch } : o)) };
+}
+
+export function activeOrder(state: OrdersState): PosOrder {
+  return state.orders.find((o) => o.id === state.activeId) ?? state.orders[0];
+}
+
+export function orderItemCount(order: Pick<PosOrder, 'lines'>): number {
+  return order.lines.reduce((n, l) => n + l.quantity, 0);
+}
+
+/** Defensive parse of the stored tickets (storage may hold anything): invalid orders are dropped. */
+export function parseOrdersState(raw: unknown): OrdersState | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Partial<OrdersState>;
+  if (!Array.isArray(r.orders) || typeof r.activeId !== 'string' || typeof r.nextSeq !== 'number') return null;
+  const orders = r.orders.filter(isOrder).slice(0, MAX_OPEN_ORDERS);
+  if (!orders.length) return null;
+  const maxSeq = Math.max(...orders.map((o) => o.seq));
+  const activeId = orders.some((o) => o.id === r.activeId) ? r.activeId : orders[0].id;
+  return { nextSeq: Math.max(r.nextSeq, maxSeq + 1), activeId, orders };
+}
+
+function isOrder(o: unknown): o is PosOrder {
+  if (!o || typeof o !== 'object') return false;
+  const x = o as PosOrder;
+  return (
+    typeof x.id === 'string' &&
+    typeof x.seq === 'number' &&
+    typeof x.createdAt === 'string' &&
+    Array.isArray(x.lines) &&
+    x.lines.every(isCartLine) &&
+    Array.isArray(x.payments) &&
+    x.payments.every((p) => !!p && typeof p.id === 'string' && (p.method === 'Cash' || p.method === 'Card') && typeof p.input === 'string') &&
+    (x.pending === null || (typeof x.pending === 'object' && typeof x.pending.key === 'string' && typeof x.pending.body === 'string'))
+  );
+}
+
+function isCartLine(l: unknown): l is CartLine {
+  if (!l || typeof l !== 'object') return false;
+  const x = l as CartLine;
+  return (
+    typeof x.key === 'string' &&
+    (x.kind === 'Product' || x.kind === 'Unit') &&
+    typeof x.productId === 'string' &&
+    typeof x.description === 'string' &&
+    Number.isInteger(x.quantity) &&
+    x.quantity >= 1 &&
+    typeof x.priceInput === 'string' &&
+    typeof x.discountInput === 'string'
+  );
+}
+
+/** Persists the tickets of one register in localStorage (tolerant to blocked storage and corrupted data). */
+export class OrdersStorage {
+  constructor(
+    private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null,
+    private readonly scope: string,
+  ) {}
+
+  load(): OrdersState | null {
+    try {
+      const raw = this.storage?.getItem(this.key());
+      return raw ? parseOrdersState(JSON.parse(raw)) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  save(state: OrdersState): void {
+    try {
+      // Nothing worth keeping: a single empty ticket without an open checkout attempt.
+      const only = state.orders.length === 1 ? state.orders[0] : null;
+      if (only && !only.lines.length && !only.payments.length && !only.pending) this.storage?.removeItem(this.key());
+      else this.storage?.setItem(this.key(), JSON.stringify(state));
+    } catch {
+      /* storage unavailable or full */
+    }
+  }
+
+  private key(): string {
+    return `hn.pos.orders.${this.scope}`;
+  }
+}
+
+// ---------------------------------------------------------------- product tiles (stock of the register's warehouse)
+
+export interface ProductTile {
+  productId: string;
+  brand: string;
+  name: string;
+  ean: string | null;
+  mpn: string | null;
+  available: number;
+  /** Catalog category once known (resolved lazily), null until then. */
+  category: string | null;
+}
+
+/** Tiles for the stocked products of the register's warehouse, sorted by brand and name. */
+export function productTiles(rows: readonly StockRow[], categories: Readonly<Record<string, string>>): ProductTile[] {
+  return rows
+    .map((r) => ({
+      productId: r.productId,
+      brand: r.brand,
+      name: r.productName,
+      ean: r.ean,
+      mpn: r.mpn,
+      available: r.available,
+      category: categories[r.productId] ?? null,
+    }))
+    .sort((a, b) => a.brand.localeCompare(b.brand, 'de') || a.name.localeCompare(b.name, 'de'));
+}
+
+/** Filters tiles by category and search text (brand, name, EAN, MPN; every word must match). */
+export function filterTiles(tiles: readonly ProductTile[], category: string | null, search: string): ProductTile[] {
+  const words = search.trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean);
+  return tiles.filter((t) => {
+    if (category && t.category !== category) return false;
+    if (!words.length) return true;
+    const hay = `${t.brand} ${t.name} ${t.ean ?? ''} ${t.mpn ?? ''}`.toLocaleLowerCase('de');
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+/** Categories present among the tiles, in the catalog's order. */
+export function tileCategories(tiles: readonly ProductTile[], order: readonly string[]): string[] {
+  const present = new Set(tiles.map((t) => t.category).filter((c): c is string => !!c));
+  return order.filter((c) => present.has(c));
+}
+
+/** Two-letter monogram for tiles without an image. */
+export function initials(brand: string, name: string): string {
+  const words = `${brand} ${name}`.split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean);
+  return words.slice(0, 2).map((w) => [...w][0]).join('').toLocaleUpperCase('de') || '?';
+}
+
+/**
+ * Lookup-like entry for a tile without an EAN (scannable products are looked up by code instead, which also tells
+ * whether the product is stocked as IMEI devices).
+ */
+export function lookupFromTile(t: ProductTile): PosLookup {
+  return {
+    kind: 'Product',
+    productId: t.productId,
+    brand: t.brand,
+    name: t.name,
+    ean: t.ean,
+    imei: null,
+    stockUnitId: null,
+    taxTreatment: 'Standard19',
+    warehouseId: null,
+    onHand: null,
+    reserved: null,
+    available: t.available,
+    requiresImei: false,
+  };
+}
+
+/** Scanner/keyboard entry that is looked up as EAN/IMEI instead of being used as a search text. */
+export function looksLikeCode(text: string): boolean {
+  return /^\d{6,20}$/.test(text.trim());
 }

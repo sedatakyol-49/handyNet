@@ -1366,6 +1366,87 @@
     "Withdrawal": "Retirada"
   },
   "pos": {
+    "app": {
+      "title": "TPV",
+      "registerSelection": "Selección de caja",
+      "sell": "Vender",
+      "online": "En línea",
+      "offline": "Sin conexión",
+      "menu": "Menú del TPV",
+      "receipts": "Tickets",
+      "sessions": "Sesiones",
+      "cashAndClosing": "Entradas/salidas de efectivo y cierre",
+      "theme": "Apariencia",
+      "themes": {
+        "system": "Sistema",
+        "light": "Claro",
+        "dark": "Oscuro"
+      },
+      "backOffice": "Volver a la administración",
+      "noSession": "Ninguna sesión abierta"
+    },
+    "launch": {
+      "title": "TPV (venta en tienda)",
+      "text": "El TPV funciona como una aplicación propia a pantalla completa para pantalla táctil, teclado y escáner.",
+      "open": "Iniciar TPV"
+    },
+    "numpad": {
+      "label": "Teclado numérico",
+      "mode": "Modo de entrada",
+      "minus": "Reducir cantidad",
+      "plus": "Aumentar cantidad",
+      "backspace": "Borrar último dígito",
+      "clear": "Vaciar entrada",
+      "comma": "Coma decimal",
+      "modes": {
+        "quantity": "Cant.",
+        "discount": "% Desc.",
+        "price": "Precio"
+      },
+      "for": {
+        "quantity": "Cantidad: {name}",
+        "discount": "Descuento en %: {name}",
+        "price": "Precio unitario: {name}"
+      }
+    },
+    "sell": {
+      "products": "Productos",
+      "categories": "Categorías",
+      "allCategories": "Todos",
+      "noProducts": "No hay productos en el almacén de esta caja.",
+      "noProductsHint": "Escanee un EAN o IMEI o registre una entrada de mercancía.",
+      "noMatch": "No hay productos coincidentes.",
+      "soldOut": "no disponible",
+      "stock": "Stock {count}",
+      "truncated": "Se muestran {count} posiciones de stock. Encuentre más productos escaneando.",
+      "openOrders": "Pedidos abiertos",
+      "orderLabel": "Pedido {number} ({count} artículos)",
+      "newOrder": "Nuevo pedido (aparcar el actual)",
+      "discardOrder": "Descartar pedido",
+      "tooManyOrders": "Como máximo puede haber 20 pedidos abiertos a la vez.",
+      "cartEmpty": "Aún no hay artículos. Toque un producto o escanee un EAN/IMEI.",
+      "priceMissing": "Falta el precio",
+      "discountInvalid": "Descuento no válido",
+      "net": "Neto",
+      "vat19": "IVA 19 %",
+      "margin25a": "Dispositivos §25a (IVA no desglosado)",
+      "payment": "Pago",
+      "unitQuantity": "Un dispositivo (IMEI) siempre se vende con cantidad 1.",
+      "quantityClamped": "Como máximo {max} disponibles: cantidad ajustada.",
+      "searchLabel": "Buscar productos o escanear EAN/IMEI",
+      "searchPlaceholder": "Buscar o escanear EAN/IMEI …",
+      "searchHelp": "El texto filtra los productos; Intro añade una única coincidencia. Escáner: código + Intro.",
+      "shortcutEnter": "Tomar el código o añadir la única coincidencia; en el campo numérico volver a escanear",
+      "view": "Vista",
+      "back": "Atrás",
+      "methods": "Forma de pago",
+      "removePayment": "Eliminar pago {method}",
+      "choosePayment": "Elija una forma de pago. Se admiten varios pagos (pago dividido).",
+      "quickCash": "Efectivo",
+      "validate": "Validar",
+      "newOrderAfterSale": "Nuevo pedido",
+      "nextScanHint": "El siguiente escaneo inicia automáticamente un nuevo pedido."
+    },
     "subnav": {
       "label": "Secciones de caja",
       "registers": "Todas las cajas",

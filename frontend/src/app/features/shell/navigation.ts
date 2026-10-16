@@ -28,7 +28,6 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/angebote', labelKey: 'nav.offers', module: 'B2BSales', section: 'sales' },
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
-  { path: '/app/kasse', labelKey: 'nav.pos', module: 'Pos', permission: 'pos.sell', section: 'pos' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
   { path: '/app/administration', labelKey: 'nav.admin', adminOnly: true, section: 'settings' },
 ];

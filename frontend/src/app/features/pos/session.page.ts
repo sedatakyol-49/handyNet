@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -16,6 +16,7 @@ import { ZReportComponent } from './z-report';
 /** Cash session: cash movements and closing (Tagesabschluss) while open, the Z-report afterwards. */
 @Component({
   selector: 'hn-pos-session-page',
+  host: { class: 'pos-page block' },
   imports: [FormsModule, RouterLink, PosSubnavComponent, ZReportComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -24,11 +25,11 @@ import { ZReportComponent } from './z-report';
       <hn-page-header class="hn-no-print" [title]="'pos.session.title' | t: { register: s.registerName }" [description]="'pos.session.openedAt' | t: { date: (s.openedAt | hnDate) }">
         <hn-status-badge [status]="s.status" kind="posSessionStatus" [tone]="s.status === 'Open' ? 'success' : 'neutral'" />
         @if (s.status === 'Open') {
-          <a hnButton variant="primary" [routerLink]="['/app/kasse', s.registerId]">{{ 'pos.session.toTill' | t }}</a>
+          <a hnButton class="min-h-11" variant="primary" [routerLink]="['/kasse', s.registerId]">{{ 'pos.session.toTill' | t }}</a>
         } @else {
-          <button hnButton type="button" (click)="print()" data-testid="z-print">{{ 'pos.z.print' | t }}</button>
+          <button hnButton class="min-h-11" type="button" (click)="print()" data-testid="z-print">{{ 'pos.z.print' | t }}</button>
         }
-        <a hnButton [routerLink]="['/app/kasse', s.registerId, 'belege']">{{ 'pos.subnav.receipts' | t }}</a>
+        <a hnButton class="min-h-11" [routerLink]="['/kasse', s.registerId, 'belege']">{{ 'pos.subnav.receipts' | t }}</a>
       </hn-page-header>
     } @else {
       <hn-page-header [title]="'pos.session.loading' | t" />
@@ -153,8 +154,8 @@ import { ZReportComponent } from './z-report';
           <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">{{ closeError() }}</p>
         }
         <div class="mt-4 flex justify-end gap-2">
-          <button hnButton type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
-          <button hnButton variant="danger" type="button" [loading]="busy() === 'close'" [disabled]="!!busy()" (click)="close(s)" data-testid="pos-close-confirm">
+          <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
+          <button hnButton class="min-h-11" variant="danger" type="button" [loading]="busy() === 'close'" [disabled]="!!busy()" (click)="close(s)" data-testid="pos-close-confirm">
             {{ 'pos.session.closeConfirm' | t }}
           </button>
         </div>
@@ -166,6 +167,7 @@ export class PosSessionPage {
   private readonly api = inject(PosApi);
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
+  private readonly subnav = viewChild(PosSubnavComponent);
 
   readonly id = input.required<string>();
 
@@ -244,6 +246,7 @@ export class PosSessionPage {
       this.query.set(await firstValueFrom(this.api.closeSession(s.id, { countedCashMinor: counted, note: this.note.trim() || null })));
       this.confirmOpen.set(false);
       this.toast.success(this.i18n.t('pos.session.closed'));
+      this.subnav()?.reloadSession();
     } catch (e) {
       this.closeError.set(posErrorText(this.i18n, e));
     } finally {

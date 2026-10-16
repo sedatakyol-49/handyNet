@@ -8,12 +8,13 @@ import { PosSubnavComponent } from './pos-subnav';
 /** Cash sessions of a register, newest first, with their Z-report figures. */
 @Component({
   selector: 'hn-pos-sessions-page',
+  host: { class: 'pos-page block' },
   imports: [RouterLink, PosSubnavComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-pos-subnav [registerId]="registerId()" />
     <hn-page-header [title]="'pos.sessions.title' | t" [description]="register.value()?.name ?? null">
-      <button hnButton size="sm" type="button" [loading]="sessions.loading()" (click)="sessions.reload()">{{ 'common.refresh' | t }}</button>
+      <button hnButton type="button" class="min-h-11" [loading]="sessions.loading()" (click)="sessions.reload()">{{ 'common.refresh' | t }}</button>
     </hn-page-header>
     <hn-banner class="mb-3" [error]="sessions.error()" />
     <hn-table [loading]="sessions.loading()">
@@ -38,7 +39,7 @@ import { PosSubnavComponent } from './pos-subnav';
               <td class="num">{{ s.summary.receiptCount }}</td>
               <td class="num">{{ s.summary.totalGrossMinor | money }}</td>
               <td class="num" [class.text-red-700]="(s.differenceMinor ?? 0) < 0">{{ s.differenceMinor === null ? '–' : (s.differenceMinor | signedMoney) }}</td>
-              <td class="text-end"><a class="hn-link" [routerLink]="['/app/kasse/sitzungen', s.id]">{{ (s.status === 'Open' ? 'pos.sessions.manage' : 'pos.sessions.zReport') | t }}</a></td>
+              <td class="text-end"><a class="hn-link inline-flex min-h-11 items-center" [routerLink]="['/kasse/sitzungen', s.id]">{{ (s.status === 'Open' ? 'pos.sessions.manage' : 'pos.sessions.zReport') | t }}</a></td>
             </tr>
           } @empty {
             <tr><td colspan="7" class="py-8 text-center text-sm text-slate-500">{{ 'pos.sessions.empty' | t }}</td></tr>

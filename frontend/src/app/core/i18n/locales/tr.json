@@ -1366,6 +1366,87 @@
     "Withdrawal": "Para çıkışı"
   },
   "pos": {
+    "app": {
+      "title": "Kasa",
+      "registerSelection": "Kasa seçimi",
+      "sell": "Satış",
+      "online": "Çevrimiçi",
+      "offline": "Çevrimdışı",
+      "menu": "Kasa menüsü",
+      "receipts": "Fişler",
+      "sessions": "Oturumlar",
+      "cashAndClosing": "Para girişi/çıkışı ve kapanış",
+      "theme": "Görünüm",
+      "themes": {
+        "system": "Sistem",
+        "light": "Açık",
+        "dark": "Koyu"
+      },
+      "backOffice": "Arka ofise dön",
+      "noSession": "Açık oturum yok"
+    },
+    "launch": {
+      "title": "Kasa (mağaza satışı)",
+      "text": "Kasa; dokunmatik ekran, klavye ve tarayıcı için ayrı bir tam ekran uygulama olarak çalışır.",
+      "open": "Kasayı başlat"
+    },
+    "numpad": {
+      "label": "Sayı tuş takımı",
+      "mode": "Giriş modu",
+      "minus": "Miktarı azalt",
+      "plus": "Miktarı artır",
+      "backspace": "Son rakamı sil",
+      "clear": "Girişi temizle",
+      "comma": "Virgül",
+      "modes": {
+        "quantity": "Miktar",
+        "discount": "% İndirim",
+        "price": "Fiyat"
+      },
+      "for": {
+        "quantity": "Miktar: {name}",
+        "discount": "İndirim (%): {name}",
+        "price": "Birim fiyat: {name}"
+      }
+    },
+    "sell": {
+      "products": "Ürünler",
+      "categories": "Kategoriler",
+      "allCategories": "Tümü",
+      "noProducts": "Bu kasanın deposunda ürün yok.",
+      "noProductsHint": "EAN veya IMEI tarayın ya da depoya mal girişi yapın.",
+      "noMatch": "Eşleşen ürün yok.",
+      "soldOut": "mevcut değil",
+      "stock": "Stok {count}",
+      "truncated": "{count} stok kalemi gösteriliyor. Diğer ürünleri tarayarak bulun.",
+      "openOrders": "Açık siparişler",
+      "orderLabel": "Sipariş {number} ({count} ürün)",
+      "newOrder": "Yeni sipariş (mevcut olanı beklet)",
+      "discardOrder": "Siparişi iptal et",
+      "tooManyOrders": "Aynı anda en fazla 20 sipariş açık olabilir.",
+      "cartEmpty": "Henüz ürün yok. Bir ürüne dokunun veya EAN/IMEI tarayın.",
+      "priceMissing": "Fiyat eksik",
+      "discountInvalid": "Geçersiz indirim",
+      "net": "Net",
+      "vat19": "KDV %19",
+      "margin25a": "§25a cihazları (KDV gösterilmez)",
+      "payment": "Ödeme",
+      "unitQuantity": "Bir cihaz (IMEI) her zaman 1 adet olarak satılır.",
+      "quantityClamped": "En fazla {max} mevcut – miktar düzeltildi.",
+      "searchLabel": "Ürün ara veya EAN/IMEI tara",
+      "searchPlaceholder": "Ara veya EAN/IMEI tara …",
+      "searchHelp": "Metin ürünleri filtreler, Enter tek eşleşmeyi ekler. Tarayıcı: kod + Enter.",
+      "shortcutEnter": "Kodu al veya tek eşleşmeyi ekle; sayı alanında taramaya dön",
+      "view": "Görünüm",
+      "back": "Geri",
+      "methods": "Ödeme yöntemi",
+      "removePayment": "{method} ödemesini kaldır",
+      "choosePayment": "Bir ödeme yöntemi seçin. Birden fazla ödeme (bölünmüş) mümkündür.",
+      "quickCash": "Nakit",
+      "validate": "Onayla",
+      "newOrderAfterSale": "Yeni sipariş",
+      "nextScanHint": "Bir sonraki tarama otomatik olarak yeni bir sipariş başlatır."
+    },
     "subnav": {
       "label": "Kasa bölümleri",
       "registers": "Tüm kasalar",
