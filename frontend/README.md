@@ -74,8 +74,10 @@ src/app
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
    │                         (IMEI Luhn check, quote form validation, error text); device intake (Ankäufe list +
    │                         intake page) with intake.logic.ts (age, seller/inspect/amount checks, steps per status)
-   ├─ pos/                   Kasse: registers, till, receipts (Storno/Return), cash sessions with closing and Z-report;
-   │                         pos.logic.ts (cart totals, payments/change, idempotency, returnable quantities, shortcuts),
+   ├─ pos/                   Kasse (standalone app /kasse): pos-app (top bar), registers, selling screen (cart, numpad,
+   │                         product grid, parked orders, payment, receipt), receipts (Storno/Return), cash sessions with
+   │                         closing and Z-report; pos.logic.ts (cart totals, % discounts, VAT preview, numpad, split
+   │                         payments/change, parked orders, idempotency, returnable quantities, shortcuts),
    │                         receipt-view (printable 80 mm receipt), z-report
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
       │                      "Reklamationen" (escalated disputes queue, detail + decision) and "Ankaufspreise"
@@ -218,32 +220,58 @@ Module `Ankauf` (enabled per organization in Administration → Unternehmen → 
 ### Kasse (POS)
 
 Module `Pos` (enabled per organization by the platform admin; sells stock of the Inventory module). Business rules:
-`../docs/adr/0008-pos-fiscal-and-receipts.md`. Navigation section "Ladenverkauf" → **Kasse** (`pos.sell`: Owner,
-Manager, Staff). Register management and Storno need `pos.manage` (Owner, Manager) and are hidden otherwise.
+`../docs/adr/0008-pos-fiscal-and-receipts.md`. The POS is a **standalone full-screen app** at `/kasse` (not inside
+the back-office shell and not in its menu; `pos.sell`: Owner, Manager, Staff), launched from the card "Kasse starten"
+on the overview. Old `/app/kasse/...` URLs redirect. Register management and Storno need `pos.manage` (Owner,
+Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
 
-- `/app/kasse`: registers (session open/closed, warehouse, next receipt number). With `pos.manage`: create (name +
-  warehouse, default warehouse otherwise), rename, deactivate/activate (the API refuses while a session is open).
-- `/app/kasse/:registerId` (till): without an open session, the opening cash count opens one. The code input keeps the
-  focus (scanners type code + Enter; printable keys typed outside any field are routed to it). EAN → product line
-  (scanning again adds 1, limited to the available stock of the register's warehouse); 15 digits → own in-stock device
-  (quantity fixed 1, IMEI shown, §25a marked). The cashier types the unit price; it is prefilled with the last price used
-  for that product in this browser session (`sessionStorage`). Line discount, +/−, remove. Payment: cash tendered
-  (quick amounts) → change, card (≤ total), split payments; the API's rules are mirrored client-side (`settle()`).
-  Shortcuts, listed on the screen: F2 code field, F4 card for the rest, F8 exact cash, F9 pay, Esc cancels step by step
-  (code → payments → discard cart with confirmation), +/− in the empty code field. Checkout sends an `Idempotency-Key`
-  created per attempt and reused when the same cart is retried after a network error / 5xx (a changed cart gets a new
-  key). After the sale the receipt is shown and the next scan starts a new sale.
+- App frame (`pos-app.ts`, state in `pos-context.ts`): top bar with register, session state, cashier, online/offline
+  indicator (`navigator.onLine`), clock and a menu (selling, receipts, sessions, cash in/out & closing, register
+  selection, theme System/Hell/Dunkel stored in `localStorage`, language, back to the back office). Touch-first
+  (targets ≥ 44 px), responsive (desktop, tablet landscape/portrait; below 768 px one pane with a products/cart switch),
+  RTL via logical properties (the numpads keep the keypad digit order). Dark mode remaps the Tailwind palette variables
+  inside `.hn-pos-dark` (`styles.css`, screen only; the receipt stays paper-white).
+- `/kasse`: entry screen – registers (session open/closed, warehouse, next receipt number), "Kasse öffnen". With
+  `pos.manage`: create (name + warehouse), rename, deactivate/activate (the API refuses while a session is open).
+- `/kasse/:registerId` (selling screen, `till.page.*`): without an open session, the opening cash count opens one.
+  - Cart (start side): lines with quantity × unit price, discount, line total, selected line highlighted; totals with
+    net / VAT 19 % (computed per line exactly like the API) and §25a devices listed without VAT (margin VAT is computed by
+    the API from the purchase price and never shown). Numpad with the modes Menge / % Rabatt / Preis (the first key
+    replaces the shown value, backspace on an empty quantity removes the line), −/+, C, and a display field for
+    keyboard entry. Unit prices are typed by the cashier (the API has no sales prices) and prefilled with the last price
+    used in this browser session (`sessionStorage`).
+  - Products (end side, needs the module Inventory): search/scan field, category chips and tiles for the stock rows of
+    the register's warehouse (`GET /api/inventory/stock`, up to 600 rows; categories via `GET /api/catalog/products/{id}`,
+    cached in `localStorage`; no images in the API → category icon or monogram; stock badge; sold-out tiles greyed).
+    Text filters the tiles (Enter adds a single match); EAN/IMEI codes (6–20 digits) + Enter are looked up
+    (`/api/pos/lookup`): EAN → product line (+1 per scan, limited to the available stock), 15 digits → own in-stock
+    device (quantity fixed 1, IMEI shown, §25a marked). Tapping a tile with an EAN uses the same lookup.
+  - Parked orders: several open tickets per register (tabs with item counts, "+" parks the current one, discard with
+    confirmation), stored in `localStorage` per organization + register (`hn.pos.orders.*`, tolerant to blocked or
+    corrupted storage), including the pending checkout attempt.
+  - Payment screen: payment-method buttons (Bar, Karte) add lines prefilled with the remaining amount; several lines
+    (split) per method are possible, each editable via keyboard or the numpad (+10/+20/+50); quick cash (exact, next
+    banknotes), "Karte (Rest)"; remaining/change display; the API's rules are mirrored client-side (`settlePayments()`).
+    Validate sends an `Idempotency-Key` created per attempt and reused when the same ticket is retried after a network
+    error / 5xx (a changed ticket gets a new key).
+  - Receipt screen: change due, receipt preview, print, new order; the next scan starts a new order automatically.
+  - Shortcuts (listed on the screen): F2 search/scan field, F4 card for the rest, F8 exact cash, F9 payment / validate,
+    Esc step by step (receipt → payment → search text → discard ticket with confirmation), Enter in the numpad display
+    returns to scanning. Printable keys typed outside a field go to the scan field (on the payment screen digits feed
+    the numpad).
 - Receipts show the API's stored document exactly as issued: seller, number, date, lines with tax label (A / §25a), VAT
   breakdown, notes (§25a), payments/tendered/change and, prominently on top, the fiscal notice ("TSE nicht angebunden –
   Testbetrieb" in dev; TSE data is printed only for signed receipts). "Beleg drucken" uses `window.print()`; the print
   stylesheet in `styles.css` prints only the `.hn-print-area` (receipt or Z-report) on an 80 mm roll.
-- `/app/kasse/:registerId/belege` (current session or all) and `/app/kasse/belege/:id`: Storno (`pos.manage`, reason,
+- `/kasse/:registerId/belege` (current session or all) and `/kasse/belege/:id`: Storno (`pos.manage`, reason,
   confirmation; not offered once items were returned) and Return (quantity per line up to sold − returned, refund
   preview allocated exactly like the API, cash or card, reason, confirmation, own Idempotency-Key).
-- `/app/kasse/sitzungen/:id`: live interim figures, deposits/withdrawals with reason, closing with the counted cash
+- `/kasse/sitzungen/:id`: live interim figures, deposits/withdrawals with reason, closing with the counted cash
   (difference to the expected cash shown before and in the confirmation, which re-reads the session first); afterwards
   the printable Z-report (receipt number range, counts, totals, by payment method and by taxation, cash
-  reconciliation). `/app/kasse/:registerId/sitzungen` lists the sessions.
+  reconciliation). `/kasse/:registerId/sitzungen` lists the sessions.
+- Not yet possible because the API lacks it (see `../docs/roadmap.md`, Phase 2c): product images and sales prices,
+  line notes, customers, e-mail receipts, cashier PIN/permissions per cashier.
 - Money stays in integer cents (`parseMoneyToMinor`) and is displayed with Intl de-DE. `pos.*`, `stock.insufficient`
   (with the available quantity), `stock.serialized_requires_imei` and `unit.*` codes are translated.
 
@@ -320,10 +348,14 @@ Without these variables the tests are skipped. Specs:
   another intake is rejected with a reason. Same default-policy assumption as ankauf-flow.
 
 - `e2e/pos-flow.spec.ts` – shop with Pos + Inventory + ProductImport; a product with an EAN and 5 units received are
-  created via the API. The shop creates a register, opens a session with 100,00 €, scans the EAN, enters 12,50 €,
-  quantity 2, pays 50,00 € cash (F9) → receipt no. 1 with 25,00 € change and "TSE nicht angebunden – Testbetrieb";
-  returns one item in cash → receipt no. 2 with −12,50 €; closes with counted = expected (112,50 €) → difference
-  0,00 €, Z-report: receipts 1 to 2, 12,50 € gross, cash and standard taxation.
+  created via the API. No POS entry in the back-office menu; the overview launches `/kasse`. The shop creates a
+  register, opens a session with 100,00 €, scans the EAN, types 12,50 € on the numpad display, quantity 2 via the numpad
+  (total 25,00 €, VAT 3,99 €); parks the ticket, adds the product to a second ticket by its tile, switches back and
+  reloads (both tickets kept); pays ticket 1 with 50,00 € cash on the payment screen (F9) → receipt no. 1 with 25,00 €
+  change and "TSE nicht angebunden – Testbetrieb"; pays ticket 2 split (card 10,00 € + cash 5,00 €) → receipt no. 2
+  with 2,50 € change; returns one item of receipt 1 in cash → receipt no. 3 with −12,50 €; closes with counted =
+  expected (115,00 €) → difference 0,00 €, Z-report: receipts 1 to 3, 25,00 € gross, cash 15,00 €, card 10,00 €;
+  `/app/kasse` redirects to `/kasse`, the menu leads back to the back office.
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.

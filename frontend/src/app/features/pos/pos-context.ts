@@ -1,0 +1,68 @@
+import { DestroyRef, Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { CashSession } from '../../core/api/models';
+import { StorageService } from '../../core/storage.service';
+
+export type PosTheme = 'system' | 'light' | 'dark';
+const THEME_KEY = 'hn.pos.theme';
+
+/**
+ * State shared by the POS app's top bar and its pages (provided by PosAppComponent): the register and cash session
+ * the current page works with, the colour theme and the browser's online state.
+ */
+@Injectable()
+export class PosContext {
+  private readonly storage = inject(StorageService);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /** Register of the current page (null on the register selection). */
+  readonly registerId = signal<string | null>(null);
+  readonly registerName = signal<string | null>(null);
+  /** Open session of that register: undefined = not known yet, null = none. */
+  readonly session = signal<CashSession | null | undefined>(undefined);
+
+  readonly theme = signal<PosTheme>(readTheme(this.storage.get(THEME_KEY)));
+  private readonly systemDark = signal(false);
+  readonly dark = computed(() => (this.theme() === 'system' ? this.systemDark() : this.theme() === 'dark'));
+
+  readonly online = signal(true);
+  /** Minute-precision clock for the top bar. */
+  readonly now = signal(new Date());
+
+  constructor() {
+    if (!this.browser) return;
+    const destroyRef = inject(DestroyRef);
+    const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    if (media) {
+      this.systemDark.set(media.matches);
+      const onScheme = (e: MediaQueryListEvent) => this.systemDark.set(e.matches);
+      media.addEventListener?.('change', onScheme);
+      destroyRef.onDestroy(() => media.removeEventListener?.('change', onScheme));
+    }
+    this.online.set(navigator.onLine !== false);
+    const onOnline = () => this.online.set(true);
+    const onOffline = () => this.online.set(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    const timer = setInterval(() => this.now.set(new Date()), 15_000);
+    destroyRef.onDestroy(() => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      clearInterval(timer);
+    });
+  }
+
+  setRegister(id: string | null, name: string | null): void {
+    this.registerId.set(id);
+    this.registerName.set(name);
+  }
+
+  setTheme(theme: PosTheme): void {
+    this.theme.set(theme);
+    this.storage.set(THEME_KEY, theme === 'system' ? null : theme);
+  }
+}
+
+function readTheme(value: string | null): PosTheme {
+  return value === 'light' || value === 'dark' ? value : 'system';
+}

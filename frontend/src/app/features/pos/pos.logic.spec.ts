@@ -25,7 +25,33 @@ import {
   returnableQuantity,
   settle,
   tillShortcut,
+  OrdersStorage,
+  PaymentLine,
+  activeOrder,
+  addOrder,
+  addPaymentLine,
+  applyNumpad,
+  cartTax,
+  filterTiles,
+  initialOrders,
+  initials,
+  looksLikeCode,
+  numpadValue,
+  orderItemCount,
+  parseOrdersState,
+  parsePercentToBasisPoints,
+  percentOf,
+  pressNumpadKey,
+  productTiles,
+  remainingFor,
+  removeOrder,
+  sanitizeNumpadText,
+  settlePayments,
+  standardVatFromGross,
+  tileCategories,
+  updateOrder,
 } from './pos.logic';
+import { StockRow } from '../../core/api/models';
 
 const product = (over: Partial<PosLookup> = {}): PosLookup => ({
   kind: 'Product',
@@ -338,5 +364,273 @@ describe('closing, shortcuts, errors, last prices', () => {
     const broken = new LastPrices({ getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } }, 'x');
     expect(broken.get('p1')).toBeNull();
     expect(() => broken.remember({ p1: 1 })).not.toThrow();
+  });
+});
+
+describe('percent discounts and VAT preview', () => {
+  it('parses percentages to basis points (0..100 %)', () => {
+    expect(parsePercentToBasisPoints('10')).toBe(1000);
+    expect(parsePercentToBasisPoints('12,5')).toBe(1250);
+    expect(parsePercentToBasisPoints('7.25')).toBe(725);
+    expect(parsePercentToBasisPoints('10 %')).toBe(1000);
+    expect(parsePercentToBasisPoints('')).toBe(0);
+    expect(parsePercentToBasisPoints('100')).toBe(10000);
+    expect(parsePercentToBasisPoints('100,01')).toBeNull();
+    expect(parsePercentToBasisPoints('1000')).toBeNull();
+    expect(parsePercentToBasisPoints('1,234')).toBeNull();
+    expect(parsePercentToBasisPoints('abc')).toBeNull();
+  });
+
+  it('computes percentages in integer cents, half away from zero, without float overflow', () => {
+    expect(percentOf(2500, 1000)).toBe(250);
+    expect(percentOf(1999, 1250)).toBe(250); // 249.875
+    expect(percentOf(5, 5000)).toBe(3); // 2.5
+    expect(percentOf(-5, 5000)).toBe(-3);
+    expect(percentOf(1_000_000_000_000, 3333)).toBe(333_300_000_000);
+  });
+
+  it('applies a percent discount to quantity × price', () => {
+    const l = line({ quantity: 2, priceInput: '12,50', discountInput: '10', discountKind: 'percent' });
+    expect(lineAmounts(l)).toEqual({ unitPriceMinor: 1250, discountMinor: 250, grossMinor: 2250, error: null });
+    expect(lineAmounts({ ...l, discountInput: '120' }).error).toBe('discount');
+    expect(lineAmounts({ ...l, discountInput: '100' }).grossMinor).toBe(0);
+    expect(lineAmounts({ ...l, priceInput: '' }).error).toBe('price');
+    expect(buildSaleRequest('r1', [l], []).lines[0]).toEqual({ productId: 'p1', quantity: 2, unitPriceMinor: 1250, discountMinor: 250 });
+    // Amount discounts keep working for lines without a kind (older stored tickets).
+    expect(lineAmounts(line({ quantity: 2, priceInput: '12,50', discountInput: '2,50' })).grossMinor).toBe(2250);
+  });
+
+  it('mirrors the API VAT calculation (per line, 19 % contained in gross)', () => {
+    expect(standardVatFromGross(1190)).toBe(190);
+    expect(standardVatFromGross(100)).toBe(16);
+    expect(standardVatFromGross(2500)).toBe(399);
+    expect(standardVatFromGross(-2500)).toBe(-399);
+    expect(standardVatFromGross(0)).toBe(0);
+  });
+
+  it('separates §25a devices (no VAT shown) from standard lines and skips invalid lines', () => {
+    const tax = cartTax([
+      line({ quantity: 2, priceInput: '12,50' }),
+      line({ key: 'u:1', kind: 'Unit', imei: '1', priceInput: '300,00', taxTreatment: 'Margin25a' }),
+      line({ key: 'p9', productId: 'p9', priceInput: '' }),
+    ]);
+    expect(tax).toEqual({ standardGrossMinor: 2500, standardNetMinor: 2101, standardVatMinor: 399, marginGrossMinor: 30000 });
+  });
+});
+
+describe('numpad', () => {
+  const press = (keys: string[], mode: 'quantity' | 'discount' | 'price' | 'amount', start = { buffer: '', fresh: true }) => {
+    let s = { ...start, remove: false };
+    for (const k of keys) s = pressNumpadKey(s, k as never, mode);
+    return s;
+  };
+
+  it('replaces the shown value on the first key, then appends', () => {
+    expect(press(['5'], 'quantity', { buffer: '1', fresh: true }).buffer).toBe('5');
+    expect(press(['5', '2'], 'quantity', { buffer: '1', fresh: true }).buffer).toBe('52');
+    expect(press(['0', '7'], 'quantity').buffer).toBe('7');
+  });
+
+  it('accepts one comma with two decimals for amounts, none for quantities', () => {
+    expect(press(['1', '2', ',', '5', '0', '9'], 'price').buffer).toBe('12,50');
+    expect(press([',', '5'], 'price').buffer).toBe('0,5');
+    expect(press(['1', ',', ','], 'amount').buffer).toBe('1,');
+    expect(press(['1', ','], 'quantity').buffer).toBe('1');
+  });
+
+  it('limits the number of digits per mode', () => {
+    expect(press(['1', '2', '3', '4', '5', '6', '7', '8'], 'price').buffer).toBe('1234567');
+    expect(press(['1', '2', '3', '4', '5', '6'], 'quantity').buffer).toBe('12345');
+    expect(press(['1', '0', '0', '0'], 'discount').buffer).toBe('100');
+  });
+
+  it('backspace clears a fresh value, deletes digits and finally removes the line (quantity only)', () => {
+    expect(pressNumpadKey({ buffer: '12', fresh: true }, 'backspace', 'quantity')).toEqual({ buffer: '', fresh: false, remove: false });
+    expect(pressNumpadKey({ buffer: '12', fresh: false }, 'backspace', 'quantity')).toEqual({ buffer: '1', fresh: false, remove: false });
+    expect(pressNumpadKey({ buffer: '', fresh: false }, 'backspace', 'quantity').remove).toBe(true);
+    expect(pressNumpadKey({ buffer: '', fresh: false }, 'backspace', 'price').remove).toBe(false);
+    expect(pressNumpadKey({ buffer: '12,5', fresh: false }, 'clear', 'price').buffer).toBe('');
+  });
+
+  it('sanitizes typed text like numpad input', () => {
+    expect(sanitizeNumpadText('12.505', 'price')).toBe('12,50');
+    expect(sanitizeNumpadText('a1b2', 'quantity')).toBe('12');
+    expect(sanitizeNumpadText('1,2,3', 'amount')).toBe('1,23');
+  });
+
+  it('shows the line value per mode', () => {
+    const l = line({ quantity: 2, priceInput: '10,00', discountInput: '1,00' });
+    expect(numpadValue(l, 'quantity')).toBe('2');
+    expect(numpadValue(l, 'price')).toBe('10,00');
+    expect(numpadValue(l, 'discount')).toBe('');
+    expect(numpadValue({ ...l, discountKind: 'percent', discountInput: '10' }, 'discount')).toBe('10');
+  });
+
+  it('writes the buffer into the line: clamped quantity, price, percent discount', () => {
+    const lines = [line({ available: 5 }), line({ key: 'u:1', kind: 'Unit', imei: '1', available: 1 })];
+    expect(applyNumpad(lines, 'p1', 'quantity', '3')).toEqual({ lines: [{ ...lines[0], quantity: 3 }, lines[1]], clamped: false });
+    const clamped = applyNumpad(lines, 'p1', 'quantity', '9');
+    expect(clamped.lines[0].quantity).toBe(5);
+    expect(clamped.clamped).toBe(true);
+    expect(applyNumpad(lines, 'p1', 'quantity', '').lines[0]).toBe(lines[0]);
+    expect(applyNumpad(lines, 'u:1', 'quantity', '4').lines[1].quantity).toBe(1);
+    expect(applyNumpad(lines, 'p1', 'price', '12,').lines[0].priceInput).toBe('12');
+    expect(applyNumpad(lines, 'p1', 'discount', '15').lines[0]).toMatchObject({ discountInput: '15', discountKind: 'percent' });
+  });
+});
+
+describe('split payments', () => {
+  const pay = (id: string, method: 'Cash' | 'Card', input: string): PaymentLine => ({ id, method, input });
+
+  it('sums card and cash lines; cash above the rest becomes change', () => {
+    const s = settlePayments(2500, [pay('a', 'Card', '10,00'), pay('b', 'Cash', '20,00')]);
+    expect(s.error).toBeNull();
+    expect(s.changeMinor).toBe(500);
+    expect(s.payments).toEqual([
+      { method: 'Cash', amountMinor: 2000 },
+      { method: 'Card', amountMinor: 1000 },
+    ]);
+  });
+
+  it('adds several lines of the same method', () => {
+    const s = settlePayments(2500, [pay('a', 'Cash', '10'), pay('b', 'Cash', '15')]);
+    expect(s).toMatchObject({ error: null, changeMinor: 0, paidMinor: 2500, payments: [{ method: 'Cash', amountMinor: 2500 }] });
+  });
+
+  it('applies the API rules', () => {
+    expect(settlePayments(2500, [pay('a', 'Cash', '10')])).toMatchObject({ error: 'insufficient', remainingMinor: 1500 });
+    expect(settlePayments(2500, [pay('a', 'Card', '30')]).error).toBe('cardExceedsTotal');
+    expect(settlePayments(2500, [pay('a', 'Card', '25'), pay('b', 'Cash', '5')]).error).toBe('cashNotNeeded');
+    expect(settlePayments(2500, []).error).toBe('noPayment');
+    expect(settlePayments(0, [pay('a', 'Cash', '5')]).error).toBe('emptyCart');
+  });
+
+  it('flags empty or invalid lines', () => {
+    const s = settlePayments(2500, [pay('a', 'Cash', ''), pay('b', 'Card', '25,00')]);
+    expect(s.invalidIds).toEqual(['a']);
+    expect(s.error).toBe('invalidAmount');
+    expect(settlePayments(2500, [pay('a', 'Cash', 'x')]).error).toBe('invalidAmount');
+  });
+
+  it('prefills a new payment with the remaining amount', () => {
+    expect(addPaymentLine([], 'Card', 2500, 'a')).toEqual([pay('a', 'Card', '25,00')]);
+    const edited = [pay('a', 'Card', '10,00')];
+    expect(remainingFor(2500, edited)).toBe(1500);
+    expect(remainingFor(2500, edited, 'a')).toBe(2500);
+    expect(addPaymentLine(edited, 'Cash', 2500, 'b')[1]).toEqual(pay('b', 'Cash', '15,00'));
+    expect(addPaymentLine([pay('a', 'Cash', '30')], 'Card', 2500, 'b')[1].input).toBe('');
+  });
+});
+
+describe('parked orders', () => {
+  const t = '2026-10-16T10:00:00.000Z';
+
+  it('starts with one ticket and parks the current one when a new ticket starts', () => {
+    const s0 = initialOrders('a', t);
+    expect(s0).toEqual({ nextSeq: 2, activeId: 'a', orders: [{ id: 'a', seq: 1, createdAt: t, lines: [], payments: [], pending: null }] });
+    const s1 = updateOrder(addOrder(s0, 'b', t)!, 'b', { lines: [line({ quantity: 2 })] });
+    expect(s1.activeId).toBe('b');
+    expect(s1.orders.map((o) => o.seq)).toEqual([1, 2]);
+    expect(orderItemCount(activeOrder(s1))).toBe(2);
+    expect(activeOrder({ ...s1, activeId: 'gone' }).id).toBe('a');
+  });
+
+  it('removes a ticket and activates its neighbour, or starts a fresh one', () => {
+    const s = addOrder(addOrder(initialOrders('a', t), 'b', t)!, 'c', t)!;
+    const withoutB = removeOrder({ ...s, activeId: 'b' }, 'b', 'n', t);
+    expect(withoutB.orders.map((o) => o.id)).toEqual(['a', 'c']);
+    expect(withoutB.activeId).toBe('c');
+    expect(removeOrder({ ...s, activeId: 'a' }, 'c', 'n', t).activeId).toBe('a');
+    const last = removeOrder(initialOrders('a', t), 'a', 'n', t);
+    expect(last.orders).toEqual([{ id: 'n', seq: 2, createdAt: t, lines: [], payments: [], pending: null }]);
+    expect(last.nextSeq).toBe(3);
+  });
+
+  it('caps the number of open tickets', () => {
+    let s = initialOrders('o0', t);
+    for (let i = 1; i < 20; i++) s = addOrder(s, `o${i}`, t)!;
+    expect(s.orders.length).toBe(20);
+    expect(addOrder(s, 'too-many', t)).toBeNull();
+  });
+
+  it('parses stored tickets defensively', () => {
+    const good = updateOrder(addOrder(initialOrders('a', t), 'b', t)!, 'a', { lines: [line()], pending: { key: 'k', body: '{}' } });
+    expect(parseOrdersState(JSON.parse(JSON.stringify(good)))).toEqual(good);
+    expect(parseOrdersState(null)).toBeNull();
+    expect(parseOrdersState({ orders: 'x' })).toBeNull();
+    const broken = { nextSeq: 1, activeId: 'zz', orders: [{ ...good.orders[0], lines: [{ key: 1 }] }, good.orders[1]] };
+    const parsed = parseOrdersState(broken)!;
+    expect(parsed.orders.map((o) => o.id)).toEqual(['b']);
+    expect(parsed.activeId).toBe('b');
+    expect(parsed.nextSeq).toBe(3);
+  });
+
+  it('persists per scope and tolerates blocked storage', () => {
+    const data = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    };
+    const store = new OrdersStorage(storage, 'org.reg1');
+    const state = updateOrder(initialOrders('a', t), 'a', { lines: [line()] });
+    store.save(state);
+    expect(data.has('hn.pos.orders.org.reg1')).toBe(true);
+    expect(store.load()).toEqual(state);
+    expect(new OrdersStorage(storage, 'org.reg2').load()).toBeNull();
+    store.save(initialOrders('x', t));
+    expect(data.has('hn.pos.orders.org.reg1')).toBe(false);
+    data.set('hn.pos.orders.org.reg1', '{not json');
+    expect(store.load()).toBeNull();
+    const fail = (): never => {
+      throw new Error('blocked');
+    };
+    const broken = new OrdersStorage({ getItem: fail, setItem: fail, removeItem: fail }, 's');
+    expect(broken.load()).toBeNull();
+    expect(() => broken.save(state)).not.toThrow();
+  });
+});
+
+describe('product tiles', () => {
+  const row = (over: Partial<StockRow>): StockRow => ({
+    warehouseId: 'w1',
+    productId: 'p1',
+    brand: 'Apple',
+    productName: 'Ladekabel USB-C',
+    ean: '4000000000000',
+    mpn: null,
+    onHand: 5,
+    reserved: 0,
+    available: 5,
+    updatedAt: '2026-10-16T10:00:00Z',
+    ...over,
+  });
+
+  it('builds sorted tiles with known categories and filters them by category and words', () => {
+    const tiles = productTiles(
+      [
+        row({ productId: 'p2', brand: 'Samsung', productName: 'Galaxy S24 Display' }),
+        row({}),
+        row({ productId: 'p3', brand: 'Apple', productName: 'Akku iPhone 12', ean: null, mpn: 'A2479' }),
+      ],
+      { p1: 'Accessory', p2: 'Display' },
+    );
+    expect(tiles.map((x) => x.productId)).toEqual(['p3', 'p1', 'p2']);
+    expect(tiles.find((x) => x.productId === 'p3')!.category).toBeNull();
+    expect(filterTiles(tiles, 'Display', '').map((x) => x.productId)).toEqual(['p2']);
+    expect(filterTiles(tiles, null, 'usb kabel').map((x) => x.productId)).toEqual(['p1']);
+    expect(filterTiles(tiles, null, 'a2479').map((x) => x.productId)).toEqual(['p3']);
+    expect(filterTiles(tiles, null, '4000000000000').length).toBe(2);
+    expect(tileCategories(tiles, ['Smartphone', 'Display', 'Accessory'])).toEqual(['Display', 'Accessory']);
+  });
+
+  it('derives monograms and recognizes scanner codes', () => {
+    expect(initials('Apple', 'iPhone 13')).toBe('AI');
+    expect(initials('', '(USB) Kabel')).toBe('UK');
+    expect(initials('', '')).toBe('?');
+    expect(looksLikeCode('4006381333931')).toBe(true);
+    expect(looksLikeCode(' 350000000000001 ')).toBe(true);
+    expect(looksLikeCode('12345')).toBe(false);
+    expect(looksLikeCode('Kabel')).toBe(false);
   });
 });

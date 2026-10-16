@@ -1354,6 +1354,87 @@
     "Withdrawal": "Withdrawal"
   },
   "pos": {
+    "app": {
+      "title": "POS",
+      "registerSelection": "Register selection",
+      "sell": "Sell",
+      "online": "Online",
+      "offline": "Offline",
+      "menu": "POS menu",
+      "receipts": "Receipts",
+      "sessions": "Sessions",
+      "cashAndClosing": "Cash in/out & closing",
+      "theme": "Appearance",
+      "themes": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "backOffice": "Back to back office",
+      "noSession": "No open session"
+    },
+    "launch": {
+      "title": "POS (in-store sales)",
+      "text": "The POS runs as a separate full-screen app for touch, keyboard and scanner.",
+      "open": "Start POS"
+    },
+    "numpad": {
+      "label": "Numpad",
+      "mode": "Input mode",
+      "minus": "Decrease quantity",
+      "plus": "Increase quantity",
+      "backspace": "Delete last digit",
+      "clear": "Clear input",
+      "comma": "Decimal comma",
+      "modes": {
+        "quantity": "Qty",
+        "discount": "% Disc",
+        "price": "Price"
+      },
+      "for": {
+        "quantity": "Quantity: {name}",
+        "discount": "Discount in %: {name}",
+        "price": "Unit price: {name}"
+      }
+    },
+    "sell": {
+      "products": "Products",
+      "categories": "Categories",
+      "allCategories": "All",
+      "noProducts": "No products in the stock of this register.",
+      "noProductsHint": "Scan an EAN or IMEI, or receive goods into stock.",
+      "noMatch": "No matching products.",
+      "soldOut": "unavailable",
+      "stock": "Stock {count}",
+      "truncated": "Showing {count} stock positions. Find further products by scanning.",
+      "openOrders": "Open orders",
+      "orderLabel": "Order {number} ({count} items)",
+      "newOrder": "New order (park the current one)",
+      "discardOrder": "Discard order",
+      "tooManyOrders": "At most 20 orders can be open at the same time.",
+      "cartEmpty": "No items yet. Tap a product or scan an EAN/IMEI.",
+      "priceMissing": "Price missing",
+      "discountInvalid": "Invalid discount",
+      "net": "Net",
+      "vat19": "VAT 19 %",
+      "margin25a": "§25a devices (VAT not shown)",
+      "payment": "Payment",
+      "unitQuantity": "A device (IMEI) is always sold with quantity 1.",
+      "quantityClamped": "At most {max} available – quantity adjusted.",
+      "searchLabel": "Search products or scan EAN/IMEI",
+      "searchPlaceholder": "Search or scan EAN/IMEI …",
+      "searchHelp": "Text filters the products, Enter adds a single match. Scanner: code + Enter.",
+      "shortcutEnter": "Take the code or add the only match; in the number field back to scanning",
+      "view": "View",
+      "back": "Back",
+      "methods": "Payment method",
+      "removePayment": "Remove {method} payment",
+      "choosePayment": "Choose a payment method. Several payments (split) are possible.",
+      "quickCash": "Cash",
+      "validate": "Validate",
+      "newOrderAfterSale": "New order",
+      "nextScanHint": "The next scan starts a new order automatically."
+    },
     "subnav": {
       "label": "Till sections",
       "registers": "All tills",

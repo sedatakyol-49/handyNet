@@ -30,6 +30,7 @@ import { ReceiptViewComponent } from './receipt-view';
 /** One receipt as issued (printable) with Storno (`pos.manage`) and Return (select lines/quantities). */
 @Component({
   selector: 'hn-pos-receipt-detail-page',
+  host: { class: 'pos-page block' },
   imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -37,7 +38,7 @@ import { ReceiptViewComponent } from './receipt-view';
       <hn-pos-subnav [registerId]="r.registerId" />
       <hn-page-header class="hn-no-print" [title]="'pos.detail.title' | t: { number: r.number }" [description]="r.registerName">
         <hn-status-badge [status]="r.kind" kind="receiptKind" [tone]="r.kind === 'Sale' ? 'success' : r.kind === 'Storno' ? 'danger' : 'warning'" />
-        <button hnButton type="button" (click)="print()" data-testid="pos-detail-print">{{ 'pos.receipt.print' | t }}</button>
+        <button hnButton class="min-h-11" type="button" (click)="print()" data-testid="pos-detail-print">{{ 'pos.receipt.print' | t }}</button>
       </hn-page-header>
     } @else {
       <hn-page-header [title]="'pos.detail.loading' | t" />
@@ -54,18 +55,18 @@ import { ReceiptViewComponent } from './receipt-view';
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               @if (r.referencedReceiptId) {
                 <dt>{{ 'pos.detail.references' | t }}</dt>
-                <dd><a class="hn-link" [routerLink]="['/app/kasse/belege', r.referencedReceiptId]">{{ 'pos.detail.receiptNo' | t: { number: r.referencedReceiptNumber } }}</a></dd>
+                <dd><a class="hn-link" [routerLink]="['/kasse/belege', r.referencedReceiptId]">{{ 'pos.detail.receiptNo' | t: { number: r.referencedReceiptNumber } }}</a></dd>
               }
               @if (r.cancelledByReceiptId) {
                 <dt>{{ 'pos.detail.cancelledBy' | t }}</dt>
-                <dd><a class="hn-link" [routerLink]="['/app/kasse/belege', r.cancelledByReceiptId]" data-testid="pos-cancelled-by">{{ 'pos.detail.openStorno' | t }}</a></dd>
+                <dd><a class="hn-link" [routerLink]="['/kasse/belege', r.cancelledByReceiptId]" data-testid="pos-cancelled-by">{{ 'pos.detail.openStorno' | t }}</a></dd>
               }
               @if (r.reason) {
                 <dt>{{ 'pos.detail.reason' | t }}</dt>
                 <dd>{{ r.reason }}</dd>
               }
               <dt>{{ 'pos.detail.session' | t }}</dt>
-              <dd><a class="hn-link" [routerLink]="['/app/kasse/sitzungen', r.sessionId]">{{ 'pos.detail.openSession' | t }}</a></dd>
+              <dd><a class="hn-link" [routerLink]="['/kasse/sitzungen', r.sessionId]">{{ 'pos.detail.openSession' | t }}</a></dd>
             </dl>
             @if (r.kind === 'Sale') {
               <div class="mt-3 flex flex-wrap gap-2">
@@ -177,8 +178,8 @@ import { ReceiptViewComponent } from './receipt-view';
               <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">{{ dialogError() }}</p>
             }
             <div class="mt-4 flex justify-end gap-2">
-              <button hnButton type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
-              <button hnButton variant="danger" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="pos-storno-confirm">{{ 'pos.detail.stornoConfirm' | t }}</button>
+              <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
+              <button hnButton class="min-h-11" variant="danger" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="pos-storno-confirm">{{ 'pos.detail.stornoConfirm' | t }}</button>
             </div>
           </form>
         } @else if (dialog() === 'return') {
@@ -187,8 +188,8 @@ import { ReceiptViewComponent } from './receipt-view';
             <p class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-return-dialog-error">{{ dialogError() }}</p>
           }
           <div class="mt-4 flex justify-end gap-2">
-            <button hnButton type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
-            <button hnButton variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="confirmReturn(r)" data-testid="pos-return-confirm">{{ 'common.confirm' | t }}</button>
+            <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
+            <button hnButton class="min-h-11" variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="confirmReturn(r)" data-testid="pos-return-confirm">{{ 'common.confirm' | t }}</button>
           </div>
         }
       </hn-dialog>
@@ -287,7 +288,7 @@ export class PosReceiptDetailPage {
         this.pendingReturn = null;
         this.toast.success(this.i18n.t('pos.detail.returnDone', { number: created.number }));
         this.returning.set(false);
-        await this.router.navigate(['/app/kasse/belege', created.id]);
+        await this.router.navigate(['/kasse/belege', created.id]);
       } catch (e) {
         if (!keepAttemptAfter(problemStatus(e))) this.pendingReturn = null;
         throw e;
@@ -310,7 +311,7 @@ export class PosReceiptDetailPage {
     await this.run(async () => {
       const created = await firstValueFrom(this.api.storno(r.id, { reason }));
       this.toast.success(this.i18n.t('pos.detail.stornoDone', { number: created.number }));
-      await this.router.navigate(['/app/kasse/belege', created.id]);
+      await this.router.navigate(['/kasse/belege', created.id]);
     });
   }
 

@@ -71,6 +71,139 @@
   .hn-mono {
     @apply font-mono text-xs;
   }
+
+  /* ---- POS app (/kasse): touch-first controls, every target ≥ 44 px ---- */
+  .hn-pos button,
+  .hn-pos a {
+    touch-action: manipulation;
+  }
+  .pos-page {
+    @apply mx-auto w-full max-w-7xl p-3 sm:p-5;
+  }
+  .pos-menu-item {
+    @apply flex min-h-11 w-full items-center gap-2 px-3 text-start text-slate-800 hover:bg-slate-50;
+  }
+  .pos-key {
+    @apply grid min-h-12 place-items-center rounded-lg border border-slate-200 bg-white text-xl font-semibold text-slate-900 shadow-xs select-none;
+    @apply hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .pos-key-fn {
+    @apply bg-slate-100 text-lg text-slate-700;
+  }
+  .pos-mode {
+    @apply min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40;
+    &[aria-pressed="true"] {
+      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
+    }
+  }
+  .pos-chip {
+    @apply min-h-11 shrink-0 rounded-full border border-slate-300 bg-white px-4 text-sm font-medium whitespace-nowrap text-slate-700 hover:bg-slate-50;
+    &[aria-pressed="true"] {
+      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
+    }
+  }
+  .pos-tile {
+    @apply flex h-full min-h-40 w-full flex-col rounded-xl border border-slate-200 bg-white p-2 text-start shadow-xs;
+    @apply hover:border-accent-600 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .pos-order-tab {
+    @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50;
+    &[aria-pressed="true"] {
+      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
+    }
+  }
+  .pos-icon-btn {
+    @apply grid size-11 shrink-0 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .pos-line {
+    @apply block min-h-14 w-full min-w-0 flex-1 border-s-4 border-transparent px-3 py-2 text-start;
+  }
+  .pos-line-selected {
+    @apply border-accent-700;
+  }
+  .pos-pay-btn {
+    @apply flex min-h-14 w-full items-center justify-between gap-3 rounded-lg bg-accent-700 px-4 text-lg font-semibold text-[#fff] shadow-xs;
+    @apply hover:bg-accent-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .pos-back {
+    @apply inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50;
+  }
+  .pos-method {
+    @apply flex min-h-16 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-start text-base font-semibold text-slate-900 shadow-xs;
+    @apply hover:border-accent-600 hover:bg-accent-50;
+  }
+  .pos-quick {
+    @apply min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-800 hover:bg-slate-50;
+  }
+  .pos-kbd {
+    @apply rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono;
+  }
+}
+
+/*
+ * POS dark theme (screen only, so printouts stay black on white). Tailwind utilities read the palette from CSS
+ * variables, so remapping the neutral scale and the light tints inside .hn-pos-dark turns every surface, border and
+ * text dark/light without per-component dark classes. Strong colours used as backgrounds (accent/red buttons) keep
+ * their value; text in those hues is lightened below. The printed receipt keeps its paper look.
+ */
+@media screen {
+  .hn-pos-dark {
+    color-scheme: dark;
+    --color-white: oklch(21.5% 0.035 262);
+    --color-slate-50: oklch(25.5% 0.035 262);
+    --color-slate-100: oklch(16.5% 0.03 264);
+    --color-slate-200: oklch(31% 0.035 260);
+    --color-slate-300: oklch(38% 0.038 258);
+    --color-slate-400: oklch(55.4% 0.046 257.417);
+    --color-slate-500: oklch(70.4% 0.04 256.788);
+    --color-slate-600: oklch(80% 0.025 255);
+    --color-slate-700: oklch(88% 0.015 255);
+    --color-slate-800: oklch(93% 0.01 255);
+    --color-slate-900: oklch(97% 0.005 250);
+    --color-accent-50: oklch(28.2% 0.091 267.935);
+    --color-accent-100: oklch(33% 0.12 266);
+    --color-red-50: oklch(25.8% 0.092 26.042);
+    --color-red-200: oklch(39.6% 0.141 25.723);
+    --color-amber-50: oklch(27.9% 0.077 45.635);
+    --color-amber-200: oklch(41.4% 0.112 45.904);
+    --color-emerald-50: oklch(26.2% 0.051 172.552);
+    --color-emerald-200: oklch(37.8% 0.077 168.94);
+    --color-emerald-300: oklch(43.2% 0.095 166.913);
+    --color-blue-50: oklch(28.2% 0.091 267.935);
+    --color-blue-200: oklch(37.9% 0.146 265.522);
+  }
+  .hn-pos-dark .text-white {
+    color: #fff;
+  }
+  .hn-pos-dark :is(.text-red-700, .text-red-800, .text-red-900, .hover\:text-red-700:hover) {
+    color: oklch(80.8% 0.114 19.571);
+  }
+  .hn-pos-dark :is(.text-amber-800, .text-amber-900) {
+    color: oklch(87.9% 0.169 91.605);
+  }
+  .hn-pos-dark :is(.text-emerald-800, .text-emerald-900) {
+    color: oklch(84.5% 0.143 164.978);
+  }
+  .hn-pos-dark :is(.text-accent-700, .text-accent-800, .text-blue-900, .hn-link) {
+    color: oklch(80.9% 0.105 251.813);
+  }
+  .hn-pos-dark dialog::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+  /* The receipt is paper: light in both themes. */
+  .hn-pos-dark .hn-receipt {
+    color-scheme: light;
+    --color-white: #fff;
+    --color-slate-300: oklch(86.9% 0.022 252.894);
+    --color-slate-400: oklch(70.4% 0.04 256.788);
+    --color-slate-500: oklch(55.4% 0.046 257.417);
+    --color-slate-600: oklch(44.6% 0.043 257.281);
+    --color-slate-900: oklch(20.8% 0.042 265.755);
+    --color-amber-50: oklch(98.7% 0.022 95.277);
+  }
+  .hn-pos-dark .hn-receipt .text-amber-900 {
+    color: oklch(41.4% 0.112 45.904);
+  }
 }
 
 /*
@@ -107,5 +240,12 @@
   }
   .hn-no-print {
     display: none !important;
+  }
+  /* The POS app is a fixed full-screen frame with scrolling panes: print from the normal document flow instead. */
+  .hn-pos,
+  .hn-pos main {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 }

@@ -67,6 +67,10 @@ export class CatalogApi {
     return this.http.get<Paged<CatalogProduct>>(`${this.base}/api/catalog/products`, { params: queryParams(q) });
   }
 
+  product(id: string): Observable<CatalogProduct> {
+    return this.http.get<CatalogProduct>(`${this.base}/api/catalog/products/${id}`);
+  }
+
   categories(): Observable<CatalogCategories> {
     return this.http.get<CatalogCategories>(`${this.base}/api/catalog/categories`);
   }

@@ -28,6 +28,9 @@ export class DashboardPage {
   protected readonly refreshing = signal(false);
   protected readonly counters = signal<Counter[]>([]);
 
+  /** The POS is a standalone app (/kasse), launched from here instead of a menu entry. */
+  protected readonly canUsePos = computed(() => this.session.allows('Pos', 'pos.sell'));
+
   protected readonly quickLinks = computed(() =>
     NAV_ITEMS.filter((i) => i.path !== '/app/uebersicht' && !i.adminOnly && !i.always && this.session.allows(i.module, i.permission)),
   );
