@@ -22,7 +22,7 @@ Status legend: ✅ done and verified by automated tests · 🟡 partial · ⬜ n
 
 ## Phase 2 — Commercial B2B
 Dependencies: Phase 1.
-- Refresh tokens + token revocation; email verification; password reset (needs Notifications).
+- ✅ Sessions and account emails (ADR-0010): opaque refresh tokens stored as SHA-256 hashes, rotation on every use, reuse detection revokes the token family, sliding expiry (`Jwt:RefreshTokenDays`, 14), logout / logout-all / change-password, all sessions revoked on password change or reset; password reset (enumeration-safe 202, single-use hashed 1 h token, per-IP rate limit + per-user cooldown, lifts lockout); email verification on registration with verify + resend (unverified users can still sign in, `emailVerified` in token response and `/api/me`); de/en emails via Notifications with the token kept out of the outbox and redacted from the email queue after delivery. Open: ⬜ web app refresh/logout/reset/verify screens, ⬜ access token down to 15 min once the web app refreshes (kept at 60), ⬜ purge job for expired token rows, ⬜ stored per-user language.
 - ✅ Notifications module: outbox → email queue (order placed / confirmed / shipped / rejected / cancelled, organization verified), SMTP via MailKit with retry/backoff, Mailpit in Compose. Open: user language preference, HTML templates, in-app notifications.
 - ✅ Shipping module: carrier adapter interface, Manual + Simulated adapters, label ≠ handover, tracking sync job, parcel/insurance/lithium rules, delivery → 48 h inspection window → auto-completion (ADR-0005). Open: real DHL/DPD/GLS/UPS adapters (need API credentials + sandbox verification), returns labels, multi-parcel shipments.
 - ✅ Payments core (ADR-0006): PSP adapter interface + Simulated provider, idempotent webhooks (status re-fetched), commission + VAT, refunds on cancel, payouts after completion, immutable double-entry ledger with a single validated write path, seller balance. Open: Mollie Connect adapter (needs contract + test key), seller onboarding/KYC at the PSP, reconciliation with PSP reports, partial refunds, chargebacks.
@@ -109,7 +109,7 @@ Dependencies: Phase 2 payments + invoicing.
 ## Known limitations of Phase 1
 - Single VAT rate (19 %); no invoices; no payments — orders are commitments only.
 - Order = one seller; the UI splits the cart per seller.
-- Access tokens live 60 min; revoking admin rights or membership takes effect at the next request for tenant
+- Access tokens live 60 min (refresh tokens since ADR-0010; logout revokes only the refresh token, the access token runs out); revoking admin rights or membership takes effect at the next request for tenant
   data (membership is checked per request) but the admin claim persists until token expiry.
 - Import commit runs row-by-row in one transaction (fine up to the 20,000-row limit; to be batched later).
 - No Redis/Hangfire yet — not needed by the slice.

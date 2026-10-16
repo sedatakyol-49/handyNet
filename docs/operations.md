@@ -26,6 +26,27 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 | `Jwt:SigningKey` | ≥ 32 random bytes |
 | `Bootstrap:AdminEmail` / `Bootstrap:AdminPassword` | creates/promotes the platform admin at startup (idempotent) |
 
+## Sessions and account emails (ADR-0010)
+
+Non-secret settings (defaults in `appsettings.json`):
+
+| Key | Default | Purpose |
+|---|---|---|
+| `Jwt:AccessTokenMinutes` | 60 | access token lifetime; lower to 15 once the web app refreshes tokens |
+| `Jwt:RefreshTokenDays` | 14 | refresh token lifetime, renewed on every rotation |
+| `Identity:PasswordResetTokenMinutes` | 60 | reset link lifetime |
+| `Identity:EmailVerificationTokenHours` | 48 | verification link lifetime |
+| `RateLimits:AuthPerMinute` | 20 | per IP: login, registration, change password, reset confirm, verify |
+| `RateLimits:RefreshPerMinute` | 60 | per IP: refresh, logout |
+| `RateLimits:AccountEmailsPerHour` | 10 | per IP: reset request, verification resend |
+| `Notifications:PublicBaseUrl` | `http://localhost:4200` | base of the links in emails (`/email-bestaetigen#token=…`, `/passwort-zuruecksetzen#token=…`) — set to the public web app URL in every environment |
+
+Rate limits partition by the connection's remote IP. Behind a reverse proxy, configure forwarded headers first, or all
+clients share one bucket. Without `Notifications:Smtp:Host` emails (including reset links) are only logged — fine for
+development, never for production. Support: a user's sessions can be ended with `POST /api/auth/logout-all` (as the
+user) or by a password reset; `identity.refresh_tokens.revocation_reason = 'Reuse'` marks a detected token theft
+(also logged as a warning).
+
 ## Deploying a new version
 
 1. Take a backup (`deploy/backup/backup.sh`).

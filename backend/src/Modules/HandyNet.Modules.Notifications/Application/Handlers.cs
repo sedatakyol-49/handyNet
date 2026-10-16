@@ -31,6 +31,9 @@ internal sealed class EmailQueue(
     public async Task<string> OrganizationNameAsync(Guid organizationId, CancellationToken ct) =>
         (await organizations.GetAsync([organizationId], ct)).GetValueOrDefault(organizationId)?.Name ?? "?";
 
+    public Task<bool> AnyQueuedAsync(Guid sourceId, CancellationToken ct) =>
+        db.Set<EmailMessage>().AsNoTracking().AnyAsync(e => e.SourceId == sourceId, ct);
+
     /// <summary>Adds emails for recipients that do not have one for this source yet (at-least-once safe).</summary>
     public async Task QueueAsync(Guid sourceId, string template, IReadOnlyList<UserSummary> recipients, RenderedEmail content, CancellationToken ct)
     {
@@ -84,6 +87,56 @@ internal sealed class OrderStatusChangedHandler(EmailQueue queue, IOptions<Notif
         var link = $"{options.Value.PublicBaseUrl.TrimEnd('/')}/app/bestellungen/{e.OrderId}";
         await queue.QueueAsync(messageId, $"order.{e.To.ToLowerInvariant()}", recipients,
             EmailTemplates.OrderStatusForCounterparty(e.To, actor, e.Reason, link), ct);
+    }
+}
+
+/// <summary>Web app routes that consume the account links. The token travels in the URL fragment, so it never
+/// reaches server or proxy access logs, nor Referer headers.</summary>
+public static class AccountLinks
+{
+    public const string VerifyEmailPath = "/email-bestaetigen";
+    public const string ResetPasswordPath = "/passwort-zuruecksetzen";
+
+    public static string Build(string publicBaseUrl, string path, string token) =>
+        $"{publicBaseUrl.TrimEnd('/')}{path}#token={Uri.EscapeDataString(token)}";
+}
+
+/// <summary>
+/// Issues the verification token here (via Identity's contract) instead of carrying it in the event, so the outbox
+/// never stores it. Token row and email row are committed together by the dispatcher.
+/// </summary>
+internal sealed class EmailVerificationRequestedHandler(EmailQueue queue, IUserAccounts users, IOptions<NotificationOptions> options) : IOutboxHandler
+{
+    public string EventType => typeof(EmailVerificationRequested).FullName!;
+
+    public async Task HandleAsync(Guid messageId, string payload, CancellationToken ct)
+    {
+        if (await queue.AnyQueuedAsync(messageId, ct))
+            return; // re-delivery: the email (and its token) already exist
+        var e = JsonSerializer.Deserialize<EmailVerificationRequested>(payload)!;
+        if (await users.IssueEmailVerificationTokenAsync(e.UserId, ct) is not { } issued)
+            return; // verified meanwhile, or deactivated
+        var link = AccountLinks.Build(options.Value.PublicBaseUrl, AccountLinks.VerifyEmailPath, issued.Token);
+        await queue.QueueAsync(messageId, EmailTemplates.EmailVerificationTemplate, [issued.User],
+            EmailTemplates.EmailVerification(issued.User.DisplayName, link, issued.ValidFor, e.Language), ct);
+    }
+}
+
+/// <summary>Same pattern as <see cref="EmailVerificationRequestedHandler"/>: the reset token is issued here, not in the event.</summary>
+internal sealed class PasswordResetRequestedHandler(EmailQueue queue, IUserAccounts users, IOptions<NotificationOptions> options) : IOutboxHandler
+{
+    public string EventType => typeof(PasswordResetRequested).FullName!;
+
+    public async Task HandleAsync(Guid messageId, string payload, CancellationToken ct)
+    {
+        if (await queue.AnyQueuedAsync(messageId, ct))
+            return;
+        var e = JsonSerializer.Deserialize<PasswordResetRequested>(payload)!;
+        if (await users.IssuePasswordResetTokenAsync(e.UserId, ct) is not { } issued)
+            return;
+        var link = AccountLinks.Build(options.Value.PublicBaseUrl, AccountLinks.ResetPasswordPath, issued.Token);
+        await queue.QueueAsync(messageId, EmailTemplates.PasswordResetTemplate, [issued.User],
+            EmailTemplates.PasswordReset(issued.User.DisplayName, link, issued.ValidFor, e.Language), ct);
     }
 }
 

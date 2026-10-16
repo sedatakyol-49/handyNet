@@ -47,12 +47,22 @@ public sealed class EmailMessage
         CreatedAt = now,
     };
 
+    /// <summary>Replaces the body of account emails once delivery is finished.</summary>
+    public const string RedactedBody = "[redacted after delivery: contained a one-time link]";
+
+    /// <summary>
+    /// Account emails ("auth.*") carry a single-use link — the only plaintext copy of its token. The body is
+    /// dropped once the email left the queue, so the email table does not keep usable secrets.
+    /// </summary>
+    public bool ContainsSecret => Template.StartsWith("auth.", StringComparison.Ordinal);
+
     public void MarkSent(DateTimeOffset now)
     {
         Status = EmailStatus.Sent;
         SentAt = now;
         Attempts++;
         LastError = null;
+        RedactIfSecret();
     }
 
     public void MarkAttemptFailed(string error, DateTimeOffset now)
@@ -62,10 +72,17 @@ public sealed class EmailMessage
         if (Attempts >= MaxAttempts)
         {
             Status = EmailStatus.Failed;
+            RedactIfSecret();
             return;
         }
 
         NextAttemptAt = now + BackoffFor(Attempts);
+    }
+
+    private void RedactIfSecret()
+    {
+        if (ContainsSecret)
+            Body = RedactedBody;
     }
 
     /// <summary>1, 2, 4, 8 … minutes, capped at 6 hours.</summary>

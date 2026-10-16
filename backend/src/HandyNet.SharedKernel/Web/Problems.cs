@@ -11,6 +11,7 @@ public static class Problems
             ErrorKind.NotFound => StatusCodes.Status404NotFound,
             ErrorKind.Conflict => StatusCodes.Status409Conflict,
             ErrorKind.Forbidden => StatusCodes.Status403Forbidden,
+            ErrorKind.Unauthorized => StatusCodes.Status401Unauthorized,
             _ => StatusCodes.Status422UnprocessableEntity,
         },
         title: error.Message,

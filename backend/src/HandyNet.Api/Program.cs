@@ -100,6 +100,20 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = builder.Configuration.GetValue("RateLimits:AuthPerMinute", 20),
             Window = TimeSpan.FromMinutes(1),
         }));
+    options.AddPolicy(IdentityModule.RefreshRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:RefreshPerMinute", 60),
+            Window = TimeSpan.FromMinutes(1),
+        }));
+    options.AddPolicy(IdentityModule.AccountEmailRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:AccountEmailsPerHour", 10),
+            Window = TimeSpan.FromHours(1),
+        }));
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy

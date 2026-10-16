@@ -59,7 +59,7 @@ flowchart TD
 
 | Module | Schema | Owns | Public contract |
 |---|---|---|---|
-| Identity | `identity` | users, password hashing, lockout, JWT | `IUserAccounts` |
+| Identity | `identity` | users, password hashing, lockout, JWT access tokens, rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested` |
 | Tenancy | `tenancy` | organizations, verification, memberships/roles, module activation, tenant resolution | `IOrganizationDirectory` |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules | `IProductCatalog`, `ProductMatcher` |
 | Inventory | `inventory` | warehouses, stock levels, movements, reservations, serialized units (IMEI), sell/return staging for POS | `IInventory` |
@@ -73,7 +73,7 @@ flowchart TD
 | Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake (IMEI stock with §25a purchase price), Ankaufbeleg (PDF), seller-data retention job (anonymization, ADR-0009) | – (top-level; uses `IProductCatalog`, `IInventory`, `IOrganizationDirectory`) |
 | POS | `pos` | registers (gapless receipt numbers), cash sessions + daily closing (Z-report), immutable receipts with Storno/returns, §25a margin VAT, fiscal signer abstraction (test signer only, ADR-0008) | – (top-level; uses `IInventory`, `IProductCatalog`, `IOrganizationDirectory`) |
 | Ledger | `ledger` | immutable double-entry journal; single write path `ledger.post_entry`; tenant-visible own accounts | `ILedger` |
-| Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified), SMTP delivery with retry | – (consumes events only) |
+| Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified, email verification, password reset — de/en), SMTP delivery with retry, account email bodies redacted after delivery | – (consumes events only) |
 | Persistence | `infra` | DbContext, RLS session interceptor, audit log, outbox | `IModuleModel` |
 
 ### Planned modules and where they attach
