@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { catchError, firstValueFrom, of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
 import { CashSession, Receipt } from '../../core/api/models';
@@ -88,12 +88,7 @@ export class TillPage {
   /** Current open session, or null when the register has none. */
   protected readonly sessionQuery = createQuery(
     () => this.registerId(),
-    (id) =>
-      this.api.currentSession(id).pipe(
-        catchError((e: unknown) =>
-          toApiProblem(e).code === 'pos.no_open_session' ? of(null as CashSession | null) : throwError(() => e),
-        ),
-      ),
+    (id) => this.api.currentSession(id),
   );
   protected readonly session = computed(() => this.sessionQuery.value());
 

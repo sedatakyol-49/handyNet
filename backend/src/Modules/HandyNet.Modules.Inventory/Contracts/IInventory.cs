@@ -57,6 +57,9 @@ public interface IInventory
 
     /// <summary>The current tenant's in-stock (sellable) unit with this IMEI, or null. Never returns other tenants' units.</summary>
     Task<UnitSnapshot?> FindOwnUnitByImeiAsync(string imei, CancellationToken ct);
+
+    /// <summary>True when the product has serialized units (InStock/Reserved) in the warehouse: sell by IMEI, not by quantity.</summary>
+    Task<bool> HasSerializedStockAsync(Guid warehouseId, Guid productId, CancellationToken ct);
 }
 
 /// <summary>A serialized unit as other modules see it. The purchase price is the basis for §25a margin VAT.</summary>

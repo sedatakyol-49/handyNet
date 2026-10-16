@@ -148,6 +148,10 @@ internal sealed class InventoryService(
         return unit.Value.Id;
     }
 
+    public Task<bool> HasSerializedStockAsync(Guid warehouseId, Guid productId, CancellationToken ct) =>
+        db.Set<StockUnit>().AnyAsync(u => u.OrganizationId == OrganizationId && u.WarehouseId == warehouseId && u.ProductId == productId
+                                          && (u.Status == UnitStatus.InStock || u.Status == UnitStatus.Reserved), ct);
+
     /// <summary>Checked through an id-free SECURITY DEFINER function: units of other organizations stay invisible.</summary>
     public async Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct) =>
         await db.Database.SqlQuery<bool>($"SELECT inventory.imei_in_stock({imei}) AS \"Value\"").SingleAsync(ct);
@@ -156,8 +160,7 @@ internal sealed class InventoryService(
     {
         if (quantity <= 0)
             return Error.Validation("stock.quantity", "Quantity must be positive.");
-        if (await db.Set<StockUnit>().AnyAsync(u => u.OrganizationId == OrganizationId && u.WarehouseId == warehouseId && u.ProductId == productId
-                                                    && (u.Status == UnitStatus.InStock || u.Status == UnitStatus.Reserved), ct))
+        if (await HasSerializedStockAsync(warehouseId, productId, ct))
             return Error.Validation("stock.serialized_requires_imei", "This product is stocked as serialized devices. Scan the IMEI of the device sold.")
                 .WithDetails(new Dictionary<string, object?> { ["productId"] = productId });
 

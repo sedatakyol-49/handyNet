@@ -1441,7 +1441,8 @@
       "addError": {
         "duplicateUnit": "Bu cihaz zaten sepette.",
         "tooManyLines": "Bir fişte en fazla 200 satır olabilir.",
-        "quantityLimit": "Satır başına azami miktara ulaşıldı."
+        "quantityLimit": "Satır başına azami miktara ulaşıldı.",
+        "requiresImei": "Bu ürün tekil cihaz olarak stokta tutuluyor. Lütfen satılan cihazın IMEI numarasını okutun."
       },
       "settle": {
         "emptyCart": "Sepet boş.",
@@ -1480,7 +1481,8 @@
       "tseStart": "Başlangıç",
       "tseEnd": "Bitiş",
       "tseSignature": "İmza",
-      "print": "Fişi yazdır"
+      "print": "Fişi yazdır",
+      "cashier": "Kasiyer"
     },
     "receipts": {
       "title": "Fişler",
@@ -1589,7 +1591,9 @@
       "expected": "Beklenen bakiye",
       "counted": "Sayılan",
       "difference": "Fark",
-      "print": "Z raporunu yazdır"
+      "print": "Z raporunu yazdır",
+      "openedBy": "Açan: {name}",
+      "closedBy": "Kapatan: {name}"
     }
   }
 }

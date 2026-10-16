@@ -129,6 +129,7 @@ public class ModuleBoundaryTests
     [InlineData("Inventory", "Pos")]
     [InlineData("Catalog", "Pos")]
     [InlineData("Tenancy", "Pos")]
+    [InlineData("Identity", "Pos")]
     [InlineData("Payments", "Invoicing")]
     [InlineData("Tenancy", "Invoicing")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)

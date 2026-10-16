@@ -1441,7 +1441,8 @@
       "addError": {
         "duplicateUnit": "Dieses Gerät ist bereits im Warenkorb.",
         "tooManyLines": "Ein Beleg kann höchstens 200 Positionen haben.",
-        "quantityLimit": "Die Höchstmenge pro Position ist erreicht."
+        "quantityLimit": "Die Höchstmenge pro Position ist erreicht.",
+        "requiresImei": "Dieses Produkt wird als Einzelgerät geführt. Bitte scannen Sie die IMEI des verkauften Geräts."
       },
       "settle": {
         "emptyCart": "Der Warenkorb ist leer.",
@@ -1480,7 +1481,8 @@
       "tseStart": "Start",
       "tseEnd": "Ende",
       "tseSignature": "Signatur",
-      "print": "Beleg drucken"
+      "print": "Beleg drucken",
+      "cashier": "Kassierer/in"
     },
     "receipts": {
       "title": "Belege",
@@ -1589,7 +1591,9 @@
       "expected": "Erwarteter Bestand",
       "counted": "Gezählt",
       "difference": "Differenz",
-      "print": "Z-Bericht drucken"
+      "print": "Z-Bericht drucken",
+      "openedBy": "Geöffnet von {name}",
+      "closedBy": "Abgeschlossen von {name}"
     }
   }
 }

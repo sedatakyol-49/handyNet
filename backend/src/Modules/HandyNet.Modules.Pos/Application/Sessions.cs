@@ -1,4 +1,5 @@
 using FluentValidation;
+using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Modules.Pos.Domain;
 using HandyNet.Persistence;
@@ -20,7 +21,7 @@ public sealed record CashMovementRequest(CashMovementKind Kind, long AmountMinor
 
 public sealed record CloseSessionRequest(long CountedCashMinor, string? Note);
 
-public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy);
+public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy, string? CreatedByName);
 
 /// <summary>For an open session the summary and expected cash are live figures; for a closed one, the stored Z-report.</summary>
 public sealed record SessionDto(
@@ -30,9 +31,11 @@ public sealed record SessionDto(
     string Status,
     DateTimeOffset OpenedAt,
     Guid OpenedBy,
+    string? OpenedByName,
     long OpeningCashMinor,
     DateTimeOffset? ClosedAt,
     Guid? ClosedBy,
+    string? ClosedByName,
     long ExpectedCashMinor,
     long? CountedCashMinor,
     long? DifferenceMinor,
@@ -196,7 +199,7 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
         new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt);
 }
 
-internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IClock clock)
+internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IUserAccounts users, IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
@@ -223,7 +226,8 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         return await ToDtoAsync(session.Value, register.Name, ct);
     }
 
-    public async Task<Result<SessionDto>> GetCurrentAsync(Guid registerId, CancellationToken ct)
+    /// <summary>Success with null when the register has no open session (the normal state of a closed till).</summary>
+    public async Task<Result<SessionDto?>> GetCurrentAsync(Guid registerId, CancellationToken ct)
     {
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == registerId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
@@ -231,7 +235,7 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var session = await db.Set<CashSession>().AsNoTracking()
             .FirstOrDefaultAsync(s => s.RegisterId == registerId && s.Status == CashSessionStatus.Open, ct);
         if (session is null)
-            return Error.NotFound("pos.no_open_session", "This register has no open cash session.");
+            return (SessionDto?)null;
         return await ToDtoAsync(session, register.Name, ct);
     }
 
@@ -274,7 +278,8 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         db.Add(movement.Value);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-        return ToDto(movement.Value);
+        var name = (await users.GetAsync([movement.Value.CreatedBy], ct)).GetValueOrDefault(movement.Value.CreatedBy)?.DisplayName;
+        return ToDto(movement.Value, name);
     }
 
     /// <summary>
@@ -323,10 +328,14 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
     {
         var summary = s.Summary ?? await SummarizeAsync(s, ct);
         var movements = await db.Set<CashMovement>().AsNoTracking().Where(m => m.SessionId == s.Id).OrderBy(m => m.CreatedAt).ToListAsync(ct);
-        return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, s.OpeningCashMinor, s.ClosedAt, s.ClosedBy,
-            s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor, s.ClosingNote, summary,
-            movements.Select(ToDto).ToList());
+        var ids = movements.Select(m => m.CreatedBy).Append(s.OpenedBy).Concat(s.ClosedBy is { } c ? [c] : Array.Empty<Guid>()).Distinct().ToList();
+        var people = await users.GetAsync(ids, ct);
+        string? NameOf(Guid? id) => id is { } x && people.TryGetValue(x, out var u) ? u.DisplayName : null;
+        return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, NameOf(s.OpenedBy), s.OpeningCashMinor,
+            s.ClosedAt, s.ClosedBy, NameOf(s.ClosedBy), s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor,
+            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy))).ToList());
     }
 
-    private static CashMovementDto ToDto(CashMovement m) => new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy);
+    private static CashMovementDto ToDto(CashMovement m, string? createdByName) =>
+        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName);
 }

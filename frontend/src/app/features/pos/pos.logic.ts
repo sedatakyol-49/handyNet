@@ -115,7 +115,7 @@ export function cartTotals(lines: readonly CartLine[]): CartTotals {
 
 export type AddResult =
   | { ok: true; lines: CartLine[]; key: string; needsPrice: boolean }
-  | { ok: false; error: 'duplicateUnit' | 'notAvailable' | 'tooManyLines' | 'quantityLimit'; available?: number };
+  | { ok: false; error: 'duplicateUnit' | 'notAvailable' | 'tooManyLines' | 'quantityLimit' | 'requiresImei'; available?: number };
 
 /**
  * Adds a lookup result to the cart. Products already in the cart get +1 (up to the available stock when known);
@@ -141,6 +141,8 @@ export function addToCart(lines: readonly CartLine[], lookup: PosLookup, lastPri
     return { ok: true, lines: [...lines, line], key, needsPrice: !lastPriceMinor };
   }
 
+  // Serialized devices are sold by IMEI only: the EAN does not say which device leaves the shop.
+  if (lookup.requiresImei) return { ok: false, error: 'requiresImei' };
   const existing = lines.find((l) => l.key === lookup.productId);
   const available = lookup.available;
   if (existing) {

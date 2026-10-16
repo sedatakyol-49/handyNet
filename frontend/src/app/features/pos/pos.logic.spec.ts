@@ -40,6 +40,7 @@ const product = (over: Partial<PosLookup> = {}): PosLookup => ({
   onHand: 5,
   reserved: 0,
   available: 5,
+  requiresImei: false,
   ...over,
 });
 
@@ -133,6 +134,10 @@ describe('cart lines and totals', () => {
     const r = addToCart([], product(), 1999);
     expect(r.ok && r.lines[0].priceInput).toBe('19,99');
     expect(r.ok && r.needsPrice).toBe(false);
+  });
+
+  it('refuses an EAN of a product stocked as devices (the IMEI must be scanned)', () => {
+    expect(addToCart([], product({ requiresImei: true }), null)).toEqual({ ok: false, error: 'requiresImei' });
   });
 
   it('adds devices once with quantity 1', () => {

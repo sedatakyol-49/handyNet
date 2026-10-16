@@ -574,9 +574,9 @@ export class PosApi {
     return this.http.post<CashSession>(`${this.url}/registers/${registerId}/sessions`, { openingCashMinor });
   }
 
-  /** 404 `pos.no_open_session` when the register has no open session. */
-  currentSession(registerId: string): Observable<CashSession> {
-    return this.http.get<CashSession>(`${this.url}/registers/${registerId}/sessions/current`);
+  /** Null (204) when the register has no open session. */
+  currentSession(registerId: string): Observable<CashSession | null> {
+    return this.http.get<CashSession | null>(`${this.url}/registers/${registerId}/sessions/current`);
   }
 
   sessions(q: { registerId?: string | null; page?: number; pageSize?: number }): Observable<Paged<CashSession>> {

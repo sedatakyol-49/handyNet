@@ -63,7 +63,7 @@ public static class PosModule
             ?? (await service.OpenAsync(id, request, ct)).ToHttp(s => Results.Created($"/api/pos/sessions/{s.Id}", s)));
 
         sell.MapGet("/registers/{id:guid}/sessions/current", async (Guid id, SessionService service, CancellationToken ct) =>
-            (await service.GetCurrentAsync(id, ct)).ToHttp(Results.Ok));
+            (await service.GetCurrentAsync(id, ct)).ToHttp(s => s is null ? Results.NoContent() : Results.Ok(s)));
 
         sell.MapGet("/sessions", async (Guid? registerId, int? page, int? pageSize, SessionService service, CancellationToken ct) =>
             Results.Ok(await service.ListAsync(registerId, page, pageSize, ct)));

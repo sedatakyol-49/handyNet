@@ -736,6 +736,7 @@ export interface CashMovement {
   reason: string;
   createdAt: string;
   createdBy: string;
+  createdByName: string | null;
 }
 
 export interface PaymentTotal {
@@ -778,9 +779,11 @@ export interface CashSession {
   status: 'Open' | 'Closed';
   openedAt: string;
   openedBy: string;
+  openedByName: string | null;
   openingCashMinor: number;
   closedAt: string | null;
   closedBy: string | null;
+  closedByName: string | null;
   expectedCashMinor: number;
   countedCashMinor: number | null;
   differenceMinor: number | null;
@@ -802,6 +805,8 @@ export interface PosLookup {
   onHand: number | null;
   reserved: number | null;
   available: number | null;
+  /** Stocked as serialized devices in the register's warehouse: scan the IMEI instead of the EAN. */
+  requiresImei: boolean;
 }
 
 export interface SaleLineRequest {
@@ -926,6 +931,7 @@ export interface Receipt {
   cancelledByReceiptId: string | null;
   createdAt: string;
   createdBy: string;
+  createdByName: string | null;
   currency: string;
   totalGrossMinor: number;
   changeMinor: number;

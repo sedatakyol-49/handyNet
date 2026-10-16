@@ -42,6 +42,10 @@ import { UI } from '../../shared/ui';
         }
         <dt>{{ 'pos.receipt.register' | t }}</dt>
         <dd class="text-end">{{ d.registerName }}</dd>
+        @if (cashier()) {
+          <dt>{{ 'pos.receipt.cashier' | t }}</dt>
+          <dd class="text-end" data-testid="receipt-cashier">{{ cashier() }}</dd>
+        }
         <dt>{{ 'pos.receipt.date' | t }}</dt>
         <dd class="text-end">{{ d.issuedAt | hnDate }}</dd>
       </dl>
@@ -136,6 +140,8 @@ import { UI } from '../../shared/ui';
 })
 export class ReceiptViewComponent {
   readonly doc = input.required<ReceiptDocument>();
+  /** Who issued the receipt (not part of the stored document). */
+  readonly cashier = input<string | null>(null);
   /** Notes printed below the totals; the fiscal notice is shown prominently at the top instead of repeated here. */
   protected readonly notes = computed(() => {
     const d = this.doc();

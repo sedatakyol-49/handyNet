@@ -84,6 +84,7 @@ test.describe.serial('POS', () => {
     await expect(page.getByTestId('pos-sale-done')).toContainText('25,00 €');
     const receipt = page.getByTestId('receipt');
     await expect(receipt.getByTestId('receipt-number')).toHaveText('1');
+    await expect(receipt.getByTestId('receipt-cashier')).not.toBeEmpty();
     await expect(receipt.getByTestId('receipt-fiscal-notice')).toHaveText('TSE nicht angebunden – Testbetrieb');
     await expect(receipt.getByTestId('receipt-total')).toHaveText('25,00 €');
     await expect(receipt.getByTestId('receipt-change')).toHaveText('25,00 €');
@@ -129,6 +130,8 @@ test.describe.serial('POS', () => {
     await expect(z.getByTestId('z-difference')).toHaveText('0,00 €');
     await expect(z.getByTestId('z-counted')).toHaveText('112,50 €');
     await expect(z.getByTestId('z-range')).toHaveText('1 bis 2');
+    await expect(z.getByTestId('z-opened-by')).toContainText('Geöffnet von');
+    await expect(z.getByTestId('z-closed-by')).toContainText('Abgeschlossen von');
     await expect(z.getByTestId('z-total-gross')).toHaveText('12,50 €');
     await expect(z.getByTestId('z-by-payment').locator('[data-method="Cash"]')).toHaveText('12,50 €');
     await expect(z.getByTestId('z-by-tax').locator('[data-treatment="Standard19"]')).toContainText('12,50 €');

@@ -1441,7 +1441,8 @@
       "addError": {
         "duplicateUnit": "This device is already in the cart.",
         "tooManyLines": "A receipt can have at most 200 lines.",
-        "quantityLimit": "The maximum quantity per line has been reached."
+        "quantityLimit": "The maximum quantity per line has been reached.",
+        "requiresImei": "This product is stocked as individual devices. Please scan the IMEI of the device sold."
       },
       "settle": {
         "emptyCart": "The cart is empty.",
@@ -1480,7 +1481,8 @@
       "tseStart": "Start",
       "tseEnd": "End",
       "tseSignature": "Signature",
-      "print": "Print receipt"
+      "print": "Print receipt",
+      "cashier": "Cashier"
     },
     "receipts": {
       "title": "Receipts",
@@ -1589,7 +1591,9 @@
       "expected": "Expected balance",
       "counted": "Counted",
       "difference": "Difference",
-      "print": "Print Z report"
+      "print": "Print Z report",
+      "openedBy": "Opened by {name}",
+      "closedBy": "Closed by {name}"
     }
   }
 }

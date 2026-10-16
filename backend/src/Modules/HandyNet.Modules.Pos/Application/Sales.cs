@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FluentValidation;
 using HandyNet.Modules.Catalog.Contracts;
+using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Modules.Inventory.Domain;
 using HandyNet.Modules.Pos.Domain;
@@ -60,6 +61,7 @@ public sealed record ReceiptDto(
     Guid? CancelledByReceiptId,
     DateTimeOffset CreatedAt,
     Guid CreatedBy,
+    string? CreatedByName,
     string Currency,
     long TotalGrossMinor,
     long ChangeMinor,
@@ -75,7 +77,10 @@ public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId,
 
 public sealed record SaleResult(ReceiptDto Receipt, bool Replayed);
 
-/// <summary>Kind = "Product" (EAN) or "Unit" (IMEI). Stock figures refer to the register's warehouse (null without registerId).</summary>
+/// <summary>
+/// Kind = "Product" (EAN) or "Unit" (IMEI). Stock figures refer to the register's warehouse (null without registerId).
+/// RequiresImei: the product is stocked as serialized devices in that warehouse, so the IMEI must be scanned instead.
+/// </summary>
 public sealed record LookupDto(
     string Kind,
     Guid ProductId,
@@ -88,7 +93,8 @@ public sealed record LookupDto(
     Guid? WarehouseId,
     int? OnHand,
     int? Reserved,
-    int? Available);
+    int? Available,
+    bool RequiresImei);
 
 internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
 {
@@ -155,6 +161,7 @@ internal sealed class SaleService(
     IInventory inventory,
     IProductCatalog catalog,
     IOrganizationDirectory organizations,
+    IUserAccounts users,
     FiscalSignerProvider signers,
     IClock clock,
     ILogger<SaleService> logger)
@@ -364,16 +371,20 @@ internal sealed class SaleService(
             var device = (await catalog.GetAsync([unit.ProductId], ct))[unit.ProductId];
             var treatment = unit.TaxScheme == TaxScheme.Margin25a ? TaxTreatment.Margin25a : TaxTreatment.Standard19;
             return new LookupDto("Unit", unit.ProductId, device.Brand, device.Name, device.Ean, unit.Imei, unit.UnitId, treatment.ToString(),
-                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0);
+                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0, false);
         }
 
         if (await catalog.FindByEanAsync(trimmed, ct) is { } product)
         {
             StockSnapshot? level = null;
+            var requiresImei = false;
             if (warehouseId is { } w)
+            {
                 level = (await inventory.GetLevelsAsync(w, [product.Id], ct)).GetValueOrDefault(product.Id) ?? new StockSnapshot(w, product.Id, 0, 0);
+                requiresImei = await inventory.HasSerializedStockAsync(w, product.Id, ct);
+            }
             return new LookupDto("Product", product.Id, product.Brand, product.Name, product.Ean, null, null, TaxTreatment.Standard19.ToString(),
-                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved);
+                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved, requiresImei);
         }
 
         return Error.NotFound("pos.code_not_found", "No product with this EAN and no device with this IMEI in your stock.");
@@ -538,7 +549,7 @@ internal sealed class SaleService(
             l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber))).ToList();
 
         return new ReceiptDto(r.Id, r.RegisterId, registerName, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, referencedNumber, cancelledBy,
-            r.CreatedAt, r.CreatedBy, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
+            r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
             r.Document!.Vat, r.Fiscal, r.Document);
     }

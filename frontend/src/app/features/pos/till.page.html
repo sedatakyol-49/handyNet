@@ -155,7 +155,7 @@
             <p class="mt-1 text-2xl font-bold tabular-nums">{{ 'pos.till.changeDue' | t }}: {{ r.changeMinor | money }}</p>
           }
         </div>
-        <hn-receipt-view [doc]="r.document" />
+        <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
         <div class="hn-no-print flex gap-2">
           <button hnButton type="button" class="min-h-12 flex-1 text-base" (click)="print()" data-testid="pos-print">{{ 'pos.receipt.print' | t }}</button>
           <button hnButton variant="primary" type="button" class="min-h-12 flex-1 text-base" (click)="newSale()" data-testid="pos-new-sale">{{ 'pos.till.newSale' | t }}</button>

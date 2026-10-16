@@ -46,7 +46,7 @@ import { ReceiptViewComponent } from './receipt-view';
 
     @if (receipt(); as r) {
       <div class="grid gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
-        <hn-receipt-view [doc]="r.document" />
+        <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
 
         <div class="hn-no-print min-w-0 space-y-4">
           <section class="hn-card p-4 text-sm" aria-labelledby="pos-detail-info">

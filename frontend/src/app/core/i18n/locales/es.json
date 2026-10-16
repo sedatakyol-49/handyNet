@@ -1441,7 +1441,8 @@
       "addError": {
         "duplicateUnit": "Este dispositivo ya está en la cesta.",
         "tooManyLines": "Un tique puede tener como máximo 200 líneas.",
-        "quantityLimit": "Se ha alcanzado la cantidad máxima por línea."
+        "quantityLimit": "Se ha alcanzado la cantidad máxima por línea.",
+        "requiresImei": "Este producto se gestiona como dispositivos individuales. Escanee el IMEI del dispositivo vendido."
       },
       "settle": {
         "emptyCart": "La cesta está vacía.",
@@ -1480,7 +1481,8 @@
       "tseStart": "Inicio",
       "tseEnd": "Fin",
       "tseSignature": "Firma",
-      "print": "Imprimir tique"
+      "print": "Imprimir tique",
+      "cashier": "Cajero/a"
     },
     "receipts": {
       "title": "Tiques",
@@ -1589,7 +1591,9 @@
       "expected": "Saldo esperado",
       "counted": "Contado",
       "difference": "Diferencia",
-      "print": "Imprimir informe Z"
+      "print": "Imprimir informe Z",
+      "openedBy": "Abierta por {name}",
+      "closedBy": "Cerrada por {name}"
     }
   }
 }

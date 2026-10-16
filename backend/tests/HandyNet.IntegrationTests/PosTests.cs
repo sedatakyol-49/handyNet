@@ -91,6 +91,15 @@ public sealed class PosTests(HandyNetFixture fixture)
         return product.Value.Id;
     }
 
+    private async Task<bool> HasSerializedStockAsync(ApiClient shop, Guid productId)
+    {
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().SetSystemActor(shop.OrganizationId!.Value);
+        var inventory = scope.ServiceProvider.GetRequiredService<IInventory>();
+        var warehouseId = await inventory.GetOrStageDefaultWarehouseAsync(CancellationToken.None);
+        return await inventory.HasSerializedStockAsync(warehouseId, productId, CancellationToken.None);
+    }
+
     private static async Task<Guid> RegisterWithSessionAsync(ApiClient shop, string name, long openingCashMinor = 100_00)
     {
         var register = Id((await shop.PostAsync("/api/pos/registers", new { name })).Expect(HttpStatusCode.Created).Json);
@@ -130,7 +139,8 @@ public sealed class PosTests(HandyNetFixture fixture)
             payments = new[] { new { method = "Cash", amountMinor = cash } },
         };
 
-        // No open session: refused, and no receipt number is used up.
+        // No open session: the till reads "none" (204), a sale is refused and no receipt number is used up.
+        (await shop.GetAsync($"/api/pos/registers/{register}/sessions/current")).Expect(HttpStatusCode.NoContent);
         Assert.Equal("pos.no_open_session", (await shop.PostAsync("/api/pos/sales", SaleBody(400_00), Key())).Code);
         (await shop.PostAsync($"/api/pos/registers/{register}/sessions", new { openingCashMinor = 100_00 })).Expect(HttpStatusCode.Created);
         Assert.Equal("pos.session_already_open",
@@ -138,13 +148,16 @@ public sealed class PosTests(HandyNetFixture fixture)
 
         // Lookup by EAN (own stock) and by IMEI (own in-stock device).
         var byEan = (await shop.GetAsync($"/api/pos/lookup?code={ean}&registerId={register}")).Expect(HttpStatusCode.OK).Json;
-        Assert.Equal(("Product", 5), (byEan["kind"]!.GetValue<string>(), byEan["available"]!.GetValue<int>()));
+        Assert.Equal(("Product", 5, false), (byEan["kind"]!.GetValue<string>(), byEan["available"]!.GetValue<int>(), byEan["requiresImei"]!.GetValue<bool>()));
+        Assert.True(await HasSerializedStockAsync(shop, device));
+        Assert.False(await HasSerializedStockAsync(shop, cable));
         var byImei = (await shop.GetAsync($"/api/pos/lookup?code={imei}&registerId={register}")).Expect(HttpStatusCode.OK).Json;
         Assert.Equal(("Unit", device, "Margin25a"), (byImei["kind"]!.GetValue<string>(), Id(byImei, "productId"), byImei["taxTreatment"]!.GetValue<string>()));
 
         // Sale 1: 2 cables (19.00 incl. 3.03 VAT) + used phone under §25a (300.00, bought for 220.00 → 12.77 VAT on the margin).
         var first = (await shop.PostAsync("/api/pos/sales", SaleBody(400_00), Key())).Expect(HttpStatusCode.Created).Json;
         Assert.Equal(1, first["number"]!.GetValue<long>());
+        Assert.False(string.IsNullOrWhiteSpace(first["createdByName"]?.GetValue<string>()));
         Assert.Equal(319_00, first["totalGrossMinor"]!.GetValue<long>());
         Assert.Equal(81_00, first["changeMinor"]!.GetValue<long>());
         var vat = first["vat"]!.AsArray().Single()!; // §25a VAT is never printed
@@ -223,13 +236,16 @@ public sealed class PosTests(HandyNetFixture fixture)
         Assert.Equal((10_00L, 1_60L), (Tax("Standard19")["grossMinor"]!.GetValue<long>(), Tax("Standard19")["vatMinor"]!.GetValue<long>()));
         Assert.Equal((0L, 0L), (Tax("Margin25a")["grossMinor"]!.GetValue<long>(), Tax("Margin25a")["vatMinor"]!.GetValue<long>()));
         Assert.Equal(2, closed["movements"]!.AsArray().Count);
+        var cashier = first["createdByName"]!.GetValue<string>();
+        Assert.Equal((cashier, cashier), (closed["openedByName"]!.GetValue<string>(), closed["closedByName"]!.GetValue<string>()));
+        Assert.All(closed["movements"]!.AsArray(), m => Assert.Equal(cashier, m!["createdByName"]!.GetValue<string>()));
 
         // Closed is final.
         Assert.Equal("pos.session_closed", (await shop.PostAsync($"/api/pos/sessions/{sessionId}/close", new { countedCashMinor = 0 })).Code);
         Assert.Equal("pos.session_closed",
             (await shop.PostAsync($"/api/pos/sessions/{sessionId}/cash-movements", new { kind = "Deposit", amountMinor = 1_00, reason = "x" })).Code);
         Assert.Equal("pos.no_open_session", (await shop.PostAsync("/api/pos/sales", SaleBody(400_00), Key())).Code);
-        Assert.Equal("pos.no_open_session", (await shop.GetAsync($"/api/pos/registers/{register}/sessions/current")).Code);
+        (await shop.GetAsync($"/api/pos/registers/{register}/sessions/current")).Expect(HttpStatusCode.NoContent);
 
         var numbers = (await shop.GetAsync($"/api/pos/sales?registerId={register}")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray()
             .Select(r => r!["number"]!.GetValue<long>()).Order();
