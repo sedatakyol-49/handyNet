@@ -121,6 +121,6 @@ payouts. **No claim of legal completeness** — the template needs review by a t
 
 E-invoicing (XRechnung / ZUGFeRD; B2B e-invoice obligations from 2025/2027), DATEV export, archiving of the issued PDF
 (the PDF is re-rendered from the immutable data; a GoBD archive with hash/format proof is open), sending invoices by
-email, reverse charge for sellers outside Germany (all treated as domestic, 19 %), partial refunds, a seller-facing UI,
+email, reverse charge for sellers outside Germany (all treated as domestic, 19 %), partial refunds,
 tax adviser review of the invoice template, confirmation of the Ankauf retention period and of the anonymization scope
 (e.g. whether the ID document type must also go), retention of other personal data (user accounts, organizations).

@@ -65,7 +65,8 @@
     "finance": "Finances",
     "ankauf": "Buyback",
     "intakes": "Purchases",
-    "pos": "Till"
+    "pos": "Till",
+    "invoices": "Invoices"
   },
   "auth": {
     "email": "Email address",
@@ -256,7 +257,16 @@
       "stock.insufficient": "Not enough stock available. Reserved goods cannot be sold.",
       "stock.serialized_requires_imei": "This product is stocked as individual devices. Please scan the IMEI of the device sold.",
       "unit.not_available": "This device is not (or no longer) in stock.",
-      "unit.other_warehouse": "This device is stocked in a different warehouse than the till’s."
+      "unit.other_warehouse": "This device is stocked in a different warehouse than the till’s.",
+      "invoicing.month_not_over": "This month has not ended yet. Invoices are issued for past months only.",
+      "invoicing.month": "Please enter the month as YYYY-MM.",
+      "invoicing.issuer_not_configured": "The issuer data for invoices are not configured yet (placeholders). No invoices were issued.",
+      "invoicing.issuer_incomplete": "The issuer data for invoices are incomplete (name, address and VAT ID or tax number required).",
+      "invoicing.not_found": "Invoice not found.",
+      "invoicing.concurrent": "Another billing run is in progress. Please run it again.",
+      "invoicing.failed": "Unexpected error; see the server log for details.",
+      "invoicing.vat_mismatch": "The VAT of a payment does not match the VAT rate; the invoice was not issued.",
+      "invoicing.number_range": "The number range for this year is exhausted."
     }
   },
   "dashboard": {
@@ -556,7 +566,8 @@
       "label": "Administration areas",
       "organizations": "Companies",
       "disputes": "Complaints",
-      "ankauf": "Buyback prices"
+      "ankauf": "Buyback prices",
+      "invoices": "Commission invoices"
     },
     "disputes": {
       "subtitle": "Review and decide complaints handed over to HandyNet.",
@@ -871,7 +882,8 @@
       "credit": "Credit",
       "debit": "Payout"
     },
-    "openOrderNumber": "Open order {number}"
+    "openOrderNumber": "Open order {number}",
+    "invoicesLink": "Commission invoices"
   },
   "disputeReason": {
     "Damaged": "Damaged goods",
@@ -1604,6 +1616,96 @@
       "print": "Print Z report",
       "openedBy": "Opened by {name}",
       "closedBy": "Closed by {name}"
+    }
+  },
+  "invoiceKind": {
+    "Invoice": "Invoice",
+    "CreditNote": "Invoice correction"
+  },
+  "invoices": {
+    "title": "Commission invoices",
+    "subtitle": "Invoices from HandyNet for the brokerage commission on online-paid sales, issued monthly after the month has ended.",
+    "hint": "Invoice numbers HN-YYYY-nnnnnn, corrections HN-RK-YYYY-nnnnnn. Issued documents are never changed: if an already invoiced payment is refunded, an invoice correction in the month of the refund offsets the line.",
+    "backToFinance": "Back to finances",
+    "back": "Back to invoices",
+    "number": "Number",
+    "kind": "Type",
+    "billingMonth": "Billing month",
+    "issueDate": "Invoice date",
+    "servicePeriod": "Service period",
+    "periodRange": "{from} to {to}",
+    "lineCount": "Lines",
+    "lines": "Lines",
+    "net": "Net",
+    "vat": "VAT",
+    "gross": "Gross",
+    "pdf": "PDF",
+    "downloadPdf": "Download PDF",
+    "downloadPdfLabel": "Download PDF of {number}",
+    "openLabel": "Open {number}",
+    "corrects": "Corrects {number}",
+    "empty": "No commission invoices yet",
+    "emptyText": "Invoices are issued after the end of a month for the sales paid online in that month.",
+    "detail": {
+      "subtitle": "The document exactly as issued. Issued invoices are never changed.",
+      "document": "Document",
+      "issuer": "Issuer",
+      "recipient": "Recipient",
+      "vatId": "VAT ID",
+      "taxNumber": "Tax number",
+      "vatRate": "VAT rate",
+      "correctsInvoice": "Corrected invoice",
+      "serviceText": "Brokerage commission for orders paid online via HandyNet, one line per order.",
+      "correctionNote": "This invoice correction reverses the following lines of invoice {number} because the payments were refunded.",
+      "withheldNote": "The commission was already withheld from the payout; no payment is due.",
+      "placeholder": "SAMPLE: the issuer data are still placeholders. This document is not a valid invoice.",
+      "line": "No.",
+      "order": "Order",
+      "paidAt": "Paid on",
+      "totalNet": "Net total",
+      "totalVat": "VAT {rate}",
+      "totalGross": "Total amount",
+      "issuedAt": "Issued on {date}"
+    },
+    "admin": {
+      "subtitle": "Issue and review commission invoices and invoice corrections for a completed month.",
+      "issueHeading": "Bill a month",
+      "month": "Billing month",
+      "monthHint": "Completed months only (German time). The previous month is suggested.",
+      "issue": "Issue invoices",
+      "helpHeading": "How issuing works",
+      "autoHint": "A background job issues the previous month automatically, normally in the first hour of the 1st. Here you can bill a month manually or catch up, e.g. after an outage.",
+      "idempotentHint": "Running it again is safe: at most one invoice is created per seller and month, and at most one correction per corrected invoice and refund month. Documents that already exist are returned unchanged and counted as \"Already issued\". After errors, simply run it again.",
+      "correctionHint": "Invoice corrections are created in the run for the month in which the refund happened, not the month of the original invoice.",
+      "pdfHint": "Sellers can download the PDFs under Finances → Invoices.",
+      "confirmTitle": "Issue invoices?",
+      "confirmText": "Invoices and invoice corrections for {month} will be issued for all sellers with commission or refunds. Issued documents are final and sequentially numbered; they cannot be changed or deleted.",
+      "idempotentShort": "Documents of this month that already exist are not issued twice.",
+      "result": "Result for {month}",
+      "sellersChecked": "Sellers checked",
+      "invoicesIssued": "New invoices",
+      "creditNotesIssued": "New corrections",
+      "alreadyIssued": "Already issued",
+      "outcome": {
+        "issued": "New documents were issued.",
+        "unchanged": "Nothing new: all documents of this month had already been issued.",
+        "empty": "No sellers with commission or refunds in this month.",
+        "failed": "Issuing failed for {count} sellers. The other documents have been issued; fix the cause and run it again."
+      },
+      "failures": "Failed",
+      "organization": "Company (ID)",
+      "code": "Code",
+      "message": "Message",
+      "monthDocuments": "Documents for {month}",
+      "monthDocumentsHint": "All invoices and corrections with this billing month, across all sellers. The total includes corrections with negative amounts.",
+      "recipient": "Recipient",
+      "noDocuments": "No documents for this month",
+      "total": "Total",
+      "validation": {
+        "required": "Please choose a month.",
+        "format": "Please enter the month as YYYY-MM.",
+        "notOver": "This month has not ended yet. Only past months can be billed."
+      }
     }
   }
 }

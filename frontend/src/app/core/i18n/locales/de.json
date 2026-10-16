@@ -65,7 +65,8 @@
     "finance": "Finanzen",
     "ankauf": "Ankauf",
     "intakes": "Ankäufe",
-    "pos": "Kasse"
+    "pos": "Kasse",
+    "invoices": "Rechnungen"
   },
   "auth": {
     "email": "E-Mail-Adresse",
@@ -256,7 +257,16 @@
       "stock.insufficient": "Nicht genügend Bestand verfügbar. Reservierte Ware kann nicht verkauft werden.",
       "stock.serialized_requires_imei": "Dieser Artikel wird als Einzelgerät geführt. Bitte scannen Sie die IMEI des verkauften Geräts.",
       "unit.not_available": "Dieses Gerät ist nicht (mehr) auf Lager.",
-      "unit.other_warehouse": "Dieses Gerät liegt in einem anderen Lager als dem der Kasse."
+      "unit.other_warehouse": "Dieses Gerät liegt in einem anderen Lager als dem der Kasse.",
+      "invoicing.month_not_over": "Dieser Monat ist noch nicht abgeschlossen. Rechnungen werden nur für vergangene Monate ausgestellt.",
+      "invoicing.month": "Bitte den Monat im Format JJJJ-MM angeben.",
+      "invoicing.issuer_not_configured": "Die Absenderdaten für Rechnungen sind noch nicht konfiguriert (Platzhalter). Es wurden keine Rechnungen ausgestellt.",
+      "invoicing.issuer_incomplete": "Die Absenderdaten für Rechnungen sind unvollständig (Name, Anschrift und USt-IdNr. oder Steuernummer erforderlich).",
+      "invoicing.not_found": "Rechnung nicht gefunden.",
+      "invoicing.concurrent": "Es wird gerade parallel abgerechnet. Bitte erneut ausführen.",
+      "invoicing.failed": "Unerwarteter Fehler; Details im Server-Log.",
+      "invoicing.vat_mismatch": "Die Umsatzsteuer einer Zahlung passt nicht zum Steuersatz; die Rechnung wurde nicht ausgestellt.",
+      "invoicing.number_range": "Der Nummernkreis für dieses Jahr ist erschöpft."
     }
   },
   "dashboard": {
@@ -556,7 +566,8 @@
       "label": "Bereiche der Administration",
       "organizations": "Unternehmen",
       "disputes": "Reklamationen",
-      "ankauf": "Ankaufspreise"
+      "ankauf": "Ankaufspreise",
+      "invoices": "Provisionsrechnungen"
     },
     "disputes": {
       "subtitle": "An HandyNet übergebene Reklamationen prüfen und entscheiden.",
@@ -871,7 +882,8 @@
       "credit": "Gutschrift",
       "debit": "Auszahlung"
     },
-    "openOrderNumber": "Bestellung {number} öffnen"
+    "openOrderNumber": "Bestellung {number} öffnen",
+    "invoicesLink": "Provisionsrechnungen"
   },
   "disputeReason": {
     "Damaged": "Ware beschädigt",
@@ -1604,6 +1616,96 @@
       "print": "Z-Bericht drucken",
       "openedBy": "Geöffnet von {name}",
       "closedBy": "Abgeschlossen von {name}"
+    }
+  },
+  "invoiceKind": {
+    "Invoice": "Rechnung",
+    "CreditNote": "Rechnungskorrektur"
+  },
+  "invoices": {
+    "title": "Provisionsrechnungen",
+    "subtitle": "Rechnungen von HandyNet über die Vermittlungsprovision für online bezahlte Verkäufe, monatlich nach Monatsende.",
+    "hint": "Rechnungsnummern HN-JJJJ-nnnnnn, Rechnungskorrekturen HN-RK-JJJJ-nnnnnn. Ausgestellte Dokumente werden nie geändert: Wird eine bereits abgerechnete Zahlung erstattet, gleicht eine Rechnungskorrektur im Monat der Erstattung die Position aus.",
+    "backToFinance": "Zu den Finanzen",
+    "back": "Zurück zu den Rechnungen",
+    "number": "Nummer",
+    "kind": "Art",
+    "billingMonth": "Abrechnungsmonat",
+    "issueDate": "Rechnungsdatum",
+    "servicePeriod": "Leistungszeitraum",
+    "periodRange": "{from} bis {to}",
+    "lineCount": "Positionen",
+    "lines": "Positionen",
+    "net": "Netto",
+    "vat": "USt",
+    "gross": "Brutto",
+    "pdf": "PDF",
+    "downloadPdf": "PDF herunterladen",
+    "downloadPdfLabel": "PDF von {number} herunterladen",
+    "openLabel": "{number} öffnen",
+    "corrects": "Korrigiert {number}",
+    "empty": "Noch keine Provisionsrechnungen",
+    "emptyText": "Rechnungen werden nach Ende eines Monats für die in diesem Monat online bezahlten Verkäufe ausgestellt.",
+    "detail": {
+      "subtitle": "Dokument genau wie ausgestellt. Ausgestellte Rechnungen werden nicht geändert.",
+      "document": "Dokument",
+      "issuer": "Rechnungssteller",
+      "recipient": "Rechnungsempfänger",
+      "vatId": "USt-IdNr.",
+      "taxNumber": "Steuernummer",
+      "vatRate": "USt-Satz",
+      "correctsInvoice": "Korrigierte Rechnung",
+      "serviceText": "Vermittlungsprovision für online bezahlte Bestellungen über HandyNet, je Bestellung eine Position.",
+      "correctionNote": "Diese Rechnungskorrektur storniert die folgenden Positionen der Rechnung {number}, weil die Zahlungen erstattet wurden.",
+      "withheldNote": "Die Provision wurde bereits bei der Auszahlung einbehalten; es ist keine Zahlung fällig.",
+      "placeholder": "MUSTER: Die Absenderdaten sind noch Platzhalter. Dieses Dokument ist keine gültige Rechnung.",
+      "line": "Pos.",
+      "order": "Bestellung",
+      "paidAt": "Bezahlt am",
+      "totalNet": "Summe netto",
+      "totalVat": "Umsatzsteuer {rate}",
+      "totalGross": "Gesamtbetrag",
+      "issuedAt": "Ausgestellt am {date}"
+    },
+    "admin": {
+      "subtitle": "Provisionsrechnungen und Rechnungskorrekturen für einen abgeschlossenen Monat ausstellen und prüfen.",
+      "issueHeading": "Monat abrechnen",
+      "month": "Abrechnungsmonat",
+      "monthHint": "Nur abgeschlossene Monate (deutsche Zeit). Vorgeschlagen ist der Vormonat.",
+      "issue": "Rechnungen ausstellen",
+      "helpHeading": "So funktioniert das Ausstellen",
+      "autoHint": "Ein Hintergrundjob stellt den Vormonat automatisch aus, normalerweise in der ersten Stunde des Monatsersten. Hier können Sie einen Monat manuell (nach)abrechnen, z. B. nach einem Ausfall.",
+      "idempotentHint": "Erneutes Ausführen ist unbedenklich: Je Verkäufer und Monat entsteht höchstens eine Rechnung, je korrigierter Rechnung und Erstattungsmonat höchstens eine Korrektur. Bereits ausgestellte Dokumente werden unverändert zurückgegeben und als „Bereits ausgestellt“ gezählt. Nach Fehlern einfach erneut ausführen.",
+      "correctionHint": "Rechnungskorrekturen entstehen im Lauf des Monats, in dem die Erstattung erfolgte, nicht im Monat der ursprünglichen Rechnung.",
+      "pdfHint": "Die PDFs sind für die Verkäufer unter Finanzen → Rechnungen abrufbar.",
+      "confirmTitle": "Rechnungen ausstellen?",
+      "confirmText": "Für {month} werden Rechnungen und Rechnungskorrekturen für alle Verkäufer mit Provision oder Erstattungen ausgestellt. Ausgestellte Dokumente sind endgültig und fortlaufend nummeriert; sie können nicht geändert oder gelöscht werden.",
+      "idempotentShort": "Bereits vorhandene Dokumente dieses Monats werden nicht doppelt ausgestellt.",
+      "result": "Ergebnis für {month}",
+      "sellersChecked": "Verkäufer geprüft",
+      "invoicesIssued": "Rechnungen neu ausgestellt",
+      "creditNotesIssued": "Korrekturen neu ausgestellt",
+      "alreadyIssued": "Bereits ausgestellt",
+      "outcome": {
+        "issued": "Neue Dokumente wurden ausgestellt.",
+        "unchanged": "Nichts Neues: Alle Dokumente dieses Monats waren bereits ausgestellt.",
+        "empty": "Keine Verkäufer mit Provision oder Erstattungen in diesem Monat.",
+        "failed": "Für {count} Verkäufer ist das Ausstellen fehlgeschlagen. Die übrigen Dokumente sind ausgestellt; beheben Sie die Ursache und führen Sie den Lauf erneut aus."
+      },
+      "failures": "Fehlgeschlagen",
+      "organization": "Unternehmen (ID)",
+      "code": "Code",
+      "message": "Meldung",
+      "monthDocuments": "Dokumente für {month}",
+      "monthDocumentsHint": "Alle Rechnungen und Korrekturen mit diesem Abrechnungsmonat, über alle Verkäufer. Die Summe enthält Korrekturen mit negativem Betrag.",
+      "recipient": "Empfänger",
+      "noDocuments": "Keine Dokumente für diesen Monat",
+      "total": "Summe",
+      "validation": {
+        "required": "Bitte einen Monat wählen.",
+        "format": "Bitte den Monat im Format JJJJ-MM angeben.",
+        "notOver": "Dieser Monat ist noch nicht abgeschlossen. Abgerechnet werden nur vergangene Monate."
+      }
     }
   }
 }

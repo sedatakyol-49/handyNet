@@ -41,6 +41,9 @@ import {
   ImportOptions,
   ImportRow,
   ImportRowStatus,
+  Invoice,
+  InvoiceSummary,
+  IssueRunResult,
   LedgerLine,
   Listing,
   MarketplaceSort,
@@ -620,5 +623,49 @@ export class PosApi {
 
   returnItems(id: string, body: ReturnRequest, idempotencyKey: string): Observable<Receipt> {
     return this.http.post<Receipt>(`${this.url}/sales/${id}/returns`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
+  }
+}
+
+/** Seller's own commission invoices and corrections (B2BSales + orders.fulfil, tenant-scoped, read only). */
+@Injectable({ providedIn: 'root' })
+export class InvoicesApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/invoices`;
+
+  /** Newest first. */
+  list(page = 1, pageSize = 25): Observable<Paged<InvoiceSummary>> {
+    return this.http.get<Paged<InvoiceSummary>>(this.url, { params: queryParams({ page, pageSize }) });
+  }
+
+  /** 404 `invoicing.not_found` for unknown ids or documents of another organization. */
+  get(id: string): Observable<Invoice> {
+    return this.http.get<Invoice>(`${this.url}/${id}`);
+  }
+
+  /** PDF rendered from the immutable invoice data. Problem bodies of failed blob requests are parsed so `code` is available. */
+  pdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/${id}/pdf`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+}
+
+/** Platform administration of commission invoicing (no X-Organization-Id). */
+@Injectable({ providedIn: 'root' })
+export class AdminInvoicesApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/admin/invoices`;
+
+  /**
+   * Issues invoices and corrections for a completed month (`yyyy-MM`), the same idempotent path as the monthly job.
+   * 422 `invoicing.month_not_over` for the current/future month; 409 `invoicing.issuer_not_configured` / `issuer_incomplete`.
+   */
+  issue(month: string): Observable<IssueRunResult> {
+    return this.http.post<IssueRunResult>(`${this.url}/issue`, { month });
+  }
+
+  /** All documents with the given billing month across sellers, ordered by number. */
+  forMonth(month: string): Observable<InvoiceSummary[]> {
+    return this.http.get<InvoiceSummary[]>(this.url, { params: queryParams({ month }) });
   }
 }
