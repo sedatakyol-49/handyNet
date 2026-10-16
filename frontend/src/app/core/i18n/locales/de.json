@@ -102,6 +102,16 @@
       "submit": "Registrierung absenden",
       "haveAccount": "Bereits registriert?",
       "loginLink": "Zur Anmeldung"
+    },
+    "hero": {
+      "title": "Die Plattform für Mobilfunkhandel, Ankauf und Reparatur",
+      "subtitle": "Großhandel, Ladengeschäft und Werkstatt in einem System – vom Wareneingang bis zum Kassenbeleg.",
+      "feature1": "B2B-Marktplatz mit Echtzeit-Beständen und sicherer Reservierung",
+      "feature2": "Ankauf mit Preislisten, IMEI-Prüfung und Ankaufbeleg",
+      "feature3": "Kasse mit Belegen, Retouren und Tagesabschluss",
+      "cardImei": "IMEI geprüft",
+      "cardReceipt": "Kassenbeleg #1042",
+      "cardOffer": "Ankaufangebot"
     }
   },
   "validation": {

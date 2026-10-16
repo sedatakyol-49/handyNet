@@ -102,6 +102,16 @@
       "submit": "Submit registration",
       "haveAccount": "Already registered?",
       "loginLink": "Sign in"
+    },
+    "hero": {
+      "title": "The platform for mobile phone trade, buyback and repair",
+      "subtitle": "Wholesale, retail store and workshop in one system – from goods receipt to the till receipt.",
+      "feature1": "B2B marketplace with real-time stock and safe reservations",
+      "feature2": "Buyback with price lists, IMEI checks and purchase receipts",
+      "feature3": "Point of sale with receipts, returns and daily closing",
+      "cardImei": "IMEI verified",
+      "cardReceipt": "Receipt #1042",
+      "cardOffer": "Buyback offer"
     }
   },
   "validation": {

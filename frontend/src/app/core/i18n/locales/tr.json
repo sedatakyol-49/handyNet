@@ -102,6 +102,16 @@
       "submit": "Kaydı gönder",
       "haveAccount": "Zaten kayıtlı mısınız?",
       "loginLink": "Giriş sayfasına git"
+    },
+    "hero": {
+      "title": "Cep telefonu ticareti, alım ve tamir için platform",
+      "subtitle": "Toptan satış, mağaza ve atölye tek sistemde – mal girişinden kasa fişine kadar.",
+      "feature1": "Gerçek zamanlı stok ve güvenli rezervasyonla B2B pazar yeri",
+      "feature2": "Fiyat listeleri, IMEI kontrolü ve alım belgesiyle cihaz alımı",
+      "feature3": "Fiş, iade ve gün sonu kapanışıyla kasa",
+      "cardImei": "IMEI doğrulandı",
+      "cardReceipt": "Kasa fişi #1042",
+      "cardOffer": "Alım teklifi"
     }
   },
   "validation": {

@@ -102,6 +102,16 @@
       "submit": "Enviar registro",
       "haveAccount": "¿Ya está registrado?",
       "loginLink": "Ir al inicio de sesión"
+    },
+    "hero": {
+      "title": "La plataforma para el comercio de móviles, la recompra y la reparación",
+      "subtitle": "Venta mayorista, tienda y taller en un solo sistema: desde la entrada de mercancía hasta el ticket de caja.",
+      "feature1": "Marketplace B2B con existencias en tiempo real y reservas seguras",
+      "feature2": "Recompra con listas de precios, comprobación de IMEI y justificante de compra",
+      "feature3": "Caja con tickets, devoluciones y cierre diario",
+      "cardImei": "IMEI verificado",
+      "cardReceipt": "Ticket n.º 1042",
+      "cardOffer": "Oferta de recompra"
     }
   },
   "validation": {
