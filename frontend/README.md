@@ -77,15 +77,18 @@ src/app
    ├─ offers/                own offers with inline price/status editing, create offer from catalog
    ├─ inventory/             stock table, adjustment dialog, movements, warehouses
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
-   ├─ team/                  staff list + add staff
+   ├─ team/                  staff list + add staff + per-cashier POS rights (module Pos)
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
    │                         (IMEI Luhn check, quote form validation, error text); device intake (Ankäufe list +
    │                         intake page) with intake.logic.ts (age, seller/inspect/amount checks, steps per status)
    ├─ pos/                   Kasse (standalone app /kasse): pos-app (top bar), registers, selling screen (cart, numpad,
-   │                         product grid, parked orders, payment, receipt), receipts (Storno/Return), cash sessions with
-   │                         closing and Z-report; pos.logic.ts (cart totals, % discounts, VAT preview, numpad, split
-   │                         payments/change, parked orders, idempotency, returnable quantities, shortcuts),
-   │                         receipt-view (printable 80 mm receipt), z-report
+   │                         product grid, parked orders, line notes, customer, payment, receipt), order history with
+   │                         filters + reprints, receipt detail (Storno/Return), cash sessions (denomination counts,
+   │                         reasons, closing, Z-report), sales report, price maintenance; pos.logic.ts (cart totals,
+   │                         % discounts, VAT preview, numpad, split payments/change, parked orders, idempotency,
+   │                         returnable quantities, shortcuts), pos-rights.ts (cashier rights, discount limit),
+   │                         cash-count.ts (denominations), sales-filter.ts (history filter ↔ query/URL),
+   │                         customer-form.ts, receipt-view (printable 80 mm receipt, "Kopie n"), z-report
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
       │                      "Reklamationen" (escalated disputes queue, detail + decision), "Ankaufspreise" and
       │                      "Provisionsrechnungen" (issue a month, run result, documents of the month)
@@ -314,14 +317,32 @@ Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
     net / VAT 19 % (computed per line exactly like the API) and §25a devices listed without VAT (margin VAT is computed by
     the API from the purchase price and never shown). Numpad with the modes Menge / % Rabatt / Preis (the first key
     replaces the shown value, backspace on an empty quantity removes the line), −/+, C, and a display field for
-    keyboard entry. Unit prices are typed by the cashier (the API has no sales prices) and prefilled with the last price
-    used in this browser session (`sessionStorage`).
-  - Products (end side, needs the module Inventory): search/scan field, category chips and tiles for the stock rows of
-    the register's warehouse (`GET /api/inventory/stock`, up to 600 rows; categories via `GET /api/catalog/products/{id}`,
-    cached in `localStorage`; no images in the API → category icon or monogram; stock badge; sold-out tiles greyed).
-    Text filters the tiles (Enter adds a single match); EAN/IMEI codes (6–20 digits) + Enter are looked up
-    (`/api/pos/lookup`): EAN → product line (+1 per scan, limited to the available stock), 15 digits → own in-stock
-    device (quantity fixed 1, IMEI shown, §25a marked). Tapping a tile with an EAN uses the same lookup.
+    keyboard entry. Unit prices come from the API's till price (see Prices below); products without one are typed by
+    the cashier and prefilled with the last price used in this browser session (`sessionStorage`).
+  - Products (end side, needs the module Inventory): search/scan field, category chips with counts
+    (`GET /api/pos/registers/{id}/product-categories`) and tiles from `GET /api/pos/registers/{id}/products` (server
+    search debounced 250 ms, 48 per page, infinite scroll via IntersectionObserver plus a "Mehr laden" button, optional
+    "Ausverkaufte"). Tiles show the till price (gross) or "Preis an der Kasse", stock badge, "Nur per IMEI-Scan" for
+    serialized products (tapping them asks for the IMEI); `imageUrl` is shown when the API provides one, otherwise the
+    category icon or a monogram. Enter adds the single server match; EAN/IMEI codes (6–20 digits) + Enter are looked up
+    (`/api/pos/lookup`, which also returns the till price): EAN → product line (+1 per scan, limited to the available
+    stock), 15 digits → own in-stock device (quantity fixed 1, IMEI shown, §25a marked).
+  - Prices: the line price is prefilled with the API's till price (own POS price, else own offer net + 19 %); only
+    without one the cashier types it (prefilled with the last price of this browser session). With `pos.manage` a tile's
+    corner button, a long-press or a right-click opens the price dialog (`GET/PUT /api/pos/prices/{productId}`: till
+    price, source, offer net price, set or remove the POS price); `/kasse/:registerId/preise` lists all products of the
+    warehouse with POS price / till price / source. A saved price updates open lines that still had the old price.
+  - Cashier rights (`posRights()` from `/api/me`: effective permissions + `maxDiscountPercent`): the Preis mode is
+    locked (lock icon) when the till knows a price and the cashier lacks `pos.price_override`; % Rabatt needs
+    `pos.discount`; the limit is shown and checked like the API's `LinePolicy` (discount × 100 > max × unit × qty, integer
+    cents) — offending lines are marked and payment is blocked. Returns need `pos.refund`, the cash menu
+    `pos.cash_movement` / `pos.close_session`, the session report `pos.close_session` or `pos.manage`. The API's 403
+    codes (`pos.price_override_forbidden` with the expected price, `pos.discount_forbidden`,
+    `pos.discount_limit_exceeded` with the limit) are translated and mark the line.
+  - Line notes ("Notiz" next to the customer button above the numpad, ≤ 200 characters) are shown in the cart, sent with
+    the sale and printed under the line. Customer ("Kunde"): Odoo-like picker (`GET/POST/PUT /api/pos/customers`, server
+    search, create/edit form with client checks, no delete), attached to the ticket (stored with parked tickets),
+    shown on the payment screen and printed from the API's snapshot (name, company, address, VAT id — never email/phone).
   - Parked orders: several open tickets per register (tabs with item counts, "+" parks the current one, discard with
     confirmation), stored in `localStorage` per organization + register (`hn.pos.orders.*`, tolerant to blocked or
     corrupted storage), including the pending checkout attempt.
@@ -339,15 +360,31 @@ Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
   breakdown, notes (§25a), payments/tendered/change and, prominently on top, the fiscal notice ("TSE nicht angebunden –
   Testbetrieb" in dev; TSE data is printed only for signed receipts). "Beleg drucken" uses `window.print()`; the print
   stylesheet in `styles.css` prints only the `.hn-print-area` (receipt or Z-report) on an 80 mm roll.
-- `/kasse/:registerId/belege` (current session or all) and `/kasse/belege/:id`: Storno (`pos.manage`, reason,
-  confirmation; not offered once items were returned) and Return (quantity per line up to sold − returned, refund
-  preview allocated exactly like the API, cash or card, reason, confirmation, own Idempotency-Key).
-- `/kasse/sitzungen/:id`: live interim figures, deposits/withdrawals with reason, closing with the counted cash
-  (difference to the expected cash shown before and in the confirmation, which re-reads the session first); afterwards
-  the printable Z-report (receipt number range, counts, totals, by payment method and by taxation, cash
-  reconciliation). `/kasse/:registerId/sitzungen` lists the sessions.
-- Not yet possible because the API lacks it (see `../docs/roadmap.md`, Phase 2c): product images and sales prices,
-  line notes, customers, e-mail receipts, cashier PIN/permissions per cashier.
+- `/kasse/:registerId/belege` (order history): scope current session / this register / all registers and a filter bar
+  (receipt number, from/to day — `to` is sent as the start of the next local day because the API's `to` is exclusive —,
+  signed amount range, cashier, customer via the picker, payment method, kind), kept in the URL query (`nr`, `von`,
+  `bis`, `min`, `max`, `kassierer`, `kunde`, `zahlart`, `art`, `scope`); columns include cashier, customer,
+  payment methods and the number of copies. `/kasse/belege/:id`: "Kopie drucken" records a reprint
+  (`POST /api/pos/sales/{id}/reprints`) and prints the receipt with the "Kopie n" marker; copies and the last reprint
+  time are shown. Storno (`pos.manage`, reason, confirmation; not offered once items were returned) and Return
+  (`pos.refund`; quantity per line up to sold − returned, refund preview allocated exactly like the API, cash or card,
+  reason, confirmation, own Idempotency-Key).
+- Opening (selling screen) and closing (`/kasse/sitzungen/:id`) take a plain amount or a denomination count (EUR notes
+  and coins with −/+ and count fields, subtotals and live total; sent as `denominations`, the API stores the total).
+  The session page: live interim figures, deposits/withdrawals with a predefined reason from
+  `GET /api/pos/cash-movement-reasons` (text required for "Sonstige"), closing with the difference to the expected cash
+  (shown before and in the confirmation, which re-reads the session first); afterwards the printable Z-report (receipt
+  number range, counts, totals, by payment method and by taxation, cash reconciliation, opening/closing counts).
+  `/kasse/:registerId/sitzungen` lists the sessions.
+- `/kasse/berichte?sitzung=…` (session report) and `/kasse/berichte` (date range + register, `pos.manage`):
+  `GET /api/pos/reports/sales` by product (sold/returned/discount/gross), by cashier and by payment method, printable.
+- Per-cashier rights are edited on the Team page (`/app/team`, `organization.manage`, organizations with the module
+  Pos): staff rows show their POS rights and discount limit; "Kassenrechte" opens a dialog (use defaults, or choose
+  among `pos.price_override`, `pos.discount`, `pos.refund`, `pos.cash_movement`, `pos.close_session`; max. discount 0–100,
+  empty = unlimited) → `PUT /api/organization/staff/{userId}/pos-rights`. Owners/managers always have all rights
+  (`409 staff.pos_rights_role` is translated). Changes apply to the cashier with the next request; the POS reads the
+  rights from `/api/me`, so a running till shows them after a reload.
+- Not yet possible because the API lacks it: product images (`imageUrl` is always null), e-mail receipts, cashier PIN.
 - Money stays in integer cents (`parseMoneyToMinor`) and is displayed with Intl de-DE. `pos.*`, `stock.insufficient`
   (with the available quantity), `stock.serialized_requires_imei` and `unit.*` codes are translated.
 
@@ -423,15 +460,19 @@ Without these variables the tests are skipped. Specs:
   on-hand 1. A second shop: a 16-year-old seller is refused client-side, the stocked IMEI shows the in-stock warning,
   another intake is rejected with a reason. Same default-policy assumption as ankauf-flow.
 
-- `e2e/pos-flow.spec.ts` – shop with Pos + Inventory + ProductImport; a product with an EAN and 5 units received are
-  created via the API. No POS entry in the back-office menu; the overview launches `/kasse`. The shop creates a
-  register, opens a session with 100,00 €, scans the EAN, types 12,50 € on the numpad display, quantity 2 via the numpad
-  (total 25,00 €, VAT 3,99 €); parks the ticket, adds the product to a second ticket by its tile, switches back and
-  reloads (both tickets kept); pays ticket 1 with 50,00 € cash on the payment screen (F9) → receipt no. 1 with 25,00 €
-  change and "TSE nicht angebunden – Testbetrieb"; pays ticket 2 split (card 10,00 € + cash 5,00 €) → receipt no. 2
-  with 2,50 € change; returns one item of receipt 1 in cash → receipt no. 3 with −12,50 €; closes with counted =
-  expected (115,00 €) → difference 0,00 €, Z-report: receipts 1 to 3, 25,00 € gross, cash 15,00 €, card 10,00 €;
+- `e2e/pos-flow.spec.ts` – shop with Pos + Inventory + ProductImport; a product with an EAN, 5 units and a POS price
+  of 12,50 € are created via the API. No POS entry in the back-office menu; the overview launches `/kasse`. The shop
+  creates a register, opens the session by counting denominations (100,00 €); the tile shows 12,50 €, the scan
+  prefills it, quantity 2 → 25,00 € (VAT 3,99 €); a line note and a newly created customer are attached; a second
+  ticket gets the product by its tile; reload keeps both tickets, note and customer; ticket 1 paid with 50,00 € cash →
+  receipt no. 1 with change, fiscal notice, the note and the customer (no email); ticket 2 split card + cash →
+  receipt no. 2. Order history: filter by number and by customer, reprint → "Kopie 1", 1 copy; return of one item →
+  receipt no. 3 (−12,50 €); closing counted by denomination (115,00 €) → difference 0,00 €, Z-report with both counts,
+  receipts 1 to 3; the session report shows 25,00 € gross, cash 15,00 €, card 10,00 €, the product and the cashier;
   `/app/kasse` redirects to `/kasse`, the menu leads back to the back office.
+- `e2e/pos-rights.spec.ts` – the owner restricts a staff member on the Team page (only "Rabatt geben", max. 10 %; 150 is
+  refused client-side); the cashier's till locks the price (POS price 20,00 €), refuses 15 % before payment with the
+  limit, sells with 10 % (18,00 €), and offers no cash in/out, closing, prices, report or return.
 
 - `e2e/invoices.spec.ts` – a new seller (B2BSales) opens "Rechnungen" from the navigation and from Finanzen (empty list
   from the real API, only that nav entry active), an unknown id shows "Rechnung nicht gefunden."; a buyer-only company

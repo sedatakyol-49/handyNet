@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CashSession } from '../../core/api/models';
 import { UI } from '../../shared/ui';
+import { countTotal, denominationLabel, fromDenominations } from './cash-count';
 
 /**
  * Z-report (closed session, stored figures) or interim report (open session, live figures). Printable on the receipt
@@ -109,10 +110,44 @@ import { UI } from '../../shared/ui';
       @if (s.closingNote) {
         <p class="mt-3 text-xs"><span class="font-semibold">{{ 'pos.session.note' | t }}:</span> {{ s.closingNote }}</p>
       }
+      @for (c of counts(); track c.key) {
+        <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.' + c.key | t }}</h3>
+        <table class="w-full text-sm" [attr.data-testid]="'z-' + c.key">
+          <thead class="sr-only">
+            <tr><th scope="col">{{ 'pos.cashCount.denomination' | t }}</th><th scope="col">{{ 'pos.cashCount.count' | t }}</th><th scope="col">{{ 'pos.receipt.amount' | t }}</th></tr>
+          </thead>
+          <tbody>
+            @for (d of c.list; track d.valueMinor) {
+              <tr [attr.data-denomination]="d.valueMinor">
+                <td dir="ltr" class="text-start tabular-nums">{{ label(d.valueMinor) }}</td>
+                <td class="text-end tabular-nums">× {{ d.count }}</td>
+                <td class="text-end tabular-nums">{{ d.valueMinor * d.count | money }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="border-t border-slate-200 font-semibold">
+              <td colspan="2">{{ 'pos.cashCount.total' | t }}</td>
+              <td class="text-end tabular-nums" [attr.data-testid]="'z-' + c.key + '-total'">{{ c.total | money }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      }
     </article>
   `,
 })
 export class ZReportComponent {
   readonly session = input.required<CashSession>();
   readonly printable = input(false);
+  protected readonly label = denominationLabel;
+  /** Opening/closing cash counts by denomination (only when they were counted that way). */
+  protected readonly counts = computed(() => {
+    const s = this.session();
+    return [
+      { key: 'openingCount', list: s.openingDenominations ?? [] },
+      { key: 'closingCount', list: s.closingDenominations ?? [] },
+    ]
+      .filter((c) => c.list.length)
+      .map((c) => ({ ...c, total: countTotal(fromDenominations(c.list)) }));
+  });
 }

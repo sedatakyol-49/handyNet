@@ -133,7 +133,8 @@ export class ToastHostComponent {
   template: `
     <dialog
       #dialog
-      class="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
+      class="m-auto rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
+      [class]="wide() ? 'w-[min(56rem,calc(100vw-2rem))]' : 'w-[min(32rem,calc(100vw-2rem))]'"
       [attr.aria-labelledby]="titleId"
       (close)="closed.emit()"
     >
@@ -150,6 +151,8 @@ export class DialogComponent {
   protected readonly titleId = `hn-dialog-${DialogComponent.nextId++}`;
   readonly title = input.required<string>();
   readonly open = input(false);
+  /** Wider dialog (lists with forms, e.g. the POS customer picker). */
+  readonly wide = input(false);
   readonly closed = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 

@@ -609,7 +609,46 @@
     "since": "Miembro desde",
     "empty": "No hay empleados",
     "initialPassword": "Contraseña inicial",
-    "passwordHint": "Solo es necesaria para cuentas de usuario nuevas. Las cuentas existentes se añaden sin contraseña."
+    "passwordHint": "Solo es necesaria para cuentas de usuario nuevas. Las cuentas existentes se añaden sin contraseña.",
+    "posRights": {
+      "column": "Permisos de caja",
+      "all": "Todos los permisos (rol)",
+      "defaults": "predeterminado",
+      "none": "Ninguno",
+      "edit": "Permisos de caja",
+      "editFor": "Editar permisos de caja de {name}",
+      "title": "Permisos de caja: {name}",
+      "text": "Titulares y gerentes tienen siempre todos los permisos de caja. Para el personal puede elegir permisos concretos y un límite de descuento; los cambios se aplican desde su próxima acción en caja.",
+      "useDefaults": "Usar permisos predeterminados (descuento, devoluciones, entradas/salidas, cierre)",
+      "rights": "Permisos",
+      "maxDiscount": "Descuento máx. (%)",
+      "maxDiscountHint": "Número entero de 0 a 100; vacío = sin límite.",
+      "maxDiscountInvalid": "Introduzca un número entero de 0 a 100.",
+      "maxDiscountShort": "Descuento hasta {percent} %",
+      "saved": "Permisos de caja de {name} guardados.",
+      "roleError": "Titulares y gerentes tienen siempre todos los permisos de caja.",
+      "names": {
+        "priceOverride": "Cambiar precio",
+        "discount": "Dar descuento",
+        "refund": "Devoluciones y reembolsos",
+        "cashMovement": "Entradas y salidas de efectivo",
+        "closeSession": "Cerrar caja"
+      },
+      "short": {
+        "priceOverride": "Precio",
+        "discount": "Descuento",
+        "refund": "Devolución",
+        "cashMovement": "Entr./Sal.",
+        "closeSession": "Cierre"
+      },
+      "help": {
+        "priceOverride": "Vender a un precio distinto del precio de caja.",
+        "discount": "Dar descuentos por línea hasta el límite indicado abajo.",
+        "refund": "Recibir artículos vendidos y reembolsarlos.",
+        "cashMovement": "Meter o sacar efectivo de la caja.",
+        "closeSession": "Cierre diario e informe de sesión."
+      }
+    }
   },
   "admin": {
     "title": "Administración",
@@ -1450,7 +1489,10 @@
         "dark": "Oscuro"
       },
       "backOffice": "Volver a la administración",
-      "noSession": "Ninguna sesión abierta"
+      "noSession": "Ninguna sesión abierta",
+      "prices": "Precios",
+      "reports": "Informes",
+      "sessionReport": "Informe de sesión"
     },
     "launch": {
       "title": "TPV (venta en tienda)",
@@ -1512,14 +1554,19 @@
       "quickCash": "Efectivo",
       "validate": "Validar",
       "newOrderAfterSale": "Nuevo pedido",
-      "nextScanHint": "El siguiente escaneo inicia automáticamente un nuevo pedido."
+      "nextScanHint": "El siguiente escaneo inicia automáticamente un nuevo pedido.",
+      "showSoldOut": "Agotados",
+      "noPrice": "Precio en caja",
+      "imeiOnly": "Solo escaneando el IMEI",
+      "loadMore": "Cargar más ({shown} de {total})"
     },
     "subnav": {
       "label": "Secciones de caja",
       "registers": "Todas las cajas",
       "till": "Venta",
       "receipts": "Tiques",
-      "sessions": "Sesiones"
+      "sessions": "Sesiones",
+      "prices": "Precios"
     },
     "registers": {
       "title": "Caja",
@@ -1626,7 +1673,27 @@
     "errors": {
       "insufficientStock": "No hay suficiente stock disponible (disponible: {available}). La mercancía reservada no se puede vender.",
       "insufficientCash": "No hay tanto efectivo en el cajón (saldo esperado: {amount}).",
-      "returnImeiInStock": "Este dispositivo ya vuelve a estar en stock (aquí o en otra empresa). Compruebe su procedencia."
+      "returnImeiInStock": "Este dispositivo ya vuelve a estar en stock (aquí o en otra empresa). Compruebe su procedencia.",
+      "priceOverrideForbidden": "Línea {line}: el precio es {price}. Para cambiarlo se necesita el permiso «Cambiar precio».",
+      "discountForbidden": "Línea {line}: los descuentos requieren el permiso «Dar descuento».",
+      "discountLimitExceeded": "Línea {line}: puede dar como máximo un {percent} % de descuento.",
+      "denominationsMismatch": "El recuento suma {total}, no {amount}.",
+      "customerNotFound": "Cliente no encontrado.",
+      "customerName": "Indique un nombre de cliente (máx. 200 caracteres).",
+      "customerEmail": "El correo electrónico no es válido.",
+      "customerVatId": "El NIF-IVA no es válido (4–20 letras o cifras).",
+      "customerCountry": "El país debe ser un código ISO de 2 letras.",
+      "customerFieldLength": "Un campo del cliente es demasiado largo.",
+      "lineNote": "La nota está limitada a 200 caracteres.",
+      "dateRange": "El periodo no es válido.",
+      "amountRange": "El importe mínimo no puede superar el máximo.",
+      "reason": "Indique un motivo.",
+      "reasonCode": "El motivo no corresponde al tipo de movimiento.",
+      "cashAmountRequired": "Introduzca un importe o cuente por denominación.",
+      "denominationInvalid": "El recuento no es válido.",
+      "price": "El precio debe estar entre 0,01 € y 1.000.000 €.",
+      "productNotFound": "Producto no encontrado.",
+      "permissionDenied": "No tiene permiso para hacerlo."
     },
     "receipt": {
       "notSigned": "Sin firmar",
@@ -1652,7 +1719,9 @@
       "tseEnd": "Fin",
       "tseSignature": "Firma",
       "print": "Imprimir tique",
-      "cashier": "Cajero/a"
+      "cashier": "Cajero/a",
+      "copy": "Copia {sequence}",
+      "customer": "Cliente"
     },
     "receipts": {
       "title": "Tiques",
@@ -1661,7 +1730,29 @@
       "allSessions": "Todas las sesiones",
       "kind": "Tipo",
       "open": "Abrir",
-      "empty": "No hay tiques."
+      "empty": "No hay tiques.",
+      "filters": "Filtros",
+      "from": "Desde",
+      "to": "Hasta",
+      "minTotal": "Importe desde",
+      "maxTotal": "Importe hasta",
+      "any": "Todos",
+      "paymentMethod": "Forma de pago",
+      "apply": "Filtrar",
+      "reset": "Restablecer",
+      "noMatch": "No hay tickets con estos filtros.",
+      "customerSelected": "Cliente elegido",
+      "clearCustomer": "Quitar filtro de cliente",
+      "scopes": {
+        "session": "Sesión actual",
+        "register": "Esta caja",
+        "all": "Todas las cajas"
+      },
+      "errors": {
+        "invalid": "No válido.",
+        "dateRange": "«Hasta» no puede ser anterior a «Desde».",
+        "amountRange": "«Importe desde» es mayor que «Importe hasta»."
+      }
     },
     "detail": {
       "title": "Tique n.º {number}",
@@ -1702,7 +1793,11 @@
       "stornoText": "¿Anular por completo el tique n.º {number} de {amount}? Se crea un tique de anulación; la mercancía vuelve al stock y los pagos se contabilizan en sentido inverso.",
       "stornoConfirm": "Anular",
       "reasonRequired": "Indique un motivo.",
-      "stornoDone": "Tique de anulación n.º {number} creado."
+      "stornoDone": "Tique de anulación n.º {number} creado.",
+      "reprint": "Imprimir copia",
+      "reprints": "Copias",
+      "lastReprint": "última {date}",
+      "reprinted": "Copia {sequence} registrada."
     },
     "session": {
       "title": "Sesión de caja {register}",
@@ -1729,7 +1824,11 @@
       "confirmTitle": "Cerrar caja",
       "confirmText": "Compruebe las cifras. El cierre no se puede deshacer.",
       "closeConfirm": "Cerrar",
-      "closed": "Caja cerrada."
+      "closed": "Caja cerrada.",
+      "reasonCode": "Motivo",
+      "reasonFree": "Texto libre",
+      "reasonOptional": "Opcional: sustituye el texto estándar.",
+      "reasonText": "Observación"
     },
     "sessions": {
       "title": "Sesiones de caja",
@@ -1763,7 +1862,129 @@
       "difference": "Diferencia",
       "print": "Imprimir informe Z",
       "openedBy": "Abierta por {name}",
-      "closedBy": "Cerrada por {name}"
+      "closedBy": "Cerrada por {name}",
+      "openingCount": "Recuento de apertura",
+      "closingCount": "Recuento de cierre"
+    },
+    "cashCount": {
+      "label": "Recuento por denominación",
+      "notes": "Billetes",
+      "coins": "Monedas",
+      "minus": "Un {value} menos",
+      "plus": "Un {value} más",
+      "total": "Contado",
+      "modeLabel": "Registro",
+      "modeAmount": "Importe",
+      "modeCount": "Contar",
+      "denomination": "Denominación",
+      "count": "Cantidad"
+    },
+    "customers": {
+      "title": "Clientes",
+      "button": "Cliente",
+      "choose": "Elegir cliente",
+      "changeFor": "Cambiar cliente {name}",
+      "search": "Buscar clientes",
+      "searchPlaceholder": "Nombre, empresa, correo, teléfono, NIF-IVA",
+      "new": "Nuevo cliente",
+      "newTitle": "Nuevo cliente",
+      "editTitle": "Editar cliente",
+      "editFor": "Editar {name}",
+      "empty": "Todavía no hay clientes.",
+      "noMatch": "No se encontró ningún cliente.",
+      "detach": "Quitar cliente",
+      "saveAndAttach": "Guardar y asignar",
+      "created": "Cliente {name} creado.",
+      "updated": "Cliente {name} guardado.",
+      "privacy": "En el ticket solo aparecen nombre, empresa, dirección y NIF-IVA, nunca el correo ni el teléfono.",
+      "fields": {
+        "name": "Nombre",
+        "company": "Empresa",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "street": "Calle y número",
+        "postalCode": "Código postal",
+        "city": "Ciudad",
+        "countryCode": "País (código ISO, p. ej. DE)",
+        "vatId": "NIF-IVA"
+      },
+      "errors": {
+        "required": "Obligatorio.",
+        "tooLong": "Demasiado largo.",
+        "invalid": "Entrada no válida."
+      }
+    },
+    "note": {
+      "button": "Nota",
+      "title": "Nota de la línea",
+      "label": "Nota",
+      "hint": "Se imprime en el ticket bajo la línea (máx. {max} caracteres).",
+      "remove": "Quitar nota"
+    },
+    "price": {
+      "title": "Mantener precio",
+      "edit": "Precio",
+      "editFor": "Editar el precio de {name}",
+      "tillPrice": "Precio de caja",
+      "source": "Origen",
+      "sources": {
+        "PosPrice": "Precio de caja propio",
+        "Offer": "Oferta propia (neto + 19 % IVA)",
+        "None": "Sin precio: se introduce en caja"
+      },
+      "offerNet": "Precio de oferta neto",
+      "updatedAt": "Último cambio",
+      "posPrice": "Precio de caja (bruto)",
+      "hint": "Precio bruto con 19 % de IVA. Sin precio de caja propio se aplica el precio de la oferta propia.",
+      "clear": "Quitar precio de caja",
+      "saved": "Precio guardado.",
+      "cleared": "Precio de caja eliminado.",
+      "invalid": "Introduzca un precio superior a 0,00 €.",
+      "fromOffer": "Precio de la oferta",
+      "pageTitle": "Precios",
+      "pageText": "Precios de caja de los productos del almacén de esta caja. Sin precio propio se aplica el precio de la oferta (neto + 19 % IVA).",
+      "searchPlaceholder": "Producto, EAN o referencia del fabricante",
+      "stock": "Disponible"
+    },
+    "reasons": {
+      "ChangeFund": "Cambio",
+      "OwnerDeposit": "Aportación del titular",
+      "OtherDeposit": "Otra entrada",
+      "BankDeposit": "Ingreso en banco",
+      "Expense": "Gasto",
+      "OwnerWithdrawal": "Retirada del titular",
+      "OtherWithdrawal": "Otra salida"
+    },
+    "report": {
+      "title": "Informe de ventas",
+      "open": "Informe",
+      "forSession": "Sesión de caja",
+      "forRange": "Periodo",
+      "print": "Imprimir informe",
+      "toSession": "A la sesión",
+      "register": "Caja",
+      "allRegisters": "Todas las cajas",
+      "show": "Mostrar",
+      "byProduct": "Por producto",
+      "byCashier": "Por cajero",
+      "sold": "Vendido",
+      "returned": "Devuelto",
+      "discount": "Descuento",
+      "sales": "Ventas",
+      "refunds": "Reembolsos",
+      "empty": "Sin ventas.",
+      "grossNote": "Todos los importes son brutos; anulaciones y devoluciones se incluyen en negativo.",
+      "rangeInvalid": "Elija un periodo válido de como máximo {days} días."
+    },
+    "rights": {
+      "priceLocked": "El precio {price} es fijo: cambiarlo requiere el permiso «Cambiar precio».",
+      "priceLockedHint": "Cambiar el precio requiere el permiso «Cambiar precio».",
+      "discountForbidden": "Los descuentos requieren el permiso «Dar descuento».",
+      "discountLimit": "Como máximo {percent} % de descuento ({amount}).",
+      "maxDiscountHint": "Su límite de descuento: {percent} %",
+      "closeForbidden": "Solo el personal con el permiso «Cerrar caja» puede cerrar la sesión.",
+      "reportForbidden": "No tiene permiso para ver este informe.",
+      "manageOnly": "Solo titulares y gerentes (gestionar cajas)."
     }
   },
   "invoiceKind": {

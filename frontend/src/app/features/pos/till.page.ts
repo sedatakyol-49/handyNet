@@ -17,16 +17,23 @@ import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom } from 'rxjs';
 import { toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
-import { PosLookup, PosPaymentMethod, Receipt } from '../../core/api/models';
+import { PosCustomer, PosLookup, PosPaymentMethod, PosPrice, PosProduct, Receipt } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
+import { formatMoney } from '../../core/format/money';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
+import { CashCounts, countTotal, toDenominations } from './cash-count';
 import { posErrorText } from './pos-error';
+import { PosCashCountComponent } from './pos-cash-count';
 import { PosContext } from './pos-context';
+import { customerSummary } from './customer-form';
+import { PosCustomerDialogComponent } from './pos-customer-dialog';
 import { PosNumpadComponent } from './pos-numpad';
+import { PosPriceDialogComponent, PriceTarget } from './pos-price-dialog';
 import { PosProductGridComponent } from './pos-product-grid';
+import { LinePolicyIssue, canEditPrice, canGiveDiscount, linePolicyIssue, posRights } from './pos-rights';
 import {
   CartLine,
   LastPrices,
@@ -34,8 +41,8 @@ import {
   NumpadMode,
   OrdersState,
   OrdersStorage,
+  POS_LIMITS,
   PaymentLine,
-  ProductTile,
   TILL_SHORTCUTS,
   activeOrder,
   addOrder,
@@ -52,7 +59,7 @@ import {
   keepAttemptAfter,
   lineAmounts,
   looksLikeCode,
-  lookupFromTile,
+  lookupFromProduct,
   maxQuantity,
   minorToPlain,
   newIdempotencyKey,
@@ -65,6 +72,7 @@ import {
   remainingFor,
   removeOrder,
   sanitizeNumpadText,
+  setLineNote,
   settlePayments,
   tillShortcut,
   updateOrder,
@@ -85,7 +93,16 @@ type Screen = 'products' | 'payment' | 'receipt';
  */
 @Component({
   selector: 'hn-till-page',
-  imports: [FormsModule, PosNumpadComponent, PosProductGridComponent, ReceiptViewComponent, ...UI],
+  imports: [
+    FormsModule,
+    PosCashCountComponent,
+    PosCustomerDialogComponent,
+    PosNumpadComponent,
+    PosPriceDialogComponent,
+    PosProductGridComponent,
+    ReceiptViewComponent,
+    ...UI,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './till.page.html',
   host: { class: 'block h-full', '(document:keydown)': 'onKeydown($event)' },
@@ -105,11 +122,15 @@ export class TillPage {
   protected readonly maxQuantity = maxQuantity;
   protected readonly itemCount = orderItemCount;
   protected readonly hasInventory = computed(() => this.store.hasModule('Inventory'));
+  /** Per-cashier rights (price override, discount limit, …) of the selected membership. */
+  protected readonly rights = computed(() => posRights(this.store.membership()));
+  protected readonly canDiscount = computed(() => canGiveDiscount(this.rights()));
+  protected readonly noteMax = POS_LIMITS.lineNoteLength;
+  protected readonly customerSummary = customerSummary;
 
   private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeField');
   private readonly grid = viewChild(PosProductGridComponent);
   private readonly lastPrices = new LastPrices(browserStorage('session'), this.store.organizationId() ?? 'none');
-  protected readonly lastPrice = (productId: string) => this.lastPrices.get(productId);
 
   // ---- data
   protected readonly register = createQuery(
@@ -126,8 +147,10 @@ export class TillPage {
   /** False until the first answer about the register's session arrived (no flash of the opening form). */
   protected readonly sessionKnown = computed(() => this.sessionAnswered() && !this.sessionQuery.error());
 
-  // ---- open session
+  // ---- open session (plain amount or counted by denomination)
   protected openingCash = '';
+  protected readonly openingMode = signal<'amount' | 'count'>('amount');
+  protected readonly openingCounts = signal<CashCounts>({});
   protected readonly openingError = signal<string | null>(null);
   protected readonly opening = signal(false);
 
@@ -141,6 +164,18 @@ export class TillPage {
   protected readonly lines = computed(() => this.order().lines);
   protected readonly totals = computed(() => cartTotals(this.lines()));
   protected readonly tax = computed(() => cartTax(this.lines()));
+  protected readonly customer = computed(() => this.order().customer ?? null);
+  /** Lines the cashier may not sell like this (price override, discount right/limit), by key. */
+  protected readonly issues = computed(() => {
+    const rights = this.rights();
+    const out = new Map<string, LinePolicyIssue>();
+    for (const l of this.lines()) {
+      const a = lineAmounts(l);
+      const issue = a.error ? null : linePolicyIssue({ ...a, quantity: l.quantity, listPriceMinor: l.listPriceMinor }, rights);
+      if (issue) out.set(l.key, issue);
+    }
+    return out;
+  });
 
   // ---- product area / scanning
   protected readonly code = signal('');
@@ -156,6 +191,10 @@ export class TillPage {
     return this.lines().find((l) => l.key === key) ?? this.lines().at(-1) ?? null;
   });
   private readonly selectedLineKey = computed(() => this.selectedLine()?.key ?? null);
+  protected readonly priceEditable = computed(() => {
+    const line = this.selectedLine();
+    return !!line && canEditPrice(line, this.rights());
+  });
   protected readonly mode = signal<NumpadMode>('quantity');
   protected readonly buffer = signal('');
   private fresh = true;
@@ -182,6 +221,13 @@ export class TillPage {
   protected readonly lastReceipt = signal<Receipt | null>(null);
   protected readonly confirmDiscard = signal(false);
 
+  // ---- dialogs: line note, customer, price (pos.manage)
+  protected readonly noteOpen = signal(false);
+  protected noteText = '';
+  protected readonly customerOpen = signal(false);
+  protected readonly priceTarget = signal<PriceTarget | null>(null);
+  private readonly dialogOpen = computed(() => this.confirmDiscard() || this.noteOpen() || this.customerOpen() || !!this.priceTarget());
+
   constructor() {
     effect(() => {
       const name = this.register.value()?.name ?? null;
@@ -206,6 +252,10 @@ export class TillPage {
       const mode = this.mode();
       untracked(() => {
         const line = this.selectedLine();
+        if (line && !this.modeAllowed(line, mode)) {
+          this.mode.set('quantity');
+          return;
+        }
         this.buffer.set(line ? numpadValue(line, mode) : '');
         this.fresh = true;
       });
@@ -214,7 +264,8 @@ export class TillPage {
 
   // =============================================================== session
   protected async openSession(): Promise<void> {
-    const minor = parseAmount(this.openingCash, null);
+    const counted = this.openingMode() === 'count';
+    const minor = counted ? countTotal(this.openingCounts()) : parseAmount(this.openingCash, null);
     if (minor === null) {
       this.openingError.set(this.i18n.t('pos.till.openingInvalid'));
       return;
@@ -222,7 +273,8 @@ export class TillPage {
     this.openingError.set(null);
     this.opening.set(true);
     try {
-      this.sessionQuery.set(await firstValueFrom(this.api.openSession(this.registerId(), minor)));
+      const body = counted ? { denominations: toDenominations(this.openingCounts()) } : { openingCashMinor: minor };
+      this.sessionQuery.set(await firstValueFrom(this.api.openSession(this.registerId(), body)));
       this.toast.success(this.i18n.t('pos.till.sessionOpened'));
       this.focusCode();
     } catch (e) {
@@ -288,16 +340,16 @@ export class TillPage {
     if (this.scanError()) this.scanError.set(null);
   }
 
-  /** Enter in the search/scan field: EAN/IMEI → lookup; text with exactly one matching tile → add it. */
+  /** Enter in the search/scan field: EAN/IMEI → lookup; text with exactly one matching product → add it. */
   protected async submitCode(): Promise<void> {
     const text = this.code().trim();
     if (!text) return;
     if (this.screen() === 'receipt') this.startNextOrder();
     if (!looksLikeCode(text)) {
-      const match = this.grid()?.visible();
-      if (match?.length === 1) {
+      const match = this.grid()?.singleMatch();
+      if (match) {
         this.code.set('');
-        await this.pickTile(match[0]);
+        this.pickProduct(match);
       }
       return;
     }
@@ -305,16 +357,15 @@ export class TillPage {
     await this.lookupAndAdd(text);
   }
 
-  protected async pickTile(tile: ProductTile): Promise<void> {
+  /** A tapped tile: the grid row carries stock, the IMEI requirement and the till price. */
+  protected pickProduct(p: PosProduct): void {
     if (this.screen() === 'receipt') this.startNextOrder();
     this.scanError.set(null);
-    if (tile.available <= 0) {
-      this.scanError.set(this.i18n.t('pos.errors.insufficientStock', { available: tile.available }));
+    if (p.available <= 0) {
+      this.scanError.set(this.i18n.t('pos.errors.insufficientStock', { available: p.available }));
       return;
     }
-    // Scannable products are looked up like a scan: fresh availability and the IMEI requirement.
-    if (tile.ean) await this.lookupAndAdd(tile.ean);
-    else this.addLookup(lookupFromTile(tile));
+    this.addLookup(lookupFromProduct(p));
   }
 
   private async lookupAndAdd(code: string): Promise<void> {
@@ -359,8 +410,10 @@ export class TillPage {
   }
 
   protected setMode(mode: NumpadMode): void {
-    this.mode.set(mode);
     const line = this.selectedLine();
+    if (mode === 'price' && line && !canEditPrice(line, this.rights())) return;
+    if (mode === 'discount' && !this.canDiscount()) return;
+    this.mode.set(mode);
     this.buffer.set(line ? numpadValue(line, mode) : '');
     this.fresh = true;
     this.focusNumpad();
@@ -374,6 +427,7 @@ export class TillPage {
       this.scanError.set(this.i18n.t('pos.sell.unitQuantity'));
       return;
     }
+    if (!this.modeAllowed(line, mode) && key !== 'backspace') return;
     const r = pressNumpadKey({ buffer: this.buffer(), fresh: this.fresh }, key, mode);
     if (r.remove) {
       this.removeLine(line.key);
@@ -386,6 +440,10 @@ export class TillPage {
   protected onNumpadText(el: HTMLInputElement): void {
     const line = this.selectedLine();
     if (!line) return;
+    if (!this.modeAllowed(line, this.mode())) {
+      el.value = this.buffer();
+      return;
+    }
     const clean = sanitizeNumpadText(el.value, this.mode());
     if (clean !== el.value) el.value = clean;
     this.applyBuffer(line, clean);
@@ -397,6 +455,83 @@ export class TillPage {
     const applied = applyNumpad(this.lines(), line.key, this.mode(), buffer);
     this.setLines(applied.lines);
     this.scanError.set(applied.clamped ? this.i18n.t('pos.sell.quantityClamped', { max: maxQuantity(line) }) : null);
+  }
+
+  /** Price changes need `pos.price_override` when the till knows a price; discounts need `pos.discount`. */
+  private modeAllowed(line: CartLine, mode: NumpadMode): boolean {
+    if (mode === 'price') return canEditPrice(line, this.rights());
+    if (mode === 'discount') return this.canDiscount();
+    return true;
+  }
+
+  // =============================================================== line note
+  protected openNote(): void {
+    const line = this.selectedLine();
+    if (!line) return;
+    this.noteText = line.note ?? '';
+    this.noteOpen.set(true);
+    this.focusId('pos-note-text');
+  }
+
+  protected saveNote(): void {
+    const line = this.selectedLine();
+    if (line) this.setLines(setLineNote(this.lines(), line.key, this.noteText));
+    this.closeNote();
+  }
+
+  protected closeNote(): void {
+    this.noteOpen.set(false);
+    this.focusCode();
+  }
+
+  // =============================================================== customer
+  protected attachCustomer(c: PosCustomer): void {
+    const order = this.order();
+    this.orders.update((s) => updateOrder(s, order.id, { customer: { id: c.id, name: c.name, company: c.company } }));
+    this.customerOpen.set(false);
+    this.checkoutError.set(null);
+    this.focusCode();
+  }
+
+  protected detachCustomer(): void {
+    const order = this.order();
+    this.orders.update((s) => updateOrder(s, order.id, { customer: null }));
+    this.customerOpen.set(false);
+    this.focusCode();
+  }
+
+  protected closeCustomer(): void {
+    this.customerOpen.set(false);
+    if (this.screen() === 'products') this.focusCode();
+  }
+
+  // =============================================================== prices (pos.manage)
+  protected editPrice(p: PosProduct): void {
+    this.priceTarget.set({ productId: p.productId, brand: p.brand, name: p.name });
+  }
+
+  protected closePrice(): void {
+    this.priceTarget.set(null);
+    this.focusCode();
+  }
+
+  /** New till price: tiles reload; open lines of the product follow it when they still had the old price. */
+  protected onPriceSaved(price: PosPrice): void {
+    this.grid()?.reload();
+    const next = price.priceMinor;
+    for (const order of this.orders().orders) {
+      const lines = order.lines.map((l) => {
+        if (l.productId !== price.productId || l.kind !== 'Product') return l;
+        const unchanged = l.listPriceMinor !== null && l.listPriceMinor !== undefined && lineAmounts(l).unitPriceMinor === l.listPriceMinor;
+        return {
+          ...l,
+          listPriceMinor: next,
+          priceSource: price.priceSource,
+          priceInput: unchanged && next !== null ? minorToPlain(next) : l.priceInput,
+        };
+      });
+      this.orders.update((s) => updateOrder(s, order.id, { lines }));
+    }
   }
 
   protected changeQty(delta: number): void {
@@ -432,6 +567,15 @@ export class TillPage {
         this.selectedKey.set(invalid.key);
         this.setMode(lineAmounts(invalid).error === 'price' ? 'price' : 'discount');
       }
+      this.pane.set('cart');
+      return false;
+    }
+    // Cashier rights (the API answers 403 otherwise): show the first offending line.
+    const blocked = this.lines().find((l) => this.issues().has(l.key));
+    if (blocked) {
+      this.checkoutError.set(this.issueText(this.issues().get(blocked.key)!));
+      this.selectedKey.set(blocked.key);
+      this.errorLineKey.set(blocked.key);
       this.pane.set('cart');
       return false;
     }
@@ -550,7 +694,12 @@ export class TillPage {
       return;
     }
     const order = this.order();
-    const body = buildSaleRequest(this.registerId(), order.lines, s.payments);
+    if (this.lines().some((l) => this.issues().has(l.key))) {
+      this.backToProducts();
+      this.openPayment();
+      return;
+    }
+    const body = buildSaleRequest(this.registerId(), order.lines, s.payments, order.customer?.id ?? null);
     const attempt = attemptFor(order.pending, JSON.stringify(body), newIdempotencyKey);
     this.orders.update((st) => updateOrder(st, order.id, { pending: attempt }));
     this.paying.set(true);
@@ -570,8 +719,11 @@ export class TillPage {
       const problem = toApiProblem(e);
       this.checkoutError.set(posErrorText(this.i18n, e) + (keep ? ' ' + this.i18n.t('pos.till.retryHint') : ''));
       const productId = problemDetail(e, 'productId');
+      const lineNumber = problemDetail(e, 'lineNumber');
       if (typeof productId === 'string') {
         this.errorLineKey.set(order.lines.find((l) => l.productId === productId && l.kind === 'Product')?.key ?? null);
+      } else if (typeof lineNumber === 'number') {
+        this.errorLineKey.set(order.lines[lineNumber - 1]?.key ?? null);
       }
       if (problem.code && RELOAD_SESSION_CODES.has(problem.code)) {
         this.sessionQuery.reload();
@@ -593,6 +745,18 @@ export class TillPage {
     this.mode.set('quantity');
   }
 
+  /** Text for a line the cashier's rights do not allow. */
+  protected issueText(issue: LinePolicyIssue): string {
+    switch (issue.kind) {
+      case 'priceOverride':
+        return this.i18n.t('pos.rights.priceLocked', { price: formatMoney(issue.expectedMinor) });
+      case 'discountForbidden':
+        return this.i18n.t('pos.rights.discountForbidden');
+      case 'discountLimit':
+        return this.i18n.t('pos.rights.discountLimit', { percent: issue.maxPercent, amount: formatMoney(issue.maxDiscountMinor) });
+    }
+  }
+
   // =============================================================== receipt
   protected startNextOrder(): void {
     this.lastReceipt.set(null);
@@ -606,7 +770,7 @@ export class TillPage {
 
   // =============================================================== keyboard
   protected onKeydown(e: KeyboardEvent): void {
-    if (!this.session() || this.confirmDiscard()) return;
+    if (!this.session() || this.dialogOpen()) return;
     const action = tillShortcut(e);
     if (!action) {
       if (!isPrintableKey(e) || isEditable(e.target)) return;

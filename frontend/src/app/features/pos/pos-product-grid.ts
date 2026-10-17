@@ -1,20 +1,26 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { CatalogApi, InventoryApi } from '../../core/api/handynet-api';
-import { StockRow } from '../../core/api/models';
-import { StorageService } from '../../core/storage.service';
+import { PosApi } from '../../core/api/handynet-api';
+import { PosCategoryCount, PosProduct } from '../../core/api/models';
 import { UI } from '../../shared/ui';
-import { ProductTile, filterTiles, initials, productTiles, tileCategories } from './pos.logic';
+import { gridSearch, initials, mergeProductPages } from './pos.logic';
 
-/** Catalog categories are global and practically immutable: cached per browser. */
-const CATEGORY_CACHE_KEY = 'hn.pos.productCategories';
-const STOCK_PAGE_SIZE = 200;
-const MAX_STOCK_PAGES = 3;
-const MAX_CATEGORY_LOOKUPS = 300;
-const LOOKUP_CONCURRENCY = 4;
-const FALLBACK_CATEGORY_ORDER = [
-  'Smartphone', 'Tablet', 'Wearable', 'Display', 'Battery', 'Housing', 'Camera', 'ChargingPort', 'SmallParts', 'Accessory', 'Tool', 'Other',
-];
+const PAGE_SIZE = 48;
+const SEARCH_DEBOUNCE_MS = 250;
+const LONG_PRESS_MS = 550;
 
 /** Outline icons per catalog category (24×24, stroke). */
 const ICONS: Record<string, string> = {
@@ -33,9 +39,10 @@ const ICONS: Record<string, string> = {
 };
 
 /**
- * Product area of the selling screen: category filter and tiles for the products stocked in the register's
- * warehouse (`GET /api/inventory/stock`). The API has no product images or sales prices, so tiles show the category
- * icon (or a monogram) and the last price used in this browser session.
+ * Product area of the selling screen: category chips with counts and tiles for the products of the register's
+ * warehouse with their till prices (`GET /api/pos/registers/{id}/products`, server search, paged with infinite
+ * scroll and a "load more" fallback). With `pos.manage` a tile's price can be edited (corner button, long-press or
+ * right-click).
  */
 @Component({
   selector: 'hn-pos-product-grid',
@@ -43,40 +50,48 @@ const ICONS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-0 flex-col' },
   template: `
-    @if (categories().length > 1) {
-      <div class="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2" role="group" [attr.aria-label]="'pos.sell.categories' | t" data-testid="pos-categories">
-        <button type="button" class="pos-chip" [attr.aria-pressed]="category() === null" (click)="category.set(null)" data-testid="pos-category-all">
-          {{ 'pos.sell.allCategories' | t }}
+    <div class="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2" role="group" [attr.aria-label]="'pos.sell.categories' | t" data-testid="pos-categories">
+      <button type="button" class="pos-chip" [attr.aria-pressed]="category() === null" (click)="setCategory(null)" data-testid="pos-category-all">
+        {{ 'pos.sell.allCategories' | t }}
+        <span class="ms-1 text-xs tabular-nums opacity-75">{{ categoryTotal() }}</span>
+      </button>
+      @for (c of categories(); track c.category) {
+        <button type="button" class="pos-chip" [attr.aria-pressed]="category() === c.category" (click)="setCategory(c.category)" [attr.data-testid]="'pos-category-' + c.category">
+          {{ c.category | tEnum: 'category' }}
+          <span class="ms-1 text-xs tabular-nums opacity-75">{{ c.productCount }}</span>
         </button>
-        @for (c of categories(); track c) {
-          <button type="button" class="pos-chip" [attr.aria-pressed]="category() === c" (click)="category.set(c)" [attr.data-testid]="'pos-category-' + c">
-            {{ c | tEnum: 'category' }}
-          </button>
-        }
-      </div>
-    }
+      }
+      <button type="button" class="pos-chip ms-auto" [attr.aria-pressed]="includeOutOfStock()" (click)="toggleOutOfStock()" data-testid="pos-show-soldout">
+        {{ 'pos.sell.showSoldOut' | t }}
+      </button>
+    </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+    <div #scroller class="min-h-0 flex-1 overflow-y-auto px-3 pb-3" [attr.aria-busy]="loading() || null">
       @if (error()) {
         <hn-banner [error]="error()" />
-      } @else if (loading() && !rows().length) {
+      } @else if (loading() && !items().length) {
         <p class="py-10 text-center text-sm text-slate-500">{{ 'common.loading' | t }}</p>
-      } @else if (!tiles().length) {
-        <div class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-empty">
-          <p class="font-medium text-slate-700">{{ 'pos.sell.noProducts' | t }}</p>
-          <p class="mt-1">{{ 'pos.sell.noProductsHint' | t }}</p>
-        </div>
-      } @else if (!visible().length) {
-        <p class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-none">{{ 'pos.sell.noMatch' | t }}</p>
+      } @else if (!items().length) {
+        @if (appliedSearch() || category()) {
+          <p class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-none">{{ 'pos.sell.noMatch' | t }}</p>
+        } @else {
+          <div class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-empty">
+            <p class="font-medium text-slate-700">{{ 'pos.sell.noProducts' | t }}</p>
+            <p class="mt-1">{{ 'pos.sell.noProductsHint' | t }}</p>
+          </div>
+        }
       } @else {
         <ul class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2" [attr.aria-label]="'pos.sell.products' | t" data-testid="pos-products">
-          @for (p of visible(); track p.productId) {
+          @for (p of items(); track p.productId) {
             @let soldOut = p.available <= 0;
-            @let last = lastPrice()(p.productId);
-            <li>
-              <button type="button" class="pos-tile" [disabled]="soldOut" (click)="pick.emit(p)" [attr.data-product]="p.name" data-testid="pos-product">
-                <span class="grid h-16 place-items-center rounded-md bg-slate-100 text-slate-600" aria-hidden="true">
-                  @if (p.category && icons[p.category]) {
+            <li class="relative">
+              <button type="button" class="pos-tile" [disabled]="soldOut" (click)="onTileClick(p)" (contextmenu)="onContextMenu($event, p)"
+                (pointerdown)="startPress(p)" (pointerup)="cancelPress()" (pointerleave)="cancelPress()" (pointercancel)="cancelPress()"
+                [attr.data-product]="p.name" [attr.aria-describedby]="'pos-tile-price-' + p.productId" data-testid="pos-product">
+                <span class="grid h-16 place-items-center overflow-hidden rounded-md bg-slate-100 text-slate-600" aria-hidden="true">
+                  @if (p.imageUrl) {
+                    <img [src]="p.imageUrl" alt="" class="size-full object-contain" loading="lazy" />
+                  } @else if (icons[p.category]) {
                     <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                       <path [attr.d]="icons[p.category]" />
                     </svg>
@@ -87,100 +102,187 @@ const ICONS: Record<string, string> = {
                 <span class="mt-1.5 line-clamp-2 text-start text-sm font-semibold leading-snug text-slate-900">{{ p.name }}</span>
                 <span class="truncate text-start text-xs text-slate-500">{{ p.brand }}</span>
                 <span class="mt-auto flex items-end justify-between gap-1 pt-1.5 text-xs">
-                  <span class="tabular-nums font-semibold text-slate-800">
-                    @if (last !== null) {
-                      {{ last | money }}
+                  <span [id]="'pos-tile-price-' + p.productId" class="tabular-nums" data-testid="pos-product-price">
+                    @if (p.priceMinor !== null) {
+                      <span class="text-sm font-bold text-slate-900">{{ p.priceMinor | money }}</span>
+                    } @else {
+                      <span class="text-slate-500">{{ 'pos.sell.noPrice' | t }}</span>
                     }
                   </span>
                   <span class="rounded px-1.5 py-0.5 font-medium tabular-nums" [class]="soldOut ? 'bg-red-50 text-red-800' : p.available <= 3 ? 'bg-amber-50 text-amber-900' : 'bg-slate-100 text-slate-700'">
                     {{ soldOut ? ('pos.sell.soldOut' | t) : ('pos.sell.stock' | t: { count: p.available }) }}
                   </span>
                 </span>
+                @if (p.serialized) {
+                  <span class="mt-1 text-start text-[11px] font-medium text-amber-900">{{ 'pos.sell.imeiOnly' | t }}</span>
+                }
               </button>
+              @if (canManagePrices()) {
+                <button type="button" class="absolute end-1 top-1 grid size-11 place-items-center rounded-lg bg-white/90 text-slate-600 shadow-xs hover:text-accent-800"
+                  (click)="editPrice.emit(p)" [attr.aria-label]="'pos.price.editFor' | t: { name: p.name }" [title]="'pos.price.edit' | t" data-testid="pos-product-edit-price">
+                  <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></svg>
+                </button>
+              }
             </li>
           }
         </ul>
-        @if (truncated()) {
-          <p class="mt-3 text-center text-xs text-slate-500">{{ 'pos.sell.truncated' | t: { count: rows().length } }}</p>
+        @if (hasMore()) {
+          <div #sentinel class="mt-3 text-center">
+            <button hnButton type="button" class="min-h-11" [loading]="loading()" (click)="loadMore()" data-testid="pos-products-more">
+              {{ 'pos.sell.loadMore' | t: { shown: items().length, total: total() } }}
+            </button>
+          </div>
         }
       }
     </div>
   `,
 })
 export class PosProductGridComponent {
-  private readonly inventory = inject(InventoryApi);
-  private readonly catalog = inject(CatalogApi);
-  private readonly storage = inject(StorageService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly api = inject(PosApi);
 
-  readonly warehouseId = input<string | null>(null);
+  readonly registerId = input.required<string>();
+  /** Text of the search/scan field (codes are looked up by the till, not searched). */
   readonly search = input('');
-  /** Last price used for a product in this browser session (cents) or null. */
-  readonly lastPrice = input<(productId: string) => number | null>(() => null);
-  readonly pick = output<ProductTile>();
+  readonly canManagePrices = input(false);
+  readonly pick = output<PosProduct>();
+  readonly editPrice = output<PosProduct>();
 
   protected readonly icons = ICONS;
-  protected readonly rows = signal<StockRow[]>([]);
+  protected readonly items = signal<PosProduct[]>([]);
+  protected readonly total = signal(0);
   protected readonly loading = signal(false);
   protected readonly error = signal<unknown>(null);
-  protected readonly truncated = signal(false);
-  private readonly categoryMap = signal<Record<string, string>>(this.readCache());
-  private readonly categoryOrder = signal<string[]>(FALLBACK_CATEGORY_ORDER);
   protected readonly category = signal<string | null>(null);
+  protected readonly includeOutOfStock = signal(false);
+  protected readonly categories = signal<PosCategoryCount[]>([]);
+  protected readonly categoryTotal = computed(() => this.categories().reduce((n, c) => n + c.productCount, 0));
+  /** The search text the shown items belong to (debounced). */
+  protected readonly appliedSearch = signal('');
+  private page = 0;
+  protected readonly hasMore = computed(() => this.items().length < this.total());
 
-  protected readonly tiles = computed(() => productTiles(this.rows(), this.categoryMap()));
-  protected readonly categories = computed(() => tileCategories(this.tiles(), this.categoryOrder()));
-  /** Tiles after category and search filter (read by the selling screen: Enter adds a single match). */
-  readonly visible = computed(() => {
-    const list = filterTiles(this.tiles(), this.category(), this.search());
-    // Products in stock first; sold-out ones stay visible (greyed) so the cashier sees why.
-    return [...list.filter((t) => t.available > 0), ...list.filter((t) => t.available <= 0)];
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
+  private loadToken = 0;
+  private destroyed = false;
+  private pressTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressClick = false;
+
+  /** The only product matching the current search text (Enter adds it), or null. */
+  readonly singleMatch = computed(() => {
+    const wanted = gridSearch(this.search());
+    if (!wanted || this.loading() || wanted !== this.appliedSearch() || this.total() !== 1) return null;
+    const only = this.items()[0];
+    return only && only.available > 0 ? only : null;
   });
 
-  private destroyed = false;
-  private loadToken = 0;
-
   constructor() {
-    this.destroyRef.onDestroy(() => (this.destroyed = true));
-    effect(() => {
-      const warehouse = this.warehouseId();
-      untracked(() => void this.load(warehouse));
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.cancelPress();
     });
-    firstValueFrom(this.catalog.categories())
-      .then((c) => c.categories.length && this.categoryOrder.set(c.categories))
-      .catch(() => undefined);
+    // Debounced server search.
+    effect((onCleanup) => {
+      const wanted = gridSearch(this.search());
+      if (wanted === untracked(() => this.appliedSearch())) return;
+      const timer = setTimeout(() => this.appliedSearch.set(wanted), SEARCH_DEBOUNCE_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
+    effect(() => {
+      const registerId = this.registerId();
+      this.appliedSearch();
+      this.category();
+      this.includeOutOfStock();
+      untracked(() => void this.loadFirst(registerId));
+    });
+    effect(() => {
+      const registerId = this.registerId();
+      untracked(() => void this.loadCategories(registerId));
+    });
+    // Infinite scroll: load the next page when the "load more" row scrolls into view.
+    effect((onCleanup) => {
+      const el = this.sentinel()?.nativeElement;
+      const root = this.scroller()?.nativeElement;
+      if (!el || !root || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && this.loadMore(), { root, rootMargin: '200px' });
+      observer.observe(el);
+      onCleanup(() => observer.disconnect());
+    });
   }
 
-  /** Re-reads the stock (after a sale the available quantities changed). */
+  /** Re-reads the loaded pages and the category counts (after a sale or a price change). */
   reload(): void {
-    void this.load(this.warehouseId());
+    void this.loadPages(this.registerId(), Math.max(this.page, 1));
+    void this.loadCategories(this.registerId());
   }
 
-  protected monogram(p: ProductTile): string {
+  protected setCategory(c: string | null): void {
+    this.category.set(c);
+  }
+
+  protected toggleOutOfStock(): void {
+    this.includeOutOfStock.update((v) => !v);
+  }
+
+  protected monogram(p: PosProduct): string {
     return initials(p.brand, p.name);
   }
 
-  private async load(warehouseId: string | null): Promise<void> {
-    const token = ++this.loadToken;
-    if (!warehouseId) {
-      this.rows.set([]);
+  // ---- tap, long-press (price), right-click (price)
+  protected onTileClick(p: PosProduct): void {
+    if (this.suppressClick) {
+      this.suppressClick = false;
       return;
     }
+    this.pick.emit(p);
+  }
+
+  protected startPress(p: PosProduct): void {
+    this.cancelPress();
+    if (!this.canManagePrices()) return;
+    this.pressTimer = setTimeout(() => {
+      this.pressTimer = null;
+      this.suppressClick = true;
+      this.editPrice.emit(p);
+    }, LONG_PRESS_MS);
+  }
+
+  protected cancelPress(): void {
+    if (this.pressTimer) clearTimeout(this.pressTimer);
+    this.pressTimer = null;
+  }
+
+  protected onContextMenu(e: Event, p: PosProduct): void {
+    if (!this.canManagePrices()) return;
+    e.preventDefault();
+    this.cancelPress();
+    this.editPrice.emit(p);
+  }
+
+  // ---- loading
+  protected loadMore(): void {
+    if (this.loading() || !this.hasMore()) return;
+    void this.loadPage(this.registerId(), this.page + 1, ++this.loadToken);
+  }
+
+  private loadFirst(registerId: string): Promise<void> {
+    this.page = 0;
+    this.items.set([]);
+    this.total.set(0);
+    this.scroller()?.nativeElement.scrollTo?.({ top: 0 });
+    return this.loadPage(registerId, 1, ++this.loadToken);
+  }
+
+  private async loadPage(registerId: string, page: number, token: number): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const all: StockRow[] = [];
-      let total = 0;
-      for (let page = 1; page <= MAX_STOCK_PAGES; page++) {
-        const result = await firstValueFrom(this.inventory.stock({ warehouseId, page, pageSize: STOCK_PAGE_SIZE }));
-        all.push(...result.items);
-        total = result.totalCount;
-        if (all.length >= total || !result.items.length) break;
-      }
+      const result = await firstValueFrom(this.api.products(registerId, this.queryFor(page)));
       if (token !== this.loadToken || this.destroyed) return;
-      this.rows.set(all);
-      this.truncated.set(total > all.length);
-      void this.resolveCategories(all, token);
+      this.items.set(page === 1 ? result.items : mergeProductPages(this.items(), result.items));
+      this.total.set(result.totalCount);
+      this.page = page;
     } catch (e) {
       if (token === this.loadToken) this.error.set(e);
     } finally {
@@ -188,34 +290,45 @@ export class PosProductGridComponent {
     }
   }
 
-  /** Stock rows carry no category: look missing ones up once (few parallel requests) and cache them. */
-  private async resolveCategories(rows: StockRow[], token: number): Promise<void> {
-    const known = this.categoryMap();
-    const missing = [...new Set(rows.map((r) => r.productId).filter((id) => !known[id]))].slice(0, MAX_CATEGORY_LOOKUPS);
-    if (!missing.length) return;
-    const found: Record<string, string> = {};
-    let next = 0;
-    const worker = async () => {
-      while (next < missing.length && token === this.loadToken && !this.destroyed) {
-        const id = missing[next++];
-        try {
-          const product = await firstValueFrom(this.catalog.product(id));
-          if (product.category) found[id] = product.category;
-        } catch {
-          /* unknown category: the tile shows a monogram */
-        }
+  private async loadPages(registerId: string, pages: number): Promise<void> {
+    const token = ++this.loadToken;
+    this.loading.set(true);
+    try {
+      let all: PosProduct[] = [];
+      let total = 0;
+      for (let page = 1; page <= pages; page++) {
+        const result = await firstValueFrom(this.api.products(registerId, this.queryFor(page)));
+        all = mergeProductPages(all, result.items);
+        total = result.totalCount;
+        if (all.length >= total || !result.items.length) break;
       }
-    };
-    await Promise.all(Array.from({ length: LOOKUP_CONCURRENCY }, worker));
-    if (this.destroyed || !Object.keys(found).length) return;
-    const merged = { ...this.categoryMap(), ...found };
-    this.categoryMap.set(merged);
-    this.storage.setJson(CATEGORY_CACHE_KEY, merged);
+      if (token !== this.loadToken || this.destroyed) return;
+      this.items.set(all);
+      this.total.set(total);
+      this.page = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+    } catch (e) {
+      if (token === this.loadToken) this.error.set(e);
+    } finally {
+      if (token === this.loadToken) this.loading.set(false);
+    }
   }
 
-  private readCache(): Record<string, string> {
-    const cached = this.storage.getJson<Record<string, unknown>>(CATEGORY_CACHE_KEY);
-    if (!cached || typeof cached !== 'object') return {};
-    return Object.fromEntries(Object.entries(cached).filter((e): e is [string, string] => typeof e[1] === 'string'));
+  private queryFor(page: number) {
+    return {
+      search: this.appliedSearch() || null,
+      category: this.category(),
+      includeOutOfStock: this.includeOutOfStock() || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    };
+  }
+
+  private async loadCategories(registerId: string): Promise<void> {
+    try {
+      const list = await firstValueFrom(this.api.productCategories(registerId));
+      if (!this.destroyed) this.categories.set(list);
+    } catch {
+      /* chips are optional: the grid still works without them */
+    }
   }
 }

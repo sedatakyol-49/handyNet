@@ -6,6 +6,7 @@ import { SessionStore } from '../../core/auth/session.store';
 import { I18nService, Lang } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PosContext, PosTheme } from './pos-context';
+import { canSeeSessionReport, posRights } from './pos-rights';
 
 /**
  * Standalone, full-screen POS app (route `/kasse`, outside the back-office shell): a minimal top bar with register,
@@ -77,8 +78,19 @@ import { PosContext, PosTheme } from './pos-context';
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'belege']" (click)="closeMenu()" data-testid="pos-menu-receipts">{{ 'pos.app.receipts' | t }}</a>
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'sitzungen']" (click)="closeMenu()" data-testid="pos-menu-sessions">{{ 'pos.app.sessions' | t }}</a>
                 @if (ctx.session(); as s) {
-                  <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse/sitzungen', s.id]" (click)="closeMenu()" data-testid="pos-menu-cash">{{ 'pos.app.cashAndClosing' | t }}</a>
+                  @if (rights().cashMovement || rights().closeSession) {
+                    <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse/sitzungen', s.id]" (click)="closeMenu()" data-testid="pos-menu-cash">{{ 'pos.app.cashAndClosing' | t }}</a>
+                  }
+                  @if (canReport()) {
+                    <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte" [queryParams]="{ sitzung: s.id }" (click)="closeMenu()" data-testid="pos-menu-report">{{ 'pos.app.sessionReport' | t }}</a>
+                  }
                 }
+                @if (rights().manage) {
+                  <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'preise']" (click)="closeMenu()" data-testid="pos-menu-prices">{{ 'pos.app.prices' | t }}</a>
+                }
+              }
+              @if (rights().manage) {
+                <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte" (click)="closeMenu()" data-testid="pos-menu-reports">{{ 'pos.app.reports' | t }}</a>
               }
               <a role="menuitem" class="pos-menu-item" routerLink="/kasse" (click)="closeMenu()" data-testid="pos-menu-registers">{{ 'pos.app.registerSelection' | t }}</a>
 
@@ -123,6 +135,8 @@ export class PosAppComponent {
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
 
   protected readonly themes: PosTheme[] = ['system', 'light', 'dark'];
+  protected readonly rights = computed(() => posRights(this.session.membership()));
+  protected readonly canReport = computed(() => canSeeSessionReport(this.rights()));
   protected readonly menuOpen = signal(false);
 
   private readonly url = toSignal(

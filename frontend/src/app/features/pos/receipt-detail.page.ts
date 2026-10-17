@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -38,16 +38,19 @@ import { ReceiptViewComponent } from './receipt-view';
       <hn-pos-subnav [registerId]="r.registerId" />
       <hn-page-header class="hn-no-print" [title]="'pos.detail.title' | t: { number: r.number }" [description]="r.registerName">
         <hn-status-badge [status]="r.kind" kind="receiptKind" [tone]="r.kind === 'Sale' ? 'success' : r.kind === 'Storno' ? 'danger' : 'warning'" />
-        <button hnButton class="min-h-11" type="button" (click)="print()" data-testid="pos-detail-print">{{ 'pos.receipt.print' | t }}</button>
+        <button hnButton class="min-h-11" type="button" [loading]="reprinting()" [disabled]="reprinting()" (click)="reprint(r)" data-testid="pos-detail-reprint">
+          {{ 'pos.detail.reprint' | t }}
+        </button>
       </hn-page-header>
     } @else {
       <hn-page-header [title]="'pos.detail.loading' | t" />
     }
     <hn-banner class="mb-3" [error]="query.error()" />
+    <hn-banner class="mb-3" [error]="reprintError()" />
 
     @if (receipt(); as r) {
       <div class="grid gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
-        <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
+        <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" [copy]="copy()" />
 
         <div class="hn-no-print min-w-0 space-y-4">
           <section class="hn-card p-4 text-sm" aria-labelledby="pos-detail-info">
@@ -67,6 +70,19 @@ import { ReceiptViewComponent } from './receipt-view';
               }
               <dt>{{ 'pos.detail.session' | t }}</dt>
               <dd><a class="hn-link" [routerLink]="['/kasse/sitzungen', r.sessionId]">{{ 'pos.detail.openSession' | t }}</a></dd>
+              @if (r.customer; as c) {
+                <dt>{{ 'pos.receipt.customer' | t }}</dt>
+                <dd>
+                  <a class="hn-link" [routerLink]="['/kasse', r.registerId, 'belege']" [queryParams]="{ scope: 'all', kunde: c.id, kundeName: c.name }" data-testid="pos-detail-customer">{{ c.name }}</a>
+                </dd>
+              }
+              <dt>{{ 'pos.detail.reprints' | t }}</dt>
+              <dd data-testid="pos-detail-reprint-count">
+                {{ r.reprintCount ?? 0 }}
+                @if (r.lastReprintedAt) {
+                  <span class="text-xs text-slate-500">({{ 'pos.detail.lastReprint' | t: { date: (r.lastReprintedAt | hnDate) } }})</span>
+                }
+              </dd>
             </dl>
             @if (r.kind === 'Sale') {
               <div class="mt-3 flex flex-wrap gap-2">
@@ -202,6 +218,7 @@ export class PosReceiptDetailPage {
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
 
   readonly id = input.required<string>();
 
@@ -219,8 +236,13 @@ export class PosReceiptDetailPage {
   });
   protected readonly returnable = computed(() => {
     const r = this.receipt();
-    return !!r && this.session.can('pos.sell') && canReturn(r);
+    return !!r && this.session.can('pos.refund') && canReturn(r);
   });
+
+  /** Copy number shown on the receipt after a recorded reprint ("Kopie n"). */
+  protected readonly copy = signal<number | null>(null);
+  protected readonly reprinting = signal(false);
+  protected readonly reprintError = signal<unknown>(null);
 
   protected readonly returning = signal(false);
   protected readonly selection = signal<ReturnSelection>({});
@@ -243,8 +265,21 @@ export class PosReceiptDetailPage {
   protected readonly returnableOf = returnableQuantity;
   protected readonly refundOf = refundPreviewMinor;
 
-  protected print(): void {
-    if (typeof window !== 'undefined') window.print();
+  /** Records the reprint (copy number from the API), marks the receipt "Kopie n" and prints it. */
+  protected async reprint(r: Receipt): Promise<void> {
+    this.reprinting.set(true);
+    this.reprintError.set(null);
+    try {
+      const copy = await firstValueFrom(this.api.reprint(r.id));
+      this.query.set(copy.receipt);
+      this.copy.set(copy.sequence);
+      this.toast.success(this.i18n.t('pos.detail.reprinted', { sequence: copy.sequence }));
+      afterNextRender(() => typeof window !== 'undefined' && window.print(), { injector: this.injector });
+    } catch (e) {
+      this.reprintError.set(e);
+    } finally {
+      this.reprinting.set(false);
+    }
   }
 
   // ---- return
