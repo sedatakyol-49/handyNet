@@ -32,7 +32,7 @@ Non-secret settings (defaults in `appsettings.json`):
 
 | Key | Default | Purpose |
 |---|---|---|
-| `Jwt:AccessTokenMinutes` | 60 | access token lifetime; lower to 15 once the web app refreshes tokens |
+| `Jwt:AccessTokenMinutes` | 15 | access token lifetime; the web app refreshes shortly before expiry and on 401 |
 | `Jwt:RefreshTokenDays` | 14 | refresh token lifetime, renewed on every rotation |
 | `Identity:PasswordResetTokenMinutes` | 60 | reset link lifetime |
 | `Identity:EmailVerificationTokenHours` | 48 | verification link lifetime |

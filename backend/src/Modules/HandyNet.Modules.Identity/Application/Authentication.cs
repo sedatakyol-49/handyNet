@@ -28,7 +28,7 @@ public sealed class JwtOptions
     /// Access token lifetime. Kept at 60 in appsettings until the web app refreshes tokens; 15 is the target
     /// (a revoked session keeps working until its access token expires).
     /// </summary>
-    public int AccessTokenMinutes { get; set; } = 60;
+    public int AccessTokenMinutes { get; set; } = 15;
 
     /// <summary>Lifetime of a refresh token; every rotation starts a fresh lifetime (sliding session).</summary>
     public int RefreshTokenDays { get; set; } = 14;

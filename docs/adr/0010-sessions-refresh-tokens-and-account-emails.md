@@ -28,6 +28,7 @@ queued emails, but Notifications depends on Identity, so Identity cannot call it
    Rows are never deleted (no DELETE grant): they are the history reuse detection needs.
 5. **Access tokens stay at 60 minutes for now.** The web app does not refresh yet; a shorter lifetime would log users
    out every 15 minutes. Target is 15 minutes once the frontend refreshes (config only, `Jwt:AccessTokenMinutes`).
+   Update 2026-10-17: the web app now refreshes (single-flight, cross-tab lock); the default is 15 minutes.
    Until then a revoked session's *access* token keeps working until it expires — revocation is immediate only for
    refresh tokens.
 6. **Account tokens** (`identity.account_tokens`, purpose `EmailVerification` | `PasswordReset`): same opaque
