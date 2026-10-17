@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -138,6 +138,17 @@ export class PosAppComponent {
   protected readonly rights = computed(() => posRights(this.session.membership()));
   protected readonly canReport = computed(() => canSeeSessionReport(this.rights()));
   protected readonly menuOpen = signal(false);
+
+  constructor() {
+    // The acting organization changed (switched or another user signed in in another tab): the open register belongs
+    // to the previous organization, so go back to register selection.
+    let previousOrg: string | null = null;
+    effect(() => {
+      const org = this.session.organizationId();
+      if (org && previousOrg && org !== previousOrg) untracked(() => void this.router.navigate(['/kasse']));
+      if (org) previousOrg = org;
+    });
+  }
 
   private readonly url = toSignal(
     this.router.events.pipe(

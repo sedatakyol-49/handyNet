@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -37,14 +37,6 @@ export class ShellComponent {
   protected readonly visibleItems = computed(() => NAV_ITEMS.filter((item) => this.isVisible(item)));
 
   constructor() {
-    // Signed out in another tab (or the session ended): leave the app. A different user signed in elsewhere: reload /api/me.
-    effect(() => {
-      if (this.session.signedOutElsewhere() > 0) void untracked(() => this.router.navigate(['/login']));
-    });
-    effect(() => {
-      if (this.session.isAuthenticated() && !this.session.me()) void untracked(() => this.auth.loadMe());
-    });
-
     // Close the mobile drawer after navigation.
     this.router.events
       .pipe(
