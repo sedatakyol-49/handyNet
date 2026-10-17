@@ -36,7 +36,7 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
         (keydown)="onKey($event)"
         data-testid="gallery-main"
       >
-        <img [src]="api.imageUrl(current()?.fullUrl)" [alt]="alt(index())" class="max-h-full max-w-full object-contain" />
+        <img [src]="api.imageUrl(current()?.fullUrl)" [alt]="alt(index())" class="size-full object-contain" />
         @if (sorted().length > 1) {
           <button type="button" class="absolute start-1 top-1/2 -translate-y-1/2 rounded bg-white/90 px-2 py-1 text-slate-700 shadow-sm hover:bg-white"
             (click)="go(index() - 1)" [attr.aria-label]="'images.previous' | t">
