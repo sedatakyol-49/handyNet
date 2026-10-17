@@ -285,7 +285,11 @@ function withoutNote(l: CartLine): CartLine {
 }
 
 function describe(lookup: PosLookup): string {
-  return [lookup.brand, lookup.name].filter((s) => !!s && s.trim()).join(' ');
+  const brand = lookup.brand?.trim() ?? '';
+  const name = lookup.name?.trim() ?? '';
+  // Many catalog names already start with the brand ("Apple Sim Display"): do not print "Apple Apple Sim Display".
+  if (brand && name.toLocaleLowerCase().startsWith(brand.toLocaleLowerCase()) && /^(\s|$)/.test(name.slice(brand.length))) return name;
+  return [brand, name].filter(Boolean).join(' ');
 }
 
 /** Cents → "12,50" (input format). */

@@ -145,6 +145,18 @@ describe('cart lines and totals', () => {
     expect(cartTotals([]).valid).toBe(false);
   });
 
+  it('does not repeat the brand when the product name already starts with it', () => {
+    const named = (name: string) => {
+      const r = addToCart([], product({ name }), null);
+      if (!r.ok) throw new Error();
+      return r.lines[0].description;
+    };
+    expect(named('Apple Sim Display')).toBe('Apple Sim Display');
+    expect(named('apple Sim Display')).toBe('apple Sim Display');
+    expect(named('Applecare Kabel')).toBe('Apple Applecare Kabel');
+    expect(named('Ladekabel')).toBe('Apple Ladekabel');
+  });
+
   it('adds products, increments on rescan and respects available stock', () => {
     const first = addToCart([], product({ available: 2 }), null);
     expect(first.ok && first.needsPrice).toBe(true);
