@@ -1,5 +1,5 @@
-import { CatalogCategories, LookupMatch, ManualEntryRequest, OfferCondition } from '../../../core/api/models';
-import { minorToDecimal, parseMoneyToMinor } from '../../../core/format/money';
+import { CatalogCategories, LookupMatch, ManualEntryRequest, ManualEntryResult, OfferCondition } from '../../../core/api/models';
+import { minorToDecimal, minorToInput, parseMoneyToMinor } from '../../../core/format/money';
 
 /**
  * Pure rules of the "Artikel anlegen" wizard (identify → stock → offer → summary). They mirror the API
@@ -429,4 +429,302 @@ export function stepForProblem(code: string | null, fieldKeys: string[]): EntryS
   if (keys.some((k) => k.startsWith('imeis') || k === 'quantity' || k === 'purchaseprice' || k === 'warehouseid')) return 'stock';
   if (keys.some((k) => k.startsWith('offer'))) return 'offer';
   return 'summary';
+}
+
+// ---------------------------------------------------------------- multi-select (several existing products at once)
+
+/**
+ * Selection of lookup matches. It survives new searches (search "akku", tick 2, search "display", tick 1 → 3) and is
+ * keyed by product id; the stored match is the snapshot of the search it was ticked in.
+ */
+export function isSelected(selected: readonly LookupMatch[], productId: string): boolean {
+  return selected.some((m) => m.product.id === productId);
+}
+
+export function toggleSelection(selected: readonly LookupMatch[], match: LookupMatch): LookupMatch[] {
+  return isSelected(selected, match.product.id) ? selected.filter((m) => m.product.id !== match.product.id) : [...selected, match];
+}
+
+/** Adds the match unless it is already selected (auto-selection of a single exact EAN match). */
+export function addToSelection(selected: readonly LookupMatch[], match: LookupMatch): LookupMatch[] {
+  return isSelected(selected, match.product.id) ? [...selected] : [...selected, match];
+}
+
+export function removeFromSelection(selected: readonly LookupMatch[], productId: string): LookupMatch[] {
+  return selected.filter((m) => m.product.id !== productId);
+}
+
+/** Steps of the bulk flow (2+ selected products): one table for all rows, then review + save. */
+export type BulkStep = 'rows' | 'review';
+export type WizardStep = EntryStep | BulkStep;
+export const BULK_STEPS: WizardStep[] = ['identify', 'rows', 'review'];
+
+/** At most this many rows are sent at the same time. */
+export const BULK_CONCURRENCY = 3;
+
+export type RowStatus = 'pending' | 'saving' | 'saved' | 'error';
+
+/** One product of the bulk table: its own stock input, EK, offer and send state. Mutable (bound with ngModel). */
+export interface BulkRow {
+  /** Product id (one row per product). */
+  id: string;
+  match: LookupMatch;
+  stockMode: StockMode;
+  quantity: string;
+  imeiText: string;
+  purchasePrice: string;
+  offer: OfferDraft;
+  /**
+   * Idempotency-Key of this row: created with the row and sent with every (re)send of it, also after the row was
+   * edited. A failed request is not recorded by the API, so the key stays usable; if a send with unknown outcome did
+   * succeed, the resend is replayed (same data) or refused with entry.idempotency_key_reused (changed data) instead of
+   * booking the stock twice.
+   */
+  key: string;
+  status: RowStatus;
+  result: ManualEntryResult | null;
+  errorCode: string | null;
+  /** Translated message of the last failed send. */
+  error: string | null;
+}
+
+/** Offer prefill of an existing product: its own offer if there is one, else the suggested SKU and 1 / 2 days. */
+export function offerPrefill(match: LookupMatch, enabled = false): OfferDraft {
+  const existing = match.ownOffers[0];
+  if (!existing) return { ...emptyOffer(), enabled, supplierSku: match.suggestedSku };
+  return {
+    enabled,
+    supplierSku: existing.supplierSku,
+    price: minorToInput(existing.priceMinor),
+    minOrderQuantity: String(existing.minOrderQuantity),
+    deliveryDays: String(existing.deliveryDays),
+    condition: existing.condition as OfferCondition,
+    publish: existing.status === 'Published' || existing.status === 'Draft',
+  };
+}
+
+export function newBulkRow(match: LookupMatch, newKey: () => string): BulkRow {
+  return {
+    id: match.product.id,
+    match,
+    stockMode: match.imeiRequired ? 'imei' : 'quantity',
+    quantity: '1',
+    imeiText: '',
+    purchasePrice: '',
+    offer: offerPrefill(match),
+    key: newKey(),
+    status: 'pending',
+    result: null,
+    errorCode: null,
+    error: null,
+  };
+}
+
+/**
+ * Rows for the current selection, in selection order: rows of products that stay selected keep their input, status
+ * and key; newly selected products get a new row; unsaved rows of deselected products are dropped. Saved rows are
+ * always kept (they are part of the run's summary).
+ */
+export function syncRows(rows: readonly BulkRow[], selected: readonly LookupMatch[], newKey: () => string): BulkRow[] {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const out: BulkRow[] = rows.filter((r) => r.status === 'saved' && !isSelected(selected, r.id));
+  for (const m of selected) out.push(byId.get(m.product.id) ?? newBulkRow(m, newKey));
+  return out;
+}
+
+function rowAsDraft(row: BulkRow, warehouseId: string): EntryDraft {
+  return {
+    productMode: 'existing',
+    match: row.match,
+    newProduct: emptyNewProduct(),
+    warehouseId,
+    stockMode: row.stockMode,
+    quantity: row.quantity,
+    imeiText: row.imeiText,
+    purchasePrice: row.purchasePrice,
+    offer: row.offer,
+  };
+}
+
+export function rowPolicy(row: BulkRow): ImeiPolicy {
+  return imeiPolicy({ productMode: 'existing', match: row.match, newProduct: emptyNewProduct() }, null);
+}
+
+export function rowStockMode(row: BulkRow): StockMode {
+  return effectiveStockMode(row.stockMode, rowPolicy(row));
+}
+
+/** Same rule as the single entry: offers only with the permission and never for IMEI stock. */
+export function rowOfferPossible(row: BulkRow, ctx: EntryContext): boolean {
+  return offerPossible(rowAsDraft(row, ''), ctx);
+}
+
+/** IMEIs (valid ones) that appear in more than one row, per row id. */
+export function crossRowImeiDuplicates(rows: readonly BulkRow[]): Map<string, string[]> {
+  const owners = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (rowStockMode(row) !== 'imei') continue;
+    for (const imei of parseImeiList(row.imeiText).valid) {
+      const set = owners.get(imei) ?? new Set<string>();
+      set.add(row.id);
+      owners.set(imei, set);
+    }
+  }
+  const out = new Map<string, string[]>();
+  for (const [imei, ids] of owners) {
+    if (ids.size < 2) continue;
+    for (const id of ids) out.set(id, [...(out.get(id) ?? []), imei]);
+  }
+  return out;
+}
+
+function skuKey(sku: string): string {
+  return sku.trim().toUpperCase();
+}
+
+/**
+ * Validation of one row (values are i18n keys): stock (quantity or IMEIs), EK and, when enabled and possible, the
+ * offer. Cross-row rules: an IMEI may appear in one row only, an offer SKU in one row only. A row must receive stock
+ * or carry an offer, otherwise it would save nothing.
+ */
+export function validateRow(row: BulkRow, rows: readonly BulkRow[], ctx: EntryContext): StepErrors {
+  const draft = rowAsDraft(row, '');
+  const errors: StepErrors = { ...validateStock(draft, ctx) };
+  const offer = rowOfferPossible(row, ctx) && row.offer.enabled;
+  if (offer) Object.assign(errors, validateOffer(draft));
+  const mode = rowStockMode(row);
+  if (mode === 'quantity' && !errors['quantity'] && parseWholeNumber(row.quantity, 0, MAX_QUANTITY) === 0 && !offer) {
+    errors['quantity'] = 'inventory.entry.bulk.v.nothing';
+  }
+  if (mode === 'imei' && !errors['imeis'] && (crossRowImeiDuplicates(rows).get(row.id)?.length ?? 0) > 0) {
+    errors['imeis'] = 'inventory.entry.bulk.v.imeiOtherRow';
+  }
+  if (offer && !errors['supplierSku']) {
+    const key = skuKey(row.offer.supplierSku);
+    const clash = rows.some((r) => r.id !== row.id && r.offer.enabled && rowOfferPossible(r, ctx) && skuKey(r.offer.supplierSku) === key);
+    if (clash) errors['supplierSku'] = 'inventory.entry.bulk.v.skuOtherRow';
+  }
+  return errors;
+}
+
+/** Errors of all rows that are still to be sent (saved rows are final), keyed by row id; empty when all are valid. */
+export function validateRows(rows: readonly BulkRow[], ctx: EntryContext): Map<string, StepErrors> {
+  const out = new Map<string, StepErrors>();
+  for (const row of rows) {
+    if (row.status === 'saved') continue;
+    const errors = validateRow(row, rows, ctx);
+    if (Object.keys(errors).length) out.set(row.id, errors);
+  }
+  return out;
+}
+
+/** Request of one row (validate first); the warehouse is shared by all rows. */
+export function buildRowRequest(row: BulkRow, warehouseId: string, ctx: EntryContext): ManualEntryRequest {
+  return buildEntryRequest(rowAsDraft(row, warehouseId), ctx);
+}
+
+/** Rows a (re)run sends: everything not saved yet. Saved rows are never sent again. */
+export function rowsToSend(rows: readonly BulkRow[]): BulkRow[] {
+  return rows.filter((r) => r.status !== 'saved');
+}
+
+export interface BulkSummary {
+  total: number;
+  saved: number;
+  failed: number;
+}
+
+export function bulkSummary(rows: readonly BulkRow[]): BulkSummary {
+  return {
+    total: rows.length,
+    saved: rows.filter((r) => r.status === 'saved').length,
+    failed: rows.filter((r) => r.status === 'error').length,
+  };
+}
+
+/** Rows whose input would be lost by closing the dialog. */
+export function hasUnsavedRows(rows: readonly BulkRow[]): boolean {
+  return rows.some((r) => r.status !== 'saved');
+}
+
+/** "Menge für alle": sets the quantity of every unsaved row stocked by quantity; returns how many rows changed. */
+export function setQuantityForAll(rows: readonly BulkRow[], quantity: string): number {
+  let changed = 0;
+  for (const row of rows) {
+    if (row.status === 'saved' || rowStockMode(row) !== 'quantity') continue;
+    row.quantity = quantity.trim();
+    changed++;
+  }
+  return changed;
+}
+
+/**
+ * Sends one row with its own key and records the outcome on the row. `send` performs the request; `describe` turns a
+ * failure into the translated message. Never throws.
+ */
+export async function sendRow(
+  row: BulkRow,
+  body: ManualEntryRequest,
+  send: (body: ManualEntryRequest, key: string) => Promise<ManualEntryResult>,
+  describe: (error: unknown) => { code: string | null; text: string },
+): Promise<void> {
+  row.status = 'saving';
+  try {
+    row.result = await send(body, row.key);
+    row.status = 'saved';
+    row.error = null;
+    row.errorCode = null;
+  } catch (e) {
+    const d = describe(e);
+    row.status = 'error';
+    row.errorCode = d.code;
+    row.error = d.text;
+  }
+}
+
+export interface BulkRunOptions {
+  warehouseId: string;
+  ctx: EntryContext;
+  send: (body: ManualEntryRequest, key: string) => Promise<ManualEntryResult>;
+  describe: (error: unknown) => { code: string | null; text: string };
+  /** Called whenever a row changed its status (re-render). */
+  onChange?: () => void;
+  concurrency?: number;
+}
+
+/**
+ * One save run of the bulk table: sends every row that is not saved yet (the first run all rows, later runs the failed
+ * ones), each with its own key, at most BULK_CONCURRENCY at a time — one at a time without a warehouse, because the
+ * API then creates the default warehouse and parallel requests would race for it. Returns the last saved result.
+ */
+export async function runBulk(rows: readonly BulkRow[], options: BulkRunOptions): Promise<ManualEntryResult | null> {
+  const toSend = rowsToSend(rows);
+  for (const row of toSend) {
+    row.status = 'pending';
+    row.error = null;
+    row.errorCode = null;
+  }
+  options.onChange?.();
+  let last: ManualEntryResult | null = null;
+  const limit = options.warehouseId ? (options.concurrency ?? BULK_CONCURRENCY) : 1;
+  await runLimited(toSend, limit, async (row) => {
+    const sending = sendRow(row, buildRowRequest(row, options.warehouseId, options.ctx), options.send, options.describe);
+    options.onChange?.();
+    await sending;
+    if (row.status === 'saved' && row.result) last = row.result;
+    options.onChange?.();
+  });
+  return last;
+}
+
+/** Runs `worker` for every item with at most `limit` in flight; resolves when all are done (workers must not throw). */
+export async function runLimited<T>(items: readonly T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const lanes = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await worker(item);
+    }
+  });
+  await Promise.all(lanes);
 }

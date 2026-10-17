@@ -618,7 +618,9 @@
         "identify": "Artikel",
         "stock": "Bestand",
         "offer": "Angebot",
-        "summary": "Prüfen & speichern"
+        "summary": "Prüfen & speichern",
+        "rows": "Mengen",
+        "review": "Prüfen & speichern"
       },
       "identifyTitle": "Artikel suchen oder neu anlegen",
       "scanLabel": "EAN, Herstellernummer oder Bezeichnung",
@@ -730,6 +732,53 @@
         "price": "Bitte einen Preis größer als 0 eingeben, z. B. 12,50.",
         "moq": "Mindestens 1.",
         "deliveryDays": "0 bis 60 Tage."
+      },
+      "bulk": {
+        "selected": "Ausgewählt ({count})",
+        "clearSelection": "Auswahl leeren",
+        "unselect": "{product} aus der Auswahl entfernen",
+        "selectedHint": "Die Auswahl bleibt bei neuen Suchen erhalten. Im nächsten Schritt erfassen Sie Menge bzw. IMEIs, EK und Angebot je Artikel in einer Tabelle.",
+        "tickHint": "mehrere Artikel ankreuzen möglich",
+        "newProductSingle": "Neue Artikel werden einzeln angelegt: Leeren Sie dazu zuerst die Auswahl.",
+        "nextWith": "Weiter mit {count} Artikeln",
+        "rowsTitle": "Bestand für {count} Artikel",
+        "warehouseHint": "Gilt für alle Zeilen.",
+        "quantityAll": "Menge für alle",
+        "apply": "Übernehmen",
+        "remove": "Entfernen",
+        "removeRow": "Zeile {product} entfernen",
+        "ek": "EK netto je Stück",
+        "ekShort": "EK netto",
+        "offerCreate": "Angebot im Marktplatz anlegen",
+        "offerUpdate": "Eigenes Angebot aktualisieren",
+        "publish": "Veröffentlichen",
+        "imeiInOtherRow": "auch in einer anderen Zeile erfasst",
+        "rowSaved": "Gespeichert: +{qty}, Bestand jetzt {onHand}.",
+        "status": {
+          "pending": "Offen",
+          "saving": "Wird gespeichert …",
+          "saved": "Gespeichert",
+          "error": "Fehler"
+        },
+        "resultTitle": "Ergebnis",
+        "savedOf": "{saved} von {total} gespeichert",
+        "failedHint": "Fehlgeschlagen: {count}. Korrigieren Sie die Zeilen über „Bearbeiten“ und senden Sie sie erneut – gespeicherte Zeilen werden nicht noch einmal gesendet.",
+        "editRow": "Bearbeiten",
+        "sendInfo": "Jede Zeile wird einzeln gespeichert. Schlägt eine fehl, bleiben die anderen gespeichert; erneutes Senden bucht nichts doppelt.",
+        "saveAll": "Alle speichern ({count})",
+        "retryFailed": "Fehlgeschlagene erneut senden ({count})",
+        "moreItems": "Weitere Artikel erfassen",
+        "savedNext": "{count} Artikel gespeichert. Nächste Auswahl:",
+        "closeTitle": "Nicht gespeicherte Zeilen verwerfen?",
+        "closeText": "Noch nicht gespeichert: {count} Zeilen. Beim Schließen gehen diese Angaben verloren.",
+        "closeBusy": "Das Speichern läuft noch ({count} Zeilen offen). Bereits gesendete Zeilen werden trotzdem gebucht.",
+        "keepEditing": "Weiter bearbeiten",
+        "discardClose": "Verwerfen und schließen",
+        "v": {
+          "nothing": "Bitte eine Menge ab 1 eingeben oder ein Angebot anlegen.",
+          "imeiOtherRow": "Mindestens eine IMEI ist auch in einer anderen Zeile erfasst.",
+          "skuOtherRow": "Diese Artikelnummer wird bereits in einer anderen Zeile verwendet."
+        }
       }
     }
   },

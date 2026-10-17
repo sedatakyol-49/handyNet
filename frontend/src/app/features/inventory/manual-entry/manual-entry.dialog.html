@@ -1,5 +1,19 @@
-<hn-dialog [open]="open()" [title]="'inventory.entry.title' | t" size="xl" testId="entry-dialog" (closed)="close()">
+<hn-dialog [open]="open()" [title]="'inventory.entry.title' | t" size="xl" testId="entry-dialog" [guardClose]="true" (closed)="close()">
   <div data-entry-dialog class="space-y-4 text-sm">
+    @if (confirmClose()) {
+      <div role="alertdialog" aria-labelledby="entry-close-title" aria-describedby="entry-close-text"
+        class="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-950" data-testid="entry-close-confirm">
+        <p id="entry-close-title" class="font-semibold">{{ 'inventory.entry.bulk.closeTitle' | t }}</p>
+        <p id="entry-close-text" class="mt-0.5">
+          {{ (busy() ? 'inventory.entry.bulk.closeBusy' : 'inventory.entry.bulk.closeText') | t: { count: toSendCount() } }}
+        </p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button #closeKeep hnButton variant="primary" type="button" (click)="keepEditing()" data-testid="entry-close-keep">{{ 'inventory.entry.bulk.keepEditing' | t }}</button>
+          <button hnButton variant="danger" type="button" (click)="closeNow()" data-testid="entry-close-discard">{{ 'inventory.entry.bulk.discardClose' | t }}</button>
+        </div>
+      </div>
+    }
+
     @if (step() !== 'done') {
       <nav [attr.aria-label]="'inventory.entry.stepsLabel' | t">
         <ol class="flex flex-wrap gap-1.5" data-testid="entry-steps">
@@ -7,9 +21,10 @@
             <li>
               <button
                 type="button"
-                class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                class="flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                 [class]="step() === s ? 'border-accent-700 bg-accent-700 text-white' : i < stepIndex() ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'border-slate-200 bg-slate-50 text-slate-500'"
                 [attr.aria-current]="step() === s ? 'step' : null"
+                [disabled]="step() !== s && stepDisabled(s)"
                 (click)="goTo(s)"
               >
                 <span class="tabular-nums">{{ i + 1 }}</span>
@@ -35,6 +50,9 @@
         <hn-banner tone="success" data-testid="entry-saved-banner"
           [text]="'inventory.entry.savedNext' | t: { product: ls.product.brand + ' ' + ls.product.name, qty: ls.quantityReceived, onHand: ls.stock.onHand }" />
       }
+      @if (lastBulkSaved(); as n) {
+        <hn-banner tone="success" data-testid="entry-saved-banner" [text]="'inventory.entry.bulk.savedNext' | t: { count: n }" />
+      }
       <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.identifyTitle' | t }}</h3>
       <hn-field [label]="'inventory.entry.scanLabel' | t" for="entry-scan" [hint]="'inventory.entry.scanHint' | t">
         <div class="flex gap-2">
@@ -57,15 +75,43 @@
 
       <hn-banner [error]="lookup.error()" />
 
+      @if (selection().length > 0) {
+        <section class="rounded-md border border-accent-100 bg-accent-50 p-2" aria-labelledby="entry-tray-title" data-testid="entry-tray">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 id="entry-tray-title" class="text-sm font-semibold" data-testid="entry-tray-title">{{ 'inventory.entry.bulk.selected' | t: { count: selection().length } }}</h4>
+            <button hnButton size="sm" variant="ghost" type="button" (click)="clearSelection()" data-testid="entry-clear-selection">{{ 'inventory.entry.bulk.clearSelection' | t }}</button>
+          </div>
+          <ul class="mt-1.5 flex flex-wrap gap-1.5">
+            @for (m of selection(); track m.product.id) {
+              <li class="inline-flex max-w-full items-center gap-0.5 rounded-full border border-slate-300 bg-white ps-2.5 text-xs" data-testid="entry-chip">
+                <span class="truncate">{{ matchLabel(m) }}</span>
+                <button type="button" class="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  [attr.aria-label]="'inventory.entry.bulk.unselect' | t: { product: matchLabel(m) }" (click)="unselect(m.product.id)" data-testid="entry-chip-remove">
+                  <span aria-hidden="true">✕</span>
+                </button>
+              </li>
+            }
+          </ul>
+          @if (selection().length >= 2) {
+            <p class="mt-1.5 text-xs text-slate-600">{{ 'inventory.entry.bulk.selectedHint' | t }}</p>
+          }
+        </section>
+      }
+
       @if (lookupResult(); as r) {
         @if (r.looksLikeImei) {
           <hn-banner tone="info" [text]="'inventory.entry.looksLikeImei' | t" />
         }
         @if (r.matches.length > 0) {
-          <p class="text-xs text-slate-600" role="status">{{ 'inventory.entry.matches' | t: { count: r.matches.length } }}</p>
+          <p class="text-xs text-slate-600" role="status">{{ 'inventory.entry.matches' | t: { count: r.matches.length } }} · {{ 'inventory.entry.bulk.tickHint' | t }}</p>
           <ul class="max-h-[28rem] space-y-1.5 overflow-y-auto pe-1" data-testid="entry-matches">
             @for (m of r.matches; track m.product.id) {
-              <li class="flex items-start gap-3 rounded-md border bg-white p-2" [class]="isChosen(m) ? 'border-accent-600 ring-1 ring-accent-600' : 'border-slate-200'" data-testid="entry-match">
+              <li class="flex items-start gap-3 rounded-md border bg-white p-2" [class]="(isSelected(m) ? 'border-accent-600 ring-1 ring-accent-600 bg-accent-50' : 'border-slate-200') + (draft.productMode === 'new' ? '' : ' cursor-pointer hover:border-slate-300')"
+                (click)="onMatchClick($event, m)" data-testid="entry-match">
+                <span class="flex min-h-11 min-w-8 shrink-0 items-center justify-center">
+                  <input type="checkbox" class="hn-checkbox size-5" [id]="'entry-sel-' + m.product.id" [checked]="isSelected(m)" [disabled]="draft.productMode === 'new'"
+                    (change)="toggle(m)" [attr.aria-describedby]="'entry-meta-' + m.product.id" data-testid="entry-select" />
+                </span>
                 @if (m.primaryThumbnailUrl) {
                   <img [src]="catalog.imageUrl(m.primaryThumbnailUrl)" alt="" class="size-14 shrink-0 rounded border border-slate-200 object-contain" loading="lazy" width="56" height="56" />
                 } @else {
@@ -73,10 +119,10 @@
                 }
                 <div class="min-w-0 flex-1">
                   <p class="font-medium">
-                    {{ m.product.brand }} {{ m.product.name }}
+                    <label [for]="'entry-sel-' + m.product.id" class="cursor-pointer">{{ m.product.brand }} {{ m.product.name }}</label>
                     <span class="ms-1 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-600">{{ 'inventory.entry.matchedBy.' + m.matchedBy | t }}</span>
                   </p>
-                  <p class="text-xs text-slate-500">
+                  <p class="text-xs text-slate-500" [id]="'entry-meta-' + m.product.id">
                     {{ m.product.category | tEnum: 'category' }} · {{ m.product.quality | tEnum: 'quality' }}
                     @if (m.product.ean) { · EAN <span class="hn-mono">{{ m.product.ean }}</span> }
                     @if (m.product.mpn) { · MPN <span class="hn-mono">{{ m.product.mpn }}</span> }
@@ -94,9 +140,9 @@
                   }
                 </div>
                 <div class="flex shrink-0 flex-col items-end gap-1">
-                  <button hnButton size="sm" type="button" [variant]="isChosen(m) ? 'primary' : 'secondary'" [attr.aria-pressed]="isChosen(m)" (click)="choose(m)" data-testid="entry-choose">
-                    {{ (isChosen(m) ? 'inventory.entry.chosen' : 'inventory.entry.choose') | t }}
-                  </button>
+                  @if (isSelected(m)) {
+                    <span class="rounded bg-accent-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">{{ 'inventory.entry.chosen' | t }}</span>
+                  }
                   @if (m.canManageImages) {
                     <button hnButton size="sm" variant="ghost" type="button" [attr.aria-expanded]="imagesFor() === m.product.id" (click)="toggleImages(m)" data-testid="entry-match-images">
                       {{ 'images.manageCount' | t: { count: m.imageCount } }}
@@ -118,7 +164,11 @@
 
       @if (draft.productMode !== 'new') {
         @if (ctx().canCreateProduct) {
-          <button hnButton type="button" (click)="startNewProduct()" data-testid="entry-new-product">{{ 'inventory.entry.newProduct' | t }}</button>
+          @if (selection().length === 0) {
+            <button hnButton type="button" (click)="startNewProduct()" data-testid="entry-new-product">{{ 'inventory.entry.newProduct' | t }}</button>
+          } @else {
+            <p class="text-xs text-slate-500" data-testid="entry-new-product-hint">{{ 'inventory.entry.bulk.newProductSingle' | t }}</p>
+          }
         } @else if (lookupResult()) {
           <p class="text-xs text-slate-500">{{ 'inventory.entry.noProductCreation' | t }}</p>
         }
@@ -339,6 +389,224 @@
       </dl>
     }
 
+    <!-- ============================================================ bulk 2. rows -->
+    @if (step() === 'rows') {
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.bulk.rowsTitle' | t: { count: rows.length } }}</h3>
+      <div class="flex flex-wrap items-end gap-3">
+        <hn-field [label]="'inventory.warehouse' | t" for="bulk-warehouse" [hint]="'inventory.entry.bulk.warehouseHint' | t" class="w-full sm:w-80">
+          <select hnSelect id="bulk-warehouse" name="bulkWarehouse" [(ngModel)]="draft.warehouseId" [disabled]="summary().saved > 0 || busy()" aria-describedby="bulk-warehouse-hint" data-testid="bulk-warehouse">
+            @for (w of warehouses.value() ?? []; track w.id) {
+              <option [value]="w.id">{{ w.code }} – {{ w.name }}{{ w.isDefault ? ' (' + ('inventory.entry.defaultWarehouse' | t) + ')' : '' }}</option>
+            } @empty {
+              <option value="">{{ 'inventory.entry.defaultWarehouseAuto' | t }}</option>
+            }
+          </select>
+        </hn-field>
+        <div class="flex items-end gap-2">
+          <hn-field [label]="'inventory.entry.bulk.quantityAll' | t" for="bulk-qty-all" class="w-32">
+            <input hnInput id="bulk-qty-all" name="bulkQtyAll" inputmode="numeric" autocomplete="off" class="text-end" [(ngModel)]="allQuantity"
+              (keydown.enter)="$event.preventDefault(); applyQuantityToAll()" data-testid="bulk-qty-all" />
+          </hn-field>
+          <button hnButton type="button" class="min-h-9" (click)="applyQuantityToAll()" [disabled]="busy()" data-testid="bulk-qty-apply">{{ 'inventory.entry.bulk.apply' | t }}</button>
+        </div>
+      </div>
+
+      <ol class="space-y-2" data-testid="bulk-rows">
+        @for (row of rows; track row.id; let i = $index) {
+          <li class="rounded-md border p-2.5" [class]="row.status === 'error' ? 'border-red-300 bg-red-50/40' : row.status === 'saved' ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white'"
+            [attr.data-row-id]="row.id" [attr.aria-labelledby]="'bulk-name-' + row.id" data-testid="bulk-row">
+            <div class="flex items-start gap-3">
+              @if (row.match.primaryThumbnailUrl) {
+                <img [src]="catalog.imageUrl(row.match.primaryThumbnailUrl)" alt="" class="size-12 shrink-0 rounded border border-slate-200 object-contain" loading="lazy" width="48" height="48" />
+              } @else {
+                <span class="flex size-12 shrink-0 items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400" aria-hidden="true">{{ 'images.noImageShort' | t }}</span>
+              }
+              <div class="min-w-0 flex-1">
+                <p class="font-medium" [id]="'bulk-name-' + row.id"><span class="tabular-nums text-slate-500">{{ i + 1 }}.</span> {{ matchLabel(row.match) }}</p>
+                <p class="text-xs text-slate-500">
+                  {{ row.match.product.category | tEnum: 'category' }}
+                  @if (row.match.product.ean) { · EAN <span class="hn-mono">{{ row.match.product.ean }}</span> }
+                  @if (row.match.product.mpn) { · MPN <span class="hn-mono">{{ row.match.product.mpn }}</span> }
+                  · {{ 'inventory.entry.ownStock' | t: { onHand: row.match.ownOnHand, available: row.match.ownAvailable } }}
+                </p>
+              </div>
+              <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset" [class]="statusClass(row.status)" data-testid="bulk-status">{{ 'inventory.entry.bulk.status.' + row.status | t }}</span>
+              @if (!rowLocked(row)) {
+                <button hnButton size="sm" variant="ghost" type="button" class="min-h-8 shrink-0" [disabled]="busy()" (click)="removeRow(row)"
+                  [attr.aria-label]="'inventory.entry.bulk.removeRow' | t: { product: matchLabel(row.match) }" data-testid="bulk-remove">
+                  {{ 'inventory.entry.bulk.remove' | t }}
+                </button>
+              }
+            </div>
+            @if (row.status === 'error' && row.error) {
+              <p class="mt-1.5 text-xs text-red-700" role="alert" data-testid="bulk-row-error">{{ row.error }}</p>
+            }
+            @if (row.status === 'saved' && row.result; as r) {
+              <p class="mt-1.5 text-xs text-emerald-800" data-testid="bulk-row-saved">{{ 'inventory.entry.bulk.rowSaved' | t: { qty: r.quantityReceived, onHand: r.stock.onHand } }}</p>
+            }
+            <fieldset class="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]" [disabled]="rowLocked(row) || busy()">
+              <legend class="sr-only">{{ matchLabel(row.match) }}</legend>
+              <div class="space-y-2">
+                @if (rowPolicy(row) === 'optional') {
+                  <div role="radiogroup" [attr.aria-label]="'inventory.entry.stockMode' | t" class="flex flex-wrap gap-4 text-sm">
+                    <label class="flex min-h-8 items-center gap-2"><input type="radio" [name]="'bulk-mode-' + row.id" value="quantity" [(ngModel)]="row.stockMode" (ngModelChange)="onRowInput()" /> {{ 'inventory.entry.byQuantity' | t }}</label>
+                    <label class="flex min-h-8 items-center gap-2"><input type="radio" [name]="'bulk-mode-' + row.id" value="imei" [(ngModel)]="row.stockMode" (ngModelChange)="onRowInput()" /> {{ 'inventory.entry.byImei' | t }}</label>
+                  </div>
+                }
+                @if (rowMode(row) === 'quantity') {
+                  <hn-field [label]="'inventory.quantity' | t" [for]="'bulk-qty-' + i" [required]="true" [errors]="rowError(row, 'quantity')" class="max-w-40">
+                    <input hnInput [id]="'bulk-qty-' + i" [name]="'bulk-qty-' + row.id" inputmode="numeric" autocomplete="off" class="text-end" data-row-focus
+                      [(ngModel)]="row.quantity" (ngModelChange)="onRowInput()" [attr.aria-invalid]="!!rowError(row, 'quantity')" data-testid="bulk-qty" />
+                  </hn-field>
+                } @else {
+                  <hn-field [label]="'inventory.entry.imeis' | t" [for]="'bulk-imeis-' + i" [required]="true" [errors]="rowError(row, 'imeis')">
+                    <textarea hnInput [id]="'bulk-imeis-' + i" [name]="'bulk-imeis-' + row.id" rows="3" class="hn-mono" spellcheck="false" autocomplete="off" data-row-focus
+                      [(ngModel)]="row.imeiText" (ngModelChange)="onRowInput()" [attr.aria-invalid]="!!rowError(row, 'imeis')"
+                      [attr.aria-describedby]="'bulk-imei-summary-' + i" data-testid="bulk-imeis"></textarea>
+                  </hn-field>
+                  @if (rowImeis(row); as list) {
+                    <p [id]="'bulk-imei-summary-' + i" class="text-xs" role="status" data-testid="bulk-imei-summary">
+                      {{ 'inventory.entry.imeiSummary' | t: { valid: list.valid.length, invalid: list.invalid, duplicates: list.duplicates } }}
+                    </p>
+                    @if (list.invalid + list.duplicates > 0 || rowImeiClashes(row).length > 0) {
+                      <ul class="max-h-28 space-y-0.5 overflow-y-auto text-xs text-red-700" data-testid="bulk-imei-problems">
+                        @for (e of list.entries; track $index) {
+                          @if (e.status !== 'ok') {
+                            <li>{{ 'inventory.entry.imeiLine' | t: { line: e.line, value: e.raw } }} – {{ 'inventory.entry.imeiStatus.' + e.status | t }}</li>
+                          }
+                        }
+                        @for (imei of rowImeiClashes(row); track imei) {
+                          <li><span class="hn-mono">{{ imei }}</span> – {{ 'inventory.entry.bulk.imeiInOtherRow' | t }}</li>
+                        }
+                      </ul>
+                    }
+                  }
+                }
+              </div>
+              <hn-field [label]="'inventory.entry.bulk.ek' | t" [for]="'bulk-ek-' + i" [errors]="rowError(row, 'purchasePrice')">
+                <input hnInput [id]="'bulk-ek-' + i" [name]="'bulk-ek-' + row.id" inputmode="decimal" autocomplete="off" class="text-end" placeholder="0,00"
+                  [(ngModel)]="row.purchasePrice" (ngModelChange)="onRowInput()" [attr.aria-invalid]="!!rowError(row, 'purchasePrice')" data-testid="bulk-ek" />
+              </hn-field>
+
+              <div class="sm:col-span-2">
+                @if (rowOfferPossible(row)) {
+                  <label class="flex min-h-8 items-center gap-2">
+                    <input type="checkbox" class="hn-checkbox size-5" [name]="'bulk-offer-' + row.id" [(ngModel)]="row.offer.enabled" (ngModelChange)="onRowInput()" data-testid="bulk-offer-enabled" />
+                    {{ (row.match.ownOffers.length ? 'inventory.entry.bulk.offerUpdate' : 'inventory.entry.bulk.offerCreate') | t }}
+                  </label>
+                  @if (row.offer.enabled) {
+                    <div class="mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                      <hn-field [label]="'common.sku' | t" [for]="'bulk-sku-' + i" [required]="true" [errors]="rowError(row, 'supplierSku')" class="sm:col-span-2 lg:col-span-1">
+                        <input hnInput [id]="'bulk-sku-' + i" [name]="'bulk-sku-' + row.id" maxlength="100" autocomplete="off" [(ngModel)]="row.offer.supplierSku" (ngModelChange)="onRowInput()"
+                          [attr.aria-invalid]="!!rowError(row, 'supplierSku')" data-testid="bulk-sku" />
+                      </hn-field>
+                      <hn-field [label]="'inventory.entry.salesPrice' | t" [for]="'bulk-price-' + i" [required]="true" [errors]="rowError(row, 'price')"
+                        [hint]="grossOf(row.offer.price) !== null ? ('inventory.entry.grossPreview' | t: { gross: (grossOf(row.offer.price) | money) }) : ('common.netPlusVat' | t)">
+                        <input hnInput [id]="'bulk-price-' + i" [name]="'bulk-price-' + row.id" inputmode="decimal" autocomplete="off" class="text-end" placeholder="0,00"
+                          [(ngModel)]="row.offer.price" (ngModelChange)="onRowInput()" [attr.aria-invalid]="!!rowError(row, 'price')" [attr.aria-describedby]="'bulk-price-' + i + '-hint'" data-testid="bulk-price" />
+                      </hn-field>
+                      <hn-field [label]="'marketplace.detail.moq' | t" [for]="'bulk-moq-' + i" [required]="true" [errors]="rowError(row, 'minOrderQuantity')">
+                        <input hnInput [id]="'bulk-moq-' + i" [name]="'bulk-moq-' + row.id" inputmode="numeric" class="text-end" [(ngModel)]="row.offer.minOrderQuantity" (ngModelChange)="onRowInput()"
+                          [attr.aria-invalid]="!!rowError(row, 'minOrderQuantity')" data-testid="bulk-moq" />
+                      </hn-field>
+                      <hn-field [label]="'inventory.entry.deliveryDays' | t" [for]="'bulk-days-' + i" [required]="true" [errors]="rowError(row, 'deliveryDays')">
+                        <input hnInput [id]="'bulk-days-' + i" [name]="'bulk-days-' + row.id" inputmode="numeric" class="text-end" [(ngModel)]="row.offer.deliveryDays" (ngModelChange)="onRowInput()"
+                          [attr.aria-invalid]="!!rowError(row, 'deliveryDays')" data-testid="bulk-days" />
+                      </hn-field>
+                      <hn-field [label]="'common.condition' | t" [for]="'bulk-condition-' + i">
+                        <select hnSelect [id]="'bulk-condition-' + i" [name]="'bulk-condition-' + row.id" [(ngModel)]="row.offer.condition">
+                          @for (c of conditions; track c) {
+                            <option [value]="c">{{ c | tEnum: 'condition' }}</option>
+                          }
+                        </select>
+                      </hn-field>
+                      <div class="flex items-end pb-1.5">
+                        <label class="flex min-h-8 items-center gap-2">
+                          <input type="checkbox" class="hn-checkbox size-5" [name]="'bulk-publish-' + row.id" [(ngModel)]="row.offer.publish" data-testid="bulk-publish" />
+                          {{ 'inventory.entry.bulk.publish' | t }}
+                        </label>
+                      </div>
+                    </div>
+                  }
+                } @else if (ctx().canCreateOffer) {
+                  <p class="text-xs text-slate-500">{{ 'inventory.entry.noOfferForImei' | t }}</p>
+                }
+              </div>
+            </fieldset>
+          </li>
+        }
+      </ol>
+    }
+
+    <!-- ============================================================ bulk 3. review + save -->
+    @if (step() === 'review') {
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ (bulkRan() ? 'inventory.entry.bulk.resultTitle' : 'inventory.entry.summaryTitle') | t }}</h3>
+      <p class="text-slate-700">{{ 'inventory.warehouse' | t }}: <span class="font-medium">{{ warehouseLabel(draft.warehouseId) }}</span></p>
+      <div aria-live="polite">
+        @if (bulkRan()) {
+          @if (summary(); as s) {
+            <div class="rounded-md border p-3" [class]="busy() ? 'border-slate-200 bg-slate-50' : s.failed > 0 ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-emerald-300 bg-emerald-50 text-emerald-900'" data-testid="bulk-summary">
+              <p class="font-semibold">{{ 'inventory.entry.bulk.savedOf' | t: { saved: s.saved, total: s.total } }}</p>
+              @if (!busy() && s.failed > 0) {
+                <p class="mt-0.5">{{ 'inventory.entry.bulk.failedHint' | t: { count: s.failed } }}</p>
+              }
+            </div>
+          }
+        }
+      </div>
+      <div class="overflow-x-auto rounded-md border border-slate-200">
+        <table class="hn-table" data-testid="bulk-review">
+          <thead>
+            <tr>
+              <th scope="col" class="text-start">{{ 'common.product' | t }}</th>
+              <th scope="col" class="text-end">{{ 'inventory.entry.receive' | t }}</th>
+              <th scope="col" class="text-end">{{ 'inventory.entry.bulk.ekShort' | t }}</th>
+              <th scope="col" class="text-start">{{ 'inventory.entry.offer' | t }}</th>
+              <th scope="col" class="text-start">{{ 'common.status' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track row.id) {
+              <tr [attr.data-row-id]="row.id" data-testid="bulk-review-row">
+                <td class="min-w-48">
+                  <span class="font-medium">{{ matchLabel(row.match) }}</span>
+                  @if (row.match.product.ean || row.match.product.mpn) {
+                    <span class="block text-xs text-slate-500 hn-mono">{{ row.match.product.ean || row.match.product.mpn }}</span>
+                  }
+                </td>
+                <td class="whitespace-nowrap text-end tabular-nums" data-testid="bulk-review-qty">
+                  @if (rowMode(row) === 'imei') {
+                    {{ 'inventory.entry.devices' | t: { count: rowImeis(row).valid.length } }}
+                  } @else {
+                    +{{ row.quantity }}
+                  }
+                </td>
+                <td class="whitespace-nowrap text-end tabular-nums">{{ moneyMinor(row.purchasePrice) !== null ? (moneyMinor(row.purchasePrice) | money) : '–' }}</td>
+                <td class="min-w-40 text-xs">
+                  @if (rowOfferPossible(row) && row.offer.enabled) {
+                    <span class="hn-mono">{{ row.offer.supplierSku }}</span> · {{ moneyMinor(row.offer.price) | money }} {{ 'common.net' | t }} ·
+                    {{ (row.offer.publish ? 'inventory.entry.published' : 'inventory.entry.notPublished') | t }}
+                  } @else {
+                    {{ 'inventory.entry.noOffer' | t }}
+                  }
+                </td>
+                <td class="min-w-48">
+                  <span class="rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset" [class]="statusClass(row.status)" data-testid="bulk-review-status">{{ 'inventory.entry.bulk.status.' + row.status | t }}</span>
+                  @if (row.status === 'error') {
+                    <p class="mt-1 text-xs text-red-700" data-testid="bulk-review-error">{{ row.error }}</p>
+                    <button hnButton size="sm" variant="ghost" type="button" class="mt-1 min-h-8" [disabled]="busy()" (click)="editRow(row)" data-testid="bulk-edit-row">{{ 'inventory.entry.bulk.editRow' | t }}</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!bulkRan()) {
+        <p class="text-xs text-slate-500">{{ 'inventory.entry.bulk.sendInfo' | t }}</p>
+      }
+    }
+
     <!-- ============================================================ done -->
     @if (step() === 'done') {
       @if (result(); as r) {
@@ -372,15 +640,24 @@
       @if (step() === 'done') {
         <button hnButton type="button" (click)="close()">{{ 'common.close' | t }}</button>
         <button hnButton variant="primary" type="button" (click)="nextItem()" data-testid="entry-next-item">{{ 'inventory.entry.nextItem' | t }}</button>
+      } @else if (step() === 'review' && summary().total > 0 && summary().saved === summary().total) {
+        <button hnButton type="button" (click)="close()" data-testid="bulk-close">{{ 'common.close' | t }}</button>
+        <button hnButton variant="primary" type="button" (click)="moreItems()" data-testid="bulk-more">{{ 'inventory.entry.bulk.moreItems' | t }}</button>
       } @else {
         <div class="flex gap-2">
-          <button hnButton type="button" (click)="close()">{{ 'common.cancel' | t }}</button>
-          @if (step() !== 'identify') {
-            <button hnButton type="button" (click)="back()" data-testid="entry-back">{{ 'inventory.entry.back' | t }}</button>
+          <button hnButton type="button" (click)="close()" data-testid="entry-cancel">{{ 'common.cancel' | t }}</button>
+          @if (step() !== 'identify' && !(bulk() && step() === 'rows' && summary().saved > 0)) {
+            <button hnButton type="button" [disabled]="busy()" (click)="back()" data-testid="entry-back">{{ 'inventory.entry.back' | t }}</button>
           }
         </div>
         <div class="flex gap-2">
-          @if (step() === 'summary') {
+          @if (step() === 'review') {
+            <button hnButton variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="saveRows()" data-testid="bulk-save">
+              {{ (summary().failed > 0 ? 'inventory.entry.bulk.retryFailed' : 'inventory.entry.bulk.saveAll') | t: { count: toSendCount() } }}
+            </button>
+          } @else if (step() === 'identify' && bulk()) {
+            <button hnButton variant="primary" type="button" (click)="next()" data-testid="entry-next">{{ 'inventory.entry.bulk.nextWith' | t: { count: selection().length } }}</button>
+          } @else if (step() === 'summary') {
             <button hnButton type="button" [loading]="busy()" [disabled]="busy()" (click)="submit(true)" data-testid="entry-save-next">
               {{ 'inventory.entry.saveAndNext' | t }}
             </button>

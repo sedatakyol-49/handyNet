@@ -80,7 +80,10 @@ src/app
    │                         month validation, date-only/month formatting, issue-run outcome, cent sums)
    ├─ offers/                own offers with inline price/status editing, create offer from catalog, product images
    ├─ inventory/             stock table, adjustment dialog, movements, warehouses; manual-entry/ = "Artikel anlegen"
-   │                         wizard and manual-entry.logic.ts (IMEI/GTIN checks, step validation, request, idempotency)
+   │                         wizard and manual-entry.logic.ts (IMEI/GTIN checks, step validation, request, idempotency);
+   │                         multi-select: lookup matches are ticked (selection survives new searches), 2+ products
+   │                         open a bulk table (shared warehouse, quantity/IMEIs, EK, offer per row) saved as one POST
+   │                         per row with its own stable Idempotency-Key (≤ 3 in flight); only unsaved rows are resent
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
    ├─ team/                  staff list + add staff + per-cashier POS rights (module Pos)
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts

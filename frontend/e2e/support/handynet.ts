@@ -134,6 +134,16 @@ export class Api {
     expect(c.status(), await c.text()).toBe(200);
   }
 
+  /** Lager "Artikel anlegen" (POST /api/inventory/items) as test data setup; returns the entry result. */
+  async createItem(organizationId: string, body: Record<string, unknown>): Promise<{ product: { id: string } }> {
+    const res = await this.ctx.post('/api/inventory/items', {
+      headers: { ...this.headers(organizationId), 'Idempotency-Key': randomUUID() },
+      data: body,
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    return res.json();
+  }
+
   /** Changes the price (decimal euros) of the supplier's offer with the given SKU. */
   async setOfferPrice(organizationId: string, sku: string, price: number): Promise<void> {
     const list = await this.ctx.get('/api/offers', { headers: this.headers(organizationId), params: { search: sku } });
