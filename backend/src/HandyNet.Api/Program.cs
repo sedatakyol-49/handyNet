@@ -21,6 +21,7 @@ using HandyNet.Persistence;
 using HandyNet.SharedKernel.Tenancy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -69,6 +70,9 @@ builder.Services
     .AddAnkaufModule(builder.Configuration, builder.Environment)
     .AddPosModule(builder.Configuration, builder.Environment)
     .AddInvoicingModule(builder.Configuration);
+
+// POS fallback price from the own marketplace offer: composed here because POS must not depend on Marketplace.
+builder.Services.Replace(ServiceDescriptor.Scoped<HandyNet.Modules.Pos.Contracts.IOfferPriceSource, HandyNet.Api.Composition.PosOfferPriceSource>());
 
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();

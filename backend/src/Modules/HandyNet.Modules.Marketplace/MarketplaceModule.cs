@@ -20,6 +20,7 @@ public static class MarketplaceModule
         services.AddScoped<OfferService>();
         services.AddScoped<IOfferSync>(sp => sp.GetRequiredService<OfferService>());
         services.AddScoped<IOfferReservations>(sp => sp.GetRequiredService<OfferService>());
+        services.AddScoped<IOwnOfferPrices, OwnOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<OfferService>(includeInternalTypes: true);
         return services;
     }

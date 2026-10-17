@@ -35,22 +35,70 @@ public static class Permissions
     public const string OrdersPlace = "orders.place";
     public const string OrdersFulfil = "orders.fulfil";
 
-    /// <summary>Sell at the register: open/close cash sessions, cash movements, sales, returns, lookup.</summary>
+    /// <summary>Sell at the register: open cash sessions, sales, lookup, products, customers, reprints.</summary>
     public const string PosSell = "pos.sell";
 
-    /// <summary>Manage registers and cancel whole receipts (Storno).</summary>
+    /// <summary>Manage registers and POS prices, cancel whole receipts (Storno), date-range reports.</summary>
     public const string PosManage = "pos.manage";
 
-    private static readonly string[] All =
-        [OrganizationManage, ImportsManage, OffersManage, InventoryManage, MarketplaceBrowse, OrdersRead, OrdersPlace, OrdersFulfil, PosSell, PosManage];
+    /// <summary>Sell a product at a price other than its POS price.</summary>
+    public const string PosPriceOverride = "pos.price_override";
 
+    /// <summary>Give line discounts, up to the membership's maximum discount percentage.</summary>
+    public const string PosDiscount = "pos.discount";
+
+    /// <summary>Take back sold items (returns with refund).</summary>
+    public const string PosRefund = "pos.refund";
+
+    /// <summary>Put cash into or take cash out of the drawer (Einlage/Entnahme).</summary>
+    public const string PosCashMovement = "pos.cash_movement";
+
+    /// <summary>Close a cash session (Tagesabschluss) and read its session report.</summary>
+    public const string PosCloseSession = "pos.close_session";
+
+    /// <summary>POS rights an owner can grant or withhold per staff membership (per-cashier permissions).</summary>
+    public static readonly IReadOnlySet<string> ConfigurablePos =
+        new HashSet<string> { PosPriceOverride, PosDiscount, PosRefund, PosCashMovement, PosCloseSession };
+
+    /// <summary>
+    /// Staff POS rights while the membership has no own configuration: everything a cashier could do before the rights were
+    /// split (discounts, returns, cash movements, closing). Selling at a price other than the POS price needs an explicit grant.
+    /// </summary>
+    public static readonly IReadOnlySet<string> DefaultStaffPos = new HashSet<string> { PosDiscount, PosRefund, PosCashMovement, PosCloseSession };
+
+    public const int FullDiscountPercent = 100;
+
+    private static readonly string[] All =
+    [
+        OrganizationManage, ImportsManage, OffersManage, InventoryManage, MarketplaceBrowse, OrdersRead, OrdersPlace, OrdersFulfil, PosSell, PosManage,
+        PosPriceOverride, PosDiscount, PosRefund, PosCashMovement, PosCloseSession,
+    ];
+
+    /// <summary>Default permissions of a role (for staff: a membership without own POS configuration).</summary>
     public static IReadOnlySet<string> ForRole(MembershipRole role) => role switch
     {
         MembershipRole.Owner => All.ToHashSet(),
         MembershipRole.Manager => All.Where(p => p != OrganizationManage).ToHashSet(),
-        MembershipRole.Staff => new HashSet<string> { MarketplaceBrowse, OrdersRead, OrdersPlace, PosSell },
+        MembershipRole.Staff => new HashSet<string> { MarketplaceBrowse, OrdersRead, OrdersPlace, PosSell }.Concat(DefaultStaffPos).ToHashSet(),
         _ => new HashSet<string>(),
     };
+
+    /// <summary>
+    /// Effective permissions of a membership. Owners and managers always hold every POS right. For staff,
+    /// <paramref name="posPermissions"/> (when configured) replaces the default POS rights; only <see cref="ConfigurablePos"/>
+    /// entries count, so a stored configuration can never grant anything else.
+    /// </summary>
+    public static IReadOnlySet<string> For(MembershipRole role, IReadOnlyCollection<string>? posPermissions)
+    {
+        var permissions = ForRole(role);
+        if (role != MembershipRole.Staff || posPermissions is null)
+            return permissions;
+        return permissions.Where(p => !ConfigurablePos.Contains(p)).Concat(posPermissions.Where(ConfigurablePos.Contains)).ToHashSet();
+    }
+
+    /// <summary>Largest line discount in percent: 100 for owners and managers; for staff the configured limit (default 100).</summary>
+    public static int MaxDiscountPercentFor(MembershipRole role, int? configured) =>
+        role == MembershipRole.Staff ? Math.Clamp(configured ?? FullDiscountPercent, 0, FullDiscountPercent) : FullDiscountPercent;
 }
 
 /// <summary>
@@ -65,6 +113,9 @@ public interface ITenantContext
     IReadOnlySet<PlatformModule> Modules { get; }
     IReadOnlySet<string> Permissions { get; }
 
+    /// <summary>Largest line discount (percent of the line amount before discount) the member may give at the POS.</summary>
+    int MaxDiscountPercent { get; }
+
     Guid RequiredOrganizationId => OrganizationId
         ?? throw new InvalidOperationException("No tenant context for this request.");
 
@@ -78,8 +129,12 @@ public sealed class TenantContext : ITenantContext
     public MembershipRole? Role { get; private set; }
     public IReadOnlySet<PlatformModule> Modules { get; private set; } = new HashSet<PlatformModule>();
     public IReadOnlySet<string> Permissions { get; private set; } = new HashSet<string>();
+    public int MaxDiscountPercent { get; private set; }
 
-    public void Set(Guid organizationId, bool isVerified, MembershipRole role, IReadOnlySet<PlatformModule> modules)
+    /// <param name="posPermissions">The membership's own POS rights (staff only); null = role defaults.</param>
+    /// <param name="maxDiscountPercent">The membership's discount limit (staff only); null = role default.</param>
+    public void Set(Guid organizationId, bool isVerified, MembershipRole role, IReadOnlySet<PlatformModule> modules,
+        IReadOnlyCollection<string>? posPermissions = null, int? maxDiscountPercent = null)
     {
         if (OrganizationId is not null)
             throw new InvalidOperationException("Tenant context is already set for this scope.");
@@ -88,7 +143,8 @@ public sealed class TenantContext : ITenantContext
         IsVerified = isVerified;
         Role = role;
         Modules = modules;
-        Permissions = Tenancy.Permissions.ForRole(role);
+        Permissions = Tenancy.Permissions.For(role, posPermissions);
+        MaxDiscountPercent = Tenancy.Permissions.MaxDiscountPercentFor(role, maxDiscountPercent);
     }
 
     /// <summary>

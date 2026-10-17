@@ -43,9 +43,15 @@ public sealed class TenancyModel : IModuleModel
 
         modelBuilder.Entity<Membership>(b =>
         {
-            b.ToTable("memberships", Schema);
+            b.ToTable("memberships", Schema, t =>
+            {
+                // Per-cashier POS rights exist only for staff (owners/managers always hold all of them).
+                t.HasCheckConstraint("ck_memberships_pos_rights", "role = 'Staff' OR (pos_permissions IS NULL AND pos_max_discount_percent IS NULL)");
+                t.HasCheckConstraint("ck_memberships_pos_max_discount", "pos_max_discount_percent BETWEEN 0 AND 100");
+            });
             b.HasKey(x => x.Id);
             b.Property(x => x.Role).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.PosPermissions).HasColumnType("text[]");
             b.HasIndex(x => new { x.OrganizationId, x.UserId }).IsUnique();
             b.HasIndex(x => x.UserId);
             b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);

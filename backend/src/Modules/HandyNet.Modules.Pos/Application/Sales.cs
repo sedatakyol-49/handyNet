@@ -17,12 +17,33 @@ using Microsoft.Extensions.Options;
 
 namespace HandyNet.Modules.Pos.Application;
 
-/// <summary>A product line (ProductId, any quantity) or a serialized device (Imei, quantity 1). Prices are gross, in cents.</summary>
-public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity, long UnitPriceMinor, long? DiscountMinor);
+/// <summary>
+/// A product line (ProductId, any quantity) or a serialized device (Imei, quantity 1). Prices are gross, in cents. A unit
+/// price other than the product's POS price needs <c>pos.price_override</c>; a discount needs <c>pos.discount</c> within the
+/// cashier's limit. Note: free text printed under the line (max 200).
+/// </summary>
+public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity, long UnitPriceMinor, long? DiscountMinor, string? Note = null);
 
 public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor);
 
-public sealed record CreateSaleRequest(Guid RegisterId, IReadOnlyList<SaleLineRequest> Lines, IReadOnlyList<SalePaymentRequest> Payments);
+public sealed record CreateSaleRequest(Guid RegisterId, IReadOnlyList<SaleLineRequest> Lines, IReadOnlyList<SalePaymentRequest> Payments,
+    Guid? CustomerId = null);
+
+/// <summary>Order history filters (all optional, combined with AND). Dates are inclusive from, exclusive to.</summary>
+public sealed record SaleQuery(
+    Guid? RegisterId,
+    Guid? SessionId,
+    long? Number,
+    DateTimeOffset? From,
+    DateTimeOffset? To,
+    long? MinTotalMinor,
+    long? MaxTotalMinor,
+    Guid? CashierId,
+    Guid? CustomerId,
+    string? PaymentMethod,
+    string? Kind,
+    int? Page,
+    int? PageSize);
 
 /// <summary>RegisterId: the register (with an open session) issuing the storno; defaults to the original receipt's register.</summary>
 public sealed record StornoRequest(string Reason, Guid? RegisterId);
@@ -45,7 +66,8 @@ public sealed record ReceiptLineDto(
     int VatRateBasisPoints,
     long? VatMinor,
     int? OriginalLineNumber,
-    int ReturnedQuantity);
+    int ReturnedQuantity,
+    string? Note);
 
 public sealed record ReceiptPaymentDto(string Method, long AmountMinor, long? TenderedMinor);
 
@@ -70,10 +92,18 @@ public sealed record ReceiptDto(
     IReadOnlyList<ReceiptPaymentDto> Payments,
     IReadOnlyList<DocumentVat> Vat,
     FiscalData? Fiscal,
-    ReceiptDocument Document);
+    ReceiptDocument Document,
+    Guid? CustomerId,
+    DocumentCustomer? Customer,
+    int ReprintCount,
+    DateTimeOffset? LastReprintedAt);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
-    DateTimeOffset CreatedAt, long TotalGrossMinor);
+    DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
+    IReadOnlyList<string> PaymentMethods, int ReprintCount);
+
+/// <summary>A recorded reprint: the copy number to print ("Kopie n") and the unchanged original receipt.</summary>
+public sealed record ReprintDto(int Sequence, DateTimeOffset PrintedAt, Guid PrintedBy, ReceiptDto Receipt);
 
 public sealed record SaleResult(ReceiptDto Receipt, bool Replayed);
 
@@ -94,7 +124,9 @@ public sealed record LookupDto(
     int? OnHand,
     int? Reserved,
     int? Available,
-    bool RequiresImei);
+    bool RequiresImei,
+    long? PriceMinor = null,
+    string PriceSource = "None");
 
 internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
 {
@@ -112,7 +144,9 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
             line.RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.");
             line.RuleFor(l => l.UnitPriceMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
             line.RuleFor(l => l.DiscountMinor).GreaterThanOrEqualTo(0).When(l => l.DiscountMinor is not null);
+            line.RuleFor(l => l.Note).MaximumLength(Receipt.MaxNoteLength);
         });
+        RuleFor(x => x.CustomerId).NotEqual(Guid.Empty).When(x => x.CustomerId is not null);
         RuleFor(x => x.Payments).NotNull().Must(p => p is null || p.Count <= 10).WithMessage("At most 10 payments.");
         RuleForEach(x => x.Payments).ChildRules(p =>
         {
@@ -163,6 +197,7 @@ internal sealed class SaleService(
     IOrganizationDirectory organizations,
     IUserAccounts users,
     FiscalSignerProvider signers,
+    PriceResolver prices,
     IClock clock,
     ILogger<SaleService> logger)
 {
@@ -186,6 +221,14 @@ internal sealed class SaleService(
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RegisterId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        DocumentCustomer? customer = null;
+        if (request.CustomerId is { } customerId)
+        {
+            var found = await db.Set<Customer>().AsNoTracking().FirstOrDefaultAsync(c => c.Id == customerId && c.OrganizationId == OrganizationId, ct);
+            if (found is null)
+                return Error.NotFound("pos.customer_not_found", "Customer not found.");
+            customer = found.ToDocument();
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
@@ -223,6 +266,18 @@ internal sealed class SaleService(
         if (productIds.FirstOrDefault(id => !products.ContainsKey(id)) is var missing && missing != Guid.Empty)
             return Error.NotFound("pos.product_not_found", $"Product {missing} not found.");
 
+        // Per-cashier rights: price other than the till price, discount and discount limit (403 with a stable code).
+        var tillPrices = await prices.ResolveAsync(register.WarehouseId, productIds, ct);
+        var rights = Rights();
+        for (var i = 0; i < staged.Count; i++)
+        {
+            var (line, unit) = staged[i];
+            var allowed = LinePolicy.Check(i + 1, line.UnitPriceMinor, line.Quantity, line.DiscountMinor ?? 0,
+                tillPrices[unit?.ProductId ?? line.ProductId!.Value].Price, rights);
+            if (!allowed.IsSuccess)
+                return allowed.Error!;
+        }
+
         var inputs = staged.Select(s =>
         {
             var productId = s.Unit?.ProductId ?? s.Request.ProductId!.Value;
@@ -230,11 +285,11 @@ internal sealed class SaleService(
             var margin = s.Unit?.TaxScheme == TaxScheme.Margin25a;
             return new SaleLineInput(productId, s.Unit?.UnitId, s.Unit?.Imei, $"{product.Brand} {product.Name}", s.Request.Quantity,
                 s.Request.UnitPriceMinor, s.Request.DiscountMinor ?? 0, margin ? TaxTreatment.Margin25a : TaxTreatment.Standard19,
-                margin ? s.Unit!.PurchasePriceMinor : null);
+                margin ? s.Unit!.PurchasePriceMinor : null, s.Request.Note);
         }).ToList();
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, currentUser.UserId, clock.UtcNow,
-            idempotencyKey, requestHash);
+            idempotencyKey, requestHash, customer);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList());
         if (!receipt.IsSuccess)
             return receipt.Error!;
@@ -335,19 +390,84 @@ internal sealed class SaleService(
         return receipt is null ? Error.NotFound("pos.receipt_not_found", "Receipt not found.") : await ToDtoAsync(receipt, ct);
     }
 
-    public async Task<PagedResult<ReceiptSummaryDto>> ListAsync(Guid? registerId, Guid? sessionId, int? page, int? pageSize, CancellationToken ct)
+    /// <summary>Order history with filters; newest first.</summary>
+    public async Task<Result<PagedResult<ReceiptSummaryDto>>> ListAsync(SaleQuery q, CancellationToken ct)
     {
-        var (p, size) = Paging.Normalize(page, pageSize);
+        var (p, size) = Paging.Normalize(q.Page, q.PageSize);
         var query = db.Set<Receipt>().AsNoTracking().Where(r => r.OrganizationId == OrganizationId);
-        if (registerId is { } register)
+        if (q.RegisterId is { } register)
             query = query.Where(r => r.RegisterId == register);
-        if (sessionId is { } session)
+        if (q.SessionId is { } session)
             query = query.Where(r => r.SessionId == session);
+        if (q.Number is { } number)
+            query = query.Where(r => r.Number == number);
+        if (q.From is { } from && q.To is { } to && from >= to)
+            return Error.Validation("pos.date_range", "'from' must be before 'to'.");
+        if (q.From?.ToUniversalTime() is { } fromUtc)
+            query = query.Where(r => r.CreatedAt >= fromUtc);
+        if (q.To?.ToUniversalTime() is { } toUtc)
+            query = query.Where(r => r.CreatedAt < toUtc);
+        if (q.MinTotalMinor is { } min && q.MaxTotalMinor is { } max && min > max)
+            return Error.Validation("pos.amount_range", "'minTotalMinor' must not exceed 'maxTotalMinor'.");
+        if (q.MinTotalMinor is { } minTotal)
+            query = query.Where(r => r.TotalGrossMinor >= minTotal);
+        if (q.MaxTotalMinor is { } maxTotal)
+            query = query.Where(r => r.TotalGrossMinor <= maxTotal);
+        if (q.CashierId is { } cashier)
+            query = query.Where(r => r.CreatedBy == cashier);
+        if (q.CustomerId is { } customerId)
+            query = query.Where(r => r.CustomerId == customerId);
+        if (!string.IsNullOrWhiteSpace(q.PaymentMethod))
+        {
+            if (!Enum.TryParse<PaymentMethod>(q.PaymentMethod.Trim(), ignoreCase: true, out var method) || !Enum.IsDefined(method))
+                return Error.Validation("pos.payment_method", $"Unknown payment method '{q.PaymentMethod}'.");
+            query = query.Where(r => db.Set<ReceiptPayment>().Any(x => x.ReceiptId == r.Id && x.Method == method));
+        }
+        if (!string.IsNullOrWhiteSpace(q.Kind))
+        {
+            if (!Enum.TryParse<ReceiptKind>(q.Kind.Trim(), ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+                return Error.Validation("pos.receipt_kind", $"Unknown receipt kind '{q.Kind}'.");
+            query = query.Where(r => r.Kind == kind);
+        }
+
         var total = await query.CountAsync(ct);
-        var items = await query.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Number).Skip((p - 1) * size).Take(size)
-            .Select(r => new ReceiptSummaryDto(r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor))
+        var rows = await query.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Number).Skip((p - 1) * size).Take(size)
+            .Select(r => new
+            {
+                r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind, r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor, r.CreatedBy, r.CustomerId,
+                Methods = db.Set<ReceiptPayment>().Where(x => x.ReceiptId == r.Id).Select(x => x.Method).ToList(),
+                Reprints = db.Set<ReceiptReprint>().Count(x => x.ReceiptId == r.Id),
+            })
             .ToListAsync(ct);
+
+        var people = await users.GetAsync(rows.Select(r => r.CreatedBy).Distinct().ToList(), ct);
+        var customerIds = rows.Where(r => r.CustomerId != null).Select(r => r.CustomerId!.Value).Distinct().ToList();
+        var customers = await db.Set<Customer>().AsNoTracking().Where(c => customerIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var items = rows.Select(r => new ReceiptSummaryDto(r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, r.CreatedAt,
+            r.TotalGrossMinor, r.CreatedBy, people.GetValueOrDefault(r.CreatedBy)?.DisplayName, r.CustomerId,
+            r.CustomerId is { } c ? customers.GetValueOrDefault(c) : null, r.Methods.Order().Select(m => m.ToString()).ToList(), r.Reprints)).ToList();
         return new PagedResult<ReceiptSummaryDto>(items, p, size, total);
+    }
+
+    /// <summary>
+    /// Records a reprint (copy) of an issued receipt and returns it with its copy number. The receipt itself is never changed;
+    /// concurrent reprints are serialized per receipt and numbered without duplicates (unique index).
+    /// </summary>
+    public async Task<Result<ReprintDto>> ReprintAsync(Guid receiptId, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var receipt = await LoadAsync(receiptId, ct);
+        if (receipt is null)
+            return Error.NotFound("pos.receipt_not_found", "Receipt not found.");
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"reprint:" + receiptId}, 0))", ct);
+        var previous = await db.Set<ReceiptReprint>().CountAsync(r => r.ReceiptId == receiptId, ct);
+        var reprint = ReceiptReprint.Record(receipt, previous, currentUser.UserId, clock.UtcNow);
+        if (!reprint.IsSuccess)
+            return reprint.Error!;
+        db.Add(reprint.Value);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return new ReprintDto(reprint.Value.Sequence, reprint.Value.PrintedAt, reprint.Value.PrintedBy, await ToDtoAsync(receipt, ct));
     }
 
     /// <summary>Scanned code: 15 digits = IMEI of an own in-stock device; otherwise an EAN/GTIN from the catalog.</summary>
@@ -370,8 +490,9 @@ internal sealed class SaleService(
         {
             var device = (await catalog.GetAsync([unit.ProductId], ct))[unit.ProductId];
             var treatment = unit.TaxScheme == TaxScheme.Margin25a ? TaxTreatment.Margin25a : TaxTreatment.Standard19;
+            var unitPrice = (await prices.ResolveAsync(unit.WarehouseId, [unit.ProductId], ct))[unit.ProductId].Price;
             return new LookupDto("Unit", unit.ProductId, device.Brand, device.Name, device.Ean, unit.Imei, unit.UnitId, treatment.ToString(),
-                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0, false);
+                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0, false, unitPrice.GrossMinor, unitPrice.Source.ToString());
         }
 
         if (await catalog.FindByEanAsync(trimmed, ct) is { } product)
@@ -383,14 +504,19 @@ internal sealed class SaleService(
                 level = (await inventory.GetLevelsAsync(w, [product.Id], ct)).GetValueOrDefault(product.Id) ?? new StockSnapshot(w, product.Id, 0, 0);
                 requiresImei = await inventory.HasSerializedStockAsync(w, product.Id, ct);
             }
+            var price = (await prices.ResolveAsync(warehouseId ?? Guid.Empty, [product.Id], ct))[product.Id].Price;
             return new LookupDto("Product", product.Id, product.Brand, product.Name, product.Ean, null, null, TaxTreatment.Standard19.ToString(),
-                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved, requiresImei);
+                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved, requiresImei, price.GrossMinor,
+                price.Source.ToString());
         }
 
         return Error.NotFound("pos.code_not_found", "No product with this EAN and no device with this IMEI in your stock.");
     }
 
     // ---- internals ------------------------------------------------------------------------------------------------------
+
+    private CashierRights Rights() => new(tenant.Permissions.Contains(Permissions.PosPriceOverride), tenant.Permissions.Contains(Permissions.PosDiscount),
+        tenant.MaxDiscountPercent);
 
     private static Error FiscalMissing() =>
         Error.Conflict("pos.fiscal_signer_missing", "No fiscal signer (TSE) is configured. POS sales are not possible.");
@@ -516,10 +642,14 @@ internal sealed class SaleService(
     /// <summary>Fingerprint of everything that defines the sale (line order matters: it is the receipt's line order).</summary>
     internal static string HashRequest(CreateSaleRequest request)
     {
+        // Notes and the customer are appended only when present (length-prefixed), so fingerprints of requests without them
+        // stay identical to those stored before these fields existed.
         var canonical = $"sale#{request.RegisterId:N}#"
                         + string.Join("|", request.Lines.Select(l =>
-                            $"{l.ProductId:N}:{l.Imei?.Trim()}:{l.Quantity}:{l.UnitPriceMinor}:{l.DiscountMinor ?? 0}"))
-                        + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(p => $"{p.Method}:{p.AmountMinor}"));
+                            $"{l.ProductId:N}:{l.Imei?.Trim()}:{l.Quantity}:{l.UnitPriceMinor}:{l.DiscountMinor ?? 0}"
+                            + (string.IsNullOrWhiteSpace(l.Note) ? "" : $":n{l.Note.Trim().Length}:{l.Note.Trim()}")))
+                        + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(p => $"{p.Method}:{p.AmountMinor}"))
+                        + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
@@ -546,11 +676,14 @@ internal sealed class SaleService(
             l.Quantity, l.UnitPriceMinor, l.DiscountMinor, l.LineGrossMinor, l.TaxTreatment.ToString(), l.VatRateBasisPoints,
             // §25a VAT is not disclosed (it would reveal the purchase price and must not be shown to the customer).
             l.TaxTreatment == TaxTreatment.Margin25a ? null : l.VatMinor,
-            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber))).ToList();
+            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber), l.Note)).ToList();
+
+        var reprints = await db.Set<ReceiptReprint>().AsNoTracking().Where(x => x.ReceiptId == r.Id)
+            .GroupBy(x => x.ReceiptId).Select(g => new { Count = g.Count(), Last = g.Max(x => x.PrintedAt) }).FirstOrDefaultAsync(ct);
 
         return new ReceiptDto(r.Id, r.RegisterId, registerName, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, referencedNumber, cancelledBy,
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
-            r.Document!.Vat, r.Fiscal, r.Document);
+            r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last);
     }
 }

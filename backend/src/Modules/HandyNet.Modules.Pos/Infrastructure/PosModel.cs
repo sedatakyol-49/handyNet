@@ -38,6 +38,8 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.ClosingNote).HasMaxLength(CashSession.MaxNoteLength);
             b.Property(x => x.Summary!).HasJsonConversion();
+            b.Property(x => x.OpeningDenominations!).HasJsonConversion();
+            b.Property(x => x.ClosingDenominations!).HasJsonConversion();
             b.Property(x => x.Version).IsRowVersion();
             b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
             // Only one open session per register.
@@ -53,6 +55,7 @@ public sealed class PosModel : IModuleModel
             b.HasKey(x => x.Id);
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.Reason).HasMaxLength(CashMovement.MaxReasonLength).IsRequired();
+            b.Property(x => x.ReasonCode).HasConversion<string>().HasMaxLength(30);
             b.HasIndex(x => new { x.OrganizationId, x.SessionId });
             b.HasOne<CashSession>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SessionId })
                 .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
@@ -81,6 +84,11 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Document!).HasJsonConversion().IsRequired();
             b.Ignore(x => x.IsSealed);
             b.Ignore(x => x.Fiscal);
+            b.Ignore(x => x.Customer);
+            b.HasIndex(x => new { x.OrganizationId, x.CustomerId }).HasFilter("customer_id IS NOT NULL");
+            b.HasIndex(x => new { x.OrganizationId, x.CreatedBy, x.CreatedAt });
+            b.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.CustomerId })
+                .HasPrincipalKey(c => new { c.OrganizationId, c.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
             // Sequential numbers per register; together with the allocation trigger they are gapless.
             b.HasIndex(x => new { x.RegisterId, x.Number }).IsUnique();
@@ -118,7 +126,9 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Imei).HasMaxLength(15).IsFixedLength();
             b.Property(x => x.Description).HasMaxLength(Receipt.MaxDescriptionLength).IsRequired();
             b.Property(x => x.TaxTreatment).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Note).HasMaxLength(Receipt.MaxNoteLength);
             b.HasIndex(x => x.StockUnitId);
+            b.HasIndex(x => new { x.OrganizationId, x.ProductId });
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<StockUnit>().WithMany().HasForeignKey(x => x.StockUnitId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -129,6 +139,41 @@ public sealed class PosModel : IModuleModel
                 t.HasCheckConstraint("ck_receipt_payments_amount", "amount_minor <> 0 AND (tendered_minor IS NULL OR tendered_minor >= amount_minor)"));
             b.HasKey(x => new { x.ReceiptId, x.Method });
             b.Property(x => x.Method).HasConversion<string>().HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<PosPrice>(b =>
+        {
+            b.ToTable("prices", Schema, t => t.HasCheckConstraint("ck_prices_price", "price_minor IS NULL OR price_minor > 0"));
+            b.HasKey(x => new { x.OrganizationId, x.ProductId });
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Customer>(b =>
+        {
+            b.ToTable("customers", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(Customer.MaxNameLength).IsRequired();
+            b.Property(x => x.Company).HasMaxLength(Customer.MaxNameLength);
+            b.Property(x => x.Email).HasMaxLength(Customer.MaxEmailLength);
+            b.Property(x => x.Phone).HasMaxLength(Customer.MaxPhoneLength);
+            b.Property(x => x.Street).HasMaxLength(Customer.MaxStreetLength);
+            b.Property(x => x.PostalCode).HasMaxLength(Customer.MaxPostalCodeLength);
+            b.Property(x => x.City).HasMaxLength(Customer.MaxCityLength);
+            b.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength();
+            b.Property(x => x.VatId).HasMaxLength(Customer.MaxVatIdLength);
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
+            b.HasIndex(x => new { x.OrganizationId, x.Name });
+        });
+
+        modelBuilder.Entity<ReceiptReprint>(b =>
+        {
+            b.ToTable("receipt_reprints", Schema, t => t.HasCheckConstraint("ck_receipt_reprints_sequence", "sequence >= 1"));
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.ReceiptId, x.Sequence }).IsUnique();
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

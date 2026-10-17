@@ -9,7 +9,19 @@ public sealed record DocumentLine(
     long UnitPriceMinor,
     long DiscountMinor,
     long LineGrossMinor,
-    string TaxLabel);
+    string TaxLabel,
+    string? Note = null);
+
+/// <summary>The customer as printed on the receipt (no email or phone). Absent on receipts without a customer.</summary>
+public sealed record DocumentCustomer(
+    Guid Id,
+    string Name,
+    string? Company,
+    string? Street,
+    string? PostalCode,
+    string? City,
+    string? CountryCode,
+    string? VatId);
 
 /// <summary>VAT breakdown as printed: only regularly taxed lines. §25a VAT is never shown on the receipt.</summary>
 public sealed record DocumentVat(string Label, int RateBasisPoints, long GrossMinor, long NetMinor, long VatMinor);
@@ -46,7 +58,8 @@ public sealed record ReceiptDocument(
     IReadOnlyList<DocumentPayment> Payments,
     long ChangeMinor,
     IReadOnlyList<string> Notes,
-    DocumentFiscal Fiscal)
+    DocumentFiscal Fiscal,
+    DocumentCustomer? Customer = null)
 {
     public const string StandardLabel = "A";
     public const string MarginLabel = "§25a";
@@ -57,7 +70,7 @@ public sealed record ReceiptDocument(
     public static ReceiptDocument For(Receipt receipt, SellerInfo seller, string registerName, long? referencedReceiptNumber, FiscalData fiscal)
     {
         var lines = receipt.Lines.Select(l => new DocumentLine(l.Description, l.Imei, l.Quantity, l.UnitPriceMinor, l.DiscountMinor,
-            l.LineGrossMinor, l.TaxTreatment == TaxTreatment.Margin25a ? MarginLabel : StandardLabel)).ToList();
+            l.LineGrossMinor, l.TaxTreatment == TaxTreatment.Margin25a ? MarginLabel : StandardLabel, l.Note)).ToList();
 
         var vat = receipt.Lines.Where(l => l.TaxTreatment == TaxTreatment.Standard19)
             .GroupBy(l => l.VatRateBasisPoints)
@@ -83,6 +96,7 @@ public sealed record ReceiptDocument(
             receipt.Payments.Select(p => new DocumentPayment(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
             receipt.ChangeMinor, notes,
             new DocumentFiscal(fiscal.Status.ToString(), fiscal.Notice, fiscal.TseSerialNumber, fiscal.TransactionNumber, fiscal.SignatureCounter,
-                fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt));
+                fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt),
+            receipt.Customer);
     }
 }

@@ -2913,6 +2913,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("reason");
 
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("reason_code");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -2944,6 +2949,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("closed_by");
 
+                    b.Property<string>("ClosingDenominations")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("closing_denominations");
+
                     b.Property<string>("ClosingNote")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -2972,6 +2981,10 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<long>("OpeningCashMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("opening_cash_minor");
+
+                    b.Property<string>("OpeningDenominations")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("opening_denominations");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
@@ -3019,6 +3032,134 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("company");
+
+                    b.Property<string>("CountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character(2)")
+                        .HasColumnName("country_code")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("postal_code");
+
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("street");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VatId")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("vat_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customers");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_customer_organization_id_id");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .HasDatabaseName("ix_customers_organization_id_name");
+
+                    b.ToTable("customers", "pos");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<long?>("PriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("price_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganizationId", "ProductId")
+                        .HasName("pk_prices");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_prices_product_id");
+
+                    b.ToTable("prices", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_prices_price", "price_minor IS NULL OR price_minor > 0");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3044,6 +3185,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character(3)")
                         .HasColumnName("currency")
                         .IsFixedLength();
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
 
                     b.Property<string>("Document")
                         .IsRequired()
@@ -3159,6 +3304,10 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("OrganizationId", "CreatedAt")
                         .HasDatabaseName("ix_receipts_organization_id_created_at");
 
+                    b.HasIndex("OrganizationId", "CustomerId")
+                        .HasDatabaseName("ix_receipts_organization_id_customer_id")
+                        .HasFilter("customer_id IS NOT NULL");
+
                     b.HasIndex("OrganizationId", "IdempotencyKey")
                         .IsUnique()
                         .HasDatabaseName("ix_receipts_organization_id_idempotency_key")
@@ -3179,6 +3328,9 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("RegisterId", "Number")
                         .IsUnique()
                         .HasDatabaseName("ix_receipts_register_id_number");
+
+                    b.HasIndex("OrganizationId", "CreatedBy", "CreatedAt")
+                        .HasDatabaseName("ix_receipts_organization_id_created_by_created_at");
 
                     b.ToTable("receipts", "pos", t =>
                         {
@@ -3223,6 +3375,11 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<long>("NetMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("net_minor");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
@@ -3275,6 +3432,9 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("StockUnitId")
                         .HasDatabaseName("ix_receipt_lines_stock_unit_id");
 
+                    b.HasIndex("OrganizationId", "ProductId")
+                        .HasDatabaseName("ix_receipt_lines_organization_id_product_id");
+
                     b.HasIndex("OrganizationId", "ReceiptId")
                         .HasDatabaseName("ix_receipt_lines_organization_id_receipt_id");
 
@@ -3320,6 +3480,49 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("receipt_payments", "pos", t =>
                         {
                             t.HasCheckConstraint("ck_receipt_payments_amount", "amount_minor <> 0 AND (tendered_minor IS NULL OR tendered_minor >= amount_minor)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptReprint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("PrintedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("printed_at");
+
+                    b.Property<Guid>("PrintedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("printed_by");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_reprints");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_reprints_organization_id_receipt_id");
+
+                    b.HasIndex("ReceiptId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipt_reprints_receipt_id_sequence");
+
+                    b.ToTable("receipt_reprints", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_reprints_sequence", "sequence >= 1");
                         });
                 });
 
@@ -3564,6 +3767,14 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
 
+                    b.Property<int?>("PosMaxDiscountPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("pos_max_discount_percent");
+
+                    b.PrimitiveCollection<List<string>>("PosPermissions")
+                        .HasColumnType("text[]")
+                        .HasColumnName("pos_permissions");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -3584,7 +3795,12 @@ namespace HandyNet.Migrations.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_memberships_organization_id_user_id");
 
-                    b.ToTable("memberships", "tenancy");
+                    b.ToTable("memberships", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("ck_memberships_pos_max_discount", "pos_max_discount_percent BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("ck_memberships_pos_rights", "role = 'Staff' OR (pos_permissions IS NULL AND pos_max_discount_percent IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.Organization", b =>
@@ -4186,8 +4402,25 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_cash_sessions_registers_organization_id_register_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_prices_products_product_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
                 {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipts_customer_organization_id_customer_id");
+
                     b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId", "ReferencedReceiptId")
@@ -4253,6 +4486,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_receipt_payments_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptReprint", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_reprints_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Register", b =>

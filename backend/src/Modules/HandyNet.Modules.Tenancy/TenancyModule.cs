@@ -63,6 +63,12 @@ public static class TenancyModule
                 .ToHttp(id => Results.Ok(new { userId = id })))
             .RequirePermission(Permissions.OrganizationManage);
 
+        // Per-cashier POS rights (price override, discount limit, refunds, cash in/out, closing) of a staff member.
+        current.MapPut("/staff/{userId:guid}/pos-rights", async (Guid userId, SetPosRightsRequest request, IValidator<SetPosRightsRequest> validator,
+                OrganizationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SetPosRightsAsync(userId, request, ct)).ToHttp(Results.Ok))
+            .RequirePermission(Permissions.OrganizationManage);
+
         var admin = app.MapGroup("/api/admin/organizations").WithTags("Administration").RequirePlatformAdmin();
 
         admin.MapGet("/", async (string? status, string? search, int? page, int? pageSize,

@@ -24,7 +24,7 @@ internal sealed class TenantResolutionMiddleware(RequestDelegate next)
             var userId = currentUser.UserId;
             var membership = await db.Set<Membership>().AsNoTracking()
                 .Where(m => m.OrganizationId == organizationId && m.UserId == userId)
-                .Select(m => new { m.Role })
+                .Select(m => new { m.Role, m.PosPermissions, m.PosMaxDiscountPercent })
                 .FirstOrDefaultAsync(context.RequestAborted);
 
             if (membership is not null)
@@ -37,7 +37,9 @@ internal sealed class TenantResolutionMiddleware(RequestDelegate next)
                     organizationId,
                     organization.Status == OrganizationStatus.Verified,
                     membership.Role,
-                    organization.Modules.Select(m => m.Module).ToHashSet());
+                    organization.Modules.Select(m => m.Module).ToHashSet(),
+                    membership.PosPermissions,
+                    membership.PosMaxDiscountPercent);
             }
         }
 
