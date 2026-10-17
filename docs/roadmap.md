@@ -70,14 +70,27 @@ are out of scope for phone shops unless requested.
   (Qty / % Disc / Price modes, +/-), line notes, price override with permission, parked orders (hold/resume,
   several open tickets), customer selection/creation at the till, payment screen with multiple methods, split,
   quick cash amounts, change, edit payment before finalizing, receipt screen (print / email / new order).
-- ⬜ **C. Staff**: cashier switching with PIN on a shared device, per-cashier permissions (discount limit, price
-  change, refund, cash in/out, closing), manager approval PIN.
-- ⬜ **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
-  loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding.
-- ⬜ **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
-  e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order.
-- ⬜ **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
-  differences, session report, all-orders analytics, product/cashier/payment reports.
+  Backend ✅ (ADR-0008 "Odoo-parity extensions"): product grid endpoint (own stock of the register's warehouse, paged,
+  search, category filter + category list, serialized flag, available quantity, till price from own POS price → own
+  offer net + 19 % → none, `imageUrl` placeholder), POS price maintenance, line notes on immutable receipts, price
+  override enforced. Open: ⬜ product images (Catalog), ⬜ frontend wiring.
+- 🟡 **C. Staff**: cashier switching with PIN on a shared device, per-cashier permissions (discount limit, price
+  change, refund, cash in/out, closing), manager approval PIN. Backend ✅ per-cashier permissions on staff memberships
+  (`pos.price_override`, `pos.discount` + max %, `pos.refund`, `pos.cash_movement`, `pos.close_session`; owners/managers
+  always all), enforced by the API. Open: ⬜ PIN switching, ⬜ manager approval PIN, ⬜ UI.
+- 🟡 **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
+  loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding. Backend ✅ customer master
+  (RLS, `[PersonalData]` kept out of the audit log), optional customer on a sale, printed snapshot on the receipt,
+  per-organization POS price. Open: ⬜ pricelists/customer prices, ⬜ loyalty/coupons/gift cards, ⬜ cash rounding,
+  ⬜ customer retention/anonymization job, ⬜ UI.
+- 🟡 **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
+  e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order. Backend ✅ history filters
+  (number, dates, amount, cashier, customer, payment method, kind), refunds from an order (existing returns), recorded
+  reprints with copy number. Open: ⬜ invoice for a POS sale, ⬜ e-receipt, ⬜ ship-later, ⬜ quotations, ⬜ UI.
+- 🟡 **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
+  differences, session report, all-orders analytics, product/cashier/payment reports. Backend ✅ denominations at
+  opening/closing (stored, total = opening/counted cash), predefined + free-text reasons, closing difference, sales
+  report by product/cashier/payment method per session or date range. Open: ⬜ UI, ⬜ export (CSV/PDF).
 - ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).

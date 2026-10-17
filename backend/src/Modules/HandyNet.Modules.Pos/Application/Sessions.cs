@@ -15,13 +15,19 @@ public sealed record UpdateRegisterRequest(string Name, bool IsActive);
 
 public sealed record RegisterDto(Guid Id, string Name, Guid WarehouseId, bool IsActive, long NextReceiptNumber, Guid? OpenSessionId, DateTimeOffset CreatedAt);
 
-public sealed record OpenSessionRequest(long OpeningCashMinor);
+/// <summary>Opening cash as an amount and/or as denomination counts (if both, they must agree).</summary>
+public sealed record OpenSessionRequest(long? OpeningCashMinor, IReadOnlyList<DenominationCount>? Denominations = null);
 
-public sealed record CashMovementRequest(CashMovementKind Kind, long AmountMinor, string Reason);
+/// <summary>Reason: free text; ReasonCode: predefined reason (then the text is optional, except for "Other").</summary>
+public sealed record CashMovementRequest(CashMovementKind Kind, long AmountMinor, string? Reason, CashMovementReason? ReasonCode = null);
 
-public sealed record CloseSessionRequest(long CountedCashMinor, string? Note);
+/// <summary>Counted cash as an amount and/or as denomination counts (if both, they must agree).</summary>
+public sealed record CloseSessionRequest(long? CountedCashMinor, string? Note, IReadOnlyList<DenominationCount>? Denominations = null);
 
-public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy, string? CreatedByName);
+public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy, string? CreatedByName,
+    string? ReasonCode);
+
+public sealed record CashMovementReasonDto(string Code, string Kind, string Label, bool RequiresText);
 
 /// <summary>For an open session the summary and expected cash are live figures; for a closed one, the stored Z-report.</summary>
 public sealed record SessionDto(
@@ -41,7 +47,9 @@ public sealed record SessionDto(
     long? DifferenceMinor,
     string? ClosingNote,
     SessionSummary Summary,
-    IReadOnlyList<CashMovementDto> Movements);
+    IReadOnlyList<CashMovementDto> Movements,
+    IReadOnlyList<DenominationCount>? OpeningDenominations,
+    IReadOnlyList<DenominationCount>? ClosingDenominations);
 
 internal static class PosLimits
 {
@@ -61,7 +69,13 @@ internal sealed class UpdateRegisterValidator : AbstractValidator<UpdateRegister
 
 internal sealed class OpenSessionValidator : AbstractValidator<OpenSessionRequest>
 {
-    public OpenSessionValidator() => RuleFor(x => x.OpeningCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor);
+    public OpenSessionValidator()
+    {
+        RuleFor(x => x.OpeningCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor).When(x => x.OpeningCashMinor is not null);
+        RuleFor(x => x.OpeningCashMinor).NotNull().When(x => x.Denominations is null)
+            .WithMessage("Enter the opening cash as an amount or as denomination counts.");
+        RuleFor(x => x.Denominations).Must(d => d is null || d.Count <= CashCount.EuroDenominations.Count).WithMessage("Too many denominations.");
+    }
 }
 
 internal sealed class CashMovementValidator : AbstractValidator<CashMovementRequest>
@@ -69,8 +83,10 @@ internal sealed class CashMovementValidator : AbstractValidator<CashMovementRequ
     public CashMovementValidator()
     {
         RuleFor(x => x.Kind).IsInEnum();
+        RuleFor(x => x.ReasonCode).IsInEnum().When(x => x.ReasonCode is not null);
         RuleFor(x => x.AmountMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
-        RuleFor(x => x.Reason).NotEmpty().MaximumLength(CashMovement.MaxReasonLength);
+        RuleFor(x => x.Reason).NotEmpty().When(x => x.ReasonCode is null).WithMessage("Choose a reason or describe it.");
+        RuleFor(x => x.Reason).MaximumLength(CashMovement.MaxReasonLength);
     }
 }
 
@@ -78,7 +94,10 @@ internal sealed class CloseSessionValidator : AbstractValidator<CloseSessionRequ
 {
     public CloseSessionValidator()
     {
-        RuleFor(x => x.CountedCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor);
+        RuleFor(x => x.CountedCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor).When(x => x.CountedCashMinor is not null);
+        RuleFor(x => x.CountedCashMinor).NotNull().When(x => x.Denominations is null)
+            .WithMessage("Enter the counted cash as an amount or as denomination counts.");
+        RuleFor(x => x.Denominations).Must(d => d is null || d.Count <= CashCount.EuroDenominations.Count).WithMessage("Too many denominations.");
         RuleFor(x => x.Note).MaximumLength(CashSession.MaxNoteLength);
     }
 }
@@ -211,7 +230,10 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         if (await db.Set<CashSession>().AnyAsync(s => s.RegisterId == registerId && s.Status == CashSessionStatus.Open, ct))
             return Error.Conflict("pos.session_already_open", "This register already has an open cash session.");
 
-        var session = CashSession.Open(OrganizationId, register, request.OpeningCashMinor, currentUser.UserId, clock.UtcNow);
+        var count = CashCount.Resolve(request.OpeningCashMinor, request.Denominations, "opening cash");
+        if (!count.IsSuccess)
+            return count.Error!;
+        var session = CashSession.Open(OrganizationId, register, count.Value.AmountMinor, currentUser.UserId, clock.UtcNow, count.Value.Counts);
         if (!session.IsSuccess)
             return session.Error!;
         db.Add(session.Value);
@@ -272,7 +294,8 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
             return Error.Conflict("pos.session_closed", "The cash session is closed.");
 
         var expected = await PosSql.ExpectedCashAsync(db, session, ct);
-        var movement = CashMovement.Record(session, request.Kind, request.AmountMinor, request.Reason, expected, currentUser.UserId, clock.UtcNow);
+        var movement = CashMovement.Record(session, request.Kind, request.AmountMinor, request.Reason, expected, currentUser.UserId, clock.UtcNow,
+            request.ReasonCode);
         if (!movement.IsSuccess)
             return movement.Error!;
         db.Add(movement.Value);
@@ -288,6 +311,9 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
     /// </summary>
     public async Task<Result<SessionDto>> CloseAsync(Guid sessionId, CloseSessionRequest request, CancellationToken ct)
     {
+        var count = CashCount.Resolve(request.CountedCashMinor, request.Denominations, "counted cash");
+        if (!count.IsSuccess)
+            return count.Error!;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var registerId = await db.Set<CashSession>().AsNoTracking().Where(s => s.Id == sessionId && s.OrganizationId == OrganizationId)
             .Select(s => (Guid?)s.RegisterId).FirstOrDefaultAsync(ct);
@@ -298,7 +324,7 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
 
         var session = await db.Set<CashSession>().FirstAsync(s => s.Id == sessionId, ct);
         var summary = await SummarizeAsync(session, ct);
-        var closed = session.Close(summary, request.CountedCashMinor, request.Note, currentUser.UserId, clock.UtcNow);
+        var closed = session.Close(summary, count.Value.AmountMinor, request.Note, currentUser.UserId, clock.UtcNow, count.Value.Counts);
         if (!closed.IsSuccess)
             return closed.Error!;
         try
@@ -333,9 +359,13 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         string? NameOf(Guid? id) => id is { } x && people.TryGetValue(x, out var u) ? u.DisplayName : null;
         return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, NameOf(s.OpenedBy), s.OpeningCashMinor,
             s.ClosedAt, s.ClosedBy, NameOf(s.ClosedBy), s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor,
-            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy))).ToList());
+            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy))).ToList(), s.OpeningDenominations, s.ClosingDenominations);
     }
 
+    public static IReadOnlyList<CashMovementReasonDto> Reasons() =>
+        CashMovementReasons.All.Select(r => new CashMovementReasonDto(r.Code.ToString(), r.Kind.ToString(), r.Label, r.Code == CashMovementReason.Other))
+            .ToList();
+
     private static CashMovementDto ToDto(CashMovement m, string? createdByName) =>
-        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName);
+        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName, m.ReasonCode?.ToString());
 }

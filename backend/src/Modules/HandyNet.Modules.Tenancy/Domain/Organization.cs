@@ -155,6 +155,30 @@ public sealed class Membership : IAuditable
     public MembershipRole Role { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>
+    /// Staff only: the member's POS rights (subset of <see cref="Permissions.ConfigurablePos"/>), replacing the role defaults.
+    /// Null = role defaults. Owners and managers always hold every POS right.
+    /// </summary>
+    public List<string>? PosPermissions { get; private set; }
+
+    /// <summary>Staff only: largest line discount in percent (0–100). Null = no limit (100).</summary>
+    public int? PosMaxDiscountPercent { get; private set; }
+
+    /// <summary>Sets the per-cashier POS rights of a staff member. Null values return to the role defaults.</summary>
+    public Result SetPosRights(IReadOnlyCollection<string>? permissions, int? maxDiscountPercent)
+    {
+        if (Role != MembershipRole.Staff)
+            return Error.Conflict("staff.pos_rights_role", "Owners and managers always hold every POS right; only staff rights can be configured.");
+        if (permissions?.FirstOrDefault(p => !Permissions.ConfigurablePos.Contains(p)) is { } unknown)
+            return Error.Validation("staff.pos_permission_unknown",
+                $"'{unknown}' is not a configurable POS permission ({string.Join(", ", Permissions.ConfigurablePos.Order())}).");
+        if (maxDiscountPercent is < 0 or > Permissions.FullDiscountPercent)
+            return Error.Validation("staff.max_discount", "The maximum discount must be between 0 and 100 percent.");
+        PosPermissions = permissions?.Distinct().Order().ToList();
+        PosMaxDiscountPercent = maxDiscountPercent;
+        return Result.Success();
+    }
+
     public static Membership Create(Guid organizationId, Guid userId, MembershipRole role, DateTimeOffset now) => new()
     {
         Id = Guid.CreateVersion7(),

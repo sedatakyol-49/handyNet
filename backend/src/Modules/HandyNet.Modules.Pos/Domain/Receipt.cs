@@ -55,7 +55,8 @@ public sealed record SaleLineInput(
     long UnitPriceMinor,
     long DiscountMinor,
     TaxTreatment Treatment,
-    long? PurchasePriceMinor);
+    long? PurchasePriceMinor,
+    string? Note = null);
 
 public sealed record PaymentInput(PaymentMethod Method, long AmountMinor);
 
@@ -69,7 +70,8 @@ public sealed record ReceiptHeader(
     Guid UserId,
     DateTimeOffset Now,
     string? IdempotencyKey = null,
-    string? RequestHash = null);
+    string? RequestHash = null,
+    DocumentCustomer? Customer = null);
 
 /// <summary>
 /// A till receipt (Kassenbeleg). Immutable once written (GoBD): the application role has no UPDATE/DELETE grant and a
@@ -82,6 +84,7 @@ public sealed class Receipt
     public const int MaxQuantity = 10_000;
     public const int MaxReasonLength = 500;
     public const int MaxDescriptionLength = 300;
+    public const int MaxNoteLength = 200;
 
     private readonly List<ReceiptLine> _lines = [];
     private readonly List<ReceiptPayment> _payments = [];
@@ -98,6 +101,14 @@ public sealed class Receipt
     public long Number { get; private set; }
     public ReceiptKind Kind { get; private set; }
     public Guid? ReferencedReceiptId { get; private set; }
+
+    /// <summary>Optional POS customer. Storno and return receipts carry the customer of the original sale.</summary>
+    public Guid? CustomerId { get; private set; }
+
+    private DocumentCustomer? _customer;
+
+    /// <summary>The customer as printed (snapshot at issue time). Stored only inside <see cref="Document"/>.</summary>
+    public DocumentCustomer? Customer => Document?.Customer ?? _customer;
     public string? IdempotencyKey { get; private set; }
     public string? RequestHash { get; private set; }
     public string Currency { get; private set; } = null!;
@@ -169,6 +180,7 @@ public sealed class Receipt
             return Error.Validation("pos.reason", $"A reason (max {MaxReasonLength} characters) is required.");
 
         var receipt = New(header, ReceiptKind.Storno, original.Id, reason.Trim());
+        receipt.CopyCustomerOf(original);
         foreach (var line in original.Lines)
             receipt._lines.Add(ReceiptLine.Refund(receipt, line.LineNumber, line, alreadyReturned: 0, quantity: line.Quantity));
         receipt.SumLines();
@@ -194,6 +206,7 @@ public sealed class Receipt
             return Error.Validation("pos.reason", $"A reason (max {MaxReasonLength} characters) is required.");
 
         var receipt = New(header, ReceiptKind.Return, original.Id, reason.Trim());
+        receipt.CopyCustomerOf(original);
         var lineNumber = 0;
         foreach (var (originalLineNumber, quantity) in quantities.OrderBy(q => q.Key))
         {
@@ -257,7 +270,15 @@ public sealed class Receipt
         Reason = reason,
         CreatedAt = h.Now,
         CreatedBy = h.UserId,
+        CustomerId = h.Customer?.Id,
+        _customer = h.Customer,
     };
+
+    private void CopyCustomerOf(Receipt original)
+    {
+        CustomerId = original.CustomerId;
+        _customer = original.Customer;
+    }
 
     private void SumLines()
     {
@@ -328,6 +349,9 @@ public sealed class ReceiptLine
     /// <summary>Refund lines: the line of the original sale receipt.</summary>
     public int? OriginalLineNumber { get; private set; }
 
+    /// <summary>Free-text line note (e.g. "Displayschutz montiert"), printed under the line. Immutable with the receipt.</summary>
+    public string? Note { get; private set; }
+
     internal static Result<ReceiptLine> ForSale(Receipt receipt, int lineNumber, SaleLineInput input)
     {
         if (input.Quantity is <= 0 or > Receipt.MaxQuantity)
@@ -341,6 +365,8 @@ public sealed class ReceiptLine
             return Error.Validation("pos.margin_line", $"Line {lineNumber}: §25a applies to a single serialized device with a known purchase price.");
         if (input.StockUnitId is not null && input.Quantity != 1)
             return Error.Validation("pos.quantity", $"Line {lineNumber}: a serialized device is sold with quantity 1.");
+        if (input.Note?.Trim().Length > Receipt.MaxNoteLength)
+            return Error.Validation("pos.line_note", $"Line {lineNumber}: the note is limited to {Receipt.MaxNoteLength} characters.");
         if (string.IsNullOrWhiteSpace(input.Description))
             return Error.Validation("pos.description", $"Line {lineNumber}: a description is required.");
 
@@ -365,6 +391,7 @@ public sealed class ReceiptLine
             VatMinor = vat,
             NetMinor = lineGross - vat,
             PurchasePriceMinor = input.Treatment == TaxTreatment.Margin25a ? input.PurchasePriceMinor : null,
+            Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim(),
         };
     }
 
@@ -399,6 +426,7 @@ public sealed class ReceiptLine
             NetMinor = -(gross - vat),
             PurchasePriceMinor = original.PurchasePriceMinor,
             OriginalLineNumber = original.LineNumber,
+            Note = original.Note,
         };
     }
 }

@@ -111,9 +111,16 @@ public sealed class CashSession : IAuditable
     public long? DifferenceMinor { get; private set; }
     public string? ClosingNote { get; private set; }
     public SessionSummary? Summary { get; private set; }
+
+    /// <summary>Opening count by denomination, if the cashier counted that way (its total is <see cref="OpeningCashMinor"/>).</summary>
+    public List<DenominationCount>? OpeningDenominations { get; private set; }
+
+    /// <summary>Closing count by denomination, if counted that way (its total is <see cref="CountedCashMinor"/>).</summary>
+    public List<DenominationCount>? ClosingDenominations { get; private set; }
     public uint Version { get; private set; }
 
-    public static Result<CashSession> Open(Guid organizationId, Register register, long openingCashMinor, Guid userId, DateTimeOffset now)
+    public static Result<CashSession> Open(Guid organizationId, Register register, long openingCashMinor, Guid userId, DateTimeOffset now,
+        IReadOnlyList<DenominationCount>? denominations = null)
     {
         if (register.OrganizationId != organizationId)
             return Error.NotFound("pos.register_not_found", "Register not found.");
@@ -121,6 +128,8 @@ public sealed class CashSession : IAuditable
             return Error.Conflict("pos.register_inactive", "The register is deactivated.");
         if (openingCashMinor < 0)
             return Error.Validation("pos.opening_cash", "The opening cash cannot be negative.");
+        if (denominations is not null && CashCount.Total(denominations) != openingCashMinor)
+            return Error.Validation("pos.denominations_mismatch", "The denominations do not add up to the opening cash.");
         return new CashSession
         {
             Id = Guid.CreateVersion7(),
@@ -130,15 +139,19 @@ public sealed class CashSession : IAuditable
             OpenedAt = now,
             OpenedBy = userId,
             OpeningCashMinor = openingCashMinor,
+            OpeningDenominations = denominations?.ToList(),
         };
     }
 
-    public Result Close(SessionSummary summary, long countedCashMinor, string? note, Guid userId, DateTimeOffset now)
+    public Result Close(SessionSummary summary, long countedCashMinor, string? note, Guid userId, DateTimeOffset now,
+        IReadOnlyList<DenominationCount>? denominations = null)
     {
         if (Status != CashSessionStatus.Open)
             return Error.Conflict("pos.session_closed", "The cash session is already closed.");
         if (countedCashMinor < 0)
             return Error.Validation("pos.counted_cash", "The counted cash cannot be negative.");
+        if (denominations is not null && CashCount.Total(denominations) != countedCashMinor)
+            return Error.Validation("pos.denominations_mismatch", "The denominations do not add up to the counted cash.");
         if (note?.Trim().Length > MaxNoteLength)
             return Error.Validation("pos.note", $"The note is limited to {MaxNoteLength} characters.");
         if (summary.OpeningCashMinor != OpeningCashMinor)
@@ -150,6 +163,7 @@ public sealed class CashSession : IAuditable
         Summary = summary;
         ExpectedCashMinor = summary.ExpectedCashMinor;
         CountedCashMinor = countedCashMinor;
+        ClosingDenominations = denominations?.ToList();
         DifferenceMinor = countedCashMinor - summary.ExpectedCashMinor;
         ClosingNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
         return Result.Success();
@@ -171,19 +185,26 @@ public sealed class CashMovement : IAuditable
     /// <summary>Always positive; the kind gives the direction.</summary>
     public long AmountMinor { get; private set; }
     public string Reason { get; private set; } = null!;
+
+    /// <summary>Predefined reason (null for movements recorded before codes existed, or free text only).</summary>
+    public CashMovementReason? ReasonCode { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
 
     /// <param name="expectedCashMinor">Cash that should be in the drawer now; a withdrawal cannot exceed it.</param>
-    public static Result<CashMovement> Record(CashSession session, CashMovementKind kind, long amountMinor, string reason, long expectedCashMinor,
-        Guid userId, DateTimeOffset now)
+    /// <param name="reasonCode">Predefined reason; <paramref name="reason"/> is then optional (the label is stored) except for "Other".</param>
+    public static Result<CashMovement> Record(CashSession session, CashMovementKind kind, long amountMinor, string? reason, long expectedCashMinor,
+        Guid userId, DateTimeOffset now, CashMovementReason? reasonCode = null)
     {
         if (session.Status != CashSessionStatus.Open)
             return Error.Conflict("pos.session_closed", "The cash session is closed.");
         if (amountMinor <= 0)
             return Error.Validation("pos.amount", "The amount must be positive.");
-        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > MaxReasonLength)
-            return Error.Validation("pos.reason", $"A reason (max {MaxReasonLength} characters) is required.");
+        if (reason?.Trim().Length > MaxReasonLength)
+            return Error.Validation("pos.reason", $"The reason is limited to {MaxReasonLength} characters.");
+        var text = CashMovementReasons.Resolve(kind, reasonCode, reason);
+        if (!text.IsSuccess)
+            return text.Error!;
         if (kind == CashMovementKind.Withdrawal && amountMinor > expectedCashMinor)
             return Error.Conflict("pos.insufficient_cash",
                     $"Only {expectedCashMinor / 100m:0.00} € should be in the drawer; {amountMinor / 100m:0.00} € cannot be withdrawn.")
@@ -195,7 +216,8 @@ public sealed class CashMovement : IAuditable
             SessionId = session.Id,
             Kind = kind,
             AmountMinor = amountMinor,
-            Reason = reason.Trim(),
+            Reason = text.Value,
+            ReasonCode = reasonCode,
             CreatedAt = now,
             CreatedBy = userId,
         };

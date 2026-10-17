@@ -39,7 +39,31 @@ public sealed record MembershipDto(
     string[] Permissions,
     bool IsWholesaler,
     bool IsRetailer,
-    bool IsRepairProvider);
+    bool IsRepairProvider,
+    int MaxDiscountPercent);
+
+/// <summary>Per-cashier POS rights of a staff member. Null values = role defaults.</summary>
+public sealed record SetPosRightsRequest(IReadOnlyList<string>? Permissions, int? MaxDiscountPercent);
+
+public sealed record StaffDto(
+    Guid UserId,
+    string Email,
+    string DisplayName,
+    string Role,
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<string>? PosPermissions,
+    int? PosMaxDiscountPercent,
+    string[] EffectivePermissions,
+    int MaxDiscountPercent);
+
+internal sealed class SetPosRightsValidator : AbstractValidator<SetPosRightsRequest>
+{
+    public SetPosRightsValidator()
+    {
+        RuleFor(x => x.Permissions).Must(p => p is null || p.Count <= 20).WithMessage("Too many permissions.");
+        RuleFor(x => x.MaxDiscountPercent).InclusiveBetween(0, Permissions.FullDiscountPercent).When(x => x.MaxDiscountPercent is not null);
+    }
+}
 
 public sealed record MeResponse(Guid UserId, string Email, string DisplayName, bool IsPlatformAdmin, bool EmailVerified, IReadOnlyList<MembershipDto> Memberships);
 
@@ -147,9 +171,10 @@ internal sealed class OrganizationService(
         var userId = currentUser.UserId;
         var user = (await users.GetAsync([userId], ct))[userId];
 
-        var roles = await db.Set<Membership>().AsNoTracking()
+        var own = await db.Set<Membership>().AsNoTracking()
             .Where(m => m.UserId == userId)
-            .ToDictionaryAsync(m => m.OrganizationId, m => m.Role, ct);
+            .ToDictionaryAsync(m => m.OrganizationId, ct);
+        var roles = own.ToDictionary(m => m.Key, m => m.Value.Role);
         var organizationIds = roles.Keys.ToList();
         var organizations = await db.Set<Organization>().AsNoTracking()
             .Include(o => o.Modules)
@@ -163,10 +188,11 @@ internal sealed class OrganizationService(
                 roles[o.Id].ToString(),
                 o.Status.ToString(),
                 o.Status == OrganizationStatus.Verified ? o.Modules.Select(m => m.Module.ToString()).Order().ToArray() : [],
-                Permissions.ForRole(roles[o.Id]).Order().ToArray(),
+                Permissions.For(roles[o.Id], own[o.Id].PosPermissions).Order().ToArray(),
                 o.IsWholesaler,
                 o.IsRetailer,
-                o.IsRepairProvider))
+                o.IsRepairProvider,
+                Permissions.MaxDiscountPercentFor(roles[o.Id], own[o.Id].PosMaxDiscountPercent)))
             .ToList();
 
         return new MeResponse(user.Id, user.Email, user.DisplayName, user.IsPlatformAdmin, user.EmailVerified, memberships);
@@ -194,17 +220,33 @@ internal sealed class OrganizationService(
         return userId;
     }
 
-    public async Task<IReadOnlyList<object>> ListStaffAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<StaffDto>> ListStaffAsync(CancellationToken ct)
     {
         var organizationId = tenant.RequiredOrganizationId;
         var memberships = await db.Set<Membership>().AsNoTracking()
             .Where(m => m.OrganizationId == organizationId)
             .ToListAsync(ct);
         var people = await users.GetAsync(memberships.Select(m => m.UserId).ToList(), ct);
-        return memberships
-            .Select(m => (object)new { m.UserId, people[m.UserId].Email, people[m.UserId].DisplayName, Role = m.Role.ToString(), m.CreatedAt })
-            .ToList();
+        return memberships.Select(m => ToStaffDto(m, people[m.UserId])).ToList();
     }
+
+    /// <summary>Per-cashier POS rights (staff only). Takes effect with the member's next request.</summary>
+    public async Task<Result<StaffDto>> SetPosRightsAsync(Guid userId, SetPosRightsRequest request, CancellationToken ct)
+    {
+        var organizationId = tenant.RequiredOrganizationId;
+        var membership = await db.Set<Membership>().FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId, ct);
+        if (membership is null)
+            return Error.NotFound("staff.not_found", "Staff member not found.");
+        var updated = membership.SetPosRights(request.Permissions, request.MaxDiscountPercent);
+        if (!updated.IsSuccess)
+            return updated.Error!;
+        await db.SaveChangesAsync(ct);
+        return ToStaffDto(membership, (await users.GetAsync([userId], ct))[userId]);
+    }
+
+    private static StaffDto ToStaffDto(Membership m, UserSummary user) =>
+        new(m.UserId, user.Email, user.DisplayName, m.Role.ToString(), m.CreatedAt, m.PosPermissions, m.PosMaxDiscountPercent,
+            Permissions.For(m.Role, m.PosPermissions).Order().ToArray(), Permissions.MaxDiscountPercentFor(m.Role, m.PosMaxDiscountPercent));
 }
 
 internal sealed class OrganizationDirectory(HandyNetDbContext db) : IOrganizationDirectory
