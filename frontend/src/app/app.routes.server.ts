@@ -7,5 +7,8 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 export const serverRoutes: ServerRoute[] = [
   { path: 'login', renderMode: RenderMode.Server },
   { path: 'registrierung', renderMode: RenderMode.Server },
+  { path: 'passwort-vergessen', renderMode: RenderMode.Server },
+  // /passwort-zuruecksetzen and /email-bestaetigen read their token from the URL fragment, which only the browser
+  // sees, so they render client-side like the app (catch-all below).
   { path: '**', renderMode: RenderMode.Client },
 ];

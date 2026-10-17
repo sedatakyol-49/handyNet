@@ -42,7 +42,8 @@
     "mainNavigation": "Navegación principal",
     "organization": "Empresa",
     "skipToContent": "Saltar al contenido",
-    "toggleNavigation": "Mostrar/ocultar navegación"
+    "toggleNavigation": "Mostrar/ocultar navegación",
+    "account": "Cuenta y seguridad"
   },
   "nav": {
     "admin": "Administración",
@@ -79,7 +80,10 @@
       "noAccount": "¿Aún no tiene cuenta?",
       "registerLink": "Registrar empresa",
       "sessionExpired": "Su sesión ha caducado. Inicie sesión de nuevo.",
-      "registered": "Registro completado. Ya puede iniciar sesión; a continuación verificaremos su empresa."
+      "registered": "Registro completado. Ya puede iniciar sesión; a continuación verificaremos su empresa.",
+      "forgotPassword": "¿Ha olvidado su contraseña?",
+      "passwordReset": "Su contraseña se ha cambiado. Inicie sesión con la nueva contraseña.",
+      "signedOutEverywhere": "Se ha cerrado su sesión en todos los dispositivos."
     },
     "register": {
       "title": "Registrar empresa",
@@ -113,6 +117,61 @@
       "cardImei": "IMEI verificado",
       "cardReceipt": "Ticket n.º 1042",
       "cardOffer": "Oferta de recompra"
+    },
+    "backToLogin": "Volver al inicio de sesión",
+    "linkIncomplete": "Este enlace está incompleto. Vuelva a abrir el enlace del correo electrónico o solicite uno nuevo.",
+    "forgot": {
+      "title": "Contraseña olvidada",
+      "subtitle": "Introduzca la dirección de correo electrónico de su cuenta. Le enviaremos un enlace para establecer una nueva contraseña.",
+      "submit": "Solicitar enlace",
+      "sentTitle": "Revise su bandeja de entrada",
+      "sent": "Si existe una cuenta para {email}, le hemos enviado un enlace para restablecer la contraseña. El enlace solo es válido durante poco tiempo y puede usarse una vez.",
+      "sentHint": "¿No ha recibido el correo? Revise la carpeta de spam y la escritura de la dirección. Puede solicitar un nuevo enlace al cabo de un minuto.",
+      "again": "Solicitar de nuevo"
+    },
+    "reset": {
+      "title": "Establecer nueva contraseña",
+      "subtitle": "Tras guardar, se cerrará su sesión en todos los dispositivos e iniciará sesión con la nueva contraseña.",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Repetir nueva contraseña",
+      "submit": "Guardar contraseña",
+      "requestNew": "Solicitar un nuevo enlace"
+    },
+    "verify": {
+      "title": "Confirmar dirección de correo electrónico",
+      "checking": "Comprobando su enlace de confirmación …",
+      "success": "Gracias: su dirección de correo electrónico está confirmada.",
+      "continue": "Continuar a HandyNet",
+      "loginToResend": "Inicie sesión para solicitar un nuevo enlace de confirmación."
+    }
+  },
+  "account": {
+    "title": "Cuenta y seguridad",
+    "subtitle": "Sus datos de acceso y sesiones.",
+    "profile": "Cuenta de usuario",
+    "verified": "Confirmada",
+    "unverified": "No confirmada",
+    "password": {
+      "title": "Cambiar contraseña",
+      "hint": "Se cerrarán todas las demás sesiones; en este dispositivo seguirá con la sesión iniciada.",
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "confirm": "Repetir nueva contraseña",
+      "submit": "Cambiar contraseña",
+      "changed": "Contraseña cambiada. Se han cerrado todas las demás sesiones."
+    },
+    "sessions": {
+      "title": "Dispositivos con sesión iniciada",
+      "text": "Cierre la sesión en todos los dispositivos y navegadores, también en este; por ejemplo, si ha perdido un dispositivo. Las páginas ya abiertas en otros dispositivos pueden seguir funcionando hasta una hora.",
+      "signOutAll": "Cerrar sesión en todas partes",
+      "confirmTitle": "¿Cerrar sesión en todos los dispositivos?",
+      "confirmText": "Se cerrarán todas las sesiones, también esta. Después tendrá que volver a iniciar sesión en cada dispositivo."
+    },
+    "verify": {
+      "bannerTitle": "Confirme su dirección de correo electrónico",
+      "bannerText": "Le hemos enviado un enlace de confirmación a {email}.",
+      "resend": "Reenviar enlace",
+      "sent": "Se ha enviado un nuevo enlace de confirmación a {email}."
     }
   },
   "validation": {
@@ -123,7 +182,9 @@
     "vatId": "El USt-IdNr. consta de «DE» y nueve dígitos.",
     "maxLength": "Máximo {max} caracteres.",
     "businessType": "Seleccione al menos un tipo de actividad.",
-    "price": "Introduzca un precio válido mayor que 0 (p. ej. 89,90)."
+    "price": "Introduzca un precio válido mayor que 0 (p. ej. 89,90).",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "passwordUnchanged": "La nueva contraseña debe ser distinta de la actual."
   },
   "businessType": {
     "wholesaler": "Mayorista",
@@ -138,6 +199,12 @@
     "codes": {
       "auth.invalid_credentials": "El correo electrónico o la contraseña no son correctos.",
       "auth.locked_out": "Demasiados intentos de inicio de sesión fallidos. Inténtelo de nuevo más tarde.",
+      "auth.current_password_invalid": "La contraseña actual no es correcta.",
+      "password.weak": "La contraseña es demasiado débil: mínimo 10 caracteres con letras y al menos un número o un carácter especial.",
+      "auth.token_invalid": "El enlace no es válido o ya se ha utilizado.",
+      "auth.token_expired": "El enlace ha caducado. Solicite uno nuevo.",
+      "auth.email_already_verified": "Su dirección de correo electrónico ya está confirmada.",
+      "auth.verification_recently_sent": "Se acaba de enviar un correo de confirmación. Espere un minuto antes de solicitar otro.",
       "user.email_taken": "Ya existe una cuenta con este correo electrónico.",
       "organization.not_verified": "Su empresa aún no está verificada.",
       "module.disabled": "Este módulo no está activado para su empresa.",

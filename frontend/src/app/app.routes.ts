@@ -14,6 +14,20 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
   },
   {
+    path: 'passwort-vergessen',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/forgot-password.page').then((m) => m.ForgotPasswordPage),
+  },
+  // Targets of the email links (token in the URL fragment); open signed in or not.
+  {
+    path: 'passwort-zuruecksetzen',
+    loadComponent: () => import('./features/auth/reset-password.page').then((m) => m.ResetPasswordPage),
+  },
+  {
+    path: 'email-bestaetigen',
+    loadComponent: () => import('./features/auth/verify-email.page').then((m) => m.VerifyEmailPage),
+  },
+  {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () => import('./features/shell/shell').then((m) => m.ShellComponent),
@@ -139,6 +153,10 @@ export const routes: Routes = [
         path: 'kasse/:registerId/sitzungen',
         canActivate: [accessGuard('Pos', 'pos.sell')],
         loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage),
+      },
+      {
+        path: 'konto',
+        loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },
       {
         path: 'team',

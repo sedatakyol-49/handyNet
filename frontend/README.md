@@ -46,7 +46,9 @@ src/app
 ├─ core/                     app-wide singletons, no UI
 │  ├─ api/                   DTO types (models.ts), typed API clients (handynet-api.ts), RFC 7807 problem parsing
 │  ├─ auth/                  SessionStore (signals: token, /api/me, selected organization, module/permission checks),
-│  │                         AuthService, authInterceptor (Bearer + X-Organization-Id, 401 → logout), route guards
+│  │                         AuthService, authInterceptor (Bearer + X-Organization-Id, refresh + retry, sign-out),
+│  │                         TokenRefresher (single-flight, cross-tab lock), account-links (fragment token, email
+│  │                         language), password-policy, route guards
 │  ├─ i18n/                  I18nService (signal-based), `t` / `tEnum` pipes, locales/*.json
 │  ├─ format/                money (cents → "1.234,56 €", parsing), date pipe
 │  ├─ ui-state/              toasts + describeProblem() (API problem → user text)
@@ -56,8 +58,11 @@ src/app
 │  │                         banner (error/warning/info, shows API problem title), toast host, dialog, page header
 │  └─ data/query.ts          createQuery(): signal-driven loader (latest request wins, keeps previous data while loading)
 └─ features/                 one folder per screen, all lazy-loaded
-   ├─ auth/                  Login, Registrierung (reactive form, client + server validation)
-   ├─ shell/                 top bar (org switcher, language, user menu), side navigation (navigation.ts)
+   ├─ auth/                  Login, Registrierung (reactive form, client + server validation), Passwort vergessen,
+   │                         Passwort zurücksetzen and E-Mail bestätigen (email link targets)
+   ├─ account/               Konto & Sicherheit (change password, sign out everywhere)
+   ├─ shell/                 top bar (org switcher, language, user menu), side navigation (navigation.ts),
+   │                         unverified-email banner (email-verification-banner.ts)
    ├─ dashboard/             Übersicht (org status, verification notice, real order counts, quick links)
    ├─ marketplace/           Marktplatz (search with "/" shortcut, filters, dense results, add to cart)
    ├─ cart/                  CartStore (signals, persisted per organization, grouped by seller) + checkout page
@@ -95,6 +100,50 @@ routes are declared once in `features/shell/navigation.ts` / `app.routes.ts` wit
 they are hidden (and the route guarded) unless the selected organization is **Verified**, has the module and the user has
 the permission – mirroring the API's own 403 checks. Unverified organizations see "Ihr Unternehmen wird geprüft" on the
 overview instead of module pages. Switching organizations re-creates the current page so all data is reloaded.
+
+### Sessions and account security
+
+Business rules: `../docs/adr/0010-sessions-refresh-tokens-and-account-emails.md`.
+
+- **Storage.** Login, refresh and change-password return an access token (JWT) plus an opaque refresh token. Both live
+  in `localStorage` under `hn.auth` (`{accessToken, expiresAt, refreshToken, refreshExpiresAt, userId}`), shared by all
+  tabs of the browser profile. Why not elsewhere: the API takes the refresh token in the request body (no HttpOnly
+  cookie), `sessionStorage` would give every tab its own token family and sign users out per tab, and memory only would
+  sign out on every reload. The trade-off is XSS exposure, the same as for the access token; mitigations are the
+  rotation with reuse detection on the server (a stolen, used token revokes the family), "Überall abmelden" and no
+  third-party scripts. `StorageService` is a no-op during SSR and `/app` renders client-side only, so the server never
+  sees or needs tokens. A stored session is kept while either token is valid.
+- **Refresh** (`core/auth/token-refresher.ts`, `auth.interceptor.ts`): a request made less than 60 s before the access
+  token expires waits for a refresh first; a 401 triggers a refresh and **one** retry with the new token. There is a
+  single in-flight refresh per tab (concurrent callers share the promise) and across tabs a lock (Web Locks API
+  `hn.auth.refresh`, fallback: a 10 s lease in `localStorage`). Inside the lock the session is re-read from storage: if
+  another tab already rotated it, that pair is used and no second refresh is sent — presenting the used token would
+  count as theft and revoke the family. Other tabs follow rotations and sign-outs through the `storage` event.
+  A rejected refresh (401 `auth.refresh_token_invalid|expired|reused`) or a second 401 clears the session and opens
+  `/login?expired=1&returnUrl=…`; network errors / 5xx during a refresh are passed to the caller and keep the session.
+  The refresh call itself bypasses the interceptors; anonymous `/api/auth/*` endpoints are never refreshed or retried.
+- **Logout** (user menu) clears the session at once and revokes the token family with `POST /api/auth/logout`
+  (best effort). **Konto & Sicherheit** (`/app/konto`, user menu): account data with email status, "Passwort ändern"
+  (`/change-password`; the API ends all other sessions and returns a new pair for this one; 422
+  `auth.current_password_invalid` / `password.weak` at the fields) and "Überall abmelden" (confirmation,
+  `POST /api/auth/logout-all`, then `/login?signedOut=all`). Access tokens already issued elsewhere keep working until
+  they expire (≤ 60 min, see ADR); the page says so.
+- **Password reset:** "Passwort vergessen?" on the login page → `/passwort-vergessen` (server-rendered). The API answers
+  202 for every valid address, so the confirmation is worded identically for existing and unknown accounts ("Falls für
+  … ein Konto besteht"). The email link `/passwort-zuruecksetzen#token=…` opens the reset form; success clears any local
+  session (the API revoked all) and shows `/login?reset=1`. `auth.token_invalid` / `auth.token_expired` replace the form
+  with the message and "Neuen Link anfordern".
+- **Email verification:** `/email-bestaetigen#token=…` verifies on load (signed in or not) and reloads `/api/me` when
+  signed in. While `/api/me` says `emailVerified: false` the app shell shows a warning banner with "Link erneut senden"
+  (`/verify-email/resend`); it can be dismissed for the browser session (`sessionStorage`, per user). After a send or
+  `409 auth.verification_recently_sent` the button is disabled for 60 s with the cooldown text; `409
+  auth.email_already_verified` reloads `/api/me`, which hides the banner.
+- **Tokens in links** are read from the URL fragment (never sent to servers or logs), then removed from the address bar
+  with `history.replaceState` (path and query kept). They live only in the page component: reloading the page shows
+  "Dieser Link ist unvollständig". Both link pages render client-side only (the fragment does not reach the server).
+- **Email language:** registration, reset request and resend send `language`. The API accepts only `de` / `en`
+  (anything else is a 422) and defaults to German, so the English UI sends `en` and every other UI language `de`
+  (`emailLanguage()` in `core/auth/account-links.ts`).
 
 ### Errors
 
@@ -357,6 +406,16 @@ Without these variables the tests are skipped. Specs:
   has no entry. The admin opens Administration → Provisionsrechnungen, the current month is refused client-side, the
   previous month is issued (confirmation) and issued again: the second run creates nothing new and the month listing
   matches the run. This issues real documents for the previous month in the target environment (as the monthly job does).
+
+- `e2e/account-security.spec.ts` (no admin needed; users self-register via the API, emails are not read) – "Passwort
+  vergessen" from the login page: client validation, then the same 202 confirmation for an unknown and an existing
+  address (`language: de` sent); `/email-bestaetigen` with an invalid token (message, fragment removed from the URL)
+  and without one; `/passwort-zuruecksetzen` with an invalid token (mismatch check, then "Link ungültig" → request
+  page). A fresh user sees the unverified-email banner, "resend" hits the cooldown (409) and is disabled; Konto &
+  Sicherheit: wrong current password → field error, change succeeds, the old refresh token is revoked (401 from
+  `/refresh`); logout revokes the new one; the old password fails, the new one signs in. Two devices: device B's access
+  token is made to look expired → one `/refresh` (200) on reload and a rotated token; device A "Überall abmelden" →
+  `/login?signedOut=all`, device B's refresh token is revoked.
 
 The login and registration endpoints are rate limited (20/min per IP by default); running the suite repeatedly within a
 minute may hit `429`.

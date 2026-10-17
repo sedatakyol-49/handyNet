@@ -21,6 +21,12 @@ import { AuthLayoutComponent } from './auth-layout';
         @if (registered) {
           <hn-banner class="mb-4" tone="success" [text]="'auth.login.registered' | t" />
         }
+        @if (passwordReset) {
+          <hn-banner class="mb-4" tone="success" [text]="'auth.login.passwordReset' | t" />
+        }
+        @if (signedOutEverywhere) {
+          <hn-banner class="mb-4" tone="info" [text]="'auth.login.signedOutEverywhere' | t" />
+        }
         <hn-banner class="mb-4" [error]="error()" />
 
         <form class="space-y-4" (ngSubmit)="submit()" #f="ngForm" novalidate>
@@ -30,6 +36,9 @@ import { AuthLayoutComponent } from './auth-layout';
           <hn-field [label]="'auth.password' | t" for="login-password" [required]="true">
             <input hnInput id="login-password" name="password" type="password" autocomplete="current-password" required [(ngModel)]="password" />
           </hn-field>
+          <p class="-mt-2 text-end text-sm">
+            <a routerLink="/passwort-vergessen" class="hn-link" data-testid="forgot-password">{{ 'auth.login.forgotPassword' | t }}</a>
+          </p>
           <button hnButton variant="primary" type="submit" class="w-full" [loading]="busy()" [disabled]="busy() || !email || !password">
             {{ 'auth.login.submit' | t }}
           </button>
@@ -53,6 +62,8 @@ export class LoginPage {
   protected readonly error = signal<unknown>(null);
   protected readonly expired = this.route.snapshot.queryParamMap.has('expired');
   protected readonly registered = this.route.snapshot.queryParamMap.has('registered');
+  protected readonly passwordReset = this.route.snapshot.queryParamMap.has('reset');
+  protected readonly signedOutEverywhere = this.route.snapshot.queryParamMap.get('signedOut') === 'all';
 
   protected async submit(): Promise<void> {
     if (!this.email || !this.password || this.busy()) return;

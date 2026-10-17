@@ -42,7 +42,8 @@
     "mainNavigation": "Ana gezinme",
     "organization": "Şirket",
     "skipToContent": "İçeriğe geç",
-    "toggleNavigation": "Gezinmeyi aç/kapat"
+    "toggleNavigation": "Gezinmeyi aç/kapat",
+    "account": "Hesap ve güvenlik"
   },
   "nav": {
     "admin": "Yönetim",
@@ -79,7 +80,10 @@
       "noAccount": "Henüz hesabınız yok mu?",
       "registerLink": "Şirketinizi kaydedin",
       "sessionExpired": "Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.",
-      "registered": "Kayıt başarılı. Şimdi giriş yapabilirsiniz – şirketiniz ardından tarafımızca incelenecektir."
+      "registered": "Kayıt başarılı. Şimdi giriş yapabilirsiniz – şirketiniz ardından tarafımızca incelenecektir.",
+      "forgotPassword": "Şifrenizi mi unuttunuz?",
+      "passwordReset": "Şifreniz değiştirildi. Lütfen yeni şifrenizle giriş yapın.",
+      "signedOutEverywhere": "Tüm cihazlarda oturumunuz kapatıldı."
     },
     "register": {
       "title": "Şirketinizi kaydedin",
@@ -113,6 +117,61 @@
       "cardImei": "IMEI doğrulandı",
       "cardReceipt": "Kasa fişi #1042",
       "cardOffer": "Alım teklifi"
+    },
+    "backToLogin": "Girişe dön",
+    "linkIncomplete": "Bu bağlantı eksik. Lütfen e-postadaki bağlantıyı yeniden açın veya yeni bir bağlantı isteyin.",
+    "forgot": {
+      "title": "Şifremi unuttum",
+      "subtitle": "Hesabınızın e-posta adresini girin. Yeni bir şifre belirlemeniz için size bir bağlantı göndereceğiz.",
+      "submit": "Bağlantı iste",
+      "sentTitle": "Lütfen gelen kutunuzu kontrol edin",
+      "sent": "{email} için bir hesap varsa, şifre sıfırlama bağlantısı gönderdik. Bağlantı yalnızca kısa bir süre geçerlidir ve bir kez kullanılabilir.",
+      "sentHint": "E-posta gelmedi mi? İstenmeyen klasörünü ve adresin yazımını kontrol edin. Bir dakika sonra yeni bir bağlantı isteyebilirsiniz.",
+      "again": "Yeniden iste"
+    },
+    "reset": {
+      "title": "Yeni şifre belirle",
+      "subtitle": "Kaydettikten sonra tüm cihazlarda oturumunuz kapatılır ve yeni şifrenizle giriş yaparsınız.",
+      "newPassword": "Yeni şifre",
+      "confirmPassword": "Yeni şifre (tekrar)",
+      "submit": "Şifreyi kaydet",
+      "requestNew": "Yeni bağlantı iste"
+    },
+    "verify": {
+      "title": "E-posta adresini doğrula",
+      "checking": "Doğrulama bağlantınız kontrol ediliyor …",
+      "success": "Teşekkürler – e-posta adresiniz doğrulandı.",
+      "continue": "HandyNet’e devam et",
+      "loginToResend": "Yeni bir doğrulama bağlantısı istemek için giriş yapın."
+    }
+  },
+  "account": {
+    "title": "Hesap ve güvenlik",
+    "subtitle": "Giriş bilgileriniz ve oturumlarınız.",
+    "profile": "Kullanıcı hesabı",
+    "verified": "Doğrulandı",
+    "unverified": "Doğrulanmadı",
+    "password": {
+      "title": "Şifre değiştir",
+      "hint": "Diğer tüm oturumlar sonlandırılır; bu cihazda oturumunuz açık kalır.",
+      "current": "Mevcut şifre",
+      "new": "Yeni şifre",
+      "confirm": "Yeni şifre (tekrar)",
+      "submit": "Şifreyi değiştir",
+      "changed": "Şifre değiştirildi. Diğer tüm oturumlar sonlandırıldı."
+    },
+    "sessions": {
+      "title": "Oturum açık cihazlar",
+      "text": "Bu cihaz dahil tüm cihaz ve tarayıcılarda oturumu kapatın – örneğin bir cihaz kaybolduysa. Diğer cihazlarda açık olan sayfalar bir saate kadar çalışmaya devam edebilir.",
+      "signOutAll": "Her yerde oturumu kapat",
+      "confirmTitle": "Tüm cihazlarda oturum kapatılsın mı?",
+      "confirmText": "Bu oturum dahil tüm oturumlar sonlandırılır. Ardından her cihazda yeniden giriş yapmanız gerekir."
+    },
+    "verify": {
+      "bannerTitle": "Lütfen e-posta adresinizi doğrulayın",
+      "bannerText": "{email} adresine bir doğrulama bağlantısı gönderdik.",
+      "resend": "Bağlantıyı yeniden gönder",
+      "sent": "{email} adresine yeni bir doğrulama bağlantısı gönderildi."
     }
   },
   "validation": {
@@ -123,7 +182,9 @@
     "vatId": "USt-IdNr. “DE” ve dokuz rakamdan oluşur.",
     "maxLength": "En fazla {max} karakter.",
     "businessType": "Lütfen en az bir faaliyet türü seçin.",
-    "price": "Lütfen 0'dan büyük geçerli bir fiyat girin (ör. 89,90)."
+    "price": "Lütfen 0'dan büyük geçerli bir fiyat girin (ör. 89,90).",
+    "passwordMismatch": "Şifreler eşleşmiyor.",
+    "passwordUnchanged": "Yeni şifre mevcut şifreden farklı olmalıdır."
   },
   "businessType": {
     "wholesaler": "Toptan ticaret",
@@ -138,6 +199,12 @@
     "codes": {
       "auth.invalid_credentials": "E-posta adresi veya şifre hatalı.",
       "auth.locked_out": "Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.",
+      "auth.current_password_invalid": "Mevcut şifre yanlış.",
+      "password.weak": "Şifre çok zayıf: harf ve en az bir rakam veya özel karakter içeren en az 10 karakter.",
+      "auth.token_invalid": "Bağlantı geçersiz veya daha önce kullanılmış.",
+      "auth.token_expired": "Bağlantının süresi doldu. Lütfen yeni bir bağlantı isteyin.",
+      "auth.email_already_verified": "E-posta adresiniz zaten doğrulanmış.",
+      "auth.verification_recently_sent": "Az önce bir doğrulama e-postası gönderildi. Yenisini istemeden önce lütfen bir dakika bekleyin.",
       "user.email_taken": "Bu e-posta adresiyle zaten bir hesap mevcut.",
       "organization.not_verified": "Şirketiniz henüz doğrulanmadı.",
       "module.disabled": "Bu modül şirketiniz için etkinleştirilmemiş.",

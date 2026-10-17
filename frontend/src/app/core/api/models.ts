@@ -24,14 +24,21 @@ export type Permission =
 
 export type OrganizationStatus = 'PendingVerification' | 'Verified' | 'Rejected' | 'Suspended';
 
+/** POST /api/auth/login, /refresh and /change-password. The refresh token is opaque and rotates on every use. */
 export interface TokenResponse {
   accessToken: string;
   expiresAt: string;
+  refreshToken: string;
+  refreshExpiresAt: string;
   userId: string;
   email: string;
   displayName: string;
   isPlatformAdmin: boolean;
+  emailVerified: boolean;
 }
+
+/** Language of account emails (verification, password reset); the API accepts only these two. */
+export type EmailLanguage = 'de' | 'en';
 
 export interface Membership {
   organizationId: string;
@@ -50,6 +57,7 @@ export interface Me {
   email: string;
   displayName: string;
   isPlatformAdmin: boolean;
+  emailVerified: boolean;
   memberships: Membership[];
 }
 
@@ -71,6 +79,8 @@ export interface RegistrationRequest {
   displayName: string;
   password: string;
   organization: OrganizationInput;
+  /** Language of the verification email. */
+  language?: EmailLanguage;
 }
 
 export interface StaffMember {
