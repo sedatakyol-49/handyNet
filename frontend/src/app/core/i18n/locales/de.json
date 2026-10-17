@@ -42,7 +42,8 @@
     "mainNavigation": "Hauptnavigation",
     "organization": "Unternehmen",
     "skipToContent": "Zum Inhalt springen",
-    "toggleNavigation": "Navigation ein-/ausblenden"
+    "toggleNavigation": "Navigation ein-/ausblenden",
+    "account": "Konto & Sicherheit"
   },
   "nav": {
     "admin": "Administration",
@@ -79,7 +80,10 @@
       "noAccount": "Noch kein Konto?",
       "registerLink": "Unternehmen registrieren",
       "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-      "registered": "Registrierung erfolgreich. Sie können sich jetzt anmelden – Ihr Unternehmen wird anschließend von uns geprüft."
+      "registered": "Registrierung erfolgreich. Sie können sich jetzt anmelden – Ihr Unternehmen wird anschließend von uns geprüft.",
+      "forgotPassword": "Passwort vergessen?",
+      "passwordReset": "Ihr Passwort wurde geändert. Bitte melden Sie sich mit dem neuen Passwort an.",
+      "signedOutEverywhere": "Sie wurden auf allen Geräten abgemeldet."
     },
     "register": {
       "title": "Unternehmen registrieren",
@@ -113,6 +117,61 @@
       "cardImei": "IMEI geprüft",
       "cardReceipt": "Kassenbeleg #1042",
       "cardOffer": "Ankaufangebot"
+    },
+    "backToLogin": "Zurück zur Anmeldung",
+    "linkIncomplete": "Dieser Link ist unvollständig. Bitte öffnen Sie den Link aus der E-Mail erneut oder fordern Sie einen neuen an.",
+    "forgot": {
+      "title": "Passwort vergessen",
+      "subtitle": "Geben Sie die E-Mail-Adresse Ihres Kontos ein. Wir senden Ihnen einen Link, mit dem Sie ein neues Passwort festlegen.",
+      "submit": "Link anfordern",
+      "sentTitle": "Bitte prüfen Sie Ihr Postfach",
+      "sent": "Falls für {email} ein Konto besteht, haben wir einen Link zum Zurücksetzen des Passworts gesendet. Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden.",
+      "sentHint": "Keine E-Mail erhalten? Prüfen Sie den Spam-Ordner und die Schreibweise der Adresse. Einen neuen Link können Sie nach einer Minute anfordern.",
+      "again": "Erneut anfordern"
+    },
+    "reset": {
+      "title": "Neues Passwort festlegen",
+      "subtitle": "Nach dem Speichern werden Sie auf allen Geräten abgemeldet und melden sich mit dem neuen Passwort an.",
+      "newPassword": "Neues Passwort",
+      "confirmPassword": "Neues Passwort wiederholen",
+      "submit": "Passwort speichern",
+      "requestNew": "Neuen Link anfordern"
+    },
+    "verify": {
+      "title": "E-Mail-Adresse bestätigen",
+      "checking": "Ihr Bestätigungslink wird geprüft …",
+      "success": "Vielen Dank – Ihre E-Mail-Adresse ist bestätigt.",
+      "continue": "Weiter zu HandyNet",
+      "loginToResend": "Melden Sie sich an, um einen neuen Bestätigungslink anzufordern."
+    }
+  },
+  "account": {
+    "title": "Konto & Sicherheit",
+    "subtitle": "Ihre Anmeldedaten und Sitzungen.",
+    "profile": "Benutzerkonto",
+    "verified": "Bestätigt",
+    "unverified": "Nicht bestätigt",
+    "password": {
+      "title": "Passwort ändern",
+      "hint": "Alle anderen Sitzungen werden dabei beendet; auf diesem Gerät bleiben Sie angemeldet.",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "confirm": "Neues Passwort wiederholen",
+      "submit": "Passwort ändern",
+      "changed": "Passwort geändert. Alle anderen Sitzungen wurden beendet."
+    },
+    "sessions": {
+      "title": "Angemeldete Geräte",
+      "text": "Melden Sie sich auf allen Geräten und in allen Browsern ab, auch auf diesem – etwa wenn ein Gerät verloren ging. Bereits geöffnete Seiten auf anderen Geräten können noch bis zu einer Stunde weiterarbeiten.",
+      "signOutAll": "Überall abmelden",
+      "confirmTitle": "Auf allen Geräten abmelden?",
+      "confirmText": "Alle Sitzungen werden beendet, auch diese. Anschließend müssen Sie sich auf jedem Gerät neu anmelden."
+    },
+    "verify": {
+      "bannerTitle": "Bitte bestätigen Sie Ihre E-Mail-Adresse",
+      "bannerText": "Wir haben Ihnen einen Bestätigungslink an {email} gesendet.",
+      "resend": "Link erneut senden",
+      "sent": "Ein neuer Bestätigungslink ist an {email} unterwegs."
     }
   },
   "validation": {
@@ -123,7 +182,9 @@
     "vatId": "Die USt-IdNr. besteht aus „DE“ und neun Ziffern.",
     "maxLength": "Maximal {max} Zeichen.",
     "businessType": "Bitte wählen Sie mindestens eine Geschäftsart.",
-    "price": "Bitte geben Sie einen gültigen Preis größer 0 ein (z. B. 89,90)."
+    "price": "Bitte geben Sie einen gültigen Preis größer 0 ein (z. B. 89,90).",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+    "passwordUnchanged": "Das neue Passwort muss sich vom aktuellen unterscheiden."
   },
   "businessType": {
     "wholesaler": "Großhandel",
@@ -138,6 +199,12 @@
     "codes": {
       "auth.invalid_credentials": "E-Mail-Adresse oder Passwort ist falsch.",
       "auth.locked_out": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.",
+      "auth.current_password_invalid": "Das aktuelle Passwort ist nicht korrekt.",
+      "password.weak": "Das Passwort ist zu schwach: mindestens 10 Zeichen mit Buchstaben und mindestens einer Ziffer oder einem Sonderzeichen.",
+      "auth.token_invalid": "Der Link ist ungültig oder wurde bereits verwendet.",
+      "auth.token_expired": "Der Link ist abgelaufen. Bitte fordern Sie einen neuen an.",
+      "auth.email_already_verified": "Ihre E-Mail-Adresse ist bereits bestätigt.",
+      "auth.verification_recently_sent": "Eine Bestätigungs-E-Mail wurde gerade erst gesendet. Bitte warten Sie eine Minute, bevor Sie eine weitere anfordern.",
       "user.email_taken": "Für diese E-Mail-Adresse existiert bereits ein Konto.",
       "organization.not_verified": "Ihr Unternehmen ist noch nicht verifiziert.",
       "module.disabled": "Dieses Modul ist für Ihr Unternehmen nicht freigeschaltet.",

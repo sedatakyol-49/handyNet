@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
+import { emailLanguage } from '../../core/auth/account-links';
 import { AuthService } from '../../core/auth/auth.service';
+import { meetsPasswordPolicy } from '../../core/auth/password-policy';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { UI } from '../../shared/ui';
 import { AuthLayoutComponent } from './auth-layout';
@@ -11,7 +13,7 @@ import { AuthLayoutComponent } from './auth-layout';
 export function passwordPolicy(control: AbstractControl): ValidationErrors | null {
   const v = String(control.value ?? '');
   if (!v) return null;
-  return v.length >= 10 && /\p{L}/u.test(v) && /[^\p{L}]/u.test(v) ? null : { passwordPolicy: true };
+  return meetsPasswordPolicy(v) ? null : { passwordPolicy: true };
 }
 
 function atLeastOneType(group: AbstractControl): ValidationErrors | null {
@@ -96,6 +98,7 @@ export class RegisterPage {
         displayName: v.displayName.trim(),
         password: v.password,
         organization: { ...v.organization, vatId: v.organization.vatId.trim() || null },
+        language: emailLanguage(this.i18n.lang()),
       });
       await this.router.navigate(['/login'], { queryParams: { registered: 1 } });
     } catch (e) {

@@ -68,6 +68,9 @@
               <p class="mt-1 text-slate-500">{{ m.role | tEnum: 'role' }} · {{ m.organizationName }}</p>
             }
           </div>
+          <a routerLink="/app/konto" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-50" data-testid="account-link">
+            {{ 'shell.account' | t }}
+          </a>
           <button type="button" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-50" (click)="logout()" data-testid="logout">
             {{ 'shell.logout' | t }}
           </button>
@@ -116,6 +119,7 @@
 </nav>
 
 <main id="main" class="px-3 pt-16 pb-10 sm:px-5 lg:ms-56" tabindex="-1">
+  <hn-email-verification-banner class="mb-4" />
   @for (key of outletKey(); track key) {
     <router-outlet />
   }

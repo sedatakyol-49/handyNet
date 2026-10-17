@@ -42,7 +42,8 @@
     "mainNavigation": "Main navigation",
     "organization": "Company",
     "skipToContent": "Skip to content",
-    "toggleNavigation": "Toggle navigation"
+    "toggleNavigation": "Toggle navigation",
+    "account": "Account & security"
   },
   "nav": {
     "admin": "Administration",
@@ -79,7 +80,10 @@
       "noAccount": "No account yet?",
       "registerLink": "Register your company",
       "sessionExpired": "Your session has expired. Please sign in again.",
-      "registered": "Registration successful. You can sign in now – we will verify your company afterwards."
+      "registered": "Registration successful. You can sign in now – we will verify your company afterwards.",
+      "forgotPassword": "Forgot password?",
+      "passwordReset": "Your password has been changed. Please sign in with your new password.",
+      "signedOutEverywhere": "You have been signed out on all devices."
     },
     "register": {
       "title": "Register your company",
@@ -113,6 +117,61 @@
       "cardImei": "IMEI verified",
       "cardReceipt": "Receipt #1042",
       "cardOffer": "Buyback offer"
+    },
+    "backToLogin": "Back to sign in",
+    "linkIncomplete": "This link is incomplete. Please open the link from the email again or request a new one.",
+    "forgot": {
+      "title": "Forgot password",
+      "subtitle": "Enter the email address of your account. We will send you a link to set a new password.",
+      "submit": "Send link",
+      "sentTitle": "Please check your inbox",
+      "sent": "If an account exists for {email}, we have sent a password reset link. The link is valid for a short time only and can be used once.",
+      "sentHint": "No email? Check your spam folder and the spelling of the address. You can request a new link after one minute.",
+      "again": "Request again"
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "After saving, you will be signed out on all devices and sign in with the new password.",
+      "newPassword": "New password",
+      "confirmPassword": "Repeat new password",
+      "submit": "Save password",
+      "requestNew": "Request a new link"
+    },
+    "verify": {
+      "title": "Confirm email address",
+      "checking": "Checking your confirmation link …",
+      "success": "Thank you – your email address is confirmed.",
+      "continue": "Continue to HandyNet",
+      "loginToResend": "Sign in to request a new confirmation link."
+    }
+  },
+  "account": {
+    "title": "Account & security",
+    "subtitle": "Your sign-in details and sessions.",
+    "profile": "User account",
+    "verified": "Confirmed",
+    "unverified": "Not confirmed",
+    "password": {
+      "title": "Change password",
+      "hint": "All other sessions will be ended; you stay signed in on this device.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat new password",
+      "submit": "Change password",
+      "changed": "Password changed. All other sessions have been ended."
+    },
+    "sessions": {
+      "title": "Signed-in devices",
+      "text": "Sign out on all devices and browsers, including this one – for example if a device was lost. Pages already open on other devices may keep working for up to one hour.",
+      "signOutAll": "Sign out everywhere",
+      "confirmTitle": "Sign out on all devices?",
+      "confirmText": "All sessions will be ended, including this one. You will then have to sign in again on every device."
+    },
+    "verify": {
+      "bannerTitle": "Please confirm your email address",
+      "bannerText": "We have sent a confirmation link to {email}.",
+      "resend": "Resend link",
+      "sent": "A new confirmation link is on its way to {email}."
     }
   },
   "validation": {
@@ -123,7 +182,9 @@
     "vatId": "The VAT ID consists of “DE” followed by nine digits.",
     "maxLength": "At most {max} characters.",
     "businessType": "Please select at least one business type.",
-    "price": "Please enter a valid price greater than 0 (e.g. 89.90)."
+    "price": "Please enter a valid price greater than 0 (e.g. 89.90).",
+    "passwordMismatch": "The passwords do not match.",
+    "passwordUnchanged": "The new password must differ from the current one."
   },
   "businessType": {
     "wholesaler": "Wholesale",
@@ -138,6 +199,12 @@
     "codes": {
       "auth.invalid_credentials": "Email or password is incorrect.",
       "auth.locked_out": "Too many failed attempts. Please try again later.",
+      "auth.current_password_invalid": "The current password is incorrect.",
+      "password.weak": "The password is too weak: at least 10 characters with letters and at least one digit or symbol.",
+      "auth.token_invalid": "The link is invalid or has already been used.",
+      "auth.token_expired": "The link has expired. Please request a new one.",
+      "auth.email_already_verified": "Your email address is already confirmed.",
+      "auth.verification_recently_sent": "A confirmation email was sent a moment ago. Please wait a minute before requesting another one.",
       "user.email_taken": "An account with this email address already exists.",
       "organization.not_verified": "Your company has not been verified yet.",
       "module.disabled": "This module is not enabled for your company.",
