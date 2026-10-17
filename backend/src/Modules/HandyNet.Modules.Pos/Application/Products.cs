@@ -12,8 +12,9 @@ namespace HandyNet.Modules.Pos.Application;
 
 /// <summary>
 /// A product of the register's warehouse as the till shows it. Prices are gross cents. PriceMinor/PriceSource is the price
-/// the till uses (own POS price, else own offer net price + 19 % VAT, else none = cashier enters it). ImageUrl is reserved
-/// for catalog product images (always null until the Catalog provides them). Serialized = sold by IMEI.
+/// the till uses (own POS price, else own offer net price + 19 % VAT, else none = cashier enters it). ImageUrl is the
+/// thumbnail of the catalog product's primary image (relative to the API base, public, immutable; null without images).
+/// Serialized = sold by IMEI.
 /// </summary>
 public sealed record PosProductDto(
     Guid ProductId,
@@ -129,11 +130,15 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         var (p, size) = Paging.Normalize(page, pageSize);
         var total = await query.CountAsync(ct);
         var rows = await query.OrderBy(s => s.Brand).ThenBy(s => s.Name).ThenBy(s => s.ProductId).Skip((p - 1) * size).Take(size).ToListAsync(ct);
-        var resolved = await prices.ResolveAsync(warehouseId.Value, rows.Select(r => r.ProductId).ToList(), ct);
+        var productIds = rows.Select(r => r.ProductId).ToList();
+        var resolved = await prices.ResolveAsync(warehouseId.Value, productIds, ct);
+        // Thumbnail of the primary image via the Catalog contract (one query for the page).
+        var images = await catalog.GetImagesAsync(productIds, ct);
         var items = rows.Select(r =>
         {
             var (price, pos, _) = resolved[r.ProductId];
-            return new PosProductDto(r.ProductId, r.Brand, r.Name, r.Category, r.Quality, r.Ean, r.Mpn, ImageUrl: null, r.Serialized, r.OnHand, r.Reserved,
+            return new PosProductDto(r.ProductId, r.Brand, r.Name, r.Category, r.Quality, r.Ean, r.Mpn, PrimaryThumbnail(images, r.ProductId), r.Serialized,
+                r.OnHand, r.Reserved,
                 r.Available, price.GrossMinor, price.Source.ToString(), pos);
         }).ToList();
         return new PagedResult<PosProductDto>(items, p, size, total);
@@ -205,6 +210,10 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
             .Select(p => (DateTimeOffset?)p.UpdatedAt).FirstOrDefaultAsync(ct);
         return new PosPriceDto(productId, pos, net, price.GrossMinor, price.Source.ToString(), updatedAt);
     }
+
+    /// <summary>The primary image's thumbnail URL (relative to the API base), or null when the product has no image.</summary>
+    internal static string? PrimaryThumbnail(IReadOnlyDictionary<Guid, IReadOnlyList<ProductImageInfo>> images, Guid productId) =>
+        images.GetValueOrDefault(productId) is { Count: > 0 } list ? (list.FirstOrDefault(i => i.IsPrimary) ?? list[0]).ThumbnailUrl : null;
 
     private async Task<Guid?> WarehouseOfAsync(Guid registerId, CancellationToken ct) =>
         await db.Set<Register>().AsNoTracking().Where(r => r.Id == registerId && r.OrganizationId == OrganizationId)
