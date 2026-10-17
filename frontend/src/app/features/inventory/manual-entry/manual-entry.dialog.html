@@ -1,0 +1,397 @@
+<hn-dialog [open]="open()" [title]="'inventory.entry.title' | t" size="xl" testId="entry-dialog" (closed)="close()">
+  <div data-entry-dialog class="space-y-4 text-sm">
+    @if (step() !== 'done') {
+      <nav [attr.aria-label]="'inventory.entry.stepsLabel' | t">
+        <ol class="flex flex-wrap gap-1.5" data-testid="entry-steps">
+          @for (s of steps(); track s; let i = $index) {
+            <li>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                [class]="step() === s ? 'border-accent-700 bg-accent-700 text-white' : i < stepIndex() ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'border-slate-200 bg-slate-50 text-slate-500'"
+                [attr.aria-current]="step() === s ? 'step' : null"
+                (click)="goTo(s)"
+              >
+                <span class="tabular-nums">{{ i + 1 }}</span>
+                {{ 'inventory.entry.steps.' + s | t }}
+              </button>
+            </li>
+          }
+        </ol>
+      </nav>
+    }
+
+    @if (problemText(); as text) {
+      <hn-banner [text]="text" data-testid="entry-error">
+        @if (retryPending()) {
+          <p class="mt-1 text-xs">{{ 'inventory.entry.retrySafe' | t }}</p>
+        }
+      </hn-banner>
+    }
+
+    <!-- ============================================================ 1. identify -->
+    @if (step() === 'identify') {
+      @if (lastSaved(); as ls) {
+        <hn-banner tone="success" data-testid="entry-saved-banner"
+          [text]="'inventory.entry.savedNext' | t: { product: ls.product.brand + ' ' + ls.product.name, qty: ls.quantityReceived, onHand: ls.stock.onHand }" />
+      }
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.identifyTitle' | t }}</h3>
+      <hn-field [label]="'inventory.entry.scanLabel' | t" for="entry-scan" [hint]="'inventory.entry.scanHint' | t">
+        <div class="flex gap-2">
+          <input
+            #scanInput
+            hnInput
+            id="entry-scan"
+            type="search"
+            autocomplete="off"
+            maxlength="200"
+            [value]="scanText()"
+            (input)="onScanInput($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault(); lookupNow()"
+            aria-describedby="entry-scan-hint"
+            data-testid="entry-scan"
+          />
+          <button hnButton type="button" (click)="lookupNow()" [loading]="lookup.loading()">{{ 'common.search' | t }}</button>
+        </div>
+      </hn-field>
+
+      <hn-banner [error]="lookup.error()" />
+
+      @if (lookupResult(); as r) {
+        @if (r.looksLikeImei) {
+          <hn-banner tone="info" [text]="'inventory.entry.looksLikeImei' | t" />
+        }
+        @if (r.matches.length > 0) {
+          <p class="text-xs text-slate-600" role="status">{{ 'inventory.entry.matches' | t: { count: r.matches.length } }}</p>
+          <ul class="max-h-[28rem] space-y-1.5 overflow-y-auto pe-1" data-testid="entry-matches">
+            @for (m of r.matches; track m.product.id) {
+              <li class="flex items-start gap-3 rounded-md border bg-white p-2" [class]="isChosen(m) ? 'border-accent-600 ring-1 ring-accent-600' : 'border-slate-200'" data-testid="entry-match">
+                @if (m.primaryThumbnailUrl) {
+                  <img [src]="catalog.imageUrl(m.primaryThumbnailUrl)" alt="" class="size-14 shrink-0 rounded border border-slate-200 object-contain" loading="lazy" width="56" height="56" />
+                } @else {
+                  <span class="flex size-14 shrink-0 items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 text-[10px] text-slate-400" aria-hidden="true">{{ 'images.noImageShort' | t }}</span>
+                }
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium">
+                    {{ m.product.brand }} {{ m.product.name }}
+                    <span class="ms-1 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-600">{{ 'inventory.entry.matchedBy.' + m.matchedBy | t }}</span>
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    {{ m.product.category | tEnum: 'category' }} · {{ m.product.quality | tEnum: 'quality' }}
+                    @if (m.product.ean) { · EAN <span class="hn-mono">{{ m.product.ean }}</span> }
+                    @if (m.product.mpn) { · MPN <span class="hn-mono">{{ m.product.mpn }}</span> }
+                    @if (m.product.modelName) { · {{ m.product.modelName }} }
+                  </p>
+                  <p class="text-xs text-slate-700">
+                    {{ 'inventory.entry.ownStock' | t: { onHand: m.ownOnHand, available: m.ownAvailable } }}
+                    @if (m.ownSerializedUnits > 0) { · {{ 'inventory.entry.serializedUnits' | t: { count: m.ownSerializedUnits } }} }
+                    @if (m.imeiRequired) { · <span class="font-medium">{{ 'inventory.entry.imeiRequiredShort' | t }}</span> }
+                  </p>
+                  @for (o of m.ownOffers; track o.id) {
+                    <p class="text-xs text-slate-700">
+                      {{ 'inventory.entry.ownOffer' | t }}: <span class="hn-mono">{{ o.supplierSku }}</span> · {{ o.priceMinor | money }} · {{ o.status | tEnum: 'offerStatus' }}
+                    </p>
+                  }
+                </div>
+                <div class="flex shrink-0 flex-col items-end gap-1">
+                  <button hnButton size="sm" type="button" [variant]="isChosen(m) ? 'primary' : 'secondary'" [attr.aria-pressed]="isChosen(m)" (click)="choose(m)" data-testid="entry-choose">
+                    {{ (isChosen(m) ? 'inventory.entry.chosen' : 'inventory.entry.choose') | t }}
+                  </button>
+                  @if (m.canManageImages) {
+                    <button hnButton size="sm" variant="ghost" type="button" [attr.aria-expanded]="imagesFor() === m.product.id" (click)="toggleImages(m)" data-testid="entry-match-images">
+                      {{ 'images.manageCount' | t: { count: m.imageCount } }}
+                    </button>
+                  }
+                </div>
+              </li>
+              @if (imagesFor() === m.product.id) {
+                <li class="rounded-md border border-slate-200 bg-slate-50 p-2">
+                  <hn-product-image-manager [productId]="m.product.id" [canManage]="m.canManageImages" />
+                </li>
+              }
+            }
+          </ul>
+        } @else {
+          <p class="text-sm text-slate-600" role="status" data-testid="entry-no-match">{{ 'inventory.entry.noMatch' | t }}</p>
+        }
+      }
+
+      @if (draft.productMode !== 'new') {
+        @if (ctx().canCreateProduct) {
+          <button hnButton type="button" (click)="startNewProduct()" data-testid="entry-new-product">{{ 'inventory.entry.newProduct' | t }}</button>
+        } @else if (lookupResult()) {
+          <p class="text-xs text-slate-500">{{ 'inventory.entry.noProductCreation' | t }}</p>
+        }
+      }
+
+      @if (draft.productMode === 'new') {
+        <fieldset class="rounded-md border border-slate-200 p-3" data-testid="entry-new-form">
+          <legend class="px-1 text-sm font-semibold">{{ 'inventory.entry.newProductTitle' | t }}</legend>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <hn-field [label]="'marketplace.brand' | t" for="entry-brand" [required]="true" [errors]="fieldError('brand')">
+              <input hnInput id="entry-brand" name="brand" maxlength="100" [(ngModel)]="draft.newProduct.brand" [attr.aria-invalid]="!!fieldError('brand')" data-testid="entry-brand" />
+            </hn-field>
+            <hn-field [label]="'common.name' | t" for="entry-name" [required]="true" [errors]="fieldError('name')">
+              <input hnInput id="entry-name" name="name" maxlength="300" [(ngModel)]="draft.newProduct.name" [attr.aria-invalid]="!!fieldError('name')" data-testid="entry-name" />
+            </hn-field>
+            <hn-field [label]="'marketplace.category' | t" for="entry-category" [required]="true" [errors]="fieldError('category')"
+              [hint]="policy() === 'required' ? ('inventory.entry.categoryImeiRequired' | t) : policy() === 'optional' ? ('inventory.entry.categoryImeiOptional' | t) : null">
+              <select hnSelect id="entry-category" name="category" [(ngModel)]="draft.newProduct.category" (ngModelChange)="onCategoryChange()"
+                [attr.aria-invalid]="!!fieldError('category')" aria-describedby="entry-category-hint" data-testid="entry-category">
+                <option value="">{{ 'inventory.entry.chooseCategory' | t }}</option>
+                @for (c of categories.value()?.categories ?? []; track c) {
+                  <option [value]="c">
+                    {{ c | tEnum: 'category' }}{{ categories.value()?.imeiRequired?.includes(c) ? ' – ' + ('inventory.entry.imeiTag' | t) : '' }}
+                  </option>
+                }
+              </select>
+            </hn-field>
+            <hn-field [label]="'common.quality' | t" for="entry-quality">
+              <select hnSelect id="entry-quality" name="quality" [(ngModel)]="draft.newProduct.quality">
+                @for (q of categories.value()?.qualities ?? []; track q) {
+                  <option [value]="q">{{ q === 'NotApplicable' ? ('inventory.entry.qualityNone' | t) : (q | tEnum: 'quality') }}</option>
+                }
+              </select>
+            </hn-field>
+            <hn-field label="EAN / GTIN" for="entry-ean" [errors]="fieldError('ean')" [hint]="'inventory.entry.eanHint' | t">
+              <input hnInput id="entry-ean" name="ean" inputmode="numeric" autocomplete="off" maxlength="14" [(ngModel)]="draft.newProduct.ean"
+                [attr.aria-invalid]="!!fieldError('ean') || !!fieldError('identifier')" aria-describedby="entry-ean-hint" data-testid="entry-ean" />
+            </hn-field>
+            <hn-field [label]="'inventory.entry.mpn' | t" for="entry-mpn" [errors]="fieldError('mpn')">
+              <input hnInput id="entry-mpn" name="mpn" autocomplete="off" maxlength="100" [(ngModel)]="draft.newProduct.mpn"
+                [attr.aria-invalid]="!!fieldError('mpn') || !!fieldError('identifier')" data-testid="entry-mpn" />
+            </hn-field>
+            @if (fieldError('identifier'); as err) {
+              <p class="text-xs text-red-700 sm:col-span-2" role="alert">{{ err }}</p>
+            }
+            <hn-field [label]="'marketplace.detail.model' | t" for="entry-model" [errors]="fieldError('modelName')" [hint]="'inventory.entry.modelHint' | t">
+              <input hnInput id="entry-model" name="modelName" maxlength="200" [(ngModel)]="draft.newProduct.modelName" aria-describedby="entry-model-hint" data-testid="entry-model" />
+            </hn-field>
+            <hn-field [label]="'marketplace.detail.compatible' | t" for="entry-compatible" [errors]="fieldError('compatibleModels')"
+              [hint]="'inventory.entry.compatibleHint' | t: { count: models().length }">
+              <textarea hnInput id="entry-compatible" name="compatibleModels" rows="2" [(ngModel)]="draft.newProduct.compatibleModels"
+                aria-describedby="entry-compatible-hint" data-testid="entry-compatible"></textarea>
+            </hn-field>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-2">
+            <p class="text-xs text-slate-500">{{ 'inventory.entry.imagesAfterSave' | t }}</p>
+            <button hnButton size="sm" variant="ghost" type="button" (click)="cancelNewProduct()">{{ 'inventory.entry.backToSearch' | t }}</button>
+          </div>
+        </fieldset>
+      }
+
+      @if (fieldError('product'); as err) {
+        <p class="text-xs text-red-700" role="alert" data-testid="entry-product-error">{{ err }}</p>
+      }
+    }
+
+    <!-- ============================================================ 2. stock -->
+    @if (step() === 'stock') {
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.stockTitle' | t: { product: productLabel() } }}</h3>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <hn-field [label]="'inventory.warehouse' | t" for="entry-warehouse">
+          <select hnSelect id="entry-warehouse" name="warehouse" [(ngModel)]="draft.warehouseId" data-testid="entry-warehouse">
+            @for (w of warehouses.value() ?? []; track w.id) {
+              <option [value]="w.id">{{ w.code }} – {{ w.name }}{{ w.isDefault ? ' (' + ('inventory.entry.defaultWarehouse' | t) + ')' : '' }}</option>
+            } @empty {
+              <option value="">{{ 'inventory.entry.defaultWarehouseAuto' | t }}</option>
+            }
+          </select>
+        </hn-field>
+        <hn-field [label]="'inventory.entry.purchasePrice' | t" for="entry-ek" [errors]="fieldError('purchasePrice')" [hint]="'inventory.entry.purchasePriceHint' | t">
+          <input hnInput id="entry-ek" name="ek" inputmode="decimal" autocomplete="off" class="text-end" placeholder="0,00" [(ngModel)]="draft.purchasePrice"
+            [attr.aria-invalid]="!!fieldError('purchasePrice')" aria-describedby="entry-ek-hint" data-testid="entry-ek" />
+        </hn-field>
+      </div>
+
+      @if (policy() === 'optional') {
+        <fieldset>
+          <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'inventory.entry.stockMode' | t }}</legend>
+          <div class="flex flex-wrap gap-4">
+            <label class="flex items-center gap-2"><input type="radio" name="stockMode" value="quantity" [(ngModel)]="draft.stockMode" (ngModelChange)="touch()" /> {{ 'inventory.entry.byQuantity' | t }}</label>
+            <label class="flex items-center gap-2"><input type="radio" name="stockMode" value="imei" [(ngModel)]="draft.stockMode" (ngModelChange)="touch()" /> {{ 'inventory.entry.byImei' | t }}</label>
+          </div>
+        </fieldset>
+      } @else if (policy() === 'required') {
+        <hn-banner tone="info" [text]="'inventory.entry.imeiRequiredInfo' | t" />
+      }
+
+      @if (stockMode() === 'quantity') {
+        <hn-field [label]="'inventory.quantity' | t" for="entry-qty" [required]="true" [errors]="fieldError('quantity')" [hint]="'inventory.entry.quantityHint' | t" class="max-w-48">
+          <input hnInput id="entry-qty" name="quantity" inputmode="numeric" autocomplete="off" class="text-end" [(ngModel)]="draft.quantity"
+            [attr.aria-invalid]="!!fieldError('quantity')" aria-describedby="entry-qty-hint" data-testid="entry-qty" />
+        </hn-field>
+      } @else {
+        <hn-field [label]="'inventory.entry.imeis' | t" for="entry-imeis" [required]="true" [errors]="fieldError('imeis')" [hint]="'inventory.entry.imeisHint' | t">
+          <textarea hnInput id="entry-imeis" name="imeis" rows="6" class="hn-mono" spellcheck="false" autocomplete="off" [(ngModel)]="draft.imeiText" (ngModelChange)="touch()"
+            [attr.aria-invalid]="!!fieldError('imeis')" aria-describedby="entry-imeis-hint entry-imei-summary" data-testid="entry-imeis"></textarea>
+        </hn-field>
+        @if (imeiList(); as list) {
+          <p id="entry-imei-summary" class="text-xs" role="status" data-testid="entry-imei-summary">
+            {{ 'inventory.entry.imeiSummary' | t: { valid: list.valid.length, invalid: list.invalid, duplicates: list.duplicates } }}
+          </p>
+          @if (list.invalid + list.duplicates > 0) {
+            <ul class="max-h-32 space-y-0.5 overflow-y-auto text-xs text-red-700" data-testid="entry-imei-problems">
+              @for (e of list.entries; track $index) {
+                @if (e.status !== 'ok') {
+                  <li>{{ 'inventory.entry.imeiLine' | t: { line: e.line, value: e.raw } }} – {{ 'inventory.entry.imeiStatus.' + e.status | t }}</li>
+                }
+              }
+            </ul>
+          }
+        }
+      }
+      @if (ctx().canCreateOffer && !offerPossible()) {
+        <p class="text-xs text-slate-500">{{ 'inventory.entry.noOfferForImei' | t }}</p>
+      }
+    }
+
+    <!-- ============================================================ 3. offer -->
+    @if (step() === 'offer') {
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.offerTitle' | t }}</h3>
+      @if (existingOffer(); as o) {
+        <hn-banner tone="info" [text]="'inventory.entry.existingOffer' | t: { sku: o.supplierSku }" />
+      }
+      <label class="flex items-center gap-2">
+        <input type="checkbox" class="hn-checkbox" name="offerEnabled" [(ngModel)]="draft.offer.enabled" (ngModelChange)="touch()" data-testid="entry-offer-enabled" />
+        {{ 'inventory.entry.offerEnabled' | t }}
+      </label>
+      @if (draft.offer.enabled) {
+        <div class="grid gap-3 sm:grid-cols-3">
+          <hn-field [label]="'common.sku' | t" for="entry-sku" [required]="true" [errors]="fieldError('supplierSku')" [hint]="'inventory.entry.skuHint' | t">
+            <input hnInput id="entry-sku" name="sku" maxlength="100" autocomplete="off" [(ngModel)]="draft.offer.supplierSku"
+              [attr.aria-invalid]="!!fieldError('supplierSku')" aria-describedby="entry-sku-hint" data-testid="entry-sku" />
+          </hn-field>
+          <hn-field [label]="'inventory.entry.salesPrice' | t" for="entry-price" [required]="true" [errors]="fieldError('price')"
+            [hint]="grossPreview() !== null ? ('inventory.entry.grossPreview' | t: { gross: (grossPreview() | money) }) : ('common.netPlusVat' | t)">
+            <input hnInput id="entry-price" name="price" inputmode="decimal" autocomplete="off" class="text-end" placeholder="0,00" [(ngModel)]="draft.offer.price"
+              [attr.aria-invalid]="!!fieldError('price')" aria-describedby="entry-price-hint" data-testid="entry-price" />
+          </hn-field>
+          <hn-field [label]="'common.condition' | t" for="entry-condition">
+            <select hnSelect id="entry-condition" name="condition" [(ngModel)]="draft.offer.condition" data-testid="entry-condition">
+              @for (c of conditions; track c) {
+                <option [value]="c">{{ c | tEnum: 'condition' }}</option>
+              }
+            </select>
+          </hn-field>
+          <hn-field [label]="'marketplace.detail.moq' | t" for="entry-moq" [required]="true" [errors]="fieldError('minOrderQuantity')">
+            <input hnInput id="entry-moq" name="moq" inputmode="numeric" class="text-end" [(ngModel)]="draft.offer.minOrderQuantity"
+              [attr.aria-invalid]="!!fieldError('minOrderQuantity')" data-testid="entry-moq" />
+          </hn-field>
+          <hn-field [label]="'inventory.entry.deliveryDays' | t" for="entry-days" [required]="true" [errors]="fieldError('deliveryDays')" [hint]="'inventory.entry.deliveryDaysHint' | t">
+            <input hnInput id="entry-days" name="days" inputmode="numeric" class="text-end" [(ngModel)]="draft.offer.deliveryDays"
+              [attr.aria-invalid]="!!fieldError('deliveryDays')" aria-describedby="entry-days-hint" data-testid="entry-days" />
+          </hn-field>
+          <div class="flex items-end pb-2">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" class="hn-checkbox" name="publish" [(ngModel)]="draft.offer.publish" data-testid="entry-publish" />
+              {{ 'inventory.entry.publish' | t }}
+            </label>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ============================================================ 4. summary -->
+    @if (step() === 'summary') {
+      <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.summaryTitle' | t }}</h3>
+      <dl class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5" data-testid="entry-summary">
+        <dt class="text-slate-500">{{ 'common.product' | t }}</dt>
+        <dd>
+          <span class="font-medium">{{ productLabel() }}</span>
+          <span class="ms-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+            {{ (draft.productMode === 'new' ? 'inventory.entry.isNew' : 'inventory.entry.isExisting') | t }}
+          </span>
+          @if (draft.productMode === 'new') {
+            <span class="block text-xs text-slate-500">
+              {{ draft.newProduct.category | tEnum: 'category' }}
+              @if (draft.newProduct.ean) { · EAN {{ draft.newProduct.ean }} }
+              @if (draft.newProduct.mpn) { · MPN {{ draft.newProduct.mpn }} }
+              @if (draft.newProduct.modelName) { · {{ draft.newProduct.modelName }} }
+              @if (models().length) { · {{ 'inventory.entry.compatibleCount' | t: { count: models().length } }} }
+            </span>
+          }
+        </dd>
+        <dt class="text-slate-500">{{ 'inventory.warehouse' | t }}</dt>
+        <dd>{{ warehouseLabel(draft.warehouseId) }}</dd>
+        @if (stockMode() === 'imei') {
+          <dt class="text-slate-500">{{ 'inventory.entry.imeis' | t }}</dt>
+          <dd>{{ 'inventory.entry.devices' | t: { count: imeiList().valid.length } }}</dd>
+        } @else {
+          <dt class="text-slate-500">{{ 'inventory.entry.receive' | t }}</dt>
+          <dd data-testid="summary-qty">+{{ draft.quantity }}</dd>
+        }
+        <dt class="text-slate-500">{{ 'inventory.entry.purchasePrice' | t }}</dt>
+        <dd>{{ ekMinor() !== null ? (ekMinor() | money) : '–' }}</dd>
+        <dt class="text-slate-500">{{ 'inventory.entry.offer' | t }}</dt>
+        <dd data-testid="summary-offer">
+          @if (offerPossible() && draft.offer.enabled) {
+            <span class="hn-mono">{{ draft.offer.supplierSku }}</span> · {{ priceMinor() | money }} {{ 'common.net' | t }}
+            ({{ grossPreview() | money }} {{ 'common.gross' | t }}) ·
+            {{ 'inventory.entry.moqShort' | t: { moq: draft.offer.minOrderQuantity } }} ·
+            {{ 'marketplace.detail.deliveryDays' | t: { days: draft.offer.deliveryDays } }} ·
+            {{ draft.offer.condition | tEnum: 'condition' }} ·
+            {{ (draft.offer.publish ? 'inventory.entry.published' : 'inventory.entry.notPublished') | t }}
+          } @else {
+            {{ 'inventory.entry.noOffer' | t }}
+          }
+        </dd>
+      </dl>
+    }
+
+    <!-- ============================================================ done -->
+    @if (step() === 'done') {
+      @if (result(); as r) {
+        <h3 #stepHeading tabindex="-1" class="text-base focus:outline-none">{{ 'inventory.entry.doneTitle' | t }}</h3>
+        <hn-banner tone="success" data-testid="entry-success"
+          [text]="'inventory.entry.done' | t: { product: r.product.brand + ' ' + r.product.name, qty: r.quantityReceived, onHand: r.stock.onHand, available: r.stock.available }" />
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5">
+          <dt class="text-slate-500">{{ 'common.product' | t }}</dt>
+          <dd>{{ 'inventory.entry.productAction.' + r.productAction | t }}</dd>
+          <dt class="text-slate-500">{{ 'inventory.entry.offer' | t }}</dt>
+          <dd data-testid="done-offer">
+            @if (r.offer; as o) {
+              {{ 'inventory.entry.offerAction.' + o.action | t }}: <span class="hn-mono">{{ o.supplierSku }}</span> · {{ o.priceMinor | money: o.currency }} ·
+              {{ o.status | tEnum: 'offerStatus' }}
+            } @else {
+              {{ 'inventory.entry.noOffer' | t }}
+            }
+          </dd>
+        </dl>
+        @if (r.productAction === 'Created' || (draft.match?.canManageImages ?? false)) {
+          <section class="rounded-md border border-slate-200 p-3" aria-labelledby="entry-images-title">
+            <h4 id="entry-images-title" class="mb-2 text-sm font-semibold">{{ 'images.title' | t }}</h4>
+            <hn-product-image-manager [productId]="r.product.id" [canManage]="true" />
+          </section>
+        }
+      }
+    }
+
+    <!-- ============================================================ footer -->
+    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3">
+      @if (step() === 'done') {
+        <button hnButton type="button" (click)="close()">{{ 'common.close' | t }}</button>
+        <button hnButton variant="primary" type="button" (click)="nextItem()" data-testid="entry-next-item">{{ 'inventory.entry.nextItem' | t }}</button>
+      } @else {
+        <div class="flex gap-2">
+          <button hnButton type="button" (click)="close()">{{ 'common.cancel' | t }}</button>
+          @if (step() !== 'identify') {
+            <button hnButton type="button" (click)="back()" data-testid="entry-back">{{ 'inventory.entry.back' | t }}</button>
+          }
+        </div>
+        <div class="flex gap-2">
+          @if (step() === 'summary') {
+            <button hnButton type="button" [loading]="busy()" [disabled]="busy()" (click)="submit(true)" data-testid="entry-save-next">
+              {{ 'inventory.entry.saveAndNext' | t }}
+            </button>
+            <button hnButton variant="primary" type="button" [loading]="busy()" [disabled]="busy()" (click)="submit(false)" data-testid="entry-save">
+              {{ (retryPending() ? 'inventory.entry.retry' : 'common.save') | t }}
+            </button>
+          } @else {
+            <button hnButton variant="primary" type="button" (click)="next()" data-testid="entry-next">{{ 'inventory.entry.next' | t }}</button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</hn-dialog>

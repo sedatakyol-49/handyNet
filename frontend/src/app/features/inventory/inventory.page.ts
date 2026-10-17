@@ -9,10 +9,11 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
+import { ManualEntryDialogComponent } from './manual-entry/manual-entry.dialog';
 
 @Component({
   selector: 'hn-inventory-page',
-  imports: [FormsModule, ...UI],
+  imports: [FormsModule, ...UI, ManualEntryDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory.page.html',
 })
@@ -23,6 +24,8 @@ export class InventoryPage {
   private readonly session = inject(SessionStore);
 
   protected readonly canManage = this.session.can('inventory.manage');
+  /** Artikel anlegen (manual entry); creating products/offers inside needs more (checked in the wizard and the API). */
+  protected readonly entryOpen = signal(false);
   protected readonly tab = signal<'stock' | 'movements'>('stock');
   protected readonly warehouseId = signal('');
   protected readonly stockPage = signal(1);
@@ -53,6 +56,11 @@ export class InventoryPage {
   protected newWarehouse = { code: '', name: '' };
   protected readonly warehouseProblem = signal<ApiProblem | null>(null);
   protected readonly warehouseBusy = signal(false);
+
+  protected onEntrySaved(): void {
+    this.stock.reload();
+    if (this.tab() === 'movements') this.movements.reload();
+  }
 
   protected warehouseCode(id: string): string {
     return this.warehouseNames().get(id) ?? id.slice(0, 8);

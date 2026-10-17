@@ -55,7 +55,10 @@ src/app
 │  └─ storage.service.ts     localStorage wrapper that is a no-op during SSR
 ├─ shared/
 │  ├─ ui/                    button, field/input/select, table, status badge, pagination, empty state,
-│  │                         banner (error/warning/info, shows API problem title), toast host, dialog, page header
+│  │                         banner (error/warning/info, shows API problem title), toast host, dialog (md/lg/xl),
+│  │                         page header, multi-select (checkbox dropdown with facet counts, filter box for long lists)
+│  ├─ product-images/        image manager (upload with preview, drag/keyboard reorder, remove, primary badge),
+│  │                         read-only gallery (keyboard, RTL-aware), image-rules.ts (5 MB / JPEG-PNG-WebP / 8 max)
 │  └─ data/query.ts          createQuery(): signal-driven loader (latest request wins, keeps previous data while loading)
 └─ features/                 one folder per screen, all lazy-loaded
    ├─ auth/                  Login, Registrierung (reactive form, client + server validation), Passwort vergessen,
@@ -64,7 +67,8 @@ src/app
    ├─ shell/                 top bar (org switcher, language, user menu), side navigation (navigation.ts),
    │                         unverified-email banner (email-verification-banner.ts)
    ├─ dashboard/             Übersicht (org status, verification notice, real order counts, quick links)
-   ├─ marketplace/           Marktplatz (search with "/" shortcut, filters, dense results, add to cart)
+   ├─ marketplace/           Marktplatz (read-only for products): URL-backed filters with facets and chips
+                             (marketplace-filters.ts), thumbnails, detail modal (?offer=) with gallery and other offers
    ├─ cart/                  CartStore (signals, persisted per organization, grouped by seller) + checkout page
    ├─ orders/                Einkauf / Verkauf lists and order detail with allowed actions
    │  ├─ shipping/           "Versand" section (book/hand over/track shipments, buyer receipt + inspection) and
@@ -74,8 +78,9 @@ src/app
    ├─ finance/               Finanzen (seller): open balance, recent payouts, paged ledger
    │  └─ invoices/           Provisionsrechnungen (seller list + detail + PDF) and invoice.logic.ts (Berlin months,
    │                         month validation, date-only/month formatting, issue-run outcome, cent sums)
-   ├─ offers/                own offers with inline price/status editing, create offer from catalog
-   ├─ inventory/             stock table, adjustment dialog, movements, warehouses
+   ├─ offers/                own offers with inline price/status editing, create offer from catalog, product images
+   ├─ inventory/             stock table, adjustment dialog, movements, warehouses; manual-entry/ = "Artikel anlegen"
+   │                         wizard and manual-entry.logic.ts (IMEI/GTIN checks, step validation, request, idempotency)
    ├─ imports/               import wizard (upload → preview/mapping → approve/discard) and history
    ├─ team/                  staff list + add staff
    ├─ ankauf/                Ankauf (dealer): model search, preliminary buyback quote, quote history; ankauf.logic.ts
@@ -293,6 +298,35 @@ Module `Ankauf` (enabled per organization in Administration → Unternehmen → 
 - `ankauf.*` error codes are translated; for codes whose API message names sheets/rows/ranges (`sheet_missing`,
   `duplicate_models`, `unreadable`, `pending_decisions`, `policy_range`) the API text is appended.
 
+### Lager: Artikel anlegen, product images, marketplace detail and filters (Phase 2b)
+
+Backend rules: `../docs/adr/0011-file-storage-and-product-images.md` and the Imports `ManualEntryService`.
+
+- **Artikel anlegen** (Lager, `inventory.manage`): dialog with the steps Artikel → Bestand → Angebot → Prüfen & speichern.
+  The scan field keeps the focus; Enter (or a 300 ms pause) calls `GET /api/inventory/items/lookup`; matches show the
+  thumbnail, how they matched (EAN / Herstellernummer / Text), own stock and own offers; a single exact EAN match is
+  selected automatically. "Neuen Artikel anlegen" (only when the lookup says `canCreateProduct`) is prefilled with
+  the scanned EAN/MPN; the category select marks IMEI categories (`imeiRequired` / `imeiAllowed` from
+  `/api/catalog/categories`). Stock: warehouse (default preselected), quantity (added as goods receipt) or one IMEI per
+  line with live Luhn / length / duplicate feedback, optional EK. The offer step exists only with `canCreateOffer` and
+  not for IMEI stock (the API refuses it); SKU is suggested, an existing own offer is prefilled and updated; the gross
+  preview is computed in integer cents. Save sends `POST /api/inventory/items` with an `Idempotency-Key` per attempt
+  that is reused when the identical request is retried after a network error / 5xx. "Speichern & nächster Artikel"
+  resets to the scan field (warehouse kept). After creating a product, images can be uploaded right away. All
+  `entry.*`, `product.*`, `offer.*`, `image.*` and `unit.imei_in_stock` codes are translated and lead back to the step
+  with the field to fix.
+- **Product images** (only the creating organization: `canManageImages` from the lookup; the API enforces it): in the
+  wizard (lookup result and after saving) and on Angebote ("Bilder"). Upload with preview (button or drop files),
+  reorder by drag & drop or the earlier/later buttons, "Als Hauptbild", remove with inline confirmation. Image URLs are
+  relative to the API base (`CatalogApi.imageUrl`).
+- **Marktplatz**: no add-product action (products enter only via Lager or import). Filters in the URL: `q`,
+  `category`, `brand`, `sellerId` (Verkäufer, multi-select with name + city and counts), `quality`, `condition`,
+  `min`/`max` (net VK range, e.g. `19.90`), `days`, `model` (passend für), `images=1`, `stock=0`, `sort`, `page`.
+  Facet counts come from `GET /api/marketplace/facets` (disjunctive); active filters are chips with remove and "Alle
+  Filter zurücksetzen"; text inputs are debounced; "Weitere Filter" collapses on small screens. A row click or Enter on
+  a focused row opens the detail modal (`?offer={id}`, deep-linkable; the row's cart controls do not open it) with the
+  product data, gallery, net and gross (19 %) price, other sellers' offers (each can be added to the cart) and quantity.
+
 ### Kasse (POS)
 
 Module `Pos` (enabled per organization by the platform admin; sells stock of the Inventory module). Business rules:
@@ -423,6 +457,12 @@ Without these variables the tests are skipped. Specs:
   on-hand 1. A second shop: a 16-year-old seller is refused client-side, the stocked IMEI shows the in-stock warning,
   another intake is rejected with a reason. Same default-policy assumption as ankauf-flow.
 
+- `e2e/lager-marketplace.spec.ts` – supplier (Inventory + ProductImport + B2BSales) creates a new product in Lager via
+  "Artikel anlegen" (unknown EAN, Akku with model + compatible models, 7 units, EK, published offer 19,90 €), uploads
+  an image right after saving (primary badge), checks the live IMEI feedback for a smartphone; the shop asserts that the
+  marketplace has no add-product action, filters by Verkäufer (`sellerId` in the URL), brand, price range and "Nur mit
+  Bildern", opens the detail modal by row click and Enter (net 19,90 €, gross 23,68 €), via deep link, and adds to the
+  cart from the modal and from the row (which does not open the modal).
 - `e2e/pos-flow.spec.ts` – shop with Pos + Inventory + ProductImport; a product with an EAN and 5 units received are
   created via the API. No POS entry in the back-office menu; the overview launches `/kasse`. The shop creates a
   register, opens a session with 100,00 €, scans the EAN, types 12,50 € on the numpad display, quantity 2 via the numpad

@@ -59,6 +59,12 @@ import {
   StockRow,
   UpdateOfferRequest,
   Warehouse,
+  LookupResult,
+  ManualEntryRequest,
+  ManualEntryResult,
+  MarketplaceFacets,
+  OfferDetail,
+  ProductImage,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -76,6 +82,31 @@ export class CatalogApi {
 
   categories(): Observable<CatalogCategories> {
     return this.http.get<CatalogCategories>(`${this.base}/api/catalog/categories`);
+  }
+
+  images(productId: string): Observable<ProductImage[]> {
+    return this.http.get<ProductImage[]>(`${this.base}/api/catalog/products/${productId}/images`);
+  }
+
+  /** Multipart field `file`; JPEG/PNG/WebP up to 5 MB, at most 8 per product (only the creating organization). */
+  uploadImage(productId: string, file: File): Observable<ProductImage> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ProductImage>(`${this.base}/api/catalog/products/${productId}/images`, form);
+  }
+
+  /** Every current image id exactly once; the first becomes the primary image. */
+  reorderImages(productId: string, imageIds: string[]): Observable<ProductImage[]> {
+    return this.http.put<ProductImage[]>(`${this.base}/api/catalog/products/${productId}/images/order`, { imageIds });
+  }
+
+  deleteImage(productId: string, imageId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/catalog/products/${productId}/images/${imageId}`);
+  }
+
+  /** Image URLs from the API are relative to the API base (public, immutable). */
+  imageUrl(relative: string | null | undefined): string | null {
+    return relative ? `${this.base}${relative}` : null;
   }
 }
 
@@ -207,13 +238,34 @@ export class InventoryApi {
   movements(q: { productId?: string | null; page?: number; pageSize?: number }): Observable<Paged<StockMovement>> {
     return this.http.get<Paged<StockMovement>>(`${this.url}/movements`, { params: queryParams(q) });
   }
+
+  /** Step 1 of "Artikel anlegen": EAN / MPN / text → catalog matches with own stock and offers. */
+  lookupItem(q: string): Observable<LookupResult> {
+    return this.http.get<LookupResult>(`${this.url}/items/lookup`, { params: queryParams({ q }) });
+  }
+
+  /** Manual entry; reuse the same key when retrying the same attempt (201 created, 200 replayed). */
+  createItem(body: ManualEntryRequest, idempotencyKey: string): Observable<ManualEntryResult> {
+    return this.http.post<ManualEntryResult>(`${this.url}/items`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
+  }
 }
 
+/** Marketplace filters as the API binds them (lists are repeated query parameters, prices net EUR decimals). */
 export interface MarketplaceQuery {
   search?: string;
-  category?: string;
-  brand?: string;
+  category?: string[];
+  brand?: string[];
+  quality?: string[];
+  condition?: string[];
+  sellerId?: string[];
+  /** Net VK in EUR, e.g. "10.50". */
+  priceMin?: string;
+  priceMax?: string;
+  maxDeliveryDays?: number | null;
+  compatibleModel?: string;
+  hasImages?: boolean;
   inStockOnly?: boolean;
+  productId?: string;
   sort?: MarketplaceSort;
   page?: number;
   pageSize?: number;
@@ -225,13 +277,24 @@ export class MarketplaceApi {
   private readonly base = inject(API_BASE_URL);
 
   offers(q: MarketplaceQuery): Observable<Paged<Listing>> {
-    return this.http.get<Paged<Listing>>(`${this.base}/api/marketplace/offers`, {
-      params: queryParams({ ...q, inStockOnly: q.inStockOnly ? true : undefined }),
-    });
+    return this.http.get<Paged<Listing>>(`${this.base}/api/marketplace/offers`, { params: this.params(q) });
+  }
+
+  facets(q: MarketplaceQuery): Observable<MarketplaceFacets> {
+    const { page: _page, pageSize: _size, sort: _sort, ...filters } = q;
+    return this.http.get<MarketplaceFacets>(`${this.base}/api/marketplace/facets`, { params: this.params(filters) });
   }
 
   offer(id: string): Observable<Listing> {
     return this.http.get<Listing>(`${this.base}/api/marketplace/offers/${id}`);
+  }
+
+  detail(id: string): Observable<OfferDetail> {
+    return this.http.get<OfferDetail>(`${this.base}/api/marketplace/offers/${id}/detail`);
+  }
+
+  private params(q: MarketplaceQuery) {
+    return queryParams({ ...q, inStockOnly: q.inStockOnly ? true : undefined, hasImages: q.hasImages ? true : undefined });
   }
 }
 

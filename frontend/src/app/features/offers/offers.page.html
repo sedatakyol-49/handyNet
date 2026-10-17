@@ -101,11 +101,13 @@
             <td>{{ o.condition | tEnum: 'condition' }}</td>
             <td class="num" [title]="'offers.stockTitle' | t">{{ o.onHand }} / {{ o.reserved }}</td>
             <td><hn-status-badge [status]="o.status" kind="offerStatus" /></td>
-            <td class="text-end">
+            <td class="text-end whitespace-nowrap">
               @if (canManage && o.status !== 'Archived') {
                 <button hnButton size="sm" variant="ghost" type="button" (click)="startEdit(o)" [disabled]="!!editingId()"
                   [attr.aria-label]="('common.edit' | t) + ': ' + o.productName">{{ 'common.edit' | t }}</button>
               }
+              <button hnButton size="sm" variant="ghost" type="button" (click)="openImages(o)"
+                [attr.aria-label]="('images.title' | t) + ': ' + o.brand + ' ' + o.productName" data-testid="offer-images">{{ 'images.title' | t }}</button>
             </td>
           </tr>
         }
@@ -186,4 +188,14 @@
       <button hnButton variant="primary" type="submit" [disabled]="!create.product || creating()" [loading]="creating()">{{ 'common.create' | t }}</button>
     </div>
   </form>
+</hn-dialog>
+
+<hn-dialog [open]="!!imagesOffer()" [title]="('images.title' | t) + (imagesOffer() ? ': ' + imagesOffer()!.brand + ' ' + imagesOffer()!.productName : '')" size="lg" (closed)="imagesOffer.set(null)">
+  @if (imagesOffer(); as o) {
+    @if (imagesAccess.value() !== null && !imagesAccess.loading()) {
+      <hn-product-image-manager [productId]="o.productId" [canManage]="!!imagesAccess.value()" [readOnlyNote]="!imagesAccess.value()" />
+    } @else {
+      <p class="text-sm text-slate-500">{{ 'common.loading' | t }}</p>
+    }
+  }
 </hn-dialog>

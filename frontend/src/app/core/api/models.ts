@@ -126,6 +126,35 @@ export interface CatalogProduct {
 export interface CatalogCategories {
   categories: string[];
   qualities: string[];
+  /** Categories stocked only by IMEI (one per unit), e.g. Smartphone. */
+  imeiRequired: string[];
+  /** Categories that may be stocked by IMEI (includes imeiRequired), e.g. Tablet, Wearable. */
+  imeiAllowed: string[];
+}
+
+/** Canonical product image; URLs are relative to the API base and immutable (ADR-0011). */
+export interface ProductImage {
+  id: string;
+  position: number;
+  isPrimary: boolean;
+  width: number;
+  height: number;
+  thumbnailWidth: number;
+  thumbnailHeight: number;
+  thumbnailUrl: string;
+  fullUrl: string;
+}
+
+export interface ProductSummary {
+  id: string;
+  brand: string;
+  name: string;
+  category: string;
+  quality: string;
+  mpn: string | null;
+  ean: string | null;
+  modelName: string | null;
+  compatibleModels: string[];
 }
 
 export type ImportStatus = 'Previewed' | 'Committed' | 'Discarded';
@@ -287,6 +316,153 @@ export interface Listing {
   condition: OfferCondition;
   available: number;
   updatedAt: string;
+  modelName: string | null;
+  compatibleModels: string[];
+  imageCount: number;
+  /** Relative URL of the primary image's thumbnail; null without images. */
+  primaryThumbnailUrl: string | null;
+}
+
+export interface ProductDetail {
+  id: string;
+  brand: string;
+  name: string;
+  category: string;
+  quality: string;
+  ean: string | null;
+  mpn: string | null;
+  modelName: string | null;
+  compatibleModels: string[];
+  images: ProductImage[];
+}
+
+/** `GET /api/marketplace/offers/{id}/detail` */
+export interface OfferDetail {
+  offer: Listing;
+  product: ProductDetail;
+  otherOffers: Listing[];
+}
+
+export interface FacetValue {
+  value: string;
+  count: number;
+}
+
+export interface SellerFacet {
+  id: string;
+  name: string;
+  city: string;
+  count: number;
+}
+
+/** `GET /api/marketplace/facets` — each list is counted without its own filter (disjunctive). */
+export interface MarketplaceFacets {
+  total: number;
+  brands: FacetValue[];
+  categories: FacetValue[];
+  qualities: FacetValue[];
+  conditions: FacetValue[];
+  sellers: SellerFacet[];
+  price: { minMinor: number; maxMinor: number } | null;
+  withImages: number;
+}
+
+// ---------------------------------------------------------------- manual Lager entry ("Artikel anlegen")
+
+export interface ManualEntryProductInput {
+  brand: string;
+  name: string;
+  category: string;
+  quality?: string | null;
+  ean?: string | null;
+  mpn?: string | null;
+  modelName?: string | null;
+  compatibleModels?: string[] | null;
+}
+
+export interface ManualEntryOfferInput {
+  supplierSku: string;
+  /** Net VK in EUR as decimal (two places at most). */
+  price: number;
+  minOrderQuantity: number;
+  deliveryDays: number;
+  condition: OfferCondition;
+  publish: boolean;
+}
+
+/** `POST /api/inventory/items` (Idempotency-Key header required). Either productId or newProduct. */
+export interface ManualEntryRequest {
+  productId?: string | null;
+  newProduct?: ManualEntryProductInput | null;
+  warehouseId?: string | null;
+  quantity?: number | null;
+  imeis?: string[] | null;
+  /** Net EK per unit in EUR as decimal. */
+  purchasePrice?: number | null;
+  offer?: ManualEntryOfferInput | null;
+}
+
+export type EntryProductAction = 'Selected' | 'MatchedExisting' | 'Created';
+
+export interface ManualEntryResult {
+  entryId: string;
+  productAction: EntryProductAction;
+  product: ProductSummary;
+  quantityReceived: number;
+  unitIds: string[];
+  unitCostMinor: number | null;
+  stock: { warehouseId: string; onHand: number; reserved: number; available: number };
+  offer: {
+    id: string;
+    action: 'Created' | 'Updated';
+    supplierSku: string;
+    priceMinor: number;
+    currency: string;
+    minOrderQuantity: number;
+    deliveryDays: number;
+    condition: OfferCondition;
+    status: OfferStatus;
+  } | null;
+  createdAt: string;
+}
+
+export interface LookupOwnOffer {
+  id: string;
+  supplierSku: string;
+  priceMinor: number;
+  minOrderQuantity: number;
+  deliveryDays: number;
+  condition: OfferCondition;
+  status: OfferStatus;
+}
+
+export interface LookupMatch {
+  product: ProductSummary;
+  matchedBy: 'Ean' | 'Mpn' | 'Text';
+  imageCount: number;
+  primaryThumbnailUrl: string | null;
+  /** The selected organization created the product and may manage its images. */
+  canManageImages: boolean;
+  imeiRequired: boolean;
+  imeiAllowed: boolean;
+  ownOnHand: number;
+  ownAvailable: number;
+  ownSerializedUnits: number;
+  ownOffers: LookupOwnOffer[];
+  suggestedSku: string;
+}
+
+/** `GET /api/inventory/items/lookup?q=` */
+export interface LookupResult {
+  query: string;
+  isValidEan: boolean;
+  normalizedEan: string | null;
+  looksLikeImei: boolean;
+  matches: LookupMatch[];
+  canCreateProduct: boolean;
+  canCreateOffer: boolean;
+  /** Prefill for "new product" when no EAN match was found. */
+  newProduct: { ean: string | null; mpn: string | null } | null;
 }
 
 export type MarketplaceSort = 'price' | 'price_desc' | 'delivery' | 'name';
