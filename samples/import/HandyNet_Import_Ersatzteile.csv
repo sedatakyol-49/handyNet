@@ -1,0 +1,31 @@
+﻿Artikelnummer;EAN;Herstellernummer;Marke;Bezeichnung;Kategorie;Qualität;Modell;Preis;Bestand;Lieferzeit;Mindestmenge;Zustand
+DSP-IP15-SP;4262010001019;661-29384;Apple;Display iPhone 15 OLED Service Pack;Display;ServicePack;iPhone 15;219;6;1;1;Neu
+DSP-IP14-SP;4262010001026;661-26364;Apple;Display iPhone 14 OLED Service Pack;Display;ServicePack;iPhone 14;189;8;1;1;Neu
+DSP-IP13-SP;4262010001033;661-22234;Apple;Display iPhone 13 OLED Service Pack;Display;ServicePack;iPhone 13;149;10;1;1;Neu
+DSP-IP13-AM;4262010001040;AM-IP13-INC;Apple;Display iPhone 13 Incell Nachbau;Display;Aftermarket;iPhone 13;39,90;25;2;1;Neu
+DSP-IP12-SP;4262010001057;661-18484;Apple;Display iPhone 12 / 12 Pro OLED Service Pack;Display;ServicePack;iPhone 12;129;7;1;1;Neu
+DSP-IP11-AM;4262010001064;AM-IP11-LCD;Apple;Display iPhone 11 LCD Nachbau;Display;Aftermarket;iPhone 11;24,90;30;2;1;Neu
+DSP-S24-SP;4262010001071;GH82-33515A;Samsung;Display Galaxy S24 AMOLED mit Rahmen Service Pack;Display;ServicePack;Galaxy S24;169;5;1;1;Neu
+DSP-S23-SP;4262010001088;GH82-30480A;Samsung;Display Galaxy S23 AMOLED mit Rahmen Service Pack;Display;ServicePack;Galaxy S23;149;6;1;1;Neu
+DSP-A54-SP;4262010001095;GH82-31231A;Samsung;Display Galaxy A54 5G mit Rahmen Service Pack;Display;ServicePack;Galaxy A54;79,90;12;1;1;Neu
+DSP-A34-SP;4262010001101;GH82-31200A;Samsung;Display Galaxy A34 5G mit Rahmen Service Pack;Display;ServicePack;Galaxy A34;69,90;9;1;1;Neu
+DSP-RN12-OR;4262010001118;560003N8F100;Xiaomi;Display Redmi Note 12 AMOLED Original;Display;Original;Redmi Note 12;54,90;8;3;1;Neu
+DSP-P7-OR;4262010001125;G949-00332-01;Google;Display Pixel 7 OLED Original;Display;Original;Pixel 7;119;4;3;1;Neu
+AKK-IP15;4262010001132;661-29510;Apple;Akku iPhone 15 3349 mAh;Akku;ServicePack;iPhone 15;49,90;15;1;1;Neu
+AKK-IP14;4262010001149;661-25521;Apple;Akku iPhone 14 3279 mAh;Akku;ServicePack;iPhone 14;44,90;18;1;1;Neu
+AKK-IP13;4262010001156;661-22216;Apple;Akku iPhone 13 3227 mAh;Akku;ServicePack;iPhone 13;39,90;20;1;1;Neu
+AKK-IP12-AM;4262010001163;AM-AKK-IP12;Apple;Akku iPhone 12 / 12 Pro 2815 mAh Nachbau;Akku;Aftermarket;iPhone 12;16,90;40;2;2;Neu
+AKK-S23;4262010001170;GH82-30461A;Samsung;Akku Galaxy S23 EB-BS912ABY;Akku;ServicePack;Galaxy S23;29,90;14;1;1;Neu
+AKK-A54;4262010001187;GH82-31091A;Samsung;Akku Galaxy A54 EB-BA546ABY;Akku;ServicePack;Galaxy A54;24,90;16;1;1;Neu
+AKK-RN12;4262010001194;BN5M-RN12;Xiaomi;Akku Redmi Note 12 BN5M;Akku;Original;Redmi Note 12;19,90;11;3;1;Neu
+LBU-IP14;4262010001200;821-03871;Apple;Ladebuchse Flex iPhone 14 Lightning;Ladebuchse;Original;iPhone 14;22,90;10;2;1;Neu
+LBU-IP13-AM;4262010001217;AM-LBU-IP13;Apple;Ladebuchse Flex iPhone 13 Lightning Nachbau;Ladebuchse;Aftermarket;iPhone 13;8,90;35;2;2;Neu
+LBU-S23;4262010001224;GH96-15622A;Samsung;Ladebuchse Board Galaxy S23 USB-C;Ladebuchse;ServicePack;Galaxy S23;18,90;12;1;1;Neu
+LBU-A54;4262010001231;GH96-15660A;Samsung;Ladebuchse Board Galaxy A54 USB-C;Ladebuchse;ServicePack;Galaxy A54;14,90;20;1;1;Neu
+KAM-IP14-H;4262010001248;821-04101;Apple;Hauptkamera iPhone 14 Rückseite;Kamera;Original;iPhone 14;64,90;5;2;1;Neu
+KAM-IP13-F;4262010001255;821-03292;Apple;Frontkamera iPhone 13 mit Face-ID-Flex;Kamera;Original;iPhone 13;39,90;6;2;1;Neu
+KAM-S23-H;4262010001262;GH96-15541A;Samsung;Hauptkamera Galaxy S23 50 MP;Kamera;ServicePack;Galaxy S23;49,90;4;1;1;Neu
+GEH-IP13-SW;4262010001279;AM-BG-IP13-BK;Apple;Backcover Glas iPhone 13 Mitternacht;Gehäuse;Aftermarket;iPhone 13;12,90;22;2;1;Neu
+GEH-IP14-BL;4262010001286;AM-BG-IP14-BL;Apple;Backcover Glas iPhone 14 Blau;Gehäuse;Aftermarket;iPhone 14;14,90;18;2;1;Neu
+GEH-S23-SW;4262010001293;GH82-30393A;Samsung;Backcover Galaxy S23 Phantom Black;Gehäuse;ServicePack;Galaxy S23;24,90;9;1;1;Neu
+KLT-IP-SCHR;4262010001309;AM-SCREWSET-IP;Apple;Schraubenset Pentalobe iPhone 11–15;Kleinteile;Aftermarket;;3,90;60;2;5;Neu
