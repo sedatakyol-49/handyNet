@@ -49,7 +49,7 @@ SKU, `canCreateProduct`), product images (ADR-0011: `IFileStorage` local/S3, Ski
 thumbnails, ≤ 8 per product, reorder/remove, public immutable serving), `GET /api/marketplace/offers/{id}/detail`,
 `GET /api/marketplace/facets`, filters (brand/category/quality/condition/seller lists, VK net price range, max delivery
 days, compatible model, has images) with indexes. Open: frontend (dialog, gallery, filter chips, e2e), S3 verification
-against a real bucket, orphan-file cleanup job, "VKVK" meaning (assumed VK range), gross price display (frontend).
+against a real bucket, orphan-file cleanup job, gross price display (frontend).
 - 🟡 **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
   1) identify — EAN scan/typing or MPN, conservative catalog match (same `ProductMatcher` as the import); no match →
   create a canonical product (brand, name, category, quality, EAN/MPN, model, compatible models, images);
@@ -67,8 +67,8 @@ against a real bucket, orphan-file cleanup job, "VKVK" meaning (assumed VK range
   stripped, thumbnails, MIT-licensed image library.
 - 🟡 **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
   max delivery days, seller, compatible model ("passend für …"), "with images"; facet endpoint, active-filter chips,
-  filters persisted in the URL, collapsible on mobile, supporting DB indexes. "VKVK" filter: meaning to be confirmed
-  with the product owner (assumed VK = Verkaufspreis range).
+  filters persisted in the URL, collapsible on mobile, supporting DB indexes. The requested "VKVK" filter was a typo for a
+  Verkäufer (seller) filter (clarified 2026-10-17): seller multi-select with facet counts (`sellerId`).
 
 ## Phase 2c — Standalone POS app, Odoo-POS parity (requested 2026-10-16)
 Benchmark: Odoo 18 Point of Sale. Restaurant-only features (tables, kitchen display, self-ordering, food delivery)

@@ -9,8 +9,7 @@ namespace HandyNet.Modules.Marketplace.Application;
 
 /// <summary>
 /// Marketplace filters. List parameters are repeated query parameters (<c>?brand=Apple&amp;brand=Samsung</c>) and match
-/// exactly. Prices are net VK in EUR (e.g. <c>priceMin=10.5</c>); more than two decimals are rejected. "VKVK" from the
-/// product owner is assumed to mean this VK range until confirmed.
+/// exactly. Prices are net VK in EUR (e.g. <c>priceMin=10.5</c>); more than two decimals are rejected.
 /// </summary>
 public sealed record BrowseQuery(
     string? Search,
