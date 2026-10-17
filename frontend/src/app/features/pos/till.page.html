@@ -11,8 +11,8 @@
       @if (!reg.isActive) {
         <hn-banner class="w-full max-w-md" tone="warning" [heading]="'pos.till.inactiveHeading' | t" [text]="'pos.till.inactiveText' | t" data-testid="pos-inactive" />
       } @else {
-        <section class="hn-card w-full p-6 shadow-sm" [class]="openingMode() === 'count' ? 'max-w-3xl' : 'max-w-md'" aria-labelledby="pos-open-heading" data-testid="pos-open-session">
-          <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase">{{ reg.name }}</p>
+        <section class="pos-card w-full p-6 shadow-sm" [class]="openingMode() === 'count' ? 'max-w-3xl' : 'max-w-md'" aria-labelledby="pos-open-heading" data-testid="pos-open-session">
+          <p class="pos-section-label">{{ reg.name }}</p>
           <h1 id="pos-open-heading" class="mt-1 text-xl">{{ 'pos.till.openTitle' | t }}</h1>
           <p class="mt-1 mb-4 text-sm text-slate-600">{{ 'pos.till.openText' | t }}</p>
           <div class="mb-4 grid grid-cols-2 gap-1.5" role="group" [attr.aria-label]="'pos.cashCount.modeLabel' | t">
@@ -29,7 +29,7 @@
             } @else {
               <hn-pos-cash-count [(counts)]="openingCounts" idPrefix="pos-open-count-" testId="pos-opening-count" />
               @if (openingError()) {
-                <p class="mt-2 text-sm text-red-700" role="alert">{{ openingError() }}</p>
+                <p class="mt-2 text-sm text-pos-danger" role="alert">{{ openingError() }}</p>
               }
             }
             <button hnButton variant="primary" type="submit" class="mt-4 min-h-14 w-full text-lg" [loading]="opening()" [disabled]="opening()" data-testid="pos-open">
@@ -42,29 +42,17 @@
   </div>
 } @else {
   <!-- ================================================================= selling screen (kept alive behind payment/receipt) -->
-  <div class="grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)] md:grid-rows-1 xl:grid-cols-[28rem_minmax(0,1fr)]"
+  <div class="grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)] md:grid-rows-1 xl:grid-cols-[28.5rem_minmax(0,1fr)]"
     [class.hidden]="screen() !== 'products'" data-testid="pos-sell">
     <!-- ---------------------------------------------------------------- cart -->
-    <section class="min-h-0 flex-col border-e border-slate-200 bg-white" [class]="pane() === 'cart' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-cart-heading">
-      <h2 id="pos-cart-heading" class="sr-only">{{ 'pos.till.cart' | t }}</h2>
-
-      <div class="flex shrink-0 items-center gap-1.5 border-b border-slate-200 px-2 py-1.5">
-        <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto" role="group" [attr.aria-label]="'pos.sell.openOrders' | t" data-testid="pos-orders">
-          @for (o of orders().orders; track o.id) {
-            @let active = o.id === order().id;
-            <button type="button" class="pos-order-tab" [attr.aria-pressed]="active" (click)="switchOrder(o.id)"
-              [attr.aria-label]="'pos.sell.orderLabel' | t: { number: o.seq, count: itemCount(o) }" data-testid="pos-order-tab" [attr.data-order]="o.seq">
-              <span class="font-semibold">{{ o.seq }}</span>
-              @if (o.lines.length) {
-                <span class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums" [class]="active ? 'bg-white text-accent-800' : 'bg-slate-200 text-slate-700'">{{ itemCount(o) }}</span>
-              }
-            </button>
-          }
-        </div>
-        <button type="button" class="pos-icon-btn" (click)="newOrder()" [attr.aria-label]="'pos.sell.newOrder' | t" [title]="'pos.sell.newOrder' | t" data-testid="pos-order-new">
-          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-        </button>
-        <button type="button" class="pos-icon-btn hover:text-red-700" [disabled]="!lines().length" (click)="confirmDiscard.set(true)"
+    <section class="min-h-0 flex-col border-pos-line bg-pos-panel md:border-e" [class]="pane() === 'cart' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-cart-heading">
+      <div class="flex shrink-0 items-center gap-2 border-b border-pos-line ps-4 pe-1.5">
+        <h2 id="pos-cart-heading" class="min-w-0 flex-1 truncate text-sm font-bold">
+          {{ 'pos.sell.ticket' | t: { number: order().seq } }}
+          <span class="font-medium text-pos-muted">· {{ 'pos.till.items' | t: { count: totals().itemCount } }}</span>
+          <span class="sr-only">({{ 'pos.till.cart' | t }})</span>
+        </h2>
+        <button type="button" class="pos-icon-btn hover:text-pos-danger" [disabled]="!lines().length" (click)="confirmDiscard.set(true)"
           [attr.aria-label]="'pos.sell.discardOrder' | t" [title]="'pos.sell.discardOrder' | t" data-testid="pos-discard">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg>
         </button>
@@ -72,32 +60,32 @@
 
       <div class="min-h-0 flex-1 overflow-y-auto">
         @if (!lines().length) {
-          <div class="flex h-full flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-slate-500" data-testid="pos-cart-empty">
-            <svg class="size-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2M9 20h.01M17 20h.01" /></svg>
-            <p>{{ 'pos.sell.cartEmpty' | t }}</p>
+          <div class="flex h-full flex-col items-center justify-center gap-2 px-6 py-10 text-center text-sm text-pos-muted" data-testid="pos-cart-empty">
+            <svg class="size-10 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2M9 20h.01M17 20h.01" /></svg>
+            <p class="max-w-64">{{ 'pos.sell.cartEmpty' | t }}</p>
           </div>
         } @else {
-          <ul class="divide-y divide-slate-100" data-testid="pos-cart" [attr.aria-label]="'pos.till.cart' | t">
+          <ul class="py-1.5" data-testid="pos-cart" [attr.aria-label]="'pos.till.cart' | t">
             @for (l of lines(); track l.key) {
               @let a = lineAmounts(l);
               @let selected = selectedLine()?.key === l.key;
-              <li class="flex items-stretch" [class]="errorLineKey() === l.key ? 'bg-red-50' : selected ? 'bg-accent-50' : ''" [attr.data-line]="l.imei ?? l.productId" data-testid="pos-line">
-                <button type="button" class="pos-line" [class.pos-line-selected]="selected" [attr.aria-pressed]="selected" (click)="selectLine(l.key)" data-testid="pos-line-select">
+              <li class="flex items-stretch" [class]="errorLineKey() === l.key ? 'bg-pos-danger-soft' : selected ? 'bg-pos-sel' : ''" [attr.data-line]="l.imei ?? l.productId" data-testid="pos-line">
+                <button type="button" class="pos-line" [class.pos-line-selected]="selected" [class.pe-1]="selected" [attr.aria-pressed]="selected" (click)="selectLine(l.key)" data-testid="pos-line-select">
                   <span class="flex items-start justify-between gap-3">
-                    <span class="min-w-0 font-semibold leading-snug text-slate-900">{{ l.description }}</span>
-                    <span class="shrink-0 text-base font-semibold tabular-nums" data-testid="pos-line-total">{{ a.grossMinor === null ? '–' : (a.grossMinor | money) }}</span>
+                    <span class="min-w-0 font-semibold leading-snug break-words">{{ l.description }}</span>
+                    <span class="shrink-0 font-bold tabular-nums" data-testid="pos-line-total">{{ a.grossMinor === null ? '–' : (a.grossMinor | money) }}</span>
                   </span>
-                  <span class="mt-0.5 block text-sm text-slate-600 tabular-nums">
+                  <span class="mt-0.5 block text-[12.5px] text-pos-muted tabular-nums">
                     <span data-testid="pos-qty">{{ l.quantity }}</span> ×
                     @if (a.unitPriceMinor !== null) {
                       {{ a.unitPriceMinor | money }}
                     } @else {
-                      <span class="font-semibold text-red-700">{{ 'pos.sell.priceMissing' | t }}</span>
+                      <span class="font-semibold text-pos-danger">{{ 'pos.sell.priceMissing' | t }}</span>
                     }
                     @if (a.error === 'discount') {
-                      · <span class="font-semibold text-red-700">{{ 'pos.sell.discountInvalid' | t }}</span>
+                      · <span class="font-semibold text-pos-danger">{{ 'pos.sell.discountInvalid' | t }}</span>
                     } @else if (a.error === 'discountTooHigh') {
-                      · <span class="font-semibold text-red-700">{{ 'pos.till.discountTooHigh' | t }}</span>
+                      · <span class="font-semibold text-pos-danger">{{ 'pos.till.discountTooHigh' | t }}</span>
                     } @else if (a.discountMinor) {
                       · {{ 'pos.till.discount' | t }}
                       @if (l.discountKind === 'percent') {
@@ -107,20 +95,20 @@
                     }
                   </span>
                   @if (l.note) {
-                    <span class="mt-0.5 block text-sm italic text-slate-700" data-testid="pos-line-note">
+                    <span class="mt-0.5 block text-xs text-pos-accent-text italic" data-testid="pos-line-note">
                       <span class="sr-only">{{ 'pos.note.label' | t }}: </span>{{ l.note }}
                     </span>
                   }
                   @if (issues().get(l.key); as issue) {
-                    <span class="mt-0.5 block text-xs font-semibold text-red-700" data-testid="pos-line-issue">{{ issueText(issue) }}</span>
+                    <span class="mt-0.5 block text-xs font-semibold text-pos-danger" data-testid="pos-line-issue">{{ issueText(issue) }}</span>
                   }
                   @if (l.imei || l.taxTreatment === 'Margin25a' || (l.kind === 'Product' && l.available !== null)) {
-                    <span class="mt-0.5 flex flex-wrap gap-x-2 text-xs text-slate-500">
+                    <span class="mt-0.5 flex flex-wrap gap-x-2 text-[11.5px] text-pos-muted">
                       @if (l.imei) {
                         <span class="hn-mono">IMEI {{ l.imei }}</span>
                       }
                       @if (l.taxTreatment === 'Margin25a') {
-                        <span class="font-medium text-amber-800">§25a</span>
+                        <span class="font-semibold text-pos-warn">§25a</span>
                       }
                       @if (l.kind === 'Product' && l.available !== null) {
                         <span>{{ 'pos.till.available' | t: { count: l.available } }}</span>
@@ -132,7 +120,7 @@
                   }
                 </button>
                 @if (selected) {
-                  <button type="button" class="grid w-12 shrink-0 place-items-center text-slate-500 hover:bg-red-50 hover:text-red-700"
+                  <button type="button" class="grid w-11 shrink-0 place-items-center text-pos-muted hover:bg-pos-danger-soft hover:text-pos-danger"
                     (click)="removeLine(l.key)" [attr.aria-label]="'pos.till.remove' | t: { name: l.description }" data-testid="pos-remove">
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
                   </button>
@@ -144,71 +132,73 @@
       </div>
 
       <!-- totals -->
-      <dl class="shrink-0 border-t border-slate-200 px-3 py-2 text-sm" data-testid="pos-totals">
+      <dl class="grid shrink-0 gap-0.5 border-t border-pos-line px-4 pt-3 pb-2.5 text-[13px] text-pos-muted tabular-nums" data-testid="pos-totals">
         @if (tax().standardGrossMinor) {
-          <div class="flex justify-between text-slate-600"><dt>{{ 'pos.sell.net' | t }}</dt><dd class="tabular-nums" data-testid="pos-net">{{ tax().standardNetMinor | money }}</dd></div>
-          <div class="flex justify-between text-slate-600"><dt>{{ 'pos.sell.vat19' | t }}</dt><dd class="tabular-nums" data-testid="pos-vat">{{ tax().standardVatMinor | money }}</dd></div>
+          <div class="flex justify-between gap-3"><dt>{{ 'pos.sell.net' | t }}</dt><dd data-testid="pos-net">{{ tax().standardNetMinor | money }}</dd></div>
+          <div class="flex justify-between gap-3"><dt>{{ 'pos.sell.vat19' | t }}</dt><dd data-testid="pos-vat">{{ tax().standardVatMinor | money }}</dd></div>
         }
         @if (tax().marginGrossMinor) {
-          <div class="flex justify-between gap-2 text-slate-600"><dt>{{ 'pos.sell.margin25a' | t }}</dt><dd class="tabular-nums">{{ tax().marginGrossMinor | money }}</dd></div>
+          <div class="flex justify-between gap-3"><dt>{{ 'pos.sell.margin25a' | t }}</dt><dd>{{ tax().marginGrossMinor | money }}</dd></div>
         }
         @if (totals().discountMinor) {
-          <div class="flex justify-between text-slate-600"><dt>{{ 'pos.till.discountTotal' | t }}</dt><dd class="tabular-nums">{{ -totals().discountMinor | money }}</dd></div>
+          <div class="flex justify-between gap-3"><dt>{{ 'pos.till.discountTotal' | t }}</dt><dd>{{ -totals().discountMinor | money }}</dd></div>
         }
-        <div class="mt-1 flex items-baseline justify-between">
-          <dt class="font-semibold">{{ 'pos.till.total' | t }} <span class="text-xs font-normal text-slate-500">· {{ 'pos.till.items' | t: { count: totals().itemCount } }}</span></dt>
-          <dd class="text-2xl font-bold tabular-nums" data-testid="pos-total">{{ totals().totalMinor | money }}</dd>
+        <div class="mt-1 flex items-baseline justify-between gap-3 text-pos-ink">
+          <dt class="text-sm font-semibold">{{ 'pos.till.total' | t }} <span class="font-normal text-pos-muted">· {{ 'pos.till.items' | t: { count: totals().itemCount } }}</span></dt>
+          <dd class="text-[28px] leading-none font-bold tracking-tight" data-testid="pos-total">{{ totals().totalMinor | money }}</dd>
         </div>
       </dl>
 
-      <!-- numpad -->
-      <div class="shrink-0 space-y-1.5 border-t border-slate-200 bg-slate-50 p-2">
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" class="pos-quick flex min-w-0 items-center justify-center gap-2" (click)="customerOpen.set(true)"
+      <!-- customer, note, numpad, pay -->
+      <div class="shrink-0 space-y-2 px-3 pb-3">
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" class="pos-soft min-w-0 justify-start" [class.pos-soft-accent]="!!customer()" (click)="customerOpen.set(true)"
             [attr.aria-label]="customer() ? ('pos.customers.changeFor' | t: { name: customer()!.name }) : ('pos.customers.choose' | t)" data-testid="pos-customer">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
             <span class="truncate" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
           </button>
-          <button type="button" class="pos-quick flex items-center justify-center gap-2" [disabled]="!selectedLine()" (click)="openNote()" data-testid="pos-note">
+          <button type="button" class="pos-soft" [disabled]="!selectedLine()" (click)="openNote()" data-testid="pos-note">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M8 9h8M8 13h5" /></svg>
             {{ 'pos.note.button' | t }}
           </button>
         </div>
-        <div class="grid grid-cols-3 gap-1.5" role="group" [attr.aria-label]="'pos.numpad.mode' | t">
-          <button type="button" class="pos-mode" [attr.aria-pressed]="mode() === 'quantity'" [disabled]="!selectedLine()" (click)="setMode('quantity')" data-testid="pos-mode-quantity">
+        @if (mode() === 'discount' && canDiscount() && rights().maxDiscountPercent < 100) {
+          <p class="text-xs text-pos-muted" data-testid="pos-discount-limit">{{ 'pos.rights.maxDiscountHint' | t: { percent: rights().maxDiscountPercent } }}</p>
+        }
+        @if (selectedLine(); as sel) {
+          <div class="flex items-center gap-1.5">
+            <label for="pos-numpad-input" class="line-clamp-2 min-w-0 flex-1 text-xs leading-snug text-pos-muted">{{ 'pos.numpad.for.' + mode() | t: { name: sel.description } }}</label>
+            <button type="button" class="pos-quick w-11 shrink-0 px-0 text-lg disabled:cursor-not-allowed disabled:opacity-40" [disabled]="sel.kind !== 'Product'" (click)="changeQty(-1)"
+              [attr.aria-label]="'pos.numpad.minus' | t" data-testid="pos-numpad-minus">−</button>
+            <input id="pos-numpad-input" class="hn-control h-11 w-28 shrink-0 rounded-[10px] text-end text-lg font-semibold tabular-nums" autocomplete="off" spellcheck="false"
+              [attr.inputmode]="mode() === 'quantity' ? 'numeric' : 'decimal'" [value]="buffer()" (input)="onNumpadText($any($event.target))"
+              (keydown.enter)="numpadEnter($event)" (keydown.escape)="numpadEnter($event)" [placeholder]="mode() === 'price' ? '0,00' : '0'"
+              [attr.aria-invalid]="mode() === 'price' && lineAmounts(sel).error === 'price'" data-testid="pos-numpad-input" />
+            <button type="button" class="pos-quick w-11 shrink-0 px-0 text-lg disabled:cursor-not-allowed disabled:opacity-40" [disabled]="sel.kind !== 'Product'" (click)="changeQty(1)"
+              [attr.aria-label]="'pos.numpad.plus' | t" data-testid="pos-numpad-plus">+</button>
+          </div>
+        }
+        <hn-pos-numpad variant="cart" [label]="'pos.numpad.label' | t" [disabled]="!selectedLine()" [decimals]="mode() !== 'quantity'" (key)="onNumpadKey($event)">
+          <button type="button" class="pos-key pos-key-mode col-start-4 row-start-1" [attr.aria-pressed]="mode() === 'quantity'" [disabled]="!selectedLine()" (click)="setMode('quantity')" data-testid="pos-mode-quantity">
             {{ 'pos.numpad.modes.quantity' | t }}
           </button>
-          <button type="button" class="pos-mode" [attr.aria-pressed]="mode() === 'discount'" [disabled]="!selectedLine() || !canDiscount()" (click)="setMode('discount')"
+          <button type="button" class="pos-key pos-key-mode col-start-4 row-start-2" [attr.aria-pressed]="mode() === 'discount'" [disabled]="!selectedLine() || !canDiscount()" (click)="setMode('discount')"
             [title]="canDiscount() ? ('pos.rights.maxDiscountHint' | t: { percent: rights().maxDiscountPercent }) : ('pos.rights.discountForbidden' | t)" data-testid="pos-mode-discount">
             {{ 'pos.numpad.modes.discount' | t }}
           </button>
-          <button type="button" class="pos-mode inline-flex items-center justify-center gap-1" [attr.aria-pressed]="mode() === 'price'" [disabled]="!selectedLine() || !priceEditable()" (click)="setMode('price')"
+          <button type="button" class="pos-key pos-key-mode col-start-4 row-start-3 inline-flex items-center justify-center gap-1" [attr.aria-pressed]="mode() === 'price'" [disabled]="!selectedLine() || !priceEditable()" (click)="setMode('price')"
             [title]="selectedLine() && !priceEditable() ? ('pos.rights.priceLockedHint' | t) : ''" data-testid="pos-mode-price">
             @if (selectedLine() && !priceEditable()) {
               <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
             }
             {{ 'pos.numpad.modes.price' | t }}
           </button>
-        </div>
-        @if (mode() === 'discount' && canDiscount() && rights().maxDiscountPercent < 100) {
-          <p class="text-xs text-slate-600" data-testid="pos-discount-limit">{{ 'pos.rights.maxDiscountHint' | t: { percent: rights().maxDiscountPercent } }}</p>
-        }
-        @if (selectedLine(); as sel) {
-          <div class="flex items-center gap-2">
-            <label for="pos-numpad-input" class="min-w-0 flex-1 truncate text-xs text-slate-600">{{ 'pos.numpad.for.' + mode() | t: { name: sel.description } }}</label>
-            <input id="pos-numpad-input" class="hn-control h-11 w-36 text-end text-lg font-semibold tabular-nums" autocomplete="off" spellcheck="false"
-              [attr.inputmode]="mode() === 'quantity' ? 'numeric' : 'decimal'" [value]="buffer()" (input)="onNumpadText($any($event.target))"
-              (keydown.enter)="numpadEnter($event)" (keydown.escape)="numpadEnter($event)" [placeholder]="mode() === 'price' ? '0,00' : '0'"
-              [attr.aria-invalid]="mode() === 'price' && lineAmounts(sel).error === 'price'" data-testid="pos-numpad-input" />
-          </div>
-        }
-        <hn-pos-numpad variant="cart" [label]="'pos.numpad.label' | t" [disabled]="!selectedLine()" [decimals]="mode() !== 'quantity'"
-          [canStep]="selectedLine()?.kind === 'Product'" (key)="onNumpadKey($event)" (step)="changeQty($event)" />
+        </hn-pos-numpad>
         @if (checkoutError() && screen() === 'products') {
-          <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
+          <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
         }
         <button type="button" class="pos-pay-btn" [disabled]="!lines().length" (click)="openPayment()" data-testid="pos-pay">
-          <span>{{ 'pos.sell.payment' | t }} <span class="text-sm font-normal opacity-80">(F9)</span></span>
+          <span>{{ 'pos.sell.payment' | t }}<small class="ms-1.5 text-xs font-semibold opacity-75">F9</small></span>
           <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
         </button>
       </div>
@@ -217,29 +207,34 @@
     <!-- ---------------------------------------------------------------- products, search, scan -->
     <section class="min-h-0 flex-col" [class]="pane() === 'products' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-products-heading">
       <h2 id="pos-products-heading" class="sr-only">{{ 'pos.sell.products' | t }}</h2>
-      <form (ngSubmit)="submitCode()" novalidate class="flex shrink-0 gap-2 p-3" role="search">
+      <form (ngSubmit)="submitCode()" novalidate class="flex shrink-0 gap-2 px-3.5 pt-3.5 pb-3" role="search">
         <label for="pos-code" class="sr-only">{{ 'pos.sell.searchLabel' | t }}</label>
         <div class="relative min-w-0 flex-1">
-          <svg class="pointer-events-none absolute start-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <svg class="pointer-events-none absolute start-3.5 top-1/2 size-5 -translate-y-1/2 text-pos-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input #codeField id="pos-code" name="code" type="search" autocomplete="off" spellcheck="false" enterkeyhint="enter"
-            class="hn-control h-12 ps-10 text-lg" [placeholder]="'pos.sell.searchPlaceholder' | t" [value]="code()" (input)="onCodeInput($any($event.target).value)"
+            class="hn-control h-12 rounded-xl border-pos-line bg-pos-panel ps-11 text-base shadow-none" [placeholder]="'pos.sell.searchPlaceholder' | t" [value]="code()" (input)="onCodeInput($any($event.target).value)"
             aria-describedby="pos-code-help" [attr.aria-invalid]="!!scanError()" data-testid="pos-code" />
         </div>
-        <button hnButton variant="secondary" type="submit" class="min-h-12 px-4 text-base" [loading]="lookups() > 0">{{ 'pos.till.add' | t }}</button>
+        <button type="submit" class="pos-soft min-h-12 px-4" [attr.aria-busy]="lookups() > 0 || null">
+          @if (lookups() > 0) {
+            <span class="size-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
+          }
+          {{ 'pos.till.add' | t }}
+        </button>
       </form>
       <p id="pos-code-help" class="sr-only">{{ 'pos.sell.searchHelp' | t }}</p>
       @if (scanError()) {
-        <p class="mx-3 mb-2 shrink-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-scan-error">{{ scanError() }}</p>
+        <p class="mx-3.5 mb-2 shrink-0 rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-scan-error">{{ scanError() }}</p>
       }
 
       @if (hasInventory() && register.value(); as reg) {
         <hn-pos-product-grid class="min-h-0 flex-1" [registerId]="reg.id" [search]="code()" [canManagePrices]="rights().manage" (pick)="pickProduct($event)" (editPrice)="editPrice($event)" />
       } @else {
-        <p class="flex-1 px-6 py-10 text-center text-sm text-slate-500">{{ 'pos.till.cartEmpty' | t }}</p>
+        <p class="flex-1 px-6 py-10 text-center text-sm text-pos-muted">{{ 'pos.till.cartEmpty' | t }}</p>
       }
 
-      <details class="hidden shrink-0 border-t border-slate-200 px-3 py-2 text-xs text-slate-600 md:block">
-        <summary class="cursor-pointer select-none py-1">{{ 'pos.till.shortcutsTitle' | t }}</summary>
+      <details class="hidden shrink-0 border-t border-pos-line px-3.5 py-2 text-xs text-pos-muted md:block">
+        <summary class="cursor-pointer py-1 select-none">{{ 'pos.till.shortcutsTitle' | t }}</summary>
         <dl class="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 sm:grid-cols-[auto_1fr_auto_1fr]" data-testid="pos-shortcuts">
           @for (s of shortcuts; track s.key) {
             <dt><kbd class="pos-kbd">{{ s.key === 'Escape' ? 'Esc' : s.key }}</kbd></dt>
@@ -252,12 +247,12 @@
     </section>
 
     <!-- ---------------------------------------------------------------- narrow screens: pane switch -->
-    <nav class="flex gap-2 border-t border-slate-200 bg-white p-2 md:hidden" [attr.aria-label]="'pos.sell.view' | t">
+    <nav class="flex gap-2 border-t border-pos-line bg-pos-panel p-2 md:hidden" [attr.aria-label]="'pos.sell.view' | t">
       <button type="button" class="pos-mode flex-1" [attr.aria-pressed]="pane() === 'products'" (click)="pane.set('products')" data-testid="pos-pane-products">{{ 'pos.sell.products' | t }}</button>
       <button type="button" class="pos-mode flex-1" [attr.aria-pressed]="pane() === 'cart'" (click)="pane.set('cart')" data-testid="pos-pane-cart">
         {{ 'pos.till.cart' | t }} · {{ totals().itemCount }}
       </button>
-      <button type="button" class="pos-pay-btn min-h-11! flex-1 justify-center text-base!" [disabled]="!lines().length" (click)="openPayment()">
+      <button type="button" class="flex-1 justify-center text-base!" [class]="pane() === 'cart' ? 'pos-soft pos-soft-accent' : 'pos-pay-btn min-h-11!'" [disabled]="!lines().length" (click)="openPayment()">
         <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
       </button>
     </nav>
@@ -266,49 +261,53 @@
   @if (screen() === 'payment') {
     <!-- ================================================================= payment -->
     <section class="flex h-full min-h-0 flex-col" aria-labelledby="pos-pay-heading" data-testid="pos-payment">
-      <div class="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 py-2">
+      <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-pos-line bg-pos-panel px-3.5 py-2">
         <button type="button" class="pos-back" (click)="backToProducts()" data-testid="pos-pay-back">
           <span class="inline-block rtl:-scale-x-100" aria-hidden="true">←</span> {{ 'pos.sell.back' | t }}
         </button>
-        <h2 id="pos-pay-heading" class="text-lg">{{ 'pos.till.payment' | t }}</h2>
-        <button type="button" class="pos-quick ms-2 hidden max-w-64 items-center gap-2 truncate sm:inline-flex" (click)="customerOpen.set(true)" data-testid="pos-pay-customer">
+        <h2 id="pos-pay-heading" class="text-lg font-bold">{{ 'pos.till.payment' | t }}</h2>
+        <button type="button" class="pos-soft ms-1 hidden max-w-64 sm:inline-flex" [class.pos-soft-accent]="!!customer()" (click)="customerOpen.set(true)" data-testid="pos-pay-customer">
           <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
           <span class="truncate">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
         </button>
-        <p class="ms-auto text-sm text-slate-600">
-          {{ 'pos.till.total' | t }} <span class="text-xl font-bold text-slate-900 tabular-nums" data-testid="pos-pay-total">{{ totals().totalMinor | money }}</span>
+        <p class="ms-auto flex items-baseline gap-2 text-sm text-pos-muted">
+          {{ 'pos.till.total' | t }} <span class="text-[28px] leading-tight font-bold tracking-tight text-pos-ink tabular-nums" data-testid="pos-pay-total">{{ totals().totalMinor | money }}</span>
         </p>
       </div>
 
-      <div class="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-3 md:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)] lg:grid-cols-[16rem_minmax(0,1fr)_minmax(18rem,22rem)]">
+      <div class="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-3.5 md:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)] lg:grid-cols-[16rem_minmax(0,1fr)_minmax(18rem,22rem)]">
         <!-- methods -->
         <div class="space-y-2" role="group" [attr.aria-label]="'pos.sell.methods' | t">
-          <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase" aria-hidden="true">{{ 'pos.sell.methods' | t }}</p>
+          <p class="pos-section-label" aria-hidden="true">{{ 'pos.sell.methods' | t }}</p>
           @for (m of methods; track m) {
             <button type="button" class="pos-method" (click)="addPayment(m)" [attr.data-testid]="'pos-method-' + m">
-              @if (m === 'Cash') {
-                <svg class="size-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="1.5" /><circle cx="12" cy="12" r="2.5" /><path d="M6 9.5v5M18 9.5v5" /></svg>
-              } @else {
-                <svg class="size-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="M2.5 9.5h19M6 15h4" /></svg>
-              }
+              <span class="pos-method-icon" aria-hidden="true">
+                @if (m === 'Cash') {
+                  <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="1.5" /><circle cx="12" cy="12" r="2.5" /><path d="M6 9.5v5M18 9.5v5" /></svg>
+                } @else {
+                  <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="M2.5 9.5h19M6 15h4" /></svg>
+                }
+              </span>
               <span>{{ m | tEnum: 'posPaymentMethod' }}</span>
             </button>
           }
-          <p class="pt-1 text-xs text-slate-500">{{ 'pos.till.cardHint' | t }}</p>
+          <p class="pt-1 text-xs text-pos-muted">{{ 'pos.till.cardHint' | t }}</p>
         </div>
 
         <!-- summary, payment lines, quick cash -->
         <div class="min-w-0 space-y-3">
-          <div class="hn-card p-4 text-center" role="status" aria-live="polite">
-            @if (settlement().remainingMinor > 0) {
-              <p class="text-sm font-medium text-amber-800">{{ 'pos.till.remaining' | t }}</p>
-              <p class="text-4xl font-bold text-amber-800 tabular-nums" data-testid="pos-remaining">{{ settlement().remainingMinor | money }}</p>
+          @let due = settlement().remainingMinor > 0;
+          @let change = !due && settlement().changeMinor > 0;
+          <div class="rounded-xl border p-5 text-center" [class]="due ? 'border-transparent bg-pos-warn-soft' : change ? 'border-transparent bg-pos-accent-soft' : 'border-pos-line bg-pos-panel'" role="status" aria-live="polite">
+            @if (due) {
+              <p class="text-sm font-semibold text-pos-warn">{{ 'pos.till.remaining' | t }}</p>
+              <p class="text-4xl font-bold tracking-tight text-pos-warn tabular-nums" data-testid="pos-remaining">{{ settlement().remainingMinor | money }}</p>
             } @else {
-              <p class="text-sm font-medium" [class]="settlement().changeMinor > 0 ? 'text-emerald-800' : 'text-slate-600'">{{ 'pos.till.change' | t }}</p>
-              <p class="text-4xl font-bold tabular-nums" [class]="settlement().changeMinor > 0 ? 'text-emerald-800' : 'text-slate-900'" data-testid="pos-change">{{ settlement().changeMinor | money }}</p>
+              <p class="text-sm font-semibold" [class]="change ? 'text-pos-accent-text' : 'text-pos-muted'">{{ 'pos.till.change' | t }}</p>
+              <p class="text-4xl font-bold tracking-tight tabular-nums" [class]="change ? 'text-pos-accent-text' : 'text-pos-ink'" data-testid="pos-change">{{ settlement().changeMinor | money }}</p>
             }
-            <p class="mt-1 text-sm text-slate-600">
-              {{ 'pos.till.paid' | t }} <span class="font-semibold tabular-nums" data-testid="pos-paid">{{ settlement().paidMinor | money }}</span>
+            <p class="mt-1 text-sm text-pos-muted">
+              {{ 'pos.till.paid' | t }} <span class="font-semibold text-pos-ink tabular-nums" data-testid="pos-paid">{{ settlement().paidMinor | money }}</span>
             </p>
           </div>
 
@@ -317,13 +316,13 @@
               @for (p of payments(); track p.id) {
                 @let sel = selectedPaymentId() === p.id;
                 @let bad = settlement().invalidIds.includes(p.id);
-                <li class="flex items-center gap-2 rounded-lg border bg-white p-2" [class]="sel ? 'border-accent-700 ring-2 ring-accent-600/30' : 'border-slate-200'"
+                <li class="flex items-center gap-2 rounded-xl border bg-pos-tile p-2" [class]="sel ? 'border-pos-accent shadow-[inset_0_0_0_1px_var(--pos-accent)]' : 'border-pos-line'"
                   (click)="selectPayment(p.id)" [attr.data-method]="p.method" data-testid="pos-payment-line">
-                  <label [for]="'pos-pay-' + p.id" class="w-24 shrink-0 ps-1 font-semibold">{{ p.method | tEnum: 'posPaymentMethod' }}</label>
-                  <input [id]="'pos-pay-' + p.id" class="hn-control h-12 min-w-0 flex-1 text-end text-xl font-semibold tabular-nums" inputmode="decimal" autocomplete="off"
+                  <label [for]="'pos-pay-' + p.id" class="w-24 shrink-0 ps-1.5 font-semibold">{{ p.method | tEnum: 'posPaymentMethod' }}</label>
+                  <input [id]="'pos-pay-' + p.id" class="hn-control h-12 min-w-0 flex-1 rounded-[10px] text-end text-xl font-semibold tabular-nums" inputmode="decimal" autocomplete="off"
                     placeholder="0,00" [value]="p.input" (focus)="selectPayment(p.id)" (input)="setPaymentInput(p.id, $any($event.target))"
                     (keydown.enter)="$event.preventDefault(); validate()" [attr.aria-invalid]="bad" data-testid="pos-pay-amount" />
-                  <button type="button" class="grid size-11 shrink-0 place-items-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-700"
+                  <button type="button" class="pos-icon-btn hover:bg-pos-danger-soft hover:text-pos-danger"
                     (click)="$event.stopPropagation(); removePayment(p.id)" [attr.aria-label]="'pos.sell.removePayment' | t: { method: (p.method | tEnum: 'posPaymentMethod') }" data-testid="pos-pay-remove">
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
                   </button>
@@ -331,33 +330,35 @@
               }
             </ul>
           } @else {
-            <p class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500" data-testid="pos-payment-none">{{ 'pos.sell.choosePayment' | t }}</p>
+            <p class="rounded-xl border border-dashed border-pos-line px-4 py-6 text-center text-sm text-pos-muted" data-testid="pos-payment-none">{{ 'pos.sell.choosePayment' | t }}</p>
           }
 
-          <div>
-            <p class="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{{ 'pos.sell.quickCash' | t }}</p>
+          <div class="pos-card p-3">
+            <p class="pos-section-label mb-1.5">{{ 'pos.sell.quickCash' | t }}</p>
             <div class="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-              <button type="button" class="pos-quick col-span-3 sm:col-span-1" (click)="exactCash()" data-testid="pos-cash-exact">{{ 'pos.till.cashExact' | t }} <span class="opacity-70">(F8)</span></button>
+              <button type="button" class="pos-quick col-span-3 sm:col-span-1" (click)="exactCash()" data-testid="pos-cash-exact">{{ 'pos.till.cashExact' | t }} <span class="text-xs opacity-70">F8</span></button>
               @for (v of cashQuick(); track v) {
                 <button type="button" class="pos-quick tabular-nums" (click)="setCash(v)" data-testid="pos-cash-suggestion">{{ v | money }}</button>
               }
             </div>
-            <button type="button" class="pos-quick mt-1.5 w-full" (click)="cardRest()" data-testid="pos-card-rest">{{ 'pos.till.cardRest' | t }} <span class="opacity-70">(F4)</span></button>
+            <button type="button" class="pos-quick mt-1.5 w-full" (click)="cardRest()" data-testid="pos-card-rest">{{ 'pos.till.cardRest' | t }} <span class="text-xs opacity-70">F4</span></button>
           </div>
         </div>
 
         <!-- numpad + validate -->
-        <div class="space-y-3 md:col-span-2 lg:col-span-1">
+        <div class="pos-card space-y-3 self-start p-3 md:col-span-2 lg:col-span-1">
           <hn-pos-numpad variant="payment" [label]="'pos.numpad.label' | t" (key)="onPayKey($event)" (add)="addToPayment($event)" />
           @if (checkoutError()) {
-            <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
+            <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
           } @else if (payments().length && settlement().error) {
-            <p class="text-sm text-amber-900" data-testid="pos-settle-hint">{{ 'pos.till.settle.' + settlement().error | t }}</p>
+            <p class="text-sm text-pos-warn" data-testid="pos-settle-hint">{{ 'pos.till.settle.' + settlement().error | t }}</p>
           }
           <button type="button" class="pos-pay-btn" [disabled]="paying()" (click)="validate()" [attr.aria-busy]="paying() || null" data-testid="pos-validate">
-            <span>{{ 'pos.sell.validate' | t }} <span class="text-sm font-normal opacity-80">(F9)</span></span>
+            <span>{{ 'pos.sell.validate' | t }}<small class="ms-1.5 text-xs font-semibold opacity-75">F9</small></span>
             @if (paying()) {
               <span class="size-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
+            } @else {
+              <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
             }
           </button>
         </div>
@@ -368,29 +369,31 @@
     @if (lastReceipt(); as r) {
       <section class="h-full overflow-y-auto p-4" aria-labelledby="pos-done-heading" data-testid="pos-receipt-screen">
         <div class="mx-auto grid max-w-5xl items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-          <div class="hn-no-print space-y-4">
-            <div class="hn-card p-6 text-center" role="status" data-testid="pos-sale-done">
-              <span class="mx-auto mb-2 grid size-12 place-items-center rounded-full bg-emerald-50 text-emerald-800" aria-hidden="true">
+          <div class="hn-no-print space-y-3">
+            <div class="pos-card p-6 text-center" role="status" data-testid="pos-sale-done">
+              <span class="mx-auto mb-2 grid size-12 place-items-center rounded-full bg-pos-ok-soft text-pos-ok-text" aria-hidden="true">
                 <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
               </span>
-              <h2 id="pos-done-heading" class="text-lg">{{ 'pos.till.saleDone' | t: { number: r.number } }}</h2>
+              <h2 id="pos-done-heading" class="text-lg font-bold">{{ 'pos.till.saleDone' | t: { number: r.number } }}</h2>
               @if (r.customer; as c) {
-                <p class="mt-1 text-sm text-slate-600" data-testid="pos-done-customer">{{ 'pos.receipt.customer' | t }}: {{ c.name }}</p>
+                <p class="mt-1 text-sm text-pos-muted" data-testid="pos-done-customer">{{ 'pos.receipt.customer' | t }}: {{ c.name }}</p>
               }
               @if (r.changeMinor) {
-                <p class="mt-3 text-sm font-medium text-emerald-800">{{ 'pos.till.changeDue' | t }}</p>
-                <p class="text-5xl font-bold text-emerald-800 tabular-nums" data-testid="pos-change-due">{{ r.changeMinor | money }}</p>
+                <div class="mx-auto mt-4 max-w-sm rounded-xl bg-pos-accent-soft px-4 py-3">
+                  <p class="text-sm font-semibold text-pos-accent-text">{{ 'pos.till.changeDue' | t }}</p>
+                  <p class="text-5xl font-bold tracking-tight text-pos-accent-text tabular-nums" data-testid="pos-change-due">{{ r.changeMinor | money }}</p>
+                </div>
               } @else {
-                <p class="mt-3 text-3xl font-bold tabular-nums">{{ r.totalGrossMinor | money }}</p>
+                <p class="mt-3 text-3xl font-bold tracking-tight tabular-nums">{{ r.totalGrossMinor | money }}</p>
               }
             </div>
             <div class="grid gap-2 sm:grid-cols-2">
-              <button hnButton type="button" class="min-h-14 text-base" (click)="print()" data-testid="pos-print">{{ 'pos.receipt.print' | t }}</button>
-              <button hnButton variant="primary" type="button" id="pos-new-sale" class="min-h-14 text-base" (click)="startNextOrder()" data-testid="pos-new-sale">
+              <button type="button" class="pos-soft min-h-[60px] text-base" (click)="print()" data-testid="pos-print">{{ 'pos.receipt.print' | t }}</button>
+              <button type="button" id="pos-new-sale" class="pos-pay-btn justify-center text-base" (click)="startNextOrder()" data-testid="pos-new-sale">
                 {{ 'pos.sell.newOrderAfterSale' | t }}
               </button>
             </div>
-            <p class="text-center text-xs text-slate-500">{{ 'pos.sell.nextScanHint' | t }}</p>
+            <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
           </div>
           <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
         </div>
@@ -398,6 +401,27 @@
     }
   }
 }
+
+<!-- Parked tickets: rendered in the POS top bar while this screen is open (see PosContext.topbarTickets). -->
+<ng-template #ticketsTpl>
+  <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto" role="group" [attr.aria-label]="'pos.sell.openOrders' | t" data-testid="pos-orders">
+    @for (o of orders().orders; track o.id) {
+      @let active = o.id === order().id;
+      <button type="button" class="pos-ticket" [attr.aria-pressed]="active" (click)="switchOrder(o.id)"
+        [attr.aria-label]="'pos.sell.orderLabel' | t: { number: o.seq, count: itemCount(o) }" data-testid="pos-order-tab" [attr.data-order]="o.seq">
+        <span class="pos-ticket-pill tabular-nums">
+          {{ 'pos.sell.ticket' | t: { number: o.seq } }}
+          @if (o.lines.length) {
+            <span aria-hidden="true">· {{ itemCount(o) }}</span>
+          }
+        </span>
+      </button>
+    }
+    <button type="button" class="pos-ticket" (click)="newOrder()" [attr.aria-label]="'pos.sell.newOrder' | t" [title]="'pos.sell.newOrder' | t" data-testid="pos-order-new">
+      <span class="pos-ticket-pill"><span aria-hidden="true">+</span> {{ 'pos.sell.newTicket' | t }}</span>
+    </button>
+  </div>
+</ng-template>
 
 <hn-dialog [title]="'pos.note.title' | t" [open]="noteOpen()" (closed)="closeNote()">
   @if (selectedLine(); as sel) {

@@ -38,7 +38,7 @@ const MAX_RANGE_DAYS = 366;
       <hn-banner tone="warning" [text]="'pos.rights.reportForbidden' | t" data-testid="pos-report-forbidden" />
     } @else {
       @if (!sessionId()) {
-        <form class="hn-card hn-no-print mb-3 grid gap-3 p-3 sm:grid-cols-[repeat(3,minmax(0,12rem))_auto] sm:items-end" (submit)="$event.preventDefault(); apply()" novalidate data-testid="pos-report-range">
+        <form class="pos-card hn-no-print mb-3 grid gap-3 p-3 sm:grid-cols-[repeat(3,minmax(0,12rem))_auto] sm:items-end" (submit)="$event.preventDefault(); apply()" novalidate data-testid="pos-report-range">
           <hn-field [label]="'pos.receipts.from' | t" for="pos-r-from">
             <input hnInput id="pos-r-from" type="date" class="h-11" [value]="from()" (input)="from.set($any($event.target).value)" data-testid="pos-r-from" />
           </hn-field>
@@ -59,7 +59,7 @@ const MAX_RANGE_DAYS = 366;
 
       <hn-banner class="mb-3" [error]="report.error() || session.error()" />
       @if (report.value(); as r) {
-        <article class="hn-print-area hn-card p-4 text-sm" aria-labelledby="pos-report-heading" data-testid="pos-report">
+        <article class="hn-print-area pos-card p-4 text-sm" aria-labelledby="pos-report-heading" data-testid="pos-report">
           <h2 id="pos-report-heading" class="text-base">{{ 'pos.report.title' | t }}</h2>
           <p class="mb-3 text-xs text-slate-600" data-testid="pos-report-scope">
             @if (session.value(); as s) {

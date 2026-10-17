@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, PLATFORM_ID, TemplateRef, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CashSession } from '../../core/api/models';
 import { StorageService } from '../../core/storage.service';
@@ -20,6 +20,8 @@ export class PosContext {
   readonly registerName = signal<string | null>(null);
   /** Open session of that register: undefined = not known yet, null = none. */
   readonly session = signal<CashSession | null | undefined>(undefined);
+  /** Content the selling screen shows in the top bar (its parked tickets); null on other pages. */
+  readonly topbarTickets = signal<TemplateRef<unknown> | null>(null);
 
   readonly theme = signal<PosTheme>(readTheme(this.storage.get(THEME_KEY)));
   private readonly systemDark = signal(false);

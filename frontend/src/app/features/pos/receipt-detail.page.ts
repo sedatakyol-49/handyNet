@@ -53,7 +53,7 @@ import { ReceiptViewComponent } from './receipt-view';
         <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" [copy]="copy()" />
 
         <div class="hn-no-print min-w-0 space-y-4">
-          <section class="hn-card p-4 text-sm" aria-labelledby="pos-detail-info">
+          <section class="pos-card p-4 text-sm" aria-labelledby="pos-detail-info">
             <h2 id="pos-detail-info" class="mb-2 text-sm">{{ 'pos.detail.info' | t }}</h2>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
               @if (r.referencedReceiptId) {
@@ -99,7 +99,7 @@ import { ReceiptViewComponent } from './receipt-view';
           </section>
 
           @if (r.kind === 'Sale') {
-            <section class="hn-card" aria-labelledby="pos-detail-lines">
+            <section class="pos-card" aria-labelledby="pos-detail-lines">
               <h2 id="pos-detail-lines" class="border-b border-slate-200 px-4 py-3 text-sm">{{ returning() ? ('pos.detail.returnTitle' | t) : ('pos.detail.lines' | t) }}</h2>
               <div class="overflow-x-auto">
                 <table class="hn-table" data-testid="pos-detail-lines">

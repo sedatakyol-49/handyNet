@@ -15,7 +15,7 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
   template: `
     @let s = session();
     @let z = s.summary;
-    <article class="hn-card p-4 text-sm" [class.hn-print-area]="printable()" aria-labelledby="z-heading" data-testid="z-report">
+    <article class="pos-card p-4 text-sm" [class.hn-print-area]="printable()" aria-labelledby="z-heading" data-testid="z-report">
       <h2 id="z-heading" class="mb-1 text-base">{{ (s.status === 'Closed' ? 'pos.z.title' : 'pos.z.interimTitle') | t }}</h2>
       <p class="mb-3 text-xs text-slate-600">
         {{ s.registerName }} · {{ s.openedAt | hnDate }} – {{ s.closedAt ? (s.closedAt | hnDate) : ('pos.z.stillOpen' | t) }}
