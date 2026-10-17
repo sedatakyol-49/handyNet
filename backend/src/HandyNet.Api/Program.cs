@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using HandyNet.FileStorage;
 using HandyNet.Migrations;
 using HandyNet.Modules.Catalog;
 using HandyNet.Modules.Identity;
@@ -53,6 +54,7 @@ var connectionString = builder.Configuration.GetConnectionString("HandyNet")
 
 builder.Services
     .AddHandyNetPersistence(connectionString)
+    .AddHandyNetFileStorage(builder.Configuration, builder.Environment)
     .AddIdentityModule(builder.Configuration)
     .AddTenancyModule()
     .AddCatalogModule()

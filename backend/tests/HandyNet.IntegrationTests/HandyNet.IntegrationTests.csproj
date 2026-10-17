@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Compile Include="..\HandyNet.UnitTests\Support\PdfText.cs" Link="Support\PdfText.cs" />
+    <Compile Include="..\HandyNet.UnitTests\Support\TestImages.cs" Link="Support\TestImages.cs" />
   </ItemGroup>
 
   <ItemGroup>

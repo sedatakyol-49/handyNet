@@ -14,3 +14,4 @@ playwright-report/
 test-results/
 .artifacts*/
 .claude/worktrees/
+App_Data/

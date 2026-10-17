@@ -29,6 +29,9 @@ public sealed class MarketplaceModel : IModuleModel
             b.Property(x => x.Version).IsRowVersion();
             b.HasIndex(x => new { x.OrganizationId, x.SkuKey }).IsUnique();
             b.HasIndex(x => new { x.ProductId, x.Status });
+            // Marketplace browsing: published offers by price (VK range, default sort) and by delivery time.
+            b.HasIndex(x => new { x.Status, x.PriceMinor });
+            b.HasIndex(x => new { x.Status, x.DeliveryDays });
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
                 .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
@@ -39,6 +42,8 @@ public sealed class MarketplaceModel : IModuleModel
         {
             b.HasNoKey();
             b.ToView("offer_listings", Schema);
+            b.Property(x => x.CompatibleModels).HasColumnType("text[]");
+            b.Property(x => x.ModelKeys).HasColumnType("text[]");
         });
     }
 }

@@ -182,28 +182,14 @@ internal sealed class ImportService(
         foreach (var row in planned)
         {
             var p = row.Parsed;
-            Guid productId;
-            var match = matcher.Match(p.ProductKey);
-            if (match.Kind == MatchKind.Existing)
-            {
-                productId = match.ProductId!.Value;
-            }
-            else if (match.Kind == MatchKind.New)
-            {
-                var staged = catalog.StageNewProduct(
-                    new NewProduct(p.Brand!, p.Name!, p.Category!.Value, p.Quality, p.Mpn, p.Ean, p.ModelName), OrganizationId);
-                if (!staged.IsSuccess)
-                    return CommitRejected([new CommitFailure(p.RowNumber, staged.Error!.Message)]);
-                matcher.Add(staged.Value);
-                productId = staged.Value.Id;
-            }
-            else
-            {
-                return CommitRejected([new CommitFailure(p.RowNumber, match.Reason!)]);
-            }
+            var resolved = RowApplier.ResolveProduct(catalog, matcher, p.ProductKey,
+                new NewProduct(p.Brand!, p.Name!, p.Category!.Value, p.Quality, p.Mpn, p.Ean, p.ModelName), OrganizationId);
+            if (!resolved.IsSuccess)
+                return CommitRejected([new CommitFailure(p.RowNumber, resolved.Error!.Message)]);
+            var productId = resolved.Value.ProductId;
 
             var terms = new OfferTerms(p.Price!.Value, p.MinOrderQuantity, p.DeliveryDays, p.Condition);
-            var upsert = await offers.StageUpsertAsync(new OfferUpsert(p.Sku!, productId, batch.WarehouseId, terms, batch.PublishOffers), ct);
+            var upsert = await RowApplier.StageOfferAsync(offers, p.Sku!, productId, batch.WarehouseId, terms, batch.PublishOffers, ct);
             if (!upsert.IsSuccess)
                 return CommitRejected([new CommitFailure(p.RowNumber, upsert.Error!.Message)]);
 

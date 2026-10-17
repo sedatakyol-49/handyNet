@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\HandyNet.FileStorage\HandyNet.FileStorage.csproj" />
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Catalog\HandyNet.Modules.Catalog.csproj" />
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Identity\HandyNet.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Imports\HandyNet.Modules.Imports.csproj" />

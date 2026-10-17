@@ -22,7 +22,11 @@ public sealed record ListingDto(
     int DeliveryDays,
     string Condition,
     int Available,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string? ModelName,
+    IReadOnlyList<string> CompatibleModels,
+    int ImageCount,
+    string? PrimaryThumbnailUrl); // relative URL of the primary image's thumbnail; null without images
 
 /// <summary>Used by Ordering to price and reserve published offers.</summary>
 public interface IOfferReservations
@@ -37,7 +41,8 @@ public interface IOfferReservations
 }
 
 public sealed record ExistingOffer(
-    Guid Id, string SkuKey, Guid ProductId, long PriceMinor, int MinOrderQuantity, int DeliveryDays, OfferCondition Condition, OfferStatus Status);
+    Guid Id, string SkuKey, Guid ProductId, long PriceMinor, int MinOrderQuantity, int DeliveryDays, OfferCondition Condition, OfferStatus Status,
+    string SupplierSku = "", Guid WarehouseId = default);
 
 public sealed record OfferUpsert(string SupplierSku, Guid ProductId, Guid WarehouseId, OfferTerms Terms, bool Publish);
 
@@ -48,4 +53,10 @@ public interface IOfferSync
 
     /// <summary>Stages create-or-update of an offer identified by the tenant's SKU; the caller commits.</summary>
     Task<Result<Guid>> StageUpsertAsync(OfferUpsert upsert, CancellationToken ct);
+
+    /// <summary>The current tenant's offers (any status but Archived) for these products, newest first.</summary>
+    Task<IReadOnlyList<ExistingOffer>> GetOwnByProductsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct);
+
+    /// <summary>The current tenant's offer by id, or null.</summary>
+    Task<ExistingOffer?> GetOwnAsync(Guid offerId, CancellationToken ct);
 }

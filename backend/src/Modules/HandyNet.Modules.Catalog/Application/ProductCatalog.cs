@@ -89,6 +89,53 @@ internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenant
         return product is null ? null : ToSummary(product);
     }
 
+    public async Task<IReadOnlyList<ProductLookupMatch>> LookupAsync(string query, int limit, CancellationToken ct)
+    {
+        var trimmed = query.Trim();
+        var results = new List<ProductLookupMatch>();
+        if (trimmed.Length == 0 || limit <= 0)
+            return results;
+
+        void AddRange(IEnumerable<Product> products, string matchedBy)
+        {
+            foreach (var p in products)
+                if (results.Count < limit && results.All(r => r.Product.Id != p.Id))
+                    results.Add(new ProductLookupMatch(ToSummary(p), matchedBy, p.CreatedByOrganizationId == tenant.OrganizationId && tenant.OrganizationId is not null));
+        }
+
+        if (Gtin.TryNormalize(trimmed, out var ean))
+            AddRange(await db.Set<Product>().AsNoTracking().Where(p => p.Ean == ean).ToListAsync(ct), "Ean");
+
+        var key = Text.NormalizeKey(trimmed);
+        if (key.Length > 0 && results.Count < limit)
+            AddRange(await db.Set<Product>().AsNoTracking().Where(p => p.MpnKey == key)
+                .OrderBy(p => p.Brand).ThenBy(p => p.Quality).Take(limit).ToListAsync(ct), "Mpn");
+
+        if (trimmed.Length >= 2 && results.Count < limit)
+        {
+            var pattern = Text.LikePattern(trimmed);
+            AddRange(await db.Set<Product>().AsNoTracking()
+                .Where(p => EF.Functions.ILike(p.Name, pattern) || EF.Functions.ILike(p.Brand, pattern)
+                            || (p.ModelName != null && EF.Functions.ILike(p.ModelName, pattern)) || p.ModelKeys.Contains(key))
+                .OrderBy(p => p.Brand).ThenBy(p => p.Name).Take(limit).ToListAsync(ct), "Text");
+        }
+
+        return results;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, IReadOnlyList<ProductImageInfo>>> GetImagesAsync(IReadOnlyCollection<Guid> productIds,
+        CancellationToken ct)
+    {
+        if (productIds.Count == 0)
+            return new Dictionary<Guid, IReadOnlyList<ProductImageInfo>>();
+        var images = await db.Set<ProductImage>().AsNoTracking()
+            .Where(i => productIds.Contains(i.ProductId) && i.RemovedAt == null)
+            .OrderBy(i => i.Position)
+            .ToListAsync(ct);
+        return images.GroupBy(i => i.ProductId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ProductImageInfo>)g.Select(ProductImageService.ToInfo).ToList());
+    }
+
     public async Task<IReadOnlyDictionary<Guid, ProductSummary>> GetAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct) =>
         (await db.Set<Product>().AsNoTracking().Where(p => productIds.Contains(p.Id)).ToListAsync(ct))
         .ToDictionary(p => p.Id, ToSummary);

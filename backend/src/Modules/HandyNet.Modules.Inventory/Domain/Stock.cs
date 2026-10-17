@@ -86,6 +86,23 @@ public sealed class StockLevel
         return StockMovement.Record(this, delta, type, reference, userId, now);
     }
 
+    /// <summary>
+    /// Goods received (e.g. manual entry in Lager): on-hand increases with a <c>Receipt</c> movement that records the
+    /// net purchase price per unit (EK), when known.
+    /// </summary>
+    public Result<StockMovement> Receive(int quantity, long? unitCostMinor, string? reference, Guid? userId, DateTimeOffset now)
+    {
+        if (quantity <= 0)
+            return Error.Validation("stock.quantity", "A receipt must increase stock.");
+        if (unitCostMinor is < 0)
+            return Error.Validation("stock.unit_cost", "The purchase price cannot be negative.");
+        var movement = Adjust(quantity, MovementType.Receipt, reference, userId, now);
+        if (!movement.IsSuccess)
+            return movement.Error!;
+        movement.Value!.UnitCostMinor = unitCostMinor;
+        return movement.Value;
+    }
+
     public Result<StockMovement?> SetOnHand(int quantity, MovementType type, string? reference, Guid? userId, DateTimeOffset now) =>
         quantity < 0
             ? Error.Validation("stock.negative", "Quantity cannot be negative.")
@@ -118,6 +135,9 @@ public sealed class StockMovement
     public string? Reference { get; private set; }
     public Guid? UserId { get; private set; }
     public DateTimeOffset OccurredAt { get; private set; }
+
+    /// <summary>Net purchase price per unit (EK, cents) recorded with a receipt, when known; null otherwise.</summary>
+    public long? UnitCostMinor { get; internal set; }
 
     internal static StockMovement Record(StockLevel level, int delta, MovementType type, string? reference, Guid? userId, DateTimeOffset now) => new()
     {

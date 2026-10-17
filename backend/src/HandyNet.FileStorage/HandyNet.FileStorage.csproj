@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- Apache-2.0. Used only when FileStorage:Provider = S3 (any S3-compatible endpoint). -->
+    <PackageReference Include="AWSSDK.S3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HandyNet.SharedKernel\HandyNet.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HandyNet.UnitTests" />
+    <InternalsVisibleTo Include="HandyNet.IntegrationTests" />
+  </ItemGroup>
+</Project>

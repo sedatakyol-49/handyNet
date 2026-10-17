@@ -36,6 +36,9 @@ public sealed class HandyNetFixture : IAsyncLifetime
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
     public CapturingEmailSender Emails { get; } = new();
 
+    /// <summary>Throw-away root of the local file storage (product images) for this test run.</summary>
+    public string FileRoot { get; } = Path.Combine(Path.GetTempPath(), "handynet-test-files", Guid.NewGuid().ToString("N"));
+
     public async Task InitializeAsync()
     {
         _adminConnection = Environment.GetEnvironmentVariable("HANDYNET_TEST_PG_ADMIN") ?? ReadLocalSettings() ?? await StartContainerAsync();
@@ -97,6 +100,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("Pos:FiscalSigner", "Disabled");
             // Tests issue invoices explicitly (admin endpoint / job instance with a fixed clock).
             web.UseSetting("Invoicing:AutoIssue", "false");
+            web.UseSetting("FileStorage:Provider", "Local");
+            web.UseSetting("FileStorage:Local:RootPath", FileRoot);
             web.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
         });
         _ = Factory.Server; // start host now (runs admin bootstrap)
@@ -113,6 +118,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
         }
         if (_container is not null)
             await _container.DisposeAsync();
+        if (Directory.Exists(FileRoot))
+            Directory.Delete(FileRoot, recursive: true);
     }
 
     public ApiClient CreateClient() => new(Factory.CreateClient());

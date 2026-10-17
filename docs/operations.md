@@ -25,6 +25,16 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 | `ConnectionStrings:HandyNetMigrations` | owner connection for `migrate` |
 | `Jwt:SigningKey` | ≥ 32 random bytes |
 | `Bootstrap:AdminEmail` / `Bootstrap:AdminPassword` | creates/promotes the platform admin at startup (idempotent) |
+| `FileStorage:S3:AccessKey` / `FileStorage:S3:SecretKey` | object storage credentials when `FileStorage:Provider` = `S3` (or leave empty for the AWS default credential chain) |
+
+## File storage (ADR-0011)
+
+- `FileStorage:Provider` = `Local` (default; `FileStorage:Local:RootPath`, Compose volume `files` at `/data/files`)
+  or `S3` (`FileStorage:S3:ServiceUrl`, `Region`, `Bucket`, optional `KeyPrefix`, `ForcePathStyle`). Startup fails if
+  the S3 settings are incomplete.
+- Back up the `files` volume (or enable bucket versioning) together with the database: image rows without files
+  return 404. The S3 adapter has not been verified against a real bucket yet — test uploads/serving/deletes once
+  against the Hetzner bucket before switching production to it.
 
 ## Sessions and account emails (ADR-0010)
 

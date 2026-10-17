@@ -43,7 +43,11 @@ public sealed class InventoryModel : IModuleModel
 
         modelBuilder.Entity<StockMovement>(b =>
         {
-            b.ToTable("stock_movements", Schema, t => t.HasCheckConstraint("ck_stock_movements_nonzero", "quantity <> 0"));
+            b.ToTable("stock_movements", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_stock_movements_nonzero", "quantity <> 0");
+                t.HasCheckConstraint("ck_stock_movements_unit_cost", "unit_cost_minor IS NULL OR unit_cost_minor >= 0");
+            });
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).UseIdentityAlwaysColumn();
             b.Property(x => x.Type).HasConversion<string>().HasMaxLength(30);

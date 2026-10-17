@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/HandyNet.Api/HandyNet.Api.csproj" />
+    <Project Path="src/HandyNet.FileStorage/HandyNet.FileStorage.csproj" />
     <Project Path="src/HandyNet.Migrations/HandyNet.Migrations.csproj" />
     <Project Path="src/HandyNet.Persistence/HandyNet.Persistence.csproj" />
     <Project Path="src/HandyNet.SharedKernel/HandyNet.SharedKernel.csproj" />

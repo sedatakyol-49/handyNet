@@ -1,3 +1,4 @@
+using FluentValidation;
 using HandyNet.Modules.Imports.Application;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel.Tenancy;
@@ -11,10 +12,14 @@ namespace HandyNet.Modules.Imports;
 
 public static class ImportsModule
 {
+    public const string IdempotencyHeader = "Idempotency-Key";
+
     public static IServiceCollection AddImportsModule(this IServiceCollection services)
     {
         services.AddSingleton<IModuleModel, Infrastructure.ImportsModel>();
         services.AddScoped<ImportService>();
+        services.AddScoped<ManualEntryService>();
+        services.AddValidatorsFromAssemblyContaining<ManualEntryService>(includeInternalTypes: true);
         return services;
     }
 
@@ -39,7 +44,7 @@ public static class ImportsModule
                     .ToHttp(b => Results.Created($"/api/imports/{b.Id}", b));
             })
             .DisableAntiforgery() // JWT bearer API, no cookies
-            .WithMetadata(new RequestSizeLimitAttributeShim(TabularReaders.MaxFileBytes + 64 * 1024));
+            .WithMetadata(new RequestBodyLimit(TabularReaders.MaxFileBytes + 64 * 1024));
 
         group.MapGet("/", async (int? page, int? pageSize, ImportService service, CancellationToken ct) =>
             Results.Ok(await service.ListAsync(page, pageSize, ct)));
@@ -62,12 +67,30 @@ public static class ImportsModule
             required = Domain.ImportField.Required,
         }));
 
+        // ---- manual single-item entry in Lager ("Artikel anlegen") ---------------------------------------------------
+        // Mapped under /api/inventory because it is the Lager screen's command; Imports owns it because it orchestrates
+        // Catalog + Inventory + Marketplace exactly like a one-row import. Creating a product additionally needs
+        // ProductImport + imports.manage, an offer B2BSales + offers.manage (checked in the service, 403).
+        var items = app.MapGroup("/api/inventory/items").WithTags("Inventory")
+            .RequireModule(PlatformModule.Inventory)
+            .RequirePermission(Permissions.InventoryManage);
+
+        items.MapPost("/", async (ManualEntryRequest request, [Microsoft.AspNetCore.Mvc.FromHeader(Name = IdempotencyHeader)] string? idempotencyKey,
+                IValidator<ManualEntryRequest> validator, ManualEntryService service, CancellationToken ct) =>
+            {
+                if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Trim().Length > ManualEntryService.MaxIdempotencyKeyLength)
+                    return Problems.From(SharedKernel.Error.Validation("entry.idempotency_key",
+                        $"Header {IdempotencyHeader} is required (max {ManualEntryService.MaxIdempotencyKeyLength} characters)."));
+                return await validator.ProblemIfInvalidAsync(request, ct)
+                       ?? (await service.CreateAsync(request, idempotencyKey.Trim(), ct)).ToHttp(r => r.Replayed
+                           ? Results.Ok(r.Entry)
+                           : Results.Created($"/api/inventory/items/{r.Entry.EntryId}", r.Entry));
+            });
+
+        items.MapGet("/lookup", async (string? q, ManualEntryService service, CancellationToken ct) =>
+            Results.Ok(await service.LookupAsync(q, ct)));
+
         return app;
     }
 }
 
-/// <summary>Per-endpoint request body limit (Kestrel reads IRequestSizeLimitMetadata).</summary>
-internal sealed class RequestSizeLimitAttributeShim(long maxBytes) : Microsoft.AspNetCore.Http.Metadata.IRequestSizeLimitMetadata
-{
-    public long? MaxRequestBodySize => maxBytes;
-}

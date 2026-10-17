@@ -45,8 +45,19 @@ public static class MarketplaceModule
             .RequireModule(PlatformModule.B2BPurchasing)
             .RequirePermission(Permissions.MarketplaceBrowse);
 
-        market.MapGet("/offers", async ([AsParameters] BrowseQuery query, OfferService service, CancellationToken ct) =>
-            Results.Ok(await service.BrowseAsync(query, ct)));
+        // Read-only by design: products enter the catalog only via Lager manual entry or import, never here.
+        market.MapGet("/offers", async ([AsParameters] BrowseQuery query, IValidator<BrowseQuery> validator, OfferService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(query, ct) ?? Results.Ok(await service.BrowseAsync(query, ct)));
+
+        market.MapGet("/facets", async ([AsParameters] BrowseQuery query, IValidator<BrowseQuery> validator, OfferService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(query, ct) ?? Results.Ok(await service.FacetsAsync(query, ct)));
+
+        market.MapGet("/offers/{id:guid}/detail", async (Guid id, OfferService service, CancellationToken ct) =>
+            await service.GetDetailAsync(id, ct) is { } detail
+                ? Results.Ok(detail)
+                : Problems.From(SharedKernel.Error.NotFound("offer.not_found", "Offer not found.")));
 
         market.MapGet("/offers/{id:guid}", async Task<Results<Ok<ListingDto>, NotFound>> (Guid id, OfferService service, CancellationToken ct) =>
             (await service.GetListingsAsync([id], ct)).TryGetValue(id, out var listing)

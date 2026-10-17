@@ -28,7 +28,8 @@ public sealed record StockRowDto(
     int Available,
     DateTimeOffset UpdatedAt);
 
-public sealed record MovementDto(long Id, Guid WarehouseId, Guid ProductId, int Quantity, int OnHandAfter, string Type, string? Reference, DateTimeOffset OccurredAt);
+public sealed record MovementDto(long Id, Guid WarehouseId, Guid ProductId, int Quantity, int OnHandAfter, string Type, string? Reference, DateTimeOffset OccurredAt,
+    long? UnitCostMinor = null);
 
 internal sealed class CreateWarehouseValidator : AbstractValidator<CreateWarehouseRequest>
 {
@@ -87,6 +88,37 @@ internal sealed class InventoryService(
             .Where(s => s.OrganizationId == OrganizationId && s.WarehouseId == warehouseId && productIds.Contains(s.ProductId))
             .Select(s => new StockSnapshot(s.WarehouseId, s.ProductId, s.OnHand, s.Reserved))
             .ToDictionaryAsync(s => s.ProductId, ct);
+
+    public async Task<IReadOnlyDictionary<Guid, StockTotal>> GetTotalsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct)
+    {
+        if (productIds.Count == 0)
+            return new Dictionary<Guid, StockTotal>();
+        var levels = await db.Set<StockLevel>().AsNoTracking()
+            .Where(s => s.OrganizationId == OrganizationId && productIds.Contains(s.ProductId))
+            .GroupBy(s => s.ProductId)
+            .Select(g => new { ProductId = g.Key, OnHand = g.Sum(s => s.OnHand), Reserved = g.Sum(s => s.Reserved) })
+            .ToListAsync(ct);
+        var units = await db.Set<StockUnit>().AsNoTracking()
+            .Where(u => u.OrganizationId == OrganizationId && productIds.Contains(u.ProductId)
+                        && (u.Status == UnitStatus.InStock || u.Status == UnitStatus.Reserved))
+            .GroupBy(u => u.ProductId)
+            .Select(g => new { ProductId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ProductId, x => x.Count, ct);
+        return levels.ToDictionary(l => l.ProductId, l => new StockTotal(l.ProductId, l.OnHand, l.Reserved, units.GetValueOrDefault(l.ProductId)));
+    }
+
+    public async Task<Result> StageReceiveAsync(Guid warehouseId, Guid productId, int quantity, long? unitCostMinor, string reference,
+        CancellationToken ct)
+    {
+        if (!await IsOwnWarehouseAsync(warehouseId, ct) && !db.ChangeTracker.Entries<Warehouse>().Any(e => e.Entity.Id == warehouseId))
+            return Error.NotFound("warehouse.not_found", "Warehouse not found.");
+        var level = await GetOrStageLevelAsync(warehouseId, productId, ct);
+        var movement = level.Receive(quantity, unitCostMinor, reference, UserId, clock.UtcNow);
+        if (!movement.IsSuccess)
+            return movement.Error!;
+        db.Add(movement.Value);
+        return Result.Success();
+    }
 
     public async Task<Result> StageSetOnHandAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct)
     {
@@ -334,7 +366,7 @@ internal sealed class InventoryService(
             query = query.Where(m => m.ProductId == id);
         var total = await query.CountAsync(ct);
         var items = await query.OrderByDescending(m => m.Id).Skip((p - 1) * size).Take(size)
-            .Select(m => new MovementDto(m.Id, m.WarehouseId, m.ProductId, m.Quantity, m.OnHandAfter, m.Type.ToString(), m.Reference, m.OccurredAt))
+            .Select(m => new MovementDto(m.Id, m.WarehouseId, m.ProductId, m.Quantity, m.OnHandAfter, m.Type.ToString(), m.Reference, m.OccurredAt, m.UnitCostMinor))
             .ToListAsync(ct);
         return new PagedResult<MovementDto>(items, p, size, total);
     }
