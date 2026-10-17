@@ -4,6 +4,11 @@ namespace HandyNet.Modules.Inventory.Contracts;
 
 public sealed record StockSnapshot(Guid WarehouseId, Guid ProductId, int OnHand, int Reserved);
 
+public sealed record StockTotal(Guid ProductId, int OnHand, int Reserved, int SerializedUnitsInStock)
+{
+    public int Available => OnHand - Reserved;
+}
+
 /// <summary>Public API of the Inventory module. All operations act on the current tenant's stock.</summary>
 public interface IInventory
 {
@@ -13,6 +18,15 @@ public interface IInventory
     Task<bool> IsOwnWarehouseAsync(Guid warehouseId, CancellationToken ct);
 
     Task<IReadOnlyDictionary<Guid, StockSnapshot>> GetLevelsAsync(Guid warehouseId, IReadOnlyCollection<Guid> productIds, CancellationToken ct);
+
+    /// <summary>Own stock per product summed over all of the tenant's warehouses (products without stock are absent).</summary>
+    Task<IReadOnlyDictionary<Guid, StockTotal>> GetTotalsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct);
+
+    /// <summary>
+    /// Stages goods received in an own warehouse: on-hand increases with a <c>Receipt</c> movement that records the net
+    /// purchase price per unit when given. Non-serialized stock only; serialized devices use <see cref="StageReceiveUnitAsync"/>.
+    /// </summary>
+    Task<Result> StageReceiveAsync(Guid warehouseId, Guid productId, int quantity, long? unitCostMinor, string reference, CancellationToken ct);
 
     /// <summary>Stages a stock correction to an absolute on-hand quantity, with a movement record.</summary>
     Task<Result> StageSetOnHandAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct);

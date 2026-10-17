@@ -5,6 +5,12 @@
     <ProjectReference Include="..\..\HandyNet.Persistence\HandyNet.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- MIT. Product image re-encoding; Windows/macOS natives come with SkiaSharp, Linux (Docker) needs NoDependencies. -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+  </ItemGroup>
+
   <PropertyGroup>
   </PropertyGroup>
 

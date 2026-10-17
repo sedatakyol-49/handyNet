@@ -8,6 +8,7 @@ using HandyNet.Persistence;
 using HandyNet.SharedKernel;
 using HandyNet.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Imei = HandyNet.Modules.Ankauf.Domain.Imei;
 
 namespace HandyNet.Modules.Ankauf.Application;
 

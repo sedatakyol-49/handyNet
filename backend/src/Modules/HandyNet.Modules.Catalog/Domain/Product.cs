@@ -52,6 +52,12 @@ public sealed class Product : Entity, IAuditable
     public string? Ean { get; private set; }
     public string? ModelName { get; private set; }
     public List<string> CompatibleModels { get; private set; } = [];
+
+    /// <summary>
+    /// Normalized keys (<see cref="Text.NormalizeKey"/>) of the model name and every compatible model, for the
+    /// marketplace filter "passend für …" (exact, case- and punctuation-insensitive; GIN-indexed).
+    /// </summary>
+    public List<string> ModelKeys { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid? CreatedByOrganizationId { get; private set; }
     public uint Version { get; private set; }
@@ -60,6 +66,8 @@ public sealed class Product : Entity, IAuditable
     {
         if (string.IsNullOrWhiteSpace(input.Brand) || string.IsNullOrWhiteSpace(input.Name))
             return Error.Validation("product.incomplete", "Brand and name are required.");
+        if (input.Brand.Trim().Length > 100 || input.Name.Trim().Length > 300 || input.Mpn?.Trim().Length > 100)
+            return Error.Validation("product.field_too_long", "Brand (100), name (300) or part number (100) is too long.");
         if (string.IsNullOrWhiteSpace(input.Ean) && string.IsNullOrWhiteSpace(input.Mpn))
             return Error.Validation("product.identifier_required", "An EAN/GTIN or a manufacturer part number is required.");
 
@@ -70,6 +78,13 @@ public sealed class Product : Entity, IAuditable
                 return Error.Validation("product.invalid_ean", $"'{input.Ean}' is not a valid EAN/GTIN.");
             ean = normalized;
         }
+
+        var modelName = string.IsNullOrWhiteSpace(input.ModelName) ? null : input.ModelName.Trim();
+        var compatible = input.CompatibleModels?.Select(m => m.Trim()).Where(m => m.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        if (modelName?.Length > 200 || compatible.Any(m => m.Length > 200))
+            return Error.Validation("product.model_too_long", "Model names are limited to 200 characters.");
+        if (compatible.Count > MaxCompatibleModels)
+            return Error.Validation("product.too_many_models", $"At most {MaxCompatibleModels} compatible models.");
 
         return new Product
         {
@@ -82,12 +97,31 @@ public sealed class Product : Entity, IAuditable
             Mpn = string.IsNullOrWhiteSpace(input.Mpn) ? null : input.Mpn.Trim(),
             MpnKey = string.IsNullOrWhiteSpace(input.Mpn) ? null : Text.NormalizeKey(input.Mpn),
             Ean = ean,
-            ModelName = string.IsNullOrWhiteSpace(input.ModelName) ? null : input.ModelName.Trim(),
-            CompatibleModels = input.CompatibleModels?.Select(m => m.Trim()).Where(m => m.Length > 0).Distinct().ToList() ?? [],
+            ModelName = modelName,
+            CompatibleModels = compatible,
+            ModelKeys = ModelKeysOf(modelName, compatible),
             CreatedAt = now,
             CreatedByOrganizationId = createdByOrganizationId,
         };
     }
+
+    public const int MaxCompatibleModels = 100;
+
+    public static List<string> ModelKeysOf(string? modelName, IEnumerable<string> compatibleModels) =>
+        (modelName is null ? compatibleModels : compatibleModels.Prepend(modelName))
+        .Select(Text.NormalizeKey).Where(k => k.Length > 0).Distinct().ToList();
+}
+
+/// <summary>
+/// Which categories are stocked as serialized devices (one IMEI per unit). Smartphones always are; tablets and wearables
+/// may be (cellular models have an IMEI, Wi-Fi-only models do not). Parts and accessories never are.
+/// </summary>
+public static class SerializedStock
+{
+    public static bool RequiresImei(ProductCategory category) => category == ProductCategory.Smartphone;
+
+    public static bool AllowsImei(ProductCategory category) =>
+        category is ProductCategory.Smartphone or ProductCategory.Tablet or ProductCategory.Wearable;
 }
 
 public sealed record NewProduct(

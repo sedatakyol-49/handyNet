@@ -599,6 +599,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnName("ean")
                         .IsFixedLength(false);
 
+                    b.PrimitiveCollection<List<string>>("ModelKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("model_keys");
+
                     b.Property<string>("ModelName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -635,6 +640,9 @@ namespace HandyNet.Migrations.Migrations
                     b.HasKey("Id")
                         .HasName("pk_products");
 
+                    b.HasIndex("Brand")
+                        .HasDatabaseName("ix_products_brand");
+
                     b.HasIndex("Category")
                         .HasDatabaseName("ix_products_category");
 
@@ -642,6 +650,14 @@ namespace HandyNet.Migrations.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_products_ean")
                         .HasFilter("ean IS NOT NULL");
+
+                    b.HasIndex("ModelKeys")
+                        .HasDatabaseName("ix_products_model_keys");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("ModelKeys"), "gin");
+
+                    b.HasIndex("Quality")
+                        .HasDatabaseName("ix_products_quality");
 
                     b.HasIndex("BrandKey", "MpnKey", "Quality")
                         .IsUnique()
@@ -651,6 +667,129 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("products", "catalog", t =>
                         {
                             t.HasCheckConstraint("ck_products_identifier", "ean IS NOT NULL OR mpn_key IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Catalog.Domain.ProductImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<string>("OriginalFormat")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("original_format");
+
+                    b.Property<long>("OriginalSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("original_size_bytes");
+
+                    b.Property<int?>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("removed_at");
+
+                    b.Property<Guid?>("RemovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("removed_by_user_id");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("sha256")
+                        .IsFixedLength();
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<int>("ThumbnailHeight")
+                        .HasColumnType("integer")
+                        .HasColumnName("thumbnail_height");
+
+                    b.Property<long>("ThumbnailSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("thumbnail_size_bytes");
+
+                    b.Property<string>("ThumbnailStorageKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("thumbnail_storage_key");
+
+                    b.Property<int>("ThumbnailWidth")
+                        .HasColumnType("integer")
+                        .HasColumnName("thumbnail_width");
+
+                    b.Property<Guid?>("UploadedByOrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_organization_id");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_images");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_product_images_active")
+                        .HasFilter("removed_at IS NULL");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_images_storage_key");
+
+                    b.ToTable("product_images", "catalog", t =>
+                        {
+                            t.HasCheckConstraint("ck_product_images_content_type", "content_type IN ('image/webp', 'image/jpeg', 'image/png')");
+
+                            t.HasCheckConstraint("ck_product_images_position", "position IS NULL OR (position >= 0 AND position < 8)");
+
+                            t.HasCheckConstraint("ck_product_images_removed", "(removed_at IS NULL) = (position IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_product_images_sizes", "size_bytes > 0 AND thumbnail_size_bytes > 0 AND original_size_bytes > 0 AND width > 0 AND height > 0 AND thumbnail_width > 0 AND thumbnail_height > 0");
                         });
                 });
 
@@ -1239,6 +1378,108 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("import_rows", "imports");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Imports.Domain.ManualEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<string>("OfferAction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("offer_action");
+
+                    b.Property<Guid?>("OfferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("offer_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("ProductAction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("product_action");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<int>("QuantityReceived")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity_received");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("result");
+
+                    b.Property<long?>("UnitCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_cost_minor");
+
+                    b.PrimitiveCollection<List<Guid>>("UnitIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("unit_ids");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_manual_entries");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_manual_entries_product_id");
+
+                    b.HasIndex("OrganizationId", "CreatedAt")
+                        .HasDatabaseName("ix_manual_entries_organization_id_created_at");
+
+                    b.HasIndex("OrganizationId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_manual_entries_organization_id_idempotency_key");
+
+                    b.HasIndex("OrganizationId", "WarehouseId")
+                        .HasDatabaseName("ix_manual_entries_organization_id_warehouse_id");
+
+                    b.ToTable("manual_entries", "imports", t =>
+                        {
+                            t.HasCheckConstraint("ck_manual_entries_offer", "(offer_id IS NULL) = (offer_action = 'None')");
+
+                            t.HasCheckConstraint("ck_manual_entries_quantity", "quantity_received >= 0");
+
+                            t.HasCheckConstraint("ck_manual_entries_unit_cost", "unit_cost_minor IS NULL OR unit_cost_minor >= 0");
+
+                            t.HasCheckConstraint("ck_manual_entries_units", "cardinality(unit_ids) = 0 OR cardinality(unit_ids) = quantity_received");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Inventory.Domain.StockLevel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1340,6 +1581,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("type");
 
+                    b.Property<long?>("UnitCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_cost_minor");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -1363,6 +1608,8 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("stock_movements", "inventory", t =>
                         {
                             t.HasCheckConstraint("ck_stock_movements_nonzero", "quantity <> 0");
+
+                            t.HasCheckConstraint("ck_stock_movements_unit_cost", "unit_cost_minor IS NULL OR unit_cost_minor >= 0");
                         });
                 });
 
@@ -2041,6 +2288,12 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("ProductId", "Status")
                         .HasDatabaseName("ix_offers_product_id_status");
 
+                    b.HasIndex("Status", "DeliveryDays")
+                        .HasDatabaseName("ix_offers_status_delivery_days");
+
+                    b.HasIndex("Status", "PriceMinor")
+                        .HasDatabaseName("ix_offers_status_price_minor");
+
                     b.ToTable("offers", "marketplace", t =>
                         {
                             t.HasCheckConstraint("ck_offers_delivery_days", "delivery_days BETWEEN 0 AND 60");
@@ -2067,6 +2320,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("text")
                         .HasColumnName("category");
 
+                    b.PrimitiveCollection<List<string>>("CompatibleModels")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("compatible_models");
+
                     b.Property<string>("Condition")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2085,9 +2343,22 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ean");
 
+                    b.Property<int>("ImageCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("image_count");
+
                     b.Property<int>("MinOrderQuantity")
                         .HasColumnType("integer")
                         .HasColumnName("min_order_quantity");
+
+                    b.PrimitiveCollection<List<string>>("ModelKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("model_keys");
+
+                    b.Property<string>("ModelName")
+                        .HasColumnType("text")
+                        .HasColumnName("model_name");
 
                     b.Property<string>("Mpn")
                         .HasColumnType("text")
@@ -2100,6 +2371,10 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<long>("PriceMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("price_minor");
+
+                    b.Property<Guid?>("PrimaryImageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_image_id");
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid")
@@ -3599,6 +3874,16 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_quotes_price_versions_price_version_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Catalog.Domain.ProductImage", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_images_products_product_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Disputes.Domain.Dispute", b =>
                 {
                     b.HasOne("HandyNet.Modules.Ordering.Domain.Order", null)
@@ -3658,6 +3943,24 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_import_rows_import_batches_batch_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Imports.Domain.ManualEntry", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_manual_entries_products_product_id");
+
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "WarehouseId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_manual_entries_warehouses_organization_id_warehouse_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Inventory.Domain.StockLevel", b =>

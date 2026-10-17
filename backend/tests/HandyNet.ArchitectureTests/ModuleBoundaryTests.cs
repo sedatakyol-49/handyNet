@@ -107,7 +107,7 @@ public class ModuleBoundaryTests
     {
         var result = Types.InAssembly(Module(module))
             .That().ResideInNamespace($"HandyNet.Modules.{module}.Domain")
-            .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Npgsql", "HandyNet.Persistence")
+            .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Npgsql", "HandyNet.Persistence", "SkiaSharp", "Amazon", "HandyNet.FileStorage")
             .GetResult();
         Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
     }

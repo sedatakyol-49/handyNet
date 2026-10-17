@@ -67,7 +67,7 @@ internal sealed class UpdateOfferValidator : AbstractValidator<UpdateOfferReques
     }
 }
 
-internal sealed class OfferService(
+internal sealed partial class OfferService(
     HandyNetDbContext db,
     ITenantContext tenant,
     IProductCatalog catalog,
@@ -181,7 +181,7 @@ internal sealed class OfferService(
     public async Task<IReadOnlyDictionary<string, ExistingOffer>> GetBySkuKeysAsync(IReadOnlyCollection<string> skuKeys, CancellationToken ct) =>
         await db.Set<Offer>().AsNoTracking()
             .Where(o => o.OrganizationId == OrganizationId && skuKeys.Contains(o.SkuKey))
-            .Select(o => new ExistingOffer(o.Id, o.SkuKey, o.ProductId, o.PriceMinor, o.MinOrderQuantity, o.DeliveryDays, o.Condition, o.Status))
+            .Select(ToExisting)
             .ToDictionaryAsync(o => o.SkuKey, ct);
 
     public async Task<Result<Guid>> StageUpsertAsync(OfferUpsert upsert, CancellationToken ct)
@@ -213,61 +213,25 @@ internal sealed class OfferService(
 
     // ---- IOfferReservations (ordering) & browsing --------------------------------------------
 
-    public async Task<IReadOnlyDictionary<Guid, ListingDto>> GetListingsAsync(IReadOnlyCollection<Guid> offerIds, CancellationToken ct) =>
-        (await db.Set<OfferListing>().AsNoTracking().Where(l => offerIds.Contains(l.OfferId)).ToListAsync(ct))
-        .ToDictionary(l => l.OfferId, ToDto);
+    private static readonly System.Linq.Expressions.Expression<Func<Offer, ExistingOffer>> ToExisting = o =>
+        new ExistingOffer(o.Id, o.SkuKey, o.ProductId, o.PriceMinor, o.MinOrderQuantity, o.DeliveryDays, o.Condition, o.Status,
+            o.SupplierSku, o.WarehouseId);
+
+    public async Task<IReadOnlyList<ExistingOffer>> GetOwnByProductsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct) =>
+        await db.Set<Offer>().AsNoTracking()
+            .Where(o => o.OrganizationId == OrganizationId && productIds.Contains(o.ProductId) && o.Status != OfferStatus.Archived)
+            .OrderByDescending(o => o.UpdatedAt)
+            .Select(ToExisting)
+            .ToListAsync(ct);
+
+    public async Task<ExistingOffer?> GetOwnAsync(Guid offerId, CancellationToken ct) =>
+        await db.Set<Offer>().AsNoTracking().Where(o => o.Id == offerId && o.OrganizationId == OrganizationId)
+            .Select(ToExisting).FirstOrDefaultAsync(ct);
+
+    // GetListingsAsync, browsing, facets and detail: Browse.cs
 
     public async Task<Guid?> ReserveAsync(Guid offerId, int quantity, string reference, CancellationToken ct) =>
         await db.Database
             .SqlQuery<Guid?>($"SELECT marketplace.reserve_offer_stock({offerId}, {quantity}, {reference}) AS \"Value\"")
             .SingleAsync(ct);
-
-    public async Task<PagedResult<ListingDto>> BrowseAsync(BrowseQuery q, CancellationToken ct)
-    {
-        var (p, size) = Paging.Normalize(q.Page, q.PageSize);
-        var query = db.Set<OfferListing>().AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(q.Search))
-        {
-            var pattern = Text.LikePattern(q.Search);
-            var key = Text.NormalizeKey(q.Search);
-            query = query.Where(l => EF.Functions.ILike(l.ProductName, pattern) || EF.Functions.ILike(l.Brand, pattern)
-                                     || l.Ean == key || (l.Mpn != null && EF.Functions.ILike(l.Mpn, pattern))
-                                     || EF.Functions.ILike(l.SupplierSku, pattern));
-        }
-        if (!string.IsNullOrWhiteSpace(q.Category))
-            query = query.Where(l => l.Category == q.Category);
-        if (!string.IsNullOrWhiteSpace(q.Brand))
-            query = query.Where(l => l.Brand == q.Brand);
-        if (q.ProductId is { } productId)
-            query = query.Where(l => l.ProductId == productId);
-        if (q.InStockOnly == true)
-            query = query.Where(l => l.Available > 0);
-
-        var total = await query.CountAsync(ct);
-        var ordered = q.Sort switch
-        {
-            "price_desc" => query.OrderByDescending(l => l.PriceMinor),
-            "delivery" => query.OrderBy(l => l.DeliveryDays).ThenBy(l => l.PriceMinor),
-            "name" => query.OrderBy(l => l.Brand).ThenBy(l => l.ProductName),
-            _ => query.OrderBy(l => l.PriceMinor),
-        };
-        var items = await ordered.ThenBy(l => l.OfferId).Skip((p - 1) * size).Take(size).ToListAsync(ct);
-        return new PagedResult<ListingDto>(items.Select(ToDto).ToList(), p, size, total);
-    }
-
-    private static ListingDto ToDto(OfferListing l) => new(
-        l.OfferId, l.SellerOrganizationId, l.SellerName, l.SellerCity, l.ProductId, l.Brand, l.ProductName, l.Category,
-        l.Quality, l.Ean, l.Mpn, l.SupplierSku, l.PriceMinor, l.Currency, l.MinOrderQuantity, l.DeliveryDays, l.Condition,
-        l.Available, l.UpdatedAt);
 }
-
-public sealed record BrowseQuery(
-    string? Search,
-    string? Category,
-    string? Brand,
-    Guid? ProductId,
-    bool? InStockOnly,
-    string? Sort,
-    int? Page,
-    int? PageSize);

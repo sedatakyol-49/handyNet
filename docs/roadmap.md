@@ -40,22 +40,32 @@ Dependencies: Phase 1.
 
 ## Phase 2b — Lager & Marketplace usability (requested 2026-10-16)
 Dependencies: Phase 1 catalog/inventory/marketplace, Imports pipeline.
-- ⬜ **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
+Backend status (2026-10-17): 🟡 backend ✅ for all four items below, frontend ⬜. Implemented: `POST /api/inventory/items`
+(Imports module; same `ProductMatcher`/product creation/offer upsert as the import commit; one transaction; Idempotency-Key
+with request hash, replayed response; stock is *received* (+quantity, Receipt movement with EK) rather than synchronized;
+IMEIs Luhn-checked and platform-unique; smartphones only by IMEI, tablets/wearables optionally; B2B offers for IMEI stock
+refused until serialized B2B sales exist), `GET /api/inventory/items/lookup` (EAN/MPN/text, own stock/offers, suggested
+SKU, `canCreateProduct`), product images (ADR-0011: `IFileStorage` local/S3, SkiaSharp re-encode to WebP, EXIF stripped,
+thumbnails, ≤ 8 per product, reorder/remove, public immutable serving), `GET /api/marketplace/offers/{id}/detail`,
+`GET /api/marketplace/facets`, filters (brand/category/quality/condition/seller lists, VK net price range, max delivery
+days, compatible model, has images) with indexes. Open: frontend (dialog, gallery, filter chips, e2e), S3 verification
+against a real bucket, orphan-file cleanup job, "VKVK" meaning (assumed VK range), gross price display (frontend).
+- 🟡 **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
   1) identify — EAN scan/typing or MPN, conservative catalog match (same `ProductMatcher` as the import); no match →
   create a canonical product (brand, name, category, quality, EAN/MPN, model, compatible models, images);
   2) stock — warehouse, quantity or one IMEI per unit for serialized categories, optional purchase price (EK);
   3) offer (optional) — SKU (suggested), VK net price, MOQ, delivery days, condition, publish toggle.
   One idempotent backend command that runs the same validation/matching/apply path as a one-row import (atomic,
   audited); "Speichern & nächster Artikel" with scanner focus for fast entry.
-- ⬜ **Marketplace stays read-only for products**: no "add product" there by design (products enter only via Lager
+- 🟡 **Marketplace stays read-only for products** (backend: test asserts no non-GET route under `/api/marketplace`): no "add product" there by design (products enter only via Lager
   manual entry or import); e2e asserts no create action on the marketplace page.
-- ⬜ **Marketplace detail modal**: clicking a row (or Enter on a focused row) opens a dialog with all product data
+- 🟡 **Marketplace detail modal**: clicking a row (or Enter on a focused row) opens a dialog with all product data
   (brand, name, category, quality, EAN, MPN, model, compatible models), offer data (seller + city, SKU, condition,
   net + gross price, available, delivery days, MOQ, last update), image gallery (placeholder if none), other
   sellers' offers for the same product, quantity + add to cart; deep link `?offer={id}`. Needs product images:
   `IFileStorage` abstraction (local disk dev, S3-compatible object storage prod), JPEG/PNG/WebP ≤ 5 MB, EXIF
   stripped, thumbnails, MIT-licensed image library.
-- ⬜ **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
+- 🟡 **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
   max delivery days, seller, compatible model ("passend für …"), "with images"; facet endpoint, active-filter chips,
   filters persisted in the URL, collapsible on mobile, supporting DB indexes. "VKVK" filter: meaning to be confirmed
   with the product owner (assumed VK = Verkaufspreis range).

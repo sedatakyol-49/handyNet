@@ -50,6 +50,16 @@ services:
       Notifications__Smtp__Username: ${SMTP_USERNAME:-}
       Notifications__Smtp__Password: ${SMTP_PASSWORD:-}
       Notifications__Smtp__Security: ${SMTP_SECURITY:-None}
+      # Product images (ADR-0011): local volume by default; set FILESTORAGE_PROVIDER=S3 + FileStorage__S3__* for object storage.
+      FileStorage__Provider: ${FILESTORAGE_PROVIDER:-Local}
+      FileStorage__Local__RootPath: /data/files
+      FileStorage__S3__ServiceUrl: ${S3_SERVICE_URL:-}
+      FileStorage__S3__Region: ${S3_REGION:-}
+      FileStorage__S3__Bucket: ${S3_BUCKET:-}
+      FileStorage__S3__AccessKey: ${S3_ACCESS_KEY:-}
+      FileStorage__S3__SecretKey: ${S3_SECRET_KEY:-}
+    volumes:
+      - files:/data/files
     depends_on:
       migrator:
         condition: service_completed_successfully
@@ -74,3 +84,4 @@ services:
 
 volumes:
   pgdata:
+  files:

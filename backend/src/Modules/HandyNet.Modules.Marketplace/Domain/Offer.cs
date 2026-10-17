@@ -143,4 +143,11 @@ public sealed class OfferListing
     public string Condition { get; private set; } = null!;
     public int Available { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public string? ModelName { get; private set; }
+    public List<string> CompatibleModels { get; private set; } = [];
+
+    /// <summary>Normalized model name + compatible models (catalog <c>model_keys</c>) for "passend für".</summary>
+    public List<string> ModelKeys { get; private set; } = [];
+    public int ImageCount { get; private set; }
+    public Guid? PrimaryImageId { get; private set; }
 }

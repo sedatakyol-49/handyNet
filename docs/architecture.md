@@ -61,10 +61,10 @@ flowchart TD
 |---|---|---|---|
 | Identity | `identity` | users, password hashing, lockout, JWT access tokens, rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested` |
 | Tenancy | `tenancy` | organizations, verification, memberships/roles, module activation, tenant resolution | `IOrganizationDirectory` |
-| Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules | `IProductCatalog`, `ProductMatcher` |
-| Inventory | `inventory` | warehouses, stock levels, movements, reservations, serialized units (IMEI), sell/return staging for POS | `IInventory` |
-| Marketplace | `marketplace` | supplier offers, B2B listing view, reservation function | `IOfferReservations`, `IOfferSync` |
-| Imports | `imports` | CSV/XLSX parsing, mapping, preview (dry run), commit | – (top-level) |
+| Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules, lookup, canonical product images (upload by creating org or platform admin, SkiaSharp re-encoding, public immutable serving — ADR-0011) | `IProductCatalog`, `ProductMatcher` |
+| Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule), sell/return staging for POS | `IInventory` |
+| Marketplace | `marketplace` | supplier offers, B2B listing view (with model data + images), filters, facets, offer detail with other sellers; read-only for products (no product creation) | `IOfferReservations`, `IOfferSync` |
+| Imports | `imports` | CSV/XLSX parsing, mapping, preview (dry run), commit; manual single-item Lager entry (`/api/inventory/items`, same apply path as a one-row import, idempotent) | – (top-level) |
 | Ordering | `ordering` | B2B orders, idempotency, lifecycle incl. delivery + inspection window, completion job | `IOrderFulfilment` |
 | Shipping | `shipping` | shipments, carrier adapters (Manual, Simulated), labels, tracking events, parcel/insurance/lithium rules, tracking sync job | – (top-level; uses `IOrderFulfilment`) |
 | Payments | `payments` | payments via PSP adapter (Simulated today), webhooks (status re-fetched), commission, refunds, payouts after completion | `ICommissionStatements` (commission per payment, for invoicing) |
@@ -85,6 +85,11 @@ flowchart TD
 | Accounting exports (XRechnung/ZUGFeRD e-invoices, DATEV) | Invoicing, Payments, POS |
 | Returns & Warranty (return shipments, restocking, partial refunds) | Disputes, Shipping, Inventory, Payments |
 | B2C Marketplace | Catalog, Marketplace (separate B2C visibility), Payments |
+
+## Shared infrastructure
+
+- `HandyNet.FileStorage`: `IFileStorage` (interface in SharedKernel) with `Local` (disk) and `S3` (S3-compatible)
+  providers, selected by `FileStorage:Provider` (ADR-0011). Used by Catalog for product images.
 
 ## Request pipeline
 
