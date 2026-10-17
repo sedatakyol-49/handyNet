@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom, of } from 'rxjs';
+import { catchError, firstValueFrom, map, of } from 'rxjs';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
 import { CatalogApi, InventoryApi, OffersApi } from '../../core/api/handynet-api';
 import { CatalogProduct, OFFER_CONDITIONS, OfferCondition, OwnOffer, UpdateOfferRequest } from '../../core/api/models';
@@ -10,6 +10,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
+import { ProductImageManagerComponent } from '../../shared/product-images/product-image-manager';
 
 interface EditDraft {
   price: string;
@@ -32,7 +33,7 @@ interface CreateDraft {
 
 @Component({
   selector: 'hn-offers-page',
-  imports: [FormsModule, ...UI],
+  imports: [FormsModule, ...UI, ProductImageManagerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './offers.page.html',
 })
@@ -175,6 +176,27 @@ export class OffersPage {
     } finally {
       this.creating.set(false);
     }
+  }
+
+  // ---- product images (only the organization that created the product may change them)
+  protected readonly imagesOffer = signal<OwnOffer | null>(null);
+  /** canManageImages from the Lager lookup when available; otherwise the API decides (403 image.not_product_owner). */
+  protected readonly imagesAccess = createQuery(
+    () => this.imagesOffer(),
+    (o) => {
+      const fallback = this.session.hasModule('ProductImport') && this.session.can('imports.manage');
+      if (!o) return of(null);
+      if (!fallback) return of(false);
+      if (!this.session.hasModule('Inventory') || !this.session.can('inventory.manage')) return of(true);
+      return this.inventory.lookupItem(o.ean ?? o.mpn ?? o.productName).pipe(
+        map((r) => r.matches.find((m) => m.product.id === o.productId)?.canManageImages ?? false),
+        catchError(() => of(fallback)),
+      );
+    },
+  );
+
+  protected openImages(o: OwnOffer): void {
+    this.imagesOffer.set(o);
   }
 
   private emptyCreate(): CreateDraft {

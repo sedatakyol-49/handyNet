@@ -1,6 +1,7 @@
 <hn-page-header [title]="'inventory.title' | t" [description]="'inventory.subtitle' | t">
   @if (canManage) {
     <button hnButton type="button" (click)="openWarehouse()">{{ 'inventory.newWarehouse' | t }}</button>
+    <button hnButton variant="primary" type="button" (click)="entryOpen.set(true)" data-testid="entry-open">{{ 'inventory.entry.open' | t }}</button>
   }
 </hn-page-header>
 
@@ -157,3 +158,7 @@
     </div>
   </form>
 </hn-dialog>
+
+@if (canManage) {
+  <hn-manual-entry-dialog [open]="entryOpen()" (closed)="entryOpen.set(false)" (saved)="onEntrySaved()" />
+}

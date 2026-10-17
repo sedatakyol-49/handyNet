@@ -133,8 +133,10 @@ export class ToastHostComponent {
   template: `
     <dialog
       #dialog
-      class="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
+      class="m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
+      [class]="widthClass()"
       [attr.aria-labelledby]="titleId"
+      [attr.data-testid]="testId()"
       (close)="closed.emit()"
     >
       <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
@@ -150,8 +152,21 @@ export class DialogComponent {
   protected readonly titleId = `hn-dialog-${DialogComponent.nextId++}`;
   readonly title = input.required<string>();
   readonly open = input(false);
+  /** md = 32rem (forms), lg = 48rem, xl = 72rem (wizard, product detail). */
+  readonly size = input<'md' | 'lg' | 'xl'>('md');
+  readonly testId = input<string | null>(null);
   readonly closed = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  protected readonly widthClass = computed(() => {
+    switch (this.size()) {
+      case 'lg':
+        return 'w-[min(48rem,calc(100vw-2rem))]';
+      case 'xl':
+        return 'w-[min(72rem,calc(100vw-2rem))]';
+      default:
+        return 'w-[min(32rem,calc(100vw-2rem))]';
+    }
+  });
 
   constructor() {
     effect(() => {

@@ -4,52 +4,144 @@
   }
 </hn-page-header>
 
-<form class="hn-card mb-3 grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]" role="search" (submit)="$event.preventDefault(); applySearch()">
-  <hn-field [label]="'marketplace.search' | t" for="mp-search" [hint]="'marketplace.searchHint' | t">
-    <div class="relative">
-      <input
-        #searchBox
-        hnInput
-        id="mp-search"
-        type="search"
-        autocomplete="off"
-        [placeholder]="'marketplace.searchPlaceholder' | t"
-        [value]="searchText()"
-        (input)="onSearchInput($any($event.target).value)"
-        aria-describedby="mp-search-hint"
-        aria-keyshortcuts="/"
-        data-testid="marketplace-search"
-      />
-      <kbd class="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded border border-slate-300 px-1 text-[10px] text-slate-500" aria-hidden="true">/</kbd>
-    </div>
-  </hn-field>
-  <hn-field [label]="'marketplace.category' | t" for="mp-category">
-    <select hnSelect id="mp-category" [value]="category()" (change)="setFilter(() => category.set($any($event.target).value))">
-      <option value="">{{ 'common.all' | t }}</option>
-      @for (c of categories.value()?.categories ?? []; track c) {
-        <option [value]="c">{{ c | tEnum: 'category' }}</option>
+<form class="hn-card mb-2 p-3" role="search" [attr.aria-label]="'marketplace.filters.label' | t" (submit)="$event.preventDefault(); applySearch(); applyModel(); applyPrice()" data-testid="marketplace-filters">
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.2fr_1fr]">
+    <hn-field [label]="'marketplace.search' | t" for="mp-search" [hint]="'marketplace.searchHint' | t">
+      <div class="relative">
+        <input
+          #searchBox
+          hnInput
+          id="mp-search"
+          type="search"
+          autocomplete="off"
+          [placeholder]="'marketplace.searchPlaceholder' | t"
+          [value]="searchText()"
+          (input)="onSearchInput($any($event.target).value)"
+          (keydown.enter)="$event.preventDefault(); applySearch()"
+          aria-describedby="mp-search-hint"
+          aria-keyshortcuts="/"
+          maxlength="200"
+          data-testid="marketplace-search"
+        />
+        <kbd class="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 rounded border border-slate-300 px-1 text-[10px] text-slate-500" aria-hidden="true">/</kbd>
+      </div>
+    </hn-field>
+    <hn-field [label]="'marketplace.category' | t" for="mp-category">
+      <hn-multi-select controlId="mp-category" [label]="'marketplace.category' | t" [options]="categoryOptions()" [selected]="filters().categories"
+        (selectedChange)="apply({ categories: $event })" testId="filter-category" />
+    </hn-field>
+    <hn-field [label]="'marketplace.brand' | t" for="mp-brand">
+      <hn-multi-select controlId="mp-brand" [label]="'marketplace.brand' | t" [options]="brandOptions()" [selected]="filters().brands"
+        (selectedChange)="apply({ brands: $event })" testId="filter-brand" />
+    </hn-field>
+    <hn-field [label]="'marketplace.seller' | t" for="mp-seller" [hint]="'marketplace.filters.sellerHint' | t">
+      <hn-multi-select controlId="mp-seller" [label]="'marketplace.seller' | t" [options]="sellerOptions()" [selected]="filters().sellers"
+        [placeholder]="'marketplace.filters.allSellers' | t" (selectedChange)="apply({ sellers: $event })" testId="filter-seller" />
+    </hn-field>
+    <hn-field [label]="'marketplace.sort' | t" for="mp-sort">
+      <select hnSelect id="mp-sort" [value]="filters().sort" (change)="setSort($any($event.target).value)">
+        <option value="price">{{ 'marketplace.sortPrice' | t }}</option>
+        <option value="price_desc">{{ 'marketplace.sortPriceDesc' | t }}</option>
+        <option value="delivery">{{ 'marketplace.sortDelivery' | t }}</option>
+        <option value="name">{{ 'marketplace.sortName' | t }}</option>
+      </select>
+    </hn-field>
+  </div>
+
+  <button
+    hnButton
+    type="button"
+    size="sm"
+    variant="ghost"
+    class="mt-2 lg:hidden"
+    [attr.aria-expanded]="moreOpen()"
+    aria-controls="mp-more"
+    (click)="moreOpen.set(!moreOpen())"
+    data-testid="more-filters"
+  >
+    {{ (moreOpen() ? 'marketplace.filters.fewer' : 'marketplace.filters.more') | t }}
+    @if (chips().length > 0) {
+      <span class="rounded-full bg-slate-200 px-1.5 text-[10px]">{{ chips().length }}</span>
+    }
+  </button>
+
+  <div id="mp-more" class="mt-3 gap-3 sm:grid-cols-2 lg:grid lg:grid-cols-[1fr_1fr_1.4fr_1fr_1.4fr]" [class.grid]="moreOpen()" [class.hidden]="!moreOpen()">
+    <hn-field [label]="'common.quality' | t" for="mp-quality">
+      <hn-multi-select controlId="mp-quality" [label]="'common.quality' | t" [options]="qualityOptions()" [selected]="filters().qualities"
+        (selectedChange)="apply({ qualities: $event })" testId="filter-quality" />
+    </hn-field>
+    <hn-field [label]="'common.condition' | t" for="mp-condition">
+      <hn-multi-select controlId="mp-condition" [label]="'common.condition' | t" [options]="conditionOptions()" [selected]="filters().conditions"
+        (selectedChange)="apply({ conditions: $event })" testId="filter-condition" />
+    </hn-field>
+    <fieldset class="min-w-0">
+      <legend class="mb-1 block text-xs font-medium text-slate-700">{{ 'marketplace.filters.price' | t }}</legend>
+      <div class="flex items-center gap-1.5">
+        <label class="sr-only" for="mp-price-min">{{ 'marketplace.filters.priceMin' | t }}</label>
+        <input hnInput id="mp-price-min" inputmode="decimal" autocomplete="off" class="text-end" [placeholder]="pricePlaceholder().min"
+          [value]="priceMinText()" (input)="onPriceInput('min', $any($event.target).value)" (change)="applyPrice()"
+          [attr.aria-invalid]="priceMinInvalid() || priceInvalid()" aria-describedby="mp-price-hint" data-testid="filter-price-min" />
+        <span aria-hidden="true" class="text-slate-500">–</span>
+        <label class="sr-only" for="mp-price-max">{{ 'marketplace.filters.priceMax' | t }}</label>
+        <input hnInput id="mp-price-max" inputmode="decimal" autocomplete="off" class="text-end" [placeholder]="pricePlaceholder().max"
+          [value]="priceMaxText()" (input)="onPriceInput('max', $any($event.target).value)" (change)="applyPrice()"
+          [attr.aria-invalid]="priceMaxInvalid() || priceInvalid()" aria-describedby="mp-price-hint" data-testid="filter-price-max" />
+        <span class="text-slate-500" aria-hidden="true">€</span>
+      </div>
+      @if (priceMinInvalid() || priceMaxInvalid()) {
+        <p class="mt-1 text-xs text-red-700" id="mp-price-hint" role="alert">{{ 'marketplace.filters.priceInvalid' | t }}</p>
+      } @else if (priceInvalid()) {
+        <p class="mt-1 text-xs text-red-700" id="mp-price-hint" role="alert">{{ 'marketplace.filters.priceRange' | t }}</p>
+      } @else {
+        <p class="mt-1 text-xs text-slate-500" id="mp-price-hint">{{ 'marketplace.filters.priceHint' | t }}</p>
       }
-    </select>
-  </hn-field>
-  <hn-field [label]="'marketplace.brand' | t" for="mp-brand">
-    <input hnInput id="mp-brand" [value]="brand()" (change)="setFilter(() => brand.set($any($event.target).value.trim()))" placeholder="Apple, Samsung …" />
-  </hn-field>
-  <hn-field [label]="'marketplace.sort' | t" for="mp-sort">
-    <select hnSelect id="mp-sort" [value]="sort()" (change)="setFilter(() => sort.set($any($event.target).value))">
-      <option value="price">{{ 'marketplace.sortPrice' | t }}</option>
-      <option value="price_desc">{{ 'marketplace.sortPriceDesc' | t }}</option>
-      <option value="delivery">{{ 'marketplace.sortDelivery' | t }}</option>
-      <option value="name">{{ 'marketplace.sortName' | t }}</option>
-    </select>
-  </hn-field>
-  <div class="flex items-end gap-3 pb-1.5">
-    <label class="flex items-center gap-2 text-sm whitespace-nowrap">
-      <input type="checkbox" class="hn-checkbox" [checked]="inStockOnly()" (change)="setFilter(() => inStockOnly.set($any($event.target).checked))" />
-      {{ 'marketplace.inStockOnly' | t }}
-    </label>
-    <button hnButton variant="ghost" size="sm" type="button" (click)="resetFilters()">{{ 'common.reset' | t }}</button>
+    </fieldset>
+    <hn-field [label]="'marketplace.filters.maxDelivery' | t" for="mp-days">
+      <select hnSelect id="mp-days" [value]="filters().maxDeliveryDays ?? ''" (change)="setDelivery($any($event.target).value)" data-testid="filter-days">
+        <option value="">{{ 'marketplace.filters.anyDelivery' | t }}</option>
+        @for (d of deliveryChoices(); track d) {
+          <option [value]="d">{{ 'marketplace.filters.upToDays' | t: { days: d } }}</option>
+        }
+      </select>
+    </hn-field>
+    <hn-field [label]="'marketplace.filters.compatibleModel' | t" for="mp-model">
+      <input hnInput id="mp-model" type="search" autocomplete="off" maxlength="200" [placeholder]="'marketplace.filters.compatiblePlaceholder' | t"
+        [value]="modelText()" (input)="onModelInput($any($event.target).value)" (keydown.enter)="$event.preventDefault(); applyModel()"
+        data-testid="filter-model" />
+    </hn-field>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2 lg:col-span-5">
+      <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+        <input type="checkbox" class="hn-checkbox" [checked]="filters().inStockOnly" (change)="apply({ inStockOnly: $any($event.target).checked })" data-testid="filter-stock" />
+        {{ 'marketplace.inStockOnly' | t }}
+      </label>
+      <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+        <input type="checkbox" class="hn-checkbox" [checked]="filters().hasImages" (change)="apply({ hasImages: $any($event.target).checked })" data-testid="filter-images" />
+        {{ 'marketplace.filters.hasImages' | t }}
+        @if (facets.value(); as fc) {
+          <span class="text-xs text-slate-500 tabular-nums">({{ fc.withImages }})</span>
+        }
+      </label>
+    </div>
   </div>
 </form>
+
+<div class="mb-3 flex min-h-8 flex-wrap items-center gap-1.5" data-testid="filter-chips">
+  <p class="me-1 text-sm text-slate-600" aria-live="polite" data-testid="result-count">
+    {{ 'marketplace.filters.results' | t: { count: facets.value()?.total ?? results.value()?.totalCount ?? 0 } }}
+  </p>
+  @if (chips().length > 0) {
+    <ul class="flex flex-wrap items-center gap-1.5" [attr.aria-label]="'marketplace.filters.active' | t">
+      @for (c of chips(); track c.kind + ':' + c.value) {
+        <li class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white py-0.5 ps-2.5 pe-1 text-xs">
+          {{ chipLabel(c) }}
+          <button type="button" class="rounded-full px-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            (click)="removeChip(c)" [attr.aria-label]="'marketplace.filters.remove' | t: { filter: chipLabel(c) }" data-testid="chip-remove">✕</button>
+        </li>
+      }
+    </ul>
+    <button hnButton size="sm" variant="ghost" type="button" (click)="resetAll()" data-testid="filters-reset">{{ 'marketplace.filters.resetAll' | t }}</button>
+  }
+</div>
 
 @if (results.error()) {
   <hn-banner class="mb-3" [error]="results.error()" />
@@ -57,9 +149,10 @@
 
 <hn-table [loading]="results.loading()">
   <table class="hn-table" data-testid="marketplace-results">
-    <caption class="sr-only">{{ 'marketplace.title' | t }}</caption>
+    <caption class="sr-only">{{ 'marketplace.title' | t }} – {{ 'marketplace.rowHint' | t }}</caption>
     <thead>
       <tr>
+        <th scope="col" class="w-12"><span class="sr-only">{{ 'images.image' | t }}</span></th>
         <th scope="col">{{ 'common.product' | t }}</th>
         <th scope="col">{{ 'common.quality' | t }}</th>
         <th scope="col">{{ 'common.condition' | t }}</th>
@@ -75,11 +168,28 @@
     </thead>
     <tbody>
       @for (l of results.value()?.items ?? []; track l.offerId) {
-        <tr>
+        <tr
+          class="cursor-pointer focus-visible:bg-accent-50"
+          tabindex="0"
+          (click)="onRowClick($event, l)"
+          (keydown)="onRowKeydown($event, l)"
+          [attr.data-offer]="l.offerId"
+          data-testid="offer-row"
+        >
+          <td class="w-14 min-w-14 py-1">
+            @if (l.primaryThumbnailUrl) {
+              <img [src]="catalog.imageUrl(l.primaryThumbnailUrl)" alt="" class="size-10 max-w-none shrink-0 rounded border border-slate-200 bg-white object-contain" loading="lazy" width="40" height="40" data-testid="row-thumb" />
+            } @else {
+              <span class="block size-10 rounded border border-dashed border-slate-200 bg-slate-50" aria-hidden="true"></span>
+            }
+          </td>
           <td class="min-w-56">
-            <span class="font-medium">{{ l.brand }} {{ l.productName }}</span>
+            <button type="button" class="text-start font-medium hover:underline" (click)="openOffer(l)" data-testid="offer-open">
+              {{ l.brand }} {{ l.productName }}
+            </button>
             <span class="block text-xs text-slate-500">
               {{ l.category | tEnum: 'category' }}
+              @if (l.modelName) { · {{ l.modelName }} }
               @if (l.ean) { · EAN {{ l.ean }} }
               @if (l.mpn) { · MPN {{ l.mpn }} }
             </span>
@@ -93,7 +203,7 @@
           <td class="num" [class.text-red-700]="l.available < l.minOrderQuantity">{{ l.available }}</td>
           <td class="num">{{ 'marketplace.days' | t: { days: l.deliveryDays } }}</td>
           <td class="num">{{ l.minOrderQuantity }}</td>
-          <td class="whitespace-nowrap">
+          <td class="cursor-default whitespace-nowrap" data-row-ignore (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
             @if (isOwn(l)) {
               <span class="text-xs text-slate-500">{{ 'marketplace.ownOffer' | t }}</span>
             } @else if (canOrder(l)) {
@@ -142,8 +252,12 @@
       } @empty {
         @if (!results.loading()) {
           <tr>
-            <td colspan="9">
-              <hn-empty-state [title]="'marketplace.emptyTitle' | t" [text]="'marketplace.emptyText' | t" />
+            <td colspan="10">
+              <hn-empty-state [title]="'marketplace.emptyTitle' | t" [text]="'marketplace.emptyText' | t">
+                @if (chips().length > 0) {
+                  <button hnButton size="sm" type="button" (click)="resetAll()">{{ 'marketplace.filters.resetAll' | t }}</button>
+                }
+              </hn-empty-state>
             </td>
           </tr>
         }
@@ -151,11 +265,8 @@
     </tbody>
   </table>
   <div footer class="border-t border-slate-200 px-2">
-    <hn-pagination
-      [page]="page()"
-      [pageSize]="pageSize"
-      [totalCount]="results.value()?.totalCount ?? 0"
-      (pageChange)="page.set($event)"
-    />
+    <hn-pagination [page]="filters().page" [pageSize]="pageSize" [totalCount]="results.value()?.totalCount ?? 0" (pageChange)="setPage($event)" />
   </div>
 </hn-table>
+
+<hn-offer-detail-dialog [offerId]="offerId()" (closed)="closeOffer()" />

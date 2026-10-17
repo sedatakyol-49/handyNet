@@ -55,6 +55,26 @@ export function minorToInput(minor: number): string {
   return (minor / 100).toFixed(2).replace('.', ',');
 }
 
+/**
+ * Gross per unit at a VAT rate in basis points (orders use the standard 1900 = 19 %): VAT rounded half away from zero
+ * like the API's Money.ApplyRate, integer cents only.
+ */
+export function grossFromNetMinor(netMinor: number, vatBasisPoints = 1900): number {
+  const scaled = netMinor * vatBasisPoints;
+  const sign = scaled < 0 ? -1 : 1;
+  const abs = Math.abs(scaled);
+  const whole = Math.floor(abs / 10_000);
+  const vat = (abs - whole * 10_000) * 2 >= 10_000 ? whole + 1 : whole;
+  return netMinor + sign * vat;
+}
+
+/** Cents → API decimal string without float formatting, e.g. 1050 → "10.50" (query parameters). */
+export function minorToDecimalString(minor: number): string {
+  const sign = minor < 0 ? '-' : '';
+  const abs = Math.abs(Math.trunc(minor));
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+}
+
 @Pipe({ name: 'signedMoney' })
 export class SignedMoneyPipe implements PipeTransform {
   transform(minor: number | null | undefined, currency = 'EUR'): string {
