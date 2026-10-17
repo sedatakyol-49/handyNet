@@ -3,10 +3,11 @@ import {
   CreateSaleRequest,
   PosLookup,
   PosPaymentMethod,
+  PosProduct,
+  PriceSource,
   Receipt,
   ReceiptLine,
   SalePayment,
-  StockRow,
   TaxTreatment,
 } from '../../core/api/models';
 import { formatMoney, parseMoneyToMinor } from '../../core/format/money';
@@ -21,6 +22,7 @@ export const POS_LIMITS = {
   closingNoteLength: 500,
   registerNameLength: 100,
   idempotencyKeyLength: 100,
+  lineNoteLength: 200,
 } as const;
 
 // ---------------------------------------------------------------- amounts
@@ -67,6 +69,11 @@ export interface CartLine {
   /** Available quantity in the register's warehouse at lookup time (null when unknown). */
   available: number | null;
   taxTreatment: TaxTreatment | null;
+  /** The till's price when the line was added (null/missing = none known: the cashier types it freely). */
+  listPriceMinor?: number | null;
+  priceSource?: PriceSource;
+  /** Free text printed under the line on the receipt (max 200 characters). */
+  note?: string;
 }
 
 export type LineError = 'price' | 'discount' | 'discountTooHigh' | null;
@@ -184,9 +191,13 @@ export type AddResult =
 
 /**
  * Adds a lookup result to the cart. Products already in the cart get +1 (up to the available stock when known);
- * devices are unique. `lastPriceMinor` (last price used for this product in this browser session) prefills the price.
+ * devices are unique. The price is prefilled with the till price from the API (own POS price or offer price); without
+ * one, with `lastPriceMinor` (last price used for this product in this browser session).
  */
 export function addToCart(lines: readonly CartLine[], lookup: PosLookup, lastPriceMinor: number | null): AddResult {
+  const listPrice = lookup.priceMinor && lookup.priceMinor > 0 ? lookup.priceMinor : null;
+  const prefill = listPrice ?? lastPriceMinor;
+  const priced = { listPriceMinor: listPrice, priceSource: listPrice ? (lookup.priceSource ?? 'PosPrice') : ('None' as PriceSource) };
   if (lookup.kind === 'Unit') {
     const key = `u:${lookup.imei}`;
     if (lines.some((l) => l.key === key)) return { ok: false, error: 'duplicateUnit' };
@@ -198,12 +209,13 @@ export function addToCart(lines: readonly CartLine[], lookup: PosLookup, lastPri
       imei: lookup.imei,
       description: describe(lookup),
       quantity: 1,
-      priceInput: lastPriceMinor ? minorToPlain(lastPriceMinor) : '',
+      priceInput: prefill ? minorToPlain(prefill) : '',
       discountInput: '',
       available: 1,
       taxTreatment: lookup.taxTreatment,
+      ...priced,
     };
-    return { ok: true, lines: [...lines, line], key, needsPrice: !lastPriceMinor };
+    return { ok: true, lines: [...lines, line], key, needsPrice: !prefill };
   }
 
   // Serialized devices are sold by IMEI only: the EAN does not say which device leaves the shop.
@@ -230,12 +242,13 @@ export function addToCart(lines: readonly CartLine[], lookup: PosLookup, lastPri
     imei: null,
     description: describe(lookup),
     quantity: 1,
-    priceInput: lastPriceMinor ? minorToPlain(lastPriceMinor) : '',
+    priceInput: prefill ? minorToPlain(prefill) : '',
     discountInput: '',
     available,
     taxTreatment: lookup.taxTreatment,
+    ...priced,
   };
-  return { ok: true, lines: [...lines, line], key: line.key, needsPrice: !lastPriceMinor };
+  return { ok: true, lines: [...lines, line], key: line.key, needsPrice: !prefill };
 }
 
 /** Upper bound for the quantity of a line (devices: 1; products: available stock if known, API maximum). */
@@ -258,6 +271,17 @@ export function setQuantity(lines: readonly CartLine[], key: string, quantity: n
     if (l.key !== key || l.kind === 'Unit' || !Number.isInteger(quantity)) return l;
     return { ...l, quantity: Math.min(Math.max(quantity, 1), maxQuantity(l)) };
   });
+}
+
+/** Sets the note of a line (trimmed, at most 200 characters; empty removes it). */
+export function setLineNote(lines: readonly CartLine[], key: string, note: string): CartLine[] {
+  const text = note.trim().slice(0, POS_LIMITS.lineNoteLength);
+  return lines.map((l) => (l.key !== key ? l : text ? { ...l, note: text } : withoutNote(l)));
+}
+
+function withoutNote(l: CartLine): CartLine {
+  const { note: _removed, ...rest } = l;
+  return rest;
 }
 
 function describe(lookup: PosLookup): string {
@@ -346,17 +370,26 @@ export function cardRest(totalMinor: number, cashInput: string): number {
   return Math.max(totalMinor - cash, 0);
 }
 
-export function buildSaleRequest(registerId: string, lines: readonly CartLine[], payments: SalePayment[]): CreateSaleRequest {
-  return {
+/** Note and customer are only sent when present (the API's idempotency fingerprint ignores absent ones). */
+export function buildSaleRequest(
+  registerId: string,
+  lines: readonly CartLine[],
+  payments: SalePayment[],
+  customerId: string | null = null,
+): CreateSaleRequest {
+  const body: CreateSaleRequest = {
     registerId,
     lines: lines.map((l) => {
       const a = lineAmounts(l);
+      const note = l.note?.trim() ? { note: l.note.trim().slice(0, POS_LIMITS.lineNoteLength) } : {};
       return l.kind === 'Unit'
-        ? { imei: l.imei, productId: l.productId, quantity: 1, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null }
-        : { productId: l.productId, quantity: l.quantity, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null };
+        ? { imei: l.imei, productId: l.productId, quantity: 1, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null, ...note }
+        : { productId: l.productId, quantity: l.quantity, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null, ...note };
     }),
     payments,
   };
+  if (customerId) body.customerId = customerId;
+  return body;
 }
 
 // ---------------------------------------------------------------- idempotency
@@ -475,11 +508,52 @@ export function problemStatus(error: unknown): number {
   return error instanceof HttpErrorResponse ? error.status : -1;
 }
 
+/** POS codes added with the Odoo-parity API, translated under `pos.errors.*` (texts without data). */
+const POS_ERROR_KEYS: Record<string, string> = {
+  'pos.customer_not_found': 'pos.errors.customerNotFound',
+  'pos.customer_name': 'pos.errors.customerName',
+  'pos.customer_email': 'pos.errors.customerEmail',
+  'pos.customer_vat_id': 'pos.errors.customerVatId',
+  'pos.customer_country': 'pos.errors.customerCountry',
+  'pos.customer_field_length': 'pos.errors.customerFieldLength',
+  'pos.line_note': 'pos.errors.lineNote',
+  'pos.date_range': 'pos.errors.dateRange',
+  'pos.amount_range': 'pos.errors.amountRange',
+  'pos.reason': 'pos.errors.reason',
+  'pos.reason_code': 'pos.errors.reasonCode',
+  'pos.cash_amount_required': 'pos.errors.cashAmountRequired',
+  'pos.denomination_unknown': 'pos.errors.denominationInvalid',
+  'pos.denomination_duplicate': 'pos.errors.denominationInvalid',
+  'pos.denomination_count': 'pos.errors.denominationInvalid',
+  'pos.price': 'pos.errors.price',
+  'pos.product_not_found': 'pos.errors.productNotFound',
+  'permission.denied': 'pos.errors.permissionDenied',
+};
+
 /**
  * Translation key + params for POS problems whose text needs data from the problem body; other codes use the generic
  * `errors.codes.<code>` lookup.
  */
 export function posProblemMessage(code: string | null, error: unknown): { key: string; params: Record<string, string | number> } | null {
+  const line = problemDetail(error, 'lineNumber');
+  const lineNumber = typeof line === 'number' ? line : '?';
+  if (code === 'pos.price_override_forbidden') {
+    const expected = problemDetail(error, 'expectedUnitPriceMinor');
+    return { key: 'pos.errors.priceOverrideForbidden', params: { line: lineNumber, price: typeof expected === 'number' ? formatMoney(expected) : '–' } };
+  }
+  if (code === 'pos.discount_forbidden') return { key: 'pos.errors.discountForbidden', params: { line: lineNumber } };
+  if (code === 'pos.discount_limit_exceeded') {
+    const max = problemDetail(error, 'maxDiscountPercent');
+    return { key: 'pos.errors.discountLimitExceeded', params: { line: lineNumber, percent: typeof max === 'number' ? max : '?' } };
+  }
+  if (code === 'pos.denominations_mismatch') {
+    const total = problemDetail(error, 'denominationTotalMinor');
+    const amount = problemDetail(error, 'amountMinor');
+    if (typeof total === 'number' && typeof amount === 'number') {
+      return { key: 'pos.errors.denominationsMismatch', params: { total: formatMoney(total), amount: formatMoney(amount) } };
+    }
+  }
+  if (code && POS_ERROR_KEYS[code]) return { key: POS_ERROR_KEYS[code], params: {} };
   if (code === 'stock.insufficient') {
     const available = problemDetail(error, 'availableQuantity');
     if (typeof available === 'number') return { key: 'pos.errors.insufficientStock', params: { available } };
@@ -671,6 +745,13 @@ export function addPaymentLine(lines: readonly PaymentLine[], method: PosPayment
 
 export const MAX_OPEN_ORDERS = 20;
 
+/** Customer attached to a ticket (stored with parked tickets; the receipt prints the API's snapshot). */
+export interface OrderCustomer {
+  id: string;
+  name: string;
+  company: string | null;
+}
+
 export interface PosOrder {
   id: string;
   /** Display number per register ("Bestellung 3"). */
@@ -680,6 +761,8 @@ export interface PosOrder {
   payments: PaymentLine[];
   /** Checkout attempt whose outcome is unknown (network error / 5xx): retried with the same key. */
   pending: PendingAttempt | null;
+  /** Missing on tickets stored by older versions. */
+  customer?: OrderCustomer | null;
 }
 
 export interface OrdersState {
@@ -747,7 +830,8 @@ function isOrder(o: unknown): o is PosOrder {
     x.lines.every(isCartLine) &&
     Array.isArray(x.payments) &&
     x.payments.every((p) => !!p && typeof p.id === 'string' && (p.method === 'Cash' || p.method === 'Card') && typeof p.input === 'string') &&
-    (x.pending === null || (typeof x.pending === 'object' && typeof x.pending.key === 'string' && typeof x.pending.body === 'string'))
+    (x.pending === null || (typeof x.pending === 'object' && typeof x.pending.key === 'string' && typeof x.pending.body === 'string')) &&
+    (x.customer === undefined || x.customer === null || (typeof x.customer === 'object' && typeof x.customer.id === 'string' && typeof x.customer.name === 'string'))
   );
 }
 
@@ -762,7 +846,9 @@ function isCartLine(l: unknown): l is CartLine {
     Number.isInteger(x.quantity) &&
     x.quantity >= 1 &&
     typeof x.priceInput === 'string' &&
-    typeof x.discountInput === 'string'
+    typeof x.discountInput === 'string' &&
+    (x.note === undefined || typeof x.note === 'string') &&
+    (x.listPriceMinor === undefined || x.listPriceMinor === null || (Number.isInteger(x.listPriceMinor) && x.listPriceMinor > 0))
   );
 }
 
@@ -786,7 +872,7 @@ export class OrdersStorage {
     try {
       // Nothing worth keeping: a single empty ticket without an open checkout attempt.
       const only = state.orders.length === 1 ? state.orders[0] : null;
-      if (only && !only.lines.length && !only.payments.length && !only.pending) this.storage?.removeItem(this.key());
+      if (only && !only.lines.length && !only.payments.length && !only.pending && !only.customer) this.storage?.removeItem(this.key());
       else this.storage?.setItem(this.key(), JSON.stringify(state));
     } catch {
       /* storage unavailable or full */
@@ -798,49 +884,18 @@ export class OrdersStorage {
   }
 }
 
-// ---------------------------------------------------------------- product tiles (stock of the register's warehouse)
+// ---------------------------------------------------------------- product tiles (GET /api/pos/registers/{id}/products)
 
-export interface ProductTile {
-  productId: string;
-  brand: string;
-  name: string;
-  ean: string | null;
-  mpn: string | null;
-  available: number;
-  /** Catalog category once known (resolved lazily), null until then. */
-  category: string | null;
+/** Server-side search of the product grid: trimmed, at most 100 characters (API limit); codes are looked up instead. */
+export function gridSearch(text: string): string {
+  const s = text.trim();
+  return looksLikeCode(s) ? '' : s.slice(0, 100);
 }
 
-/** Tiles for the stocked products of the register's warehouse, sorted by brand and name. */
-export function productTiles(rows: readonly StockRow[], categories: Readonly<Record<string, string>>): ProductTile[] {
-  return rows
-    .map((r) => ({
-      productId: r.productId,
-      brand: r.brand,
-      name: r.productName,
-      ean: r.ean,
-      mpn: r.mpn,
-      available: r.available,
-      category: categories[r.productId] ?? null,
-    }))
-    .sort((a, b) => a.brand.localeCompare(b.brand, 'de') || a.name.localeCompare(b.name, 'de'));
-}
-
-/** Filters tiles by category and search text (brand, name, EAN, MPN; every word must match). */
-export function filterTiles(tiles: readonly ProductTile[], category: string | null, search: string): ProductTile[] {
-  const words = search.trim().toLocaleLowerCase('de').split(/\s+/).filter(Boolean);
-  return tiles.filter((t) => {
-    if (category && t.category !== category) return false;
-    if (!words.length) return true;
-    const hay = `${t.brand} ${t.name} ${t.ean ?? ''} ${t.mpn ?? ''}`.toLocaleLowerCase('de');
-    return words.every((w) => hay.includes(w));
-  });
-}
-
-/** Categories present among the tiles, in the catalog's order. */
-export function tileCategories(tiles: readonly ProductTile[], order: readonly string[]): string[] {
-  const present = new Set(tiles.map((t) => t.category).filter((c): c is string => !!c));
-  return order.filter((c) => present.has(c));
+/** Appends the next page of products, dropping duplicates (stock can shift rows between pages while scrolling). */
+export function mergeProductPages(current: readonly PosProduct[], next: readonly PosProduct[]): PosProduct[] {
+  const seen = new Set(current.map((p) => p.productId));
+  return [...current, ...next.filter((p) => !seen.has(p.productId))];
 }
 
 /** Two-letter monogram for tiles without an image. */
@@ -850,24 +905,26 @@ export function initials(brand: string, name: string): string {
 }
 
 /**
- * Lookup-like entry for a tile without an EAN (scannable products are looked up by code instead, which also tells
- * whether the product is stocked as IMEI devices).
+ * Lookup-like entry for a tapped product tile: the grid already carries availability, the IMEI requirement
+ * (`serialized`) and the till price, so no extra lookup is needed.
  */
-export function lookupFromTile(t: ProductTile): PosLookup {
+export function lookupFromProduct(p: PosProduct): PosLookup {
   return {
     kind: 'Product',
-    productId: t.productId,
-    brand: t.brand,
-    name: t.name,
-    ean: t.ean,
+    productId: p.productId,
+    brand: p.brand,
+    name: p.name,
+    ean: p.ean,
     imei: null,
     stockUnitId: null,
     taxTreatment: 'Standard19',
     warehouseId: null,
-    onHand: null,
-    reserved: null,
-    available: t.available,
-    requiresImei: false,
+    onHand: p.onHand,
+    reserved: p.reserved,
+    available: p.available,
+    requiresImei: p.serialized,
+    priceMinor: p.priceMinor,
+    priceSource: p.priceSource,
   };
 }
 

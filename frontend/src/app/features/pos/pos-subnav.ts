@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PosApi } from '../../core/api/handynet-api';
+import { SessionStore } from '../../core/auth/session.store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { createQuery } from '../../shared/data/query';
 import { PosContext } from './pos-context';
@@ -16,7 +17,7 @@ import { PosContext } from './pos-context';
   host: { class: 'hn-no-print mb-4 block' },
   template: `
     <nav class="flex flex-wrap items-center gap-1 border-b border-slate-200 text-sm" [attr.aria-label]="'pos.subnav.label' | t">
-      @for (tab of tabs; track tab.path) {
+      @for (tab of visibleTabs(); track tab.id) {
         <a [routerLink]="['/kasse', registerId(), ...tab.path]" routerLinkActive="border-accent-700 text-accent-800 font-semibold"
           [routerLinkActiveOptions]="{ exact: true }" #rla="routerLinkActive" [attr.aria-current]="rla.isActive ? 'page' : null"
           class="-mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-3 text-slate-700 hover:text-slate-900" [attr.data-testid]="'pos-tab-' + tab.id">
@@ -31,11 +32,15 @@ export class PosSubnavComponent {
   private readonly ctx = inject(PosContext);
 
   readonly registerId = input.required<string>();
-  protected readonly tabs = [
-    { id: 'till', path: [] as string[], label: 'pos.subnav.till' },
-    { id: 'receipts', path: ['belege'], label: 'pos.subnav.receipts' },
-    { id: 'sessions', path: ['sitzungen'], label: 'pos.subnav.sessions' },
+  private readonly store = inject(SessionStore);
+  private readonly tabs = [
+    { id: 'till', path: [] as string[], label: 'pos.subnav.till', manage: false },
+    { id: 'receipts', path: ['belege'], label: 'pos.subnav.receipts', manage: false },
+    { id: 'sessions', path: ['sitzungen'], label: 'pos.subnav.sessions', manage: false },
+    { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
   ];
+  /** Price maintenance only with `pos.manage`. */
+  protected readonly visibleTabs = computed(() => this.tabs.filter((t) => !t.manage || this.store.can('pos.manage')));
 
   private readonly register = createQuery(
     () => this.registerId(),

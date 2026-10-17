@@ -32,7 +32,6 @@ import {
   addPaymentLine,
   applyNumpad,
   cartTax,
-  filterTiles,
   initialOrders,
   initials,
   looksLikeCode,
@@ -42,16 +41,19 @@ import {
   parsePercentToBasisPoints,
   percentOf,
   pressNumpadKey,
-  productTiles,
   remainingFor,
   removeOrder,
   sanitizeNumpadText,
   settlePayments,
   standardVatFromGross,
-  tileCategories,
   updateOrder,
+  gridSearch,
+  lookupFromProduct,
+  mergeProductPages,
+  setLineNote,
 } from './pos.logic';
-import { StockRow } from '../../core/api/models';
+import { PosProduct } from '../../core/api/models';
+import { formatMoney } from '../../core/format/money';
 
 const product = (over: Partial<PosLookup> = {}): PosLookup => ({
   kind: 'Product',
@@ -591,37 +593,85 @@ describe('parked orders', () => {
   });
 });
 
-describe('product tiles', () => {
-  const row = (over: Partial<StockRow>): StockRow => ({
-    warehouseId: 'w1',
+describe('product tiles (POS products API)', () => {
+  const p = (over: Partial<PosProduct> = {}): PosProduct => ({
     productId: 'p1',
     brand: 'Apple',
-    productName: 'Ladekabel USB-C',
+    name: 'Ladekabel USB-C',
+    category: 'Accessory',
+    quality: 'Original',
     ean: '4000000000000',
     mpn: null,
+    imageUrl: null,
+    serialized: false,
     onHand: 5,
-    reserved: 0,
-    available: 5,
-    updatedAt: '2026-10-16T10:00:00Z',
+    reserved: 1,
+    available: 4,
+    priceMinor: 1999,
+    priceSource: 'PosPrice',
+    posPriceMinor: 1999,
     ...over,
   });
 
-  it('builds sorted tiles with known categories and filters them by category and words', () => {
-    const tiles = productTiles(
-      [
-        row({ productId: 'p2', brand: 'Samsung', productName: 'Galaxy S24 Display' }),
-        row({}),
-        row({ productId: 'p3', brand: 'Apple', productName: 'Akku iPhone 12', ean: null, mpn: 'A2479' }),
-      ],
-      { p1: 'Accessory', p2: 'Display' },
-    );
-    expect(tiles.map((x) => x.productId)).toEqual(['p3', 'p1', 'p2']);
-    expect(tiles.find((x) => x.productId === 'p3')!.category).toBeNull();
-    expect(filterTiles(tiles, 'Display', '').map((x) => x.productId)).toEqual(['p2']);
-    expect(filterTiles(tiles, null, 'usb kabel').map((x) => x.productId)).toEqual(['p1']);
-    expect(filterTiles(tiles, null, 'a2479').map((x) => x.productId)).toEqual(['p3']);
-    expect(filterTiles(tiles, null, '4000000000000').length).toBe(2);
-    expect(tileCategories(tiles, ['Smartphone', 'Display', 'Accessory'])).toEqual(['Display', 'Accessory']);
+  it('turns a tile into a lookup with stock, IMEI requirement and till price', () => {
+    const l = lookupFromProduct(p());
+    expect(l).toMatchObject({ kind: 'Product', productId: 'p1', available: 4, requiresImei: false, priceMinor: 1999, priceSource: 'PosPrice' });
+    expect(lookupFromProduct(p({ serialized: true })).requiresImei).toBe(true);
+  });
+
+  it('prefills the till price and marks it as list price; without one the last price is used', () => {
+    const r = addToCart([], lookupFromProduct(p()), 1500);
+    expect(r.ok && r.lines[0]).toMatchObject({ priceInput: '19,99', listPriceMinor: 1999, priceSource: 'PosPrice' });
+    expect(r.ok && r.needsPrice).toBe(false);
+    const free = addToCart([], lookupFromProduct(p({ priceMinor: null, priceSource: 'None' })), 1500);
+    expect(free.ok && free.lines[0]).toMatchObject({ priceInput: '15,00', listPriceMinor: null, priceSource: 'None' });
+    const none = addToCart([], lookupFromProduct(p({ priceMinor: null, priceSource: 'None' })), null);
+    expect(none.ok && none.needsPrice).toBe(true);
+    expect(addToCart([], lookupFromProduct(p({ serialized: true })), null)).toEqual({ ok: false, error: 'requiresImei' });
+  });
+
+  it('merges pages without duplicates and searches only text (codes are looked up)', () => {
+    expect(mergeProductPages([p()], [p(), p({ productId: 'p2' })]).map((x) => x.productId)).toEqual(['p1', 'p2']);
+    expect(gridSearch('  kabel ')).toBe('kabel');
+    expect(gridSearch('4006381333931')).toBe('');
+    expect(gridSearch('x'.repeat(150)).length).toBe(100);
+  });
+
+  it('sets, trims, limits and removes line notes; notes and customer go into the sale request only when present', () => {
+    let lines = setLineNote([line()], 'p1', '  Displayschutz aufgeklebt  ');
+    expect(lines[0].note).toBe('Displayschutz aufgeklebt');
+    expect(setLineNote([line()], 'p1', 'x'.repeat(250))[0].note!.length).toBe(200);
+    const body = buildSaleRequest('r1', lines, [{ method: 'Cash', amountMinor: 1000 }], 'c1');
+    expect(body.lines[0].note).toBe('Displayschutz aufgeklebt');
+    expect(body.customerId).toBe('c1');
+    lines = setLineNote(lines, 'p1', '   ');
+    expect('note' in lines[0]).toBe(false);
+    const plain = buildSaleRequest('r1', lines, [{ method: 'Cash', amountMinor: 1000 }]);
+    expect('note' in plain.lines[0]).toBe(false);
+    expect('customerId' in plain).toBe(false);
+  });
+
+  it('keeps the attached customer of parked tickets and tolerates tickets stored without one', () => {
+    const state = updateOrder(initialOrders('o1', '2026-10-17T10:00:00Z'), 'o1', { customer: { id: 'c1', name: 'Erika Muster', company: null } });
+    expect(parseOrdersState(JSON.parse(JSON.stringify(state)))!.orders[0].customer).toEqual({ id: 'c1', name: 'Erika Muster', company: null });
+    const legacy = { nextSeq: 2, activeId: 'o1', orders: [{ id: 'o1', seq: 1, createdAt: 'x', lines: [line()], payments: [], pending: null }] };
+    expect(parseOrdersState(legacy)!.orders).toHaveLength(1);
+    const broken = { ...legacy, orders: [{ ...legacy.orders[0], customer: { id: 5 } }] };
+    expect(parseOrdersState(broken)).toBeNull();
+  });
+
+  it('translates the cashier-rights problems with their data', () => {
+    const err = (body: object) => new HttpErrorResponse({ status: 403, error: body });
+    expect(posProblemMessage('pos.price_override_forbidden', err({ lineNumber: 2, expectedUnitPriceMinor: 1999 }))).toEqual({
+      key: 'pos.errors.priceOverrideForbidden',
+      params: { line: 2, price: formatMoney(1999) },
+    });
+    expect(posProblemMessage('pos.discount_limit_exceeded', err({ lineNumber: 1, maxDiscountPercent: 10 }))).toEqual({
+      key: 'pos.errors.discountLimitExceeded',
+      params: { line: 1, percent: 10 },
+    });
+    expect(posProblemMessage('pos.discount_forbidden', err({ lineNumber: 3 }))!.key).toBe('pos.errors.discountForbidden');
+    expect(posProblemMessage('pos.customer_not_found', err({}))!.key).toBe('pos.errors.customerNotFound');
   });
 
   it('derives monograms and recognizes scanner codes', () => {

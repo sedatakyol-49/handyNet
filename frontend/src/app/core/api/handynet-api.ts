@@ -5,14 +5,25 @@ import { API_BASE_URL } from './api-config';
 import { queryParams } from './http-params';
 import {
   CashMovement,
-  CashMovementKind,
+  CashMovementReason,
+  CashMovementRequest,
   CashSession,
   CreateSaleRequest,
+  DenominationCount,
+  PosCategoryCount,
+  PosCustomer,
+  PosCustomerInput,
   PosLookup,
+  PosPrice,
+  PosProduct,
   PosRegister,
+  PosRightsRequest,
   Receipt,
+  ReceiptReprint,
   ReceiptSummary,
   ReturnRequest,
+  SaleQuery,
+  SalesReport,
   AdminOrganization,
   AnkaufModel,
   CreateQuoteRequest,
@@ -121,6 +132,11 @@ export class OrganizationApi {
 
   addStaff(body: { email: string; displayName: string; password?: string | null; role: StaffRole }): Observable<{ userId: string }> {
     return this.http.post<{ userId: string }>(`${this.base}/api/organization/staff`, body);
+  }
+
+  /** Per-cashier POS rights of a staff member (`organization.manage`; 409 `staff.pos_rights_role` for owners/managers). */
+  setPosRights(userId: string, body: PosRightsRequest): Observable<StaffMember> {
+    return this.http.put<StaffMember>(`${this.base}/api/organization/staff/${userId}/pos-rights`, body);
   }
 }
 
@@ -640,8 +656,9 @@ export class PosApi {
   }
 
   // ---- cash sessions
-  openSession(registerId: string, openingCashMinor: number): Observable<CashSession> {
-    return this.http.post<CashSession>(`${this.url}/registers/${registerId}/sessions`, { openingCashMinor });
+  /** Opening cash as an amount or as denomination counts (the API stores their total). */
+  openSession(registerId: string, body: { openingCashMinor?: number | null; denominations?: DenominationCount[] | null }): Observable<CashSession> {
+    return this.http.post<CashSession>(`${this.url}/registers/${registerId}/sessions`, body);
   }
 
   /** Null (204) when the register has no open session. */
@@ -657,12 +674,66 @@ export class PosApi {
     return this.http.get<CashSession>(`${this.url}/sessions/${id}`);
   }
 
-  addMovement(sessionId: string, body: { kind: CashMovementKind; amountMinor: number; reason: string }): Observable<CashMovement> {
+  /** `pos.cash_movement`. */
+  addMovement(sessionId: string, body: CashMovementRequest): Observable<CashMovement> {
     return this.http.post<CashMovement>(`${this.url}/sessions/${sessionId}/cash-movements`, body);
   }
 
-  closeSession(sessionId: string, body: { countedCashMinor: number; note?: string | null }): Observable<CashSession> {
+  cashMovementReasons(): Observable<CashMovementReason[]> {
+    return this.http.get<CashMovementReason[]>(`${this.url}/cash-movement-reasons`);
+  }
+
+  /** `pos.close_session`. Counted cash as an amount or as denomination counts. */
+  closeSession(
+    sessionId: string,
+    body: { countedCashMinor?: number | null; note?: string | null; denominations?: DenominationCount[] | null },
+  ): Observable<CashSession> {
     return this.http.post<CashSession>(`${this.url}/sessions/${sessionId}/close`, body);
+  }
+
+  // ---- products, prices
+  /** Products of the register's warehouse with till prices (in stock unless `includeOutOfStock`). */
+  products(
+    registerId: string,
+    q: { search?: string | null; category?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number },
+  ): Observable<Paged<PosProduct>> {
+    return this.http.get<Paged<PosProduct>>(`${this.url}/registers/${registerId}/products`, { params: queryParams(q) });
+  }
+
+  productCategories(registerId: string): Observable<PosCategoryCount[]> {
+    return this.http.get<PosCategoryCount[]>(`${this.url}/registers/${registerId}/product-categories`);
+  }
+
+  price(productId: string, registerId?: string | null): Observable<PosPrice> {
+    return this.http.get<PosPrice>(`${this.url}/prices/${productId}`, { params: queryParams({ registerId }) });
+  }
+
+  /** `pos.manage`; null clears the own POS price (the till falls back to the offer price). */
+  setPrice(productId: string, priceMinor: number | null): Observable<PosPrice> {
+    return this.http.put<PosPrice>(`${this.url}/prices/${productId}`, { priceMinor });
+  }
+
+  // ---- customers
+  customers(q: { search?: string | null; page?: number; pageSize?: number }): Observable<Paged<PosCustomer>> {
+    return this.http.get<Paged<PosCustomer>>(`${this.url}/customers`, { params: queryParams(q) });
+  }
+
+  customer(id: string): Observable<PosCustomer> {
+    return this.http.get<PosCustomer>(`${this.url}/customers/${id}`);
+  }
+
+  createCustomer(body: PosCustomerInput): Observable<PosCustomer> {
+    return this.http.post<PosCustomer>(`${this.url}/customers`, body);
+  }
+
+  updateCustomer(id: string, body: PosCustomerInput): Observable<PosCustomer> {
+    return this.http.put<PosCustomer>(`${this.url}/customers/${id}`, body);
+  }
+
+  // ---- reports
+  /** A session (`pos.close_session` or `pos.manage`) or a date range (`pos.manage`, `to` exclusive, ≤ 366 days). */
+  salesReport(q: { sessionId?: string | null; registerId?: string | null; from?: string | null; to?: string | null }): Observable<SalesReport> {
+    return this.http.get<SalesReport>(`${this.url}/reports/sales`, { params: queryParams(q) });
   }
 
   // ---- sales
@@ -676,8 +747,14 @@ export class PosApi {
     return this.http.post<Receipt>(`${this.url}/sales`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
   }
 
-  receipts(q: { registerId?: string | null; sessionId?: string | null; page?: number; pageSize?: number }): Observable<Paged<ReceiptSummary>> {
+  /** Order history, newest first (filters combined with AND; `to` exclusive). */
+  receipts(q: SaleQuery): Observable<Paged<ReceiptSummary>> {
     return this.http.get<Paged<ReceiptSummary>>(`${this.url}/sales`, { params: queryParams(q) });
+  }
+
+  /** Records a copy of an issued receipt and returns its copy number (the receipt itself never changes). */
+  reprint(id: string): Observable<ReceiptReprint> {
+    return this.http.post<ReceiptReprint>(`${this.url}/sales/${id}/reprints`, {});
   }
 
   receipt(id: string): Observable<Receipt> {

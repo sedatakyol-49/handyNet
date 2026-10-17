@@ -819,7 +819,46 @@
     "since": "Mitglied seit",
     "empty": "Keine Mitarbeiter",
     "initialPassword": "Startpasswort",
-    "passwordHint": "Nur für neue Benutzerkonten erforderlich. Bestehende Konten werden ohne Passwort hinzugefügt."
+    "passwordHint": "Nur für neue Benutzerkonten erforderlich. Bestehende Konten werden ohne Passwort hinzugefügt.",
+    "posRights": {
+      "column": "Kassenrechte",
+      "all": "Alle Rechte (Rolle)",
+      "defaults": "Standard",
+      "none": "Keine",
+      "edit": "Kassenrechte",
+      "editFor": "Kassenrechte von {name} bearbeiten",
+      "title": "Kassenrechte: {name}",
+      "text": "Inhaber und Manager haben immer alle Kassenrechte. Für Mitarbeiter können Sie einzelne Rechte und ein Rabattlimit festlegen; Änderungen gelten ab der nächsten Aktion an der Kasse.",
+      "useDefaults": "Standardrechte verwenden (Rabatt, Rückgabe, Ein- und Auszahlung, Abschluss)",
+      "rights": "Rechte",
+      "maxDiscount": "Max. Rabatt (%)",
+      "maxDiscountHint": "Ganze Zahl von 0 bis 100; leer = unbegrenzt.",
+      "maxDiscountInvalid": "Bitte eine ganze Zahl von 0 bis 100 eingeben.",
+      "maxDiscountShort": "Rabatt bis {percent} %",
+      "saved": "Kassenrechte von {name} gespeichert.",
+      "roleError": "Inhaber und Manager haben immer alle Kassenrechte.",
+      "names": {
+        "priceOverride": "Preis ändern",
+        "discount": "Rabatt geben",
+        "refund": "Rückgabe und Erstattung",
+        "cashMovement": "Ein- und Auszahlungen",
+        "closeSession": "Kasse abschließen"
+      },
+      "short": {
+        "priceOverride": "Preis",
+        "discount": "Rabatt",
+        "refund": "Rückgabe",
+        "cashMovement": "Ein/Aus",
+        "closeSession": "Abschluss"
+      },
+      "help": {
+        "priceOverride": "Zu einem anderen als dem Kassenpreis verkaufen.",
+        "discount": "Positionsrabatte bis zum Limit unten geben.",
+        "refund": "Verkaufte Ware zurücknehmen und erstatten.",
+        "cashMovement": "Bargeld in die Kasse einlegen oder entnehmen.",
+        "closeSession": "Tagesabschluss und Sitzungsbericht."
+      }
+    }
   },
   "admin": {
     "title": "Administration",
@@ -1660,7 +1699,10 @@
         "dark": "Dunkel"
       },
       "backOffice": "Zum Back-Office",
-      "noSession": "Keine offene Sitzung"
+      "noSession": "Keine offene Sitzung",
+      "prices": "Preise",
+      "reports": "Berichte",
+      "sessionReport": "Sitzungsbericht"
     },
     "launch": {
       "title": "Kasse (Ladenverkauf)",
@@ -1722,14 +1764,19 @@
       "quickCash": "Bargeld",
       "validate": "Abschließen",
       "newOrderAfterSale": "Neue Bestellung",
-      "nextScanHint": "Der nächste Scan beginnt automatisch eine neue Bestellung."
+      "nextScanHint": "Der nächste Scan beginnt automatisch eine neue Bestellung.",
+      "showSoldOut": "Ausverkaufte",
+      "noPrice": "Preis an der Kasse",
+      "imeiOnly": "Nur per IMEI-Scan",
+      "loadMore": "Mehr laden ({shown} von {total})"
     },
     "subnav": {
       "label": "Kassenbereiche",
       "registers": "Alle Kassen",
       "till": "Verkauf",
       "receipts": "Belege",
-      "sessions": "Sitzungen"
+      "sessions": "Sitzungen",
+      "prices": "Preise"
     },
     "registers": {
       "title": "Kasse",
@@ -1836,7 +1883,27 @@
     "errors": {
       "insufficientStock": "Nicht genügend Bestand verfügbar (verfügbar: {available}). Reservierte Ware kann nicht verkauft werden.",
       "insufficientCash": "So viel Bargeld ist nicht in der Kasse (erwarteter Bestand: {amount}).",
-      "returnImeiInStock": "Dieses Gerät ist bereits wieder im Bestand (hier oder bei einem anderen Unternehmen). Bitte prüfen Sie die Herkunft."
+      "returnImeiInStock": "Dieses Gerät ist bereits wieder im Bestand (hier oder bei einem anderen Unternehmen). Bitte prüfen Sie die Herkunft.",
+      "priceOverrideForbidden": "Position {line}: Der Preis ist {price}. Eine Preisänderung erfordert das Recht „Preis ändern“.",
+      "discountForbidden": "Position {line}: Rabatte erfordern das Recht „Rabatt geben“.",
+      "discountLimitExceeded": "Position {line}: Sie dürfen höchstens {percent} % Rabatt geben.",
+      "denominationsMismatch": "Die Zählung ergibt {total}, nicht {amount}.",
+      "customerNotFound": "Kunde nicht gefunden.",
+      "customerName": "Bitte einen Kundennamen (max. 200 Zeichen) angeben.",
+      "customerEmail": "Die E-Mail-Adresse ist ungültig.",
+      "customerVatId": "Die USt-IdNr. ist ungültig (4–20 Buchstaben oder Ziffern).",
+      "customerCountry": "Das Land muss ein ISO-Code aus 2 Buchstaben sein.",
+      "customerFieldLength": "Ein Kundenfeld ist zu lang.",
+      "lineNote": "Die Notiz ist auf 200 Zeichen begrenzt.",
+      "dateRange": "Der Zeitraum ist ungültig.",
+      "amountRange": "Der Mindestbetrag darf den Höchstbetrag nicht übersteigen.",
+      "reason": "Bitte einen Grund angeben.",
+      "reasonCode": "Der Grund passt nicht zur Art der Bewegung.",
+      "cashAmountRequired": "Bitte einen Betrag eingeben oder nach Stückelung zählen.",
+      "denominationInvalid": "Die Zählung ist ungültig.",
+      "price": "Der Preis muss zwischen 0,01 € und 1.000.000 € liegen.",
+      "productNotFound": "Produkt nicht gefunden.",
+      "permissionDenied": "Dafür fehlt Ihnen das Recht."
     },
     "receipt": {
       "notSigned": "Nicht signiert",
@@ -1862,7 +1929,9 @@
       "tseEnd": "Ende",
       "tseSignature": "Signatur",
       "print": "Beleg drucken",
-      "cashier": "Kassierer/in"
+      "cashier": "Kassierer/in",
+      "copy": "Kopie {sequence}",
+      "customer": "Kunde"
     },
     "receipts": {
       "title": "Belege",
@@ -1871,7 +1940,29 @@
       "allSessions": "Alle Sitzungen",
       "kind": "Art",
       "open": "Öffnen",
-      "empty": "Keine Belege."
+      "empty": "Keine Belege.",
+      "filters": "Filter",
+      "from": "Von",
+      "to": "Bis",
+      "minTotal": "Betrag ab",
+      "maxTotal": "Betrag bis",
+      "any": "Alle",
+      "paymentMethod": "Zahlungsart",
+      "apply": "Filtern",
+      "reset": "Zurücksetzen",
+      "noMatch": "Keine Belege für diese Filter.",
+      "customerSelected": "Kunde gewählt",
+      "clearCustomer": "Kundenfilter entfernen",
+      "scopes": {
+        "session": "Aktuelle Sitzung",
+        "register": "Diese Kasse",
+        "all": "Alle Kassen"
+      },
+      "errors": {
+        "invalid": "Ungültig.",
+        "dateRange": "„Bis“ darf nicht vor „Von“ liegen.",
+        "amountRange": "„Betrag ab“ ist größer als „Betrag bis“."
+      }
     },
     "detail": {
       "title": "Beleg Nr. {number}",
@@ -1912,7 +2003,11 @@
       "stornoText": "Beleg Nr. {number} über {amount} vollständig stornieren? Es wird ein Storno-Beleg erstellt; die Ware geht zurück ins Lager und die Zahlungen werden gegengebucht.",
       "stornoConfirm": "Stornieren",
       "reasonRequired": "Bitte geben Sie einen Grund an.",
-      "stornoDone": "Storno-Beleg Nr. {number} erstellt."
+      "stornoDone": "Storno-Beleg Nr. {number} erstellt.",
+      "reprint": "Kopie drucken",
+      "reprints": "Kopien",
+      "lastReprint": "zuletzt {date}",
+      "reprinted": "Kopie {sequence} erfasst."
     },
     "session": {
       "title": "Kassensitzung {register}",
@@ -1939,7 +2034,11 @@
       "confirmTitle": "Kasse abschließen",
       "confirmText": "Bitte prüfen Sie die Zahlen. Der Abschluss kann nicht rückgängig gemacht werden.",
       "closeConfirm": "Abschließen",
-      "closed": "Kasse abgeschlossen."
+      "closed": "Kasse abgeschlossen.",
+      "reasonCode": "Grund",
+      "reasonFree": "Freitext",
+      "reasonOptional": "Optional – ersetzt den Standardtext.",
+      "reasonText": "Bemerkung"
     },
     "sessions": {
       "title": "Kassensitzungen",
@@ -1973,7 +2072,129 @@
       "difference": "Differenz",
       "print": "Z-Bericht drucken",
       "openedBy": "Geöffnet von {name}",
-      "closedBy": "Abgeschlossen von {name}"
+      "closedBy": "Abgeschlossen von {name}",
+      "openingCount": "Zählung bei Öffnung",
+      "closingCount": "Zählung bei Abschluss"
+    },
+    "cashCount": {
+      "label": "Zählung nach Stückelung",
+      "notes": "Scheine",
+      "coins": "Münzen",
+      "minus": "{value} weniger",
+      "plus": "{value} mehr",
+      "total": "Gezählt",
+      "modeLabel": "Erfassung",
+      "modeAmount": "Betrag",
+      "modeCount": "Zählen",
+      "denomination": "Stückelung",
+      "count": "Anzahl"
+    },
+    "customers": {
+      "title": "Kunden",
+      "button": "Kunde",
+      "choose": "Kunde wählen",
+      "changeFor": "Kunde {name} ändern",
+      "search": "Kunden suchen",
+      "searchPlaceholder": "Name, Firma, E-Mail, Telefon, USt-IdNr.",
+      "new": "Neuer Kunde",
+      "newTitle": "Neuer Kunde",
+      "editTitle": "Kunde bearbeiten",
+      "editFor": "{name} bearbeiten",
+      "empty": "Noch keine Kunden angelegt.",
+      "noMatch": "Kein Kunde gefunden.",
+      "detach": "Kunde entfernen",
+      "saveAndAttach": "Speichern und zuordnen",
+      "created": "Kunde {name} angelegt.",
+      "updated": "Kunde {name} gespeichert.",
+      "privacy": "Auf dem Beleg erscheinen nur Name, Firma, Anschrift und USt-IdNr. – keine E-Mail-Adresse und keine Telefonnummer.",
+      "fields": {
+        "name": "Name",
+        "company": "Firma",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "street": "Straße und Hausnummer",
+        "postalCode": "PLZ",
+        "city": "Ort",
+        "countryCode": "Land (ISO-Code, z. B. DE)",
+        "vatId": "USt-IdNr."
+      },
+      "errors": {
+        "required": "Pflichtfeld.",
+        "tooLong": "Zu lang.",
+        "invalid": "Ungültige Eingabe."
+      }
+    },
+    "note": {
+      "button": "Notiz",
+      "title": "Notiz zur Position",
+      "label": "Notiz",
+      "hint": "Wird auf dem Beleg unter der Position gedruckt (max. {max} Zeichen).",
+      "remove": "Notiz entfernen"
+    },
+    "price": {
+      "title": "Preis pflegen",
+      "edit": "Preis",
+      "editFor": "Preis für {name} bearbeiten",
+      "tillPrice": "Kassenpreis",
+      "source": "Herkunft",
+      "sources": {
+        "PosPrice": "Eigener Kassenpreis",
+        "Offer": "Eigenes Angebot (netto + 19 % USt)",
+        "None": "Kein Preis – Eingabe an der Kasse"
+      },
+      "offerNet": "Angebotspreis netto",
+      "updatedAt": "Zuletzt geändert",
+      "posPrice": "Kassenpreis (brutto)",
+      "hint": "Bruttopreis inkl. 19 % USt. Ohne eigenen Kassenpreis gilt der Preis des eigenen Angebots.",
+      "clear": "Kassenpreis entfernen",
+      "saved": "Preis gespeichert.",
+      "cleared": "Kassenpreis entfernt.",
+      "invalid": "Bitte einen Preis über 0,00 € eingeben.",
+      "fromOffer": "Preis aus Angebot",
+      "pageTitle": "Preise",
+      "pageText": "Kassenpreise der Produkte im Lager dieser Kasse. Ohne eigenen Kassenpreis gilt der Angebotspreis (netto + 19 % USt).",
+      "searchPlaceholder": "Produkt, EAN oder Herstellernummer",
+      "stock": "Verfügbar"
+    },
+    "reasons": {
+      "ChangeFund": "Wechselgeld",
+      "OwnerDeposit": "Privateinlage",
+      "OtherDeposit": "Sonstige Einlage",
+      "BankDeposit": "Bankeinzahlung",
+      "Expense": "Ausgabe",
+      "OwnerWithdrawal": "Privatentnahme",
+      "OtherWithdrawal": "Sonstige Entnahme"
+    },
+    "report": {
+      "title": "Verkaufsbericht",
+      "open": "Bericht",
+      "forSession": "Kassensitzung",
+      "forRange": "Zeitraum",
+      "print": "Bericht drucken",
+      "toSession": "Zur Sitzung",
+      "register": "Kasse",
+      "allRegisters": "Alle Kassen",
+      "show": "Anzeigen",
+      "byProduct": "Nach Produkt",
+      "byCashier": "Nach Kassierer",
+      "sold": "Verkauft",
+      "returned": "Zurück",
+      "discount": "Rabatt",
+      "sales": "Verkäufe",
+      "refunds": "Erstattungen",
+      "empty": "Keine Umsätze.",
+      "grossNote": "Alle Beträge brutto; Storno und Rückgaben sind negativ enthalten.",
+      "rangeInvalid": "Bitte einen gültigen Zeitraum von höchstens {days} Tagen wählen."
+    },
+    "rights": {
+      "priceLocked": "Preis {price} ist fest – eine Änderung erfordert das Recht „Preis ändern“.",
+      "priceLockedHint": "Eine Preisänderung erfordert das Recht „Preis ändern“.",
+      "discountForbidden": "Rabatte erfordern das Recht „Rabatt geben“.",
+      "discountLimit": "Höchstens {percent} % Rabatt erlaubt ({amount}).",
+      "maxDiscountHint": "Ihr Rabattlimit: {percent} %",
+      "closeForbidden": "Den Kassenabschluss darf nur ein Mitarbeiter mit dem Recht „Kasse abschließen“ durchführen.",
+      "reportForbidden": "Für diesen Bericht fehlt Ihnen das Recht.",
+      "manageOnly": "Nur für Inhaber und Manager (Kasse verwalten)."
     }
   },
   "invoiceKind": {

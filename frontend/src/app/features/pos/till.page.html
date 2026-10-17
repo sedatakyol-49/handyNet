@@ -11,16 +11,27 @@
       @if (!reg.isActive) {
         <hn-banner class="w-full max-w-md" tone="warning" [heading]="'pos.till.inactiveHeading' | t" [text]="'pos.till.inactiveText' | t" data-testid="pos-inactive" />
       } @else {
-        <section class="hn-card w-full max-w-md p-6 shadow-sm" aria-labelledby="pos-open-heading" data-testid="pos-open-session">
+        <section class="hn-card w-full p-6 shadow-sm" [class]="openingMode() === 'count' ? 'max-w-3xl' : 'max-w-md'" aria-labelledby="pos-open-heading" data-testid="pos-open-session">
           <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase">{{ reg.name }}</p>
           <h1 id="pos-open-heading" class="mt-1 text-xl">{{ 'pos.till.openTitle' | t }}</h1>
           <p class="mt-1 mb-4 text-sm text-slate-600">{{ 'pos.till.openText' | t }}</p>
+          <div class="mb-4 grid grid-cols-2 gap-1.5" role="group" [attr.aria-label]="'pos.cashCount.modeLabel' | t">
+            <button type="button" class="pos-mode" [attr.aria-pressed]="openingMode() === 'amount'" (click)="openingMode.set('amount')" data-testid="pos-opening-mode-amount">{{ 'pos.cashCount.modeAmount' | t }}</button>
+            <button type="button" class="pos-mode" [attr.aria-pressed]="openingMode() === 'count'" (click)="openingMode.set('count')" data-testid="pos-opening-mode-count">{{ 'pos.cashCount.modeCount' | t }}</button>
+          </div>
           <form (ngSubmit)="openSession()" novalidate>
-            <hn-field [label]="'pos.till.openingCash' | t" for="pos-opening" [required]="true" [errors]="openingError()">
-              <input hnInput id="pos-opening" name="opening" inputmode="decimal" autocomplete="off" class="h-14 text-end text-2xl tabular-nums"
-                placeholder="0,00" [(ngModel)]="openingCash" [attr.aria-invalid]="!!openingError()"
-                [attr.aria-describedby]="openingError() ? 'pos-opening-error' : null" data-testid="pos-opening" />
-            </hn-field>
+            @if (openingMode() === 'amount') {
+              <hn-field [label]="'pos.till.openingCash' | t" for="pos-opening" [required]="true" [errors]="openingError()">
+                <input hnInput id="pos-opening" name="opening" inputmode="decimal" autocomplete="off" class="h-14 text-end text-2xl tabular-nums"
+                  placeholder="0,00" [(ngModel)]="openingCash" [attr.aria-invalid]="!!openingError()"
+                  [attr.aria-describedby]="openingError() ? 'pos-opening-error' : null" data-testid="pos-opening" />
+              </hn-field>
+            } @else {
+              <hn-pos-cash-count [(counts)]="openingCounts" idPrefix="pos-open-count-" testId="pos-opening-count" />
+              @if (openingError()) {
+                <p class="mt-2 text-sm text-red-700" role="alert">{{ openingError() }}</p>
+              }
+            }
             <button hnButton variant="primary" type="submit" class="mt-4 min-h-14 w-full text-lg" [loading]="opening()" [disabled]="opening()" data-testid="pos-open">
               {{ 'pos.till.openButton' | t }}
             </button>
@@ -95,6 +106,14 @@
                       <span data-testid="pos-line-discount">({{ -a.discountMinor | money }})</span>
                     }
                   </span>
+                  @if (l.note) {
+                    <span class="mt-0.5 block text-sm italic text-slate-700" data-testid="pos-line-note">
+                      <span class="sr-only">{{ 'pos.note.label' | t }}: </span>{{ l.note }}
+                    </span>
+                  }
+                  @if (issues().get(l.key); as issue) {
+                    <span class="mt-0.5 block text-xs font-semibold text-red-700" data-testid="pos-line-issue">{{ issueText(issue) }}</span>
+                  }
                   @if (l.imei || l.taxTreatment === 'Margin25a' || (l.kind === 'Product' && l.available !== null)) {
                     <span class="mt-0.5 flex flex-wrap gap-x-2 text-xs text-slate-500">
                       @if (l.imei) {
@@ -105,6 +124,9 @@
                       }
                       @if (l.kind === 'Product' && l.available !== null) {
                         <span>{{ 'pos.till.available' | t: { count: l.available } }}</span>
+                      }
+                      @if (l.listPriceMinor && l.priceSource === 'Offer') {
+                        <span>{{ 'pos.price.fromOffer' | t }}</span>
                       }
                     </span>
                   }
@@ -141,13 +163,36 @@
 
       <!-- numpad -->
       <div class="shrink-0 space-y-1.5 border-t border-slate-200 bg-slate-50 p-2">
-        <div class="grid grid-cols-3 gap-1.5" role="group" [attr.aria-label]="'pos.numpad.mode' | t">
-          @for (m of ['quantity', 'discount', 'price']; track m) {
-            <button type="button" class="pos-mode" [attr.aria-pressed]="mode() === m" [disabled]="!selectedLine()" (click)="setMode($any(m))" [attr.data-testid]="'pos-mode-' + m">
-              {{ 'pos.numpad.modes.' + m | t }}
-            </button>
-          }
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" class="pos-quick flex min-w-0 items-center justify-center gap-2" (click)="customerOpen.set(true)"
+            [attr.aria-label]="customer() ? ('pos.customers.changeFor' | t: { name: customer()!.name }) : ('pos.customers.choose' | t)" data-testid="pos-customer">
+            <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
+            <span class="truncate" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
+          </button>
+          <button type="button" class="pos-quick flex items-center justify-center gap-2" [disabled]="!selectedLine()" (click)="openNote()" data-testid="pos-note">
+            <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M8 9h8M8 13h5" /></svg>
+            {{ 'pos.note.button' | t }}
+          </button>
         </div>
+        <div class="grid grid-cols-3 gap-1.5" role="group" [attr.aria-label]="'pos.numpad.mode' | t">
+          <button type="button" class="pos-mode" [attr.aria-pressed]="mode() === 'quantity'" [disabled]="!selectedLine()" (click)="setMode('quantity')" data-testid="pos-mode-quantity">
+            {{ 'pos.numpad.modes.quantity' | t }}
+          </button>
+          <button type="button" class="pos-mode" [attr.aria-pressed]="mode() === 'discount'" [disabled]="!selectedLine() || !canDiscount()" (click)="setMode('discount')"
+            [title]="canDiscount() ? ('pos.rights.maxDiscountHint' | t: { percent: rights().maxDiscountPercent }) : ('pos.rights.discountForbidden' | t)" data-testid="pos-mode-discount">
+            {{ 'pos.numpad.modes.discount' | t }}
+          </button>
+          <button type="button" class="pos-mode inline-flex items-center justify-center gap-1" [attr.aria-pressed]="mode() === 'price'" [disabled]="!selectedLine() || !priceEditable()" (click)="setMode('price')"
+            [title]="selectedLine() && !priceEditable() ? ('pos.rights.priceLockedHint' | t) : ''" data-testid="pos-mode-price">
+            @if (selectedLine() && !priceEditable()) {
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+            }
+            {{ 'pos.numpad.modes.price' | t }}
+          </button>
+        </div>
+        @if (mode() === 'discount' && canDiscount() && rights().maxDiscountPercent < 100) {
+          <p class="text-xs text-slate-600" data-testid="pos-discount-limit">{{ 'pos.rights.maxDiscountHint' | t: { percent: rights().maxDiscountPercent } }}</p>
+        }
         @if (selectedLine(); as sel) {
           <div class="flex items-center gap-2">
             <label for="pos-numpad-input" class="min-w-0 flex-1 truncate text-xs text-slate-600">{{ 'pos.numpad.for.' + mode() | t: { name: sel.description } }}</label>
@@ -188,7 +233,7 @@
       }
 
       @if (hasInventory() && register.value(); as reg) {
-        <hn-pos-product-grid class="min-h-0 flex-1" [warehouseId]="reg.warehouseId" [search]="code()" [lastPrice]="lastPrice" (pick)="pickTile($event)" />
+        <hn-pos-product-grid class="min-h-0 flex-1" [registerId]="reg.id" [search]="code()" [canManagePrices]="rights().manage" (pick)="pickProduct($event)" (editPrice)="editPrice($event)" />
       } @else {
         <p class="flex-1 px-6 py-10 text-center text-sm text-slate-500">{{ 'pos.till.cartEmpty' | t }}</p>
       }
@@ -226,6 +271,10 @@
           <span class="inline-block rtl:-scale-x-100" aria-hidden="true">←</span> {{ 'pos.sell.back' | t }}
         </button>
         <h2 id="pos-pay-heading" class="text-lg">{{ 'pos.till.payment' | t }}</h2>
+        <button type="button" class="pos-quick ms-2 hidden max-w-64 items-center gap-2 truncate sm:inline-flex" (click)="customerOpen.set(true)" data-testid="pos-pay-customer">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
+          <span class="truncate">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
+        </button>
         <p class="ms-auto text-sm text-slate-600">
           {{ 'pos.till.total' | t }} <span class="text-xl font-bold text-slate-900 tabular-nums" data-testid="pos-pay-total">{{ totals().totalMinor | money }}</span>
         </p>
@@ -325,6 +374,9 @@
                 <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
               </span>
               <h2 id="pos-done-heading" class="text-lg">{{ 'pos.till.saleDone' | t: { number: r.number } }}</h2>
+              @if (r.customer; as c) {
+                <p class="mt-1 text-sm text-slate-600" data-testid="pos-done-customer">{{ 'pos.receipt.customer' | t }}: {{ c.name }}</p>
+              }
               @if (r.changeMinor) {
                 <p class="mt-3 text-sm font-medium text-emerald-800">{{ 'pos.till.changeDue' | t }}</p>
                 <p class="text-5xl font-bold text-emerald-800 tabular-nums" data-testid="pos-change-due">{{ r.changeMinor | money }}</p>
@@ -346,6 +398,28 @@
     }
   }
 }
+
+<hn-dialog [title]="'pos.note.title' | t" [open]="noteOpen()" (closed)="closeNote()">
+  @if (selectedLine(); as sel) {
+    <form (submit)="$event.preventDefault(); saveNote()" novalidate>
+      <p class="mb-2 text-sm font-semibold">{{ sel.description }}</p>
+      <hn-field [label]="'pos.note.label' | t" for="pos-note-text" [hint]="'pos.note.hint' | t: { max: noteMax }">
+        <textarea hnInput id="pos-note-text" name="note" rows="3" [maxlength]="noteMax" [(ngModel)]="noteText" aria-describedby="pos-note-text-hint" data-testid="pos-note-text"></textarea>
+      </hn-field>
+      <p class="mt-1 text-end text-xs text-slate-500 tabular-nums" aria-live="polite">{{ noteText.length }} / {{ noteMax }}</p>
+      <div class="mt-3 flex flex-wrap justify-end gap-2">
+        @if (sel.note) {
+          <button hnButton variant="ghost" type="button" class="me-auto min-h-11" (click)="noteText = ''; saveNote()" data-testid="pos-note-remove">{{ 'pos.note.remove' | t }}</button>
+        }
+        <button hnButton type="button" class="min-h-11" (click)="closeNote()">{{ 'common.cancel' | t }}</button>
+        <button hnButton variant="primary" type="submit" class="min-h-11" data-testid="pos-note-save">{{ 'common.save' | t }}</button>
+      </div>
+    </form>
+  }
+</hn-dialog>
+
+<hn-pos-customer-dialog [open]="customerOpen()" [attachedId]="customer()?.id ?? null" (chosen)="attachCustomer($event)" (detach)="detachCustomer()" (closed)="closeCustomer()" />
+<hn-pos-price-dialog [product]="priceTarget()" [registerId]="registerId()" (closed)="closePrice()" (saved)="onPriceSaved($event)" />
 
 <hn-dialog [title]="'pos.till.discardTitle' | t" [open]="confirmDiscard()" (closed)="confirmDiscard.set(false); focusCode()">
   <p class="text-sm">{{ 'pos.till.discardText' | t: { count: lines().length } }}</p>

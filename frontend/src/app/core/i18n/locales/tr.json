@@ -819,7 +819,46 @@
     "since": "Üyelik başlangıcı",
     "empty": "Çalışan yok",
     "initialPassword": "Başlangıç şifresi",
-    "passwordHint": "Yalnızca yeni kullanıcı hesapları için gereklidir. Mevcut hesaplar şifresiz eklenir."
+    "passwordHint": "Yalnızca yeni kullanıcı hesapları için gereklidir. Mevcut hesaplar şifresiz eklenir.",
+    "posRights": {
+      "column": "Kasa yetkileri",
+      "all": "Tüm yetkiler (rol)",
+      "defaults": "varsayılan",
+      "none": "Yok",
+      "edit": "Kasa yetkileri",
+      "editFor": "{name} kasa yetkilerini düzenle",
+      "title": "Kasa yetkileri: {name}",
+      "text": "Sahipler ve yöneticiler her zaman tüm kasa yetkilerine sahiptir. Personel için tek tek yetkiler ve bir indirim sınırı belirleyebilirsiniz; değişiklikler kasadaki bir sonraki işlemden itibaren geçerlidir.",
+      "useDefaults": "Varsayılan yetkileri kullan (indirim, iade, para giriş/çıkışı, kapanış)",
+      "rights": "Yetkiler",
+      "maxDiscount": "Azami indirim (%)",
+      "maxDiscountHint": "0 ile 100 arasında tam sayı; boş = sınırsız.",
+      "maxDiscountInvalid": "0 ile 100 arasında bir tam sayı girin.",
+      "maxDiscountShort": "İndirim en fazla %{percent}",
+      "saved": "{name} kasa yetkileri kaydedildi.",
+      "roleError": "Sahipler ve yöneticiler her zaman tüm kasa yetkilerine sahiptir.",
+      "names": {
+        "priceOverride": "Fiyat değiştir",
+        "discount": "İndirim ver",
+        "refund": "İade ve geri ödeme",
+        "cashMovement": "Para giriş ve çıkışı",
+        "closeSession": "Kasayı kapat"
+      },
+      "short": {
+        "priceOverride": "Fiyat",
+        "discount": "İndirim",
+        "refund": "İade",
+        "cashMovement": "Giriş/Çıkış",
+        "closeSession": "Kapanış"
+      },
+      "help": {
+        "priceOverride": "Kasa fiyatından farklı bir fiyatla sat.",
+        "discount": "Aşağıdaki sınıra kadar satır indirimi ver.",
+        "refund": "Satılan ürünü geri al ve ödemeyi iade et.",
+        "cashMovement": "Kasaya nakit koy veya kasadan nakit al.",
+        "closeSession": "Gün sonu kapanışı ve oturum raporu."
+      }
+    }
   },
   "admin": {
     "title": "Yönetim",
@@ -1660,7 +1699,10 @@
         "dark": "Koyu"
       },
       "backOffice": "Arka ofise dön",
-      "noSession": "Açık oturum yok"
+      "noSession": "Açık oturum yok",
+      "prices": "Fiyatlar",
+      "reports": "Raporlar",
+      "sessionReport": "Oturum raporu"
     },
     "launch": {
       "title": "Kasa (mağaza satışı)",
@@ -1722,14 +1764,19 @@
       "quickCash": "Nakit",
       "validate": "Onayla",
       "newOrderAfterSale": "Yeni sipariş",
-      "nextScanHint": "Bir sonraki tarama otomatik olarak yeni bir sipariş başlatır."
+      "nextScanHint": "Bir sonraki tarama otomatik olarak yeni bir sipariş başlatır.",
+      "showSoldOut": "Tükenenler",
+      "noPrice": "Fiyat kasada",
+      "imeiOnly": "Yalnızca IMEI taraması",
+      "loadMore": "Daha fazla yükle ({shown} / {total})"
     },
     "subnav": {
       "label": "Kasa bölümleri",
       "registers": "Tüm kasalar",
       "till": "Satış",
       "receipts": "Fişler",
-      "sessions": "Oturumlar"
+      "sessions": "Oturumlar",
+      "prices": "Fiyatlar"
     },
     "registers": {
       "title": "Kasa",
@@ -1836,7 +1883,27 @@
     "errors": {
       "insufficientStock": "Yeterli stok yok (mevcut: {available}). Rezerve edilmiş ürünler satılamaz.",
       "insufficientCash": "Çekmecede bu kadar nakit yok (beklenen bakiye: {amount}).",
-      "returnImeiInStock": "Bu cihaz zaten tekrar stokta (burada veya başka bir şirkette). Lütfen kaynağını kontrol edin."
+      "returnImeiInStock": "Bu cihaz zaten tekrar stokta (burada veya başka bir şirkette). Lütfen kaynağını kontrol edin.",
+      "priceOverrideForbidden": "Satır {line}: fiyat {price}. Değiştirmek için “Fiyat değiştir” yetkisi gerekir.",
+      "discountForbidden": "Satır {line}: indirim için “İndirim ver” yetkisi gerekir.",
+      "discountLimitExceeded": "Satır {line}: en fazla %{percent} indirim verebilirsiniz.",
+      "denominationsMismatch": "Sayım toplamı {total}, {amount} değil.",
+      "customerNotFound": "Müşteri bulunamadı.",
+      "customerName": "Bir müşteri adı girin (en fazla 200 karakter).",
+      "customerEmail": "E-posta adresi geçersiz.",
+      "customerVatId": "KDV numarası geçersiz (4–20 harf veya rakam).",
+      "customerCountry": "Ülke 2 harfli bir ISO kodu olmalıdır.",
+      "customerFieldLength": "Bir müşteri alanı çok uzun.",
+      "lineNote": "Not en fazla 200 karakter olabilir.",
+      "dateRange": "Tarih aralığı geçersiz.",
+      "amountRange": "Asgari tutar azami tutarı aşamaz.",
+      "reason": "Bir gerekçe girin.",
+      "reasonCode": "Gerekçe hareket türüne uymuyor.",
+      "cashAmountRequired": "Bir tutar girin veya küpürleri sayın.",
+      "denominationInvalid": "Sayım geçersiz.",
+      "price": "Fiyat 0,01 € ile 1.000.000 € arasında olmalıdır.",
+      "productNotFound": "Ürün bulunamadı.",
+      "permissionDenied": "Bunun için yetkiniz yok."
     },
     "receipt": {
       "notSigned": "İmzalanmamış",
@@ -1862,7 +1929,9 @@
       "tseEnd": "Bitiş",
       "tseSignature": "İmza",
       "print": "Fişi yazdır",
-      "cashier": "Kasiyer"
+      "cashier": "Kasiyer",
+      "copy": "Kopya {sequence}",
+      "customer": "Müşteri"
     },
     "receipts": {
       "title": "Fişler",
@@ -1871,7 +1940,29 @@
       "allSessions": "Tüm oturumlar",
       "kind": "Tür",
       "open": "Aç",
-      "empty": "Fiş yok."
+      "empty": "Fiş yok.",
+      "filters": "Filtreler",
+      "from": "Başlangıç",
+      "to": "Bitiş",
+      "minTotal": "Tutar en az",
+      "maxTotal": "Tutar en çok",
+      "any": "Tümü",
+      "paymentMethod": "Ödeme yöntemi",
+      "apply": "Filtrele",
+      "reset": "Sıfırla",
+      "noMatch": "Bu filtrelerle fiş yok.",
+      "customerSelected": "Müşteri seçildi",
+      "clearCustomer": "Müşteri filtresini kaldır",
+      "scopes": {
+        "session": "Mevcut oturum",
+        "register": "Bu kasa",
+        "all": "Tüm kasalar"
+      },
+      "errors": {
+        "invalid": "Geçersiz.",
+        "dateRange": "“Bitiş”, “Başlangıç”tan önce olamaz.",
+        "amountRange": "“Tutar en az”, “Tutar en çok”tan büyük."
+      }
     },
     "detail": {
       "title": "Fiş no. {number}",
@@ -1912,7 +2003,11 @@
       "stornoText": "{amount} tutarındaki {number} numaralı fiş tamamen iptal edilsin mi? Bir iptal fişi oluşturulur; ürünler stoğa geri döner ve ödemeler ters kaydedilir.",
       "stornoConfirm": "İptal et",
       "reasonRequired": "Lütfen bir neden girin.",
-      "stornoDone": "{number} numaralı iptal fişi oluşturuldu."
+      "stornoDone": "{number} numaralı iptal fişi oluşturuldu.",
+      "reprint": "Kopya yazdır",
+      "reprints": "Kopyalar",
+      "lastReprint": "son {date}",
+      "reprinted": "Kopya {sequence} kaydedildi."
     },
     "session": {
       "title": "Kasa oturumu {register}",
@@ -1939,7 +2034,11 @@
       "confirmTitle": "Kasayı kapat",
       "confirmText": "Lütfen rakamları kontrol edin. Kapanış geri alınamaz.",
       "closeConfirm": "Kapat",
-      "closed": "Kasa kapatıldı."
+      "closed": "Kasa kapatıldı.",
+      "reasonCode": "Gerekçe",
+      "reasonFree": "Serbest metin",
+      "reasonOptional": "İsteğe bağlı – standart metnin yerine geçer.",
+      "reasonText": "Açıklama"
     },
     "sessions": {
       "title": "Kasa oturumları",
@@ -1973,7 +2072,129 @@
       "difference": "Fark",
       "print": "Z raporunu yazdır",
       "openedBy": "Açan: {name}",
-      "closedBy": "Kapatan: {name}"
+      "closedBy": "Kapatan: {name}",
+      "openingCount": "Açılış sayımı",
+      "closingCount": "Kapanış sayımı"
+    },
+    "cashCount": {
+      "label": "Küpür sayımı",
+      "notes": "Banknotlar",
+      "coins": "Madeni paralar",
+      "minus": "Bir {value} az",
+      "plus": "Bir {value} fazla",
+      "total": "Sayılan",
+      "modeLabel": "Giriş",
+      "modeAmount": "Tutar",
+      "modeCount": "Say",
+      "denomination": "Küpür",
+      "count": "Adet"
+    },
+    "customers": {
+      "title": "Müşteriler",
+      "button": "Müşteri",
+      "choose": "Müşteri seç",
+      "changeFor": "Müşteri {name} değiştir",
+      "search": "Müşteri ara",
+      "searchPlaceholder": "Ad, firma, e-posta, telefon, KDV no.",
+      "new": "Yeni müşteri",
+      "newTitle": "Yeni müşteri",
+      "editTitle": "Müşteriyi düzenle",
+      "editFor": "{name} düzenle",
+      "empty": "Henüz müşteri yok.",
+      "noMatch": "Müşteri bulunamadı.",
+      "detach": "Müşteriyi kaldır",
+      "saveAndAttach": "Kaydet ve ata",
+      "created": "Müşteri {name} oluşturuldu.",
+      "updated": "Müşteri {name} kaydedildi.",
+      "privacy": "Fişte yalnızca ad, firma, adres ve KDV numarası görünür – e-posta ve telefon görünmez.",
+      "fields": {
+        "name": "Ad",
+        "company": "Firma",
+        "email": "E-posta",
+        "phone": "Telefon",
+        "street": "Sokak ve numara",
+        "postalCode": "Posta kodu",
+        "city": "Şehir",
+        "countryCode": "Ülke (ISO kodu, ör. DE)",
+        "vatId": "KDV numarası"
+      },
+      "errors": {
+        "required": "Zorunlu alan.",
+        "tooLong": "Çok uzun.",
+        "invalid": "Geçersiz giriş."
+      }
+    },
+    "note": {
+      "button": "Not",
+      "title": "Satır notu",
+      "label": "Not",
+      "hint": "Fişte satırın altına yazdırılır (en fazla {max} karakter).",
+      "remove": "Notu kaldır"
+    },
+    "price": {
+      "title": "Fiyatı düzenle",
+      "edit": "Fiyat",
+      "editFor": "{name} fiyatını düzenle",
+      "tillPrice": "Kasa fiyatı",
+      "source": "Kaynak",
+      "sources": {
+        "PosPrice": "Kendi kasa fiyatı",
+        "Offer": "Kendi teklifi (net + %19 KDV)",
+        "None": "Fiyat yok – kasada girilir"
+      },
+      "offerNet": "Teklif fiyatı net",
+      "updatedAt": "Son değişiklik",
+      "posPrice": "Kasa fiyatı (brüt)",
+      "hint": "%19 KDV dahil brüt fiyat. Kendi kasa fiyatı yoksa kendi teklifinin fiyatı geçerlidir.",
+      "clear": "Kasa fiyatını kaldır",
+      "saved": "Fiyat kaydedildi.",
+      "cleared": "Kasa fiyatı kaldırıldı.",
+      "invalid": "0,00 € üzerinde bir fiyat girin.",
+      "fromOffer": "Fiyat tekliften",
+      "pageTitle": "Fiyatlar",
+      "pageText": "Bu kasanın deposundaki ürünlerin kasa fiyatları. Kendi kasa fiyatı yoksa teklif fiyatı (net + %19 KDV) geçerlidir.",
+      "searchPlaceholder": "Ürün, EAN veya üretici numarası",
+      "stock": "Mevcut"
+    },
+    "reasons": {
+      "ChangeFund": "Bozuk para",
+      "OwnerDeposit": "Sahibin yatırdığı",
+      "OtherDeposit": "Diğer giriş",
+      "BankDeposit": "Bankaya yatırma",
+      "Expense": "Gider",
+      "OwnerWithdrawal": "Sahibin çektiği",
+      "OtherWithdrawal": "Diğer çıkış"
+    },
+    "report": {
+      "title": "Satış raporu",
+      "open": "Rapor",
+      "forSession": "Kasa oturumu",
+      "forRange": "Tarih aralığı",
+      "print": "Raporu yazdır",
+      "toSession": "Oturuma git",
+      "register": "Kasa",
+      "allRegisters": "Tüm kasalar",
+      "show": "Göster",
+      "byProduct": "Ürüne göre",
+      "byCashier": "Kasiyere göre",
+      "sold": "Satılan",
+      "returned": "İade",
+      "discount": "İndirim",
+      "sales": "Satışlar",
+      "refunds": "İadeler",
+      "empty": "Satış yok.",
+      "grossNote": "Tüm tutarlar brüttür; iptal ve iadeler negatif olarak dahildir.",
+      "rangeInvalid": "En fazla {days} günlük geçerli bir aralık seçin."
+    },
+    "rights": {
+      "priceLocked": "{price} fiyatı sabit – değiştirmek için “Fiyat değiştir” yetkisi gerekir.",
+      "priceLockedHint": "Fiyat değişikliği için “Fiyat değiştir” yetkisi gerekir.",
+      "discountForbidden": "İndirim için “İndirim ver” yetkisi gerekir.",
+      "discountLimit": "En fazla %{percent} indirim ({amount}).",
+      "maxDiscountHint": "İndirim sınırınız: %{percent}",
+      "closeForbidden": "Oturumu yalnızca “Kasayı kapat” yetkisi olan personel kapatabilir.",
+      "reportForbidden": "Bu raporu görme yetkiniz yok.",
+      "manageOnly": "Yalnızca sahipler ve yöneticiler (kasa yönetimi)."
     }
   },
   "invoiceKind": {

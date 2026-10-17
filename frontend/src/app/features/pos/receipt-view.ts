@@ -15,6 +15,11 @@ import { UI } from '../../shared/ui';
     @let d = doc();
     <article class="hn-print-area hn-receipt mx-auto max-w-sm rounded-lg border border-slate-300 bg-white p-4 font-mono text-xs text-slate-900"
       [attr.aria-label]="d.title + ' ' + d.receiptNumber" data-testid="receipt">
+      @if (copy()) {
+        <p class="mb-2 border-2 border-slate-900 py-1 text-center text-sm font-bold tracking-widest uppercase" data-testid="receipt-copy">
+          {{ 'pos.receipt.copy' | t: { sequence: copy()! } }}
+        </p>
+      }
       @if (d.fiscal.status !== 'Signed') {
         <p class="mb-3 rounded border-2 border-amber-500 bg-amber-50 px-2 py-1.5 text-center text-sm font-bold text-amber-900" role="note" data-testid="receipt-fiscal-notice">
           {{ d.fiscal.notice || ('pos.receipt.notSigned' | t) }}
@@ -50,6 +55,25 @@ import { UI } from '../../shared/ui';
         <dd class="text-end">{{ d.issuedAt | hnDate }}</dd>
       </dl>
 
+      @if (d.customer; as c) {
+        <section class="mb-2 border-t border-dashed border-slate-400 pt-1" [attr.aria-label]="'pos.receipt.customer' | t" data-testid="receipt-customer">
+          <p class="font-semibold">{{ 'pos.receipt.customer' | t }}</p>
+          <p data-testid="receipt-customer-name">{{ c.name }}</p>
+          @if (c.company) {
+            <p>{{ c.company }}</p>
+          }
+          @if (c.street) {
+            <p>{{ c.street }}</p>
+          }
+          @if (c.postalCode || c.city) {
+            <p>{{ c.postalCode }} {{ c.city }}</p>
+          }
+          @if (c.vatId) {
+            <p>{{ 'pos.receipt.vatId' | t }}: {{ c.vatId }}</p>
+          }
+        </section>
+      }
+
       <table class="w-full border-y border-dashed border-slate-400" data-testid="receipt-lines">
         <caption class="sr-only">{{ 'pos.receipt.lines' | t }}</caption>
         <thead class="sr-only">
@@ -66,6 +90,9 @@ import { UI } from '../../shared/ui';
                 <span class="block">{{ l.quantity }} × {{ l.unitPriceMinor | money: d.currency }}</span>
                 @if (l.discountMinor) {
                   <span class="block">{{ 'pos.receipt.discount' | t }} {{ -l.discountMinor | money: d.currency }}</span>
+                }
+                @if (l.note) {
+                  <span class="block italic" data-testid="receipt-line-note">{{ l.note }}</span>
                 }
               </td>
               <td class="py-1 text-end whitespace-nowrap tabular-nums">{{ l.lineGrossMinor | money: d.currency }}</td>
@@ -142,6 +169,8 @@ export class ReceiptViewComponent {
   readonly doc = input.required<ReceiptDocument>();
   /** Who issued the receipt (not part of the stored document). */
   readonly cashier = input<string | null>(null);
+  /** Copy number of a recorded reprint ("Kopie n"); null for the original. */
+  readonly copy = input<number | null>(null);
   /** Notes printed below the totals; the fiscal notice is shown prominently at the top instead of repeated here. */
   protected readonly notes = computed(() => {
     const d = this.doc();

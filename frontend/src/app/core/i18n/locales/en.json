@@ -819,7 +819,46 @@
     "since": "Member since",
     "empty": "No team members",
     "initialPassword": "Initial password",
-    "passwordHint": "Only required for new user accounts. Existing accounts are added without a password."
+    "passwordHint": "Only required for new user accounts. Existing accounts are added without a password.",
+    "posRights": {
+      "column": "Till rights",
+      "all": "All rights (role)",
+      "defaults": "default",
+      "none": "None",
+      "edit": "Till rights",
+      "editFor": "Edit till rights of {name}",
+      "title": "Till rights: {name}",
+      "text": "Owners and managers always hold every till right. For staff you can choose single rights and a discount limit; changes apply from their next action at the till.",
+      "useDefaults": "Use default rights (discount, returns, cash in/out, closing)",
+      "rights": "Rights",
+      "maxDiscount": "Max. discount (%)",
+      "maxDiscountHint": "Whole number 0 to 100; empty = unlimited.",
+      "maxDiscountInvalid": "Enter a whole number from 0 to 100.",
+      "maxDiscountShort": "Discount up to {percent} %",
+      "saved": "Till rights of {name} saved.",
+      "roleError": "Owners and managers always hold every till right.",
+      "names": {
+        "priceOverride": "Change price",
+        "discount": "Give discount",
+        "refund": "Returns and refunds",
+        "cashMovement": "Cash in and out",
+        "closeSession": "Close register"
+      },
+      "short": {
+        "priceOverride": "Price",
+        "discount": "Discount",
+        "refund": "Returns",
+        "cashMovement": "Cash in/out",
+        "closeSession": "Closing"
+      },
+      "help": {
+        "priceOverride": "Sell at a price other than the till price.",
+        "discount": "Give line discounts up to the limit below.",
+        "refund": "Take back sold items and refund them.",
+        "cashMovement": "Put cash into or take cash out of the drawer.",
+        "closeSession": "End-of-day closing and session report."
+      }
+    }
   },
   "admin": {
     "title": "Administration",
@@ -1660,7 +1699,10 @@
         "dark": "Dark"
       },
       "backOffice": "Back to back office",
-      "noSession": "No open session"
+      "noSession": "No open session",
+      "prices": "Prices",
+      "reports": "Reports",
+      "sessionReport": "Session report"
     },
     "launch": {
       "title": "POS (in-store sales)",
@@ -1722,14 +1764,19 @@
       "quickCash": "Cash",
       "validate": "Validate",
       "newOrderAfterSale": "New order",
-      "nextScanHint": "The next scan starts a new order automatically."
+      "nextScanHint": "The next scan starts a new order automatically.",
+      "showSoldOut": "Sold out",
+      "noPrice": "Price at the till",
+      "imeiOnly": "IMEI scan only",
+      "loadMore": "Load more ({shown} of {total})"
     },
     "subnav": {
       "label": "Till sections",
       "registers": "All tills",
       "till": "Sale",
       "receipts": "Receipts",
-      "sessions": "Sessions"
+      "sessions": "Sessions",
+      "prices": "Prices"
     },
     "registers": {
       "title": "Till",
@@ -1836,7 +1883,27 @@
     "errors": {
       "insufficientStock": "Not enough stock available (available: {available}). Reserved goods cannot be sold.",
       "insufficientCash": "There is not that much cash in the drawer (expected balance: {amount}).",
-      "returnImeiInStock": "This device is already back in stock (here or at another company). Please check its origin."
+      "returnImeiInStock": "This device is already back in stock (here or at another company). Please check its origin.",
+      "priceOverrideForbidden": "Line {line}: the price is {price}. Changing it needs the right “Change price”.",
+      "discountForbidden": "Line {line}: discounts need the right “Give discount”.",
+      "discountLimitExceeded": "Line {line}: you may give at most {percent} % discount.",
+      "denominationsMismatch": "The count adds up to {total}, not {amount}.",
+      "customerNotFound": "Customer not found.",
+      "customerName": "Enter a customer name (max. 200 characters).",
+      "customerEmail": "The email address is invalid.",
+      "customerVatId": "The VAT ID is invalid (4–20 letters or digits).",
+      "customerCountry": "The country must be a 2-letter ISO code.",
+      "customerFieldLength": "A customer field is too long.",
+      "lineNote": "The note is limited to 200 characters.",
+      "dateRange": "The date range is invalid.",
+      "amountRange": "The minimum amount must not exceed the maximum amount.",
+      "reason": "Enter a reason.",
+      "reasonCode": "The reason does not fit the kind of movement.",
+      "cashAmountRequired": "Enter an amount or count by denomination.",
+      "denominationInvalid": "The count is invalid.",
+      "price": "The price must be between €0.01 and €1,000,000.",
+      "productNotFound": "Product not found.",
+      "permissionDenied": "You do not have the right to do this."
     },
     "receipt": {
       "notSigned": "Not signed",
@@ -1862,7 +1929,9 @@
       "tseEnd": "End",
       "tseSignature": "Signature",
       "print": "Print receipt",
-      "cashier": "Cashier"
+      "cashier": "Cashier",
+      "copy": "Copy {sequence}",
+      "customer": "Customer"
     },
     "receipts": {
       "title": "Receipts",
@@ -1871,7 +1940,29 @@
       "allSessions": "All sessions",
       "kind": "Type",
       "open": "Open",
-      "empty": "No receipts."
+      "empty": "No receipts.",
+      "filters": "Filters",
+      "from": "From",
+      "to": "To",
+      "minTotal": "Amount from",
+      "maxTotal": "Amount to",
+      "any": "All",
+      "paymentMethod": "Payment method",
+      "apply": "Filter",
+      "reset": "Reset",
+      "noMatch": "No receipts for these filters.",
+      "customerSelected": "Customer selected",
+      "clearCustomer": "Remove customer filter",
+      "scopes": {
+        "session": "Current session",
+        "register": "This register",
+        "all": "All registers"
+      },
+      "errors": {
+        "invalid": "Invalid.",
+        "dateRange": "“To” must not be before “From”.",
+        "amountRange": "“Amount from” is greater than “Amount to”."
+      }
     },
     "detail": {
       "title": "Receipt no. {number}",
@@ -1912,7 +2003,11 @@
       "stornoText": "Fully cancel receipt no. {number} for {amount}? A cancellation receipt is created; the goods go back into stock and the payments are reversed.",
       "stornoConfirm": "Cancel receipt",
       "reasonRequired": "Please enter a reason.",
-      "stornoDone": "Cancellation receipt no. {number} created."
+      "stornoDone": "Cancellation receipt no. {number} created.",
+      "reprint": "Print copy",
+      "reprints": "Copies",
+      "lastReprint": "last {date}",
+      "reprinted": "Copy {sequence} recorded."
     },
     "session": {
       "title": "Cash session {register}",
@@ -1939,7 +2034,11 @@
       "confirmTitle": "Close till",
       "confirmText": "Please check the figures. Closing cannot be undone.",
       "closeConfirm": "Close",
-      "closed": "Till closed."
+      "closed": "Till closed.",
+      "reasonCode": "Reason",
+      "reasonFree": "Free text",
+      "reasonOptional": "Optional – replaces the standard text.",
+      "reasonText": "Remark"
     },
     "sessions": {
       "title": "Cash sessions",
@@ -1973,7 +2072,129 @@
       "difference": "Difference",
       "print": "Print Z report",
       "openedBy": "Opened by {name}",
-      "closedBy": "Closed by {name}"
+      "closedBy": "Closed by {name}",
+      "openingCount": "Count at opening",
+      "closingCount": "Count at closing"
+    },
+    "cashCount": {
+      "label": "Count by denomination",
+      "notes": "Notes",
+      "coins": "Coins",
+      "minus": "One {value} less",
+      "plus": "One {value} more",
+      "total": "Counted",
+      "modeLabel": "Entry",
+      "modeAmount": "Amount",
+      "modeCount": "Count",
+      "denomination": "Denomination",
+      "count": "Quantity"
+    },
+    "customers": {
+      "title": "Customers",
+      "button": "Customer",
+      "choose": "Choose customer",
+      "changeFor": "Change customer {name}",
+      "search": "Search customers",
+      "searchPlaceholder": "Name, company, email, phone, VAT ID",
+      "new": "New customer",
+      "newTitle": "New customer",
+      "editTitle": "Edit customer",
+      "editFor": "Edit {name}",
+      "empty": "No customers yet.",
+      "noMatch": "No customer found.",
+      "detach": "Remove customer",
+      "saveAndAttach": "Save and assign",
+      "created": "Customer {name} created.",
+      "updated": "Customer {name} saved.",
+      "privacy": "The receipt shows only name, company, address and VAT ID – never the email address or phone number.",
+      "fields": {
+        "name": "Name",
+        "company": "Company",
+        "email": "Email",
+        "phone": "Phone",
+        "street": "Street and number",
+        "postalCode": "Postal code",
+        "city": "City",
+        "countryCode": "Country (ISO code, e.g. DE)",
+        "vatId": "VAT ID"
+      },
+      "errors": {
+        "required": "Required.",
+        "tooLong": "Too long.",
+        "invalid": "Invalid input."
+      }
+    },
+    "note": {
+      "button": "Note",
+      "title": "Line note",
+      "label": "Note",
+      "hint": "Printed under the line on the receipt (max. {max} characters).",
+      "remove": "Remove note"
+    },
+    "price": {
+      "title": "Maintain price",
+      "edit": "Price",
+      "editFor": "Edit price of {name}",
+      "tillPrice": "Till price",
+      "source": "Source",
+      "sources": {
+        "PosPrice": "Own till price",
+        "Offer": "Own offer (net + 19 % VAT)",
+        "None": "No price – entered at the till"
+      },
+      "offerNet": "Offer price net",
+      "updatedAt": "Last changed",
+      "posPrice": "Till price (gross)",
+      "hint": "Gross price incl. 19 % VAT. Without an own till price the price of the own offer applies.",
+      "clear": "Remove till price",
+      "saved": "Price saved.",
+      "cleared": "Till price removed.",
+      "invalid": "Enter a price above €0.00.",
+      "fromOffer": "Price from offer",
+      "pageTitle": "Prices",
+      "pageText": "Till prices of the products in this register's warehouse. Without an own till price the offer price (net + 19 % VAT) applies.",
+      "searchPlaceholder": "Product, EAN or manufacturer number",
+      "stock": "Available"
+    },
+    "reasons": {
+      "ChangeFund": "Change fund",
+      "OwnerDeposit": "Owner deposit",
+      "OtherDeposit": "Other deposit",
+      "BankDeposit": "Bank deposit",
+      "Expense": "Expense",
+      "OwnerWithdrawal": "Owner withdrawal",
+      "OtherWithdrawal": "Other withdrawal"
+    },
+    "report": {
+      "title": "Sales report",
+      "open": "Report",
+      "forSession": "Cash session",
+      "forRange": "Date range",
+      "print": "Print report",
+      "toSession": "To the session",
+      "register": "Register",
+      "allRegisters": "All registers",
+      "show": "Show",
+      "byProduct": "By product",
+      "byCashier": "By cashier",
+      "sold": "Sold",
+      "returned": "Returned",
+      "discount": "Discount",
+      "sales": "Sales",
+      "refunds": "Refunds",
+      "empty": "No sales.",
+      "grossNote": "All amounts gross; cancellations and returns are included as negative amounts.",
+      "rangeInvalid": "Choose a valid range of at most {days} days."
+    },
+    "rights": {
+      "priceLocked": "Price {price} is fixed – changing it needs the right “Change price”.",
+      "priceLockedHint": "Changing the price needs the right “Change price”.",
+      "discountForbidden": "Discounts need the right “Give discount”.",
+      "discountLimit": "At most {percent} % discount allowed ({amount}).",
+      "maxDiscountHint": "Your discount limit: {percent} %",
+      "closeForbidden": "Only staff with the right “Close register” may close the session.",
+      "reportForbidden": "You do not have the right to see this report.",
+      "manageOnly": "Owners and managers only (manage registers)."
     }
   },
   "invoiceKind": {

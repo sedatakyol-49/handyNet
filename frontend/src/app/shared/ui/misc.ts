@@ -154,10 +154,13 @@ export class DialogComponent {
   readonly open = input(false);
   /** md = 32rem (forms), lg = 48rem, xl = 72rem (wizard, product detail). */
   readonly size = input<'md' | 'lg' | 'xl'>('md');
+  /** Wider dialog (lists with forms, e.g. the POS customer picker): 56rem unless a size is given. */
+  readonly wide = input(false);
   readonly testId = input<string | null>(null);
   readonly closed = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   protected readonly widthClass = computed(() => {
+    if (this.wide() && this.size() === 'md') return 'w-[min(56rem,calc(100vw-2rem))]';
     switch (this.size()) {
       case 'lg':
         return 'w-[min(48rem,calc(100vw-2rem))]';

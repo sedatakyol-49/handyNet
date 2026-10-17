@@ -20,7 +20,22 @@ export type Permission =
   | 'orders.place'
   | 'orders.fulfil'
   | 'pos.sell'
-  | 'pos.manage';
+  | 'pos.manage'
+  | 'pos.price_override'
+  | 'pos.discount'
+  | 'pos.refund'
+  | 'pos.cash_movement'
+  | 'pos.close_session';
+
+/** POS rights an owner can grant or withhold per staff member (owners and managers always hold all of them). */
+export type PosConfigurablePermission = 'pos.price_override' | 'pos.discount' | 'pos.refund' | 'pos.cash_movement' | 'pos.close_session';
+export const POS_CONFIGURABLE_PERMISSIONS: PosConfigurablePermission[] = [
+  'pos.price_override',
+  'pos.discount',
+  'pos.refund',
+  'pos.cash_movement',
+  'pos.close_session',
+];
 
 export type OrganizationStatus = 'PendingVerification' | 'Verified' | 'Rejected' | 'Suspended';
 
@@ -50,6 +65,8 @@ export interface Membership {
   isWholesaler: boolean;
   isRetailer: boolean;
   isRepairProvider: boolean;
+  /** Largest POS line discount in percent (100 for owners/managers; missing on older API versions). */
+  maxDiscountPercent?: number;
 }
 
 export interface Me {
@@ -89,6 +106,18 @@ export interface StaffMember {
   displayName: string;
   role: string;
   createdAt: string;
+  /** Staff only: own POS rights replacing the defaults; null = role defaults. */
+  posPermissions?: string[] | null;
+  /** Staff only: own discount limit; null = 100 %. */
+  posMaxDiscountPercent?: number | null;
+  effectivePermissions?: string[];
+  maxDiscountPercent?: number;
+}
+
+/** `PUT /api/organization/staff/{userId}/pos-rights` — null values return to the role defaults. */
+export interface PosRightsRequest {
+  permissions: string[] | null;
+  maxDiscountPercent: number | null;
 }
 
 export type StaffRole = 'Manager' | 'Staff';
@@ -923,6 +952,28 @@ export interface CashMovement {
   createdAt: string;
   createdBy: string;
   createdByName: string | null;
+  reasonCode?: string | null;
+}
+
+/** `GET /api/pos/cash-movement-reasons`; `Other` needs a free text. */
+export interface CashMovementReason {
+  code: string;
+  kind: CashMovementKind;
+  label: string;
+  requiresText: boolean;
+}
+
+export interface CashMovementRequest {
+  kind: CashMovementKind;
+  amountMinor: number;
+  reason: string | null;
+  reasonCode?: string | null;
+}
+
+/** Counted coins/notes of one euro denomination (cents). */
+export interface DenominationCount {
+  valueMinor: number;
+  count: number;
 }
 
 export interface PaymentTotal {
@@ -976,6 +1027,147 @@ export interface CashSession {
   closingNote: string | null;
   summary: SessionSummary;
   movements: CashMovement[];
+  /** Opening/closing cash counted by denomination (null when entered as a plain amount). */
+  openingDenominations?: DenominationCount[] | null;
+  closingDenominations?: DenominationCount[] | null;
+}
+
+/** Where the till's price comes from: own POS price, own marketplace offer (net + 19 %), or none (cashier types it). */
+export type PriceSource = 'PosPrice' | 'Offer' | 'None';
+
+/** `GET /api/pos/registers/{id}/products` — prices are gross cents. */
+export interface PosProduct {
+  productId: string;
+  brand: string;
+  name: string;
+  category: string;
+  quality: string;
+  ean: string | null;
+  mpn: string | null;
+  imageUrl: string | null;
+  /** Sold by IMEI: scan the device instead of picking the product. */
+  serialized: boolean;
+  onHand: number;
+  reserved: number;
+  available: number;
+  priceMinor: number | null;
+  priceSource: PriceSource;
+  posPriceMinor: number | null;
+}
+
+export interface PosCategoryCount {
+  category: string;
+  productCount: number;
+}
+
+/** `GET/PUT /api/pos/prices/{productId}`. */
+export interface PosPrice {
+  productId: string;
+  posPriceMinor: number | null;
+  offerNetPriceMinor: number | null;
+  priceMinor: number | null;
+  priceSource: PriceSource;
+  updatedAt: string | null;
+}
+
+export interface PosCustomerInput {
+  name: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  street?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  countryCode?: string | null;
+  vatId?: string | null;
+}
+
+export interface PosCustomer extends PosCustomerInput {
+  id: string;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  countryCode: string | null;
+  vatId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The customer as printed on the receipt (snapshot; no email/phone). */
+export interface ReceiptCustomer {
+  id: string;
+  name: string;
+  company: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  countryCode: string | null;
+  vatId: string | null;
+}
+
+/** `GET /api/pos/sales` filters (all optional; `to` is exclusive). */
+export interface SaleQuery {
+  registerId?: string | null;
+  sessionId?: string | null;
+  number?: number | null;
+  from?: string | null;
+  to?: string | null;
+  minTotalMinor?: number | null;
+  maxTotalMinor?: number | null;
+  cashierId?: string | null;
+  customerId?: string | null;
+  paymentMethod?: PosPaymentMethod | null;
+  kind?: ReceiptKind | null;
+  page?: number;
+  pageSize?: number;
+}
+
+/** `POST /api/pos/sales/{id}/reprints`: the copy number to print ("Kopie n") and the unchanged receipt. */
+export interface ReceiptReprint {
+  sequence: number;
+  printedAt: string;
+  printedBy: string;
+  receipt: Receipt;
+}
+
+export interface ProductSales {
+  productId: string;
+  description: string;
+  soldQuantity: number;
+  returnedQuantity: number;
+  netQuantity: number;
+  grossMinor: number;
+  discountMinor: number;
+}
+
+export interface CashierSales {
+  userId: string;
+  name: string | null;
+  saleCount: number;
+  refundCount: number;
+  grossMinor: number;
+}
+
+export interface PaymentMethodSales {
+  method: PosPaymentMethod;
+  receiptCount: number;
+  amountMinor: number;
+}
+
+/** `GET /api/pos/reports/sales` — gross figures, signed (returns/Storno negative). */
+export interface SalesReport {
+  sessionId: string | null;
+  registerId: string | null;
+  from: string | null;
+  to: string | null;
+  receiptCount: number;
+  totalGrossMinor: number;
+  byProduct: ProductSales[];
+  byCashier: CashierSales[];
+  byPaymentMethod: PaymentMethodSales[];
 }
 
 export interface PosLookup {
@@ -993,6 +1185,9 @@ export interface PosLookup {
   available: number | null;
   /** Stocked as serialized devices in the register's warehouse: scan the IMEI instead of the EAN. */
   requiresImei: boolean;
+  /** Till price (gross cents) and its source; missing on older API versions. */
+  priceMinor?: number | null;
+  priceSource?: PriceSource;
 }
 
 export interface SaleLineRequest {
@@ -1001,6 +1196,8 @@ export interface SaleLineRequest {
   quantity: number;
   unitPriceMinor: number;
   discountMinor?: number | null;
+  /** Printed under the line (max 200 characters). */
+  note?: string | null;
 }
 
 export interface SalePayment {
@@ -1012,6 +1209,7 @@ export interface CreateSaleRequest {
   registerId: string;
   lines: SaleLineRequest[];
   payments: SalePayment[];
+  customerId?: string | null;
 }
 
 export interface ReturnRequest {
@@ -1038,6 +1236,7 @@ export interface ReceiptLine {
   vatMinor: number | null;
   originalLineNumber: number | null;
   returnedQuantity: number;
+  note?: string | null;
 }
 
 export interface ReceiptPayment {
@@ -1084,6 +1283,7 @@ export interface ReceiptDocumentLine {
   lineGrossMinor: number;
   /** "A" (19 %) or "§25a". */
   taxLabel: string;
+  note?: string | null;
 }
 
 /** The printable receipt exactly as issued (stored with the receipt; a reprint always shows the original). */
@@ -1103,6 +1303,7 @@ export interface ReceiptDocument {
   changeMinor: number;
   notes: string[];
   fiscal: ReceiptFiscal;
+  customer?: ReceiptCustomer | null;
 }
 
 export interface Receipt {
@@ -1127,6 +1328,10 @@ export interface Receipt {
   vat: ReceiptVat[];
   fiscal: ReceiptFiscal | null;
   document: ReceiptDocument;
+  customerId?: string | null;
+  customer?: ReceiptCustomer | null;
+  reprintCount?: number;
+  lastReprintedAt?: string | null;
 }
 
 export interface ReceiptSummary {
@@ -1138,6 +1343,12 @@ export interface ReceiptSummary {
   referencedReceiptId: string | null;
   createdAt: string;
   totalGrossMinor: number;
+  createdBy?: string;
+  createdByName?: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+  paymentMethods?: PosPaymentMethod[];
+  reprintCount?: number;
 }
 
 // ---------------------------------------------------------------- Invoicing (commission invoices, ADR-0009)
