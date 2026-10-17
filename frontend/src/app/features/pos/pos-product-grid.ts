@@ -38,6 +38,31 @@ const ICONS: Record<string, string> = {
   Other: 'M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9',
 };
 
+/** Fixed soft tint (1–4) per catalog category, so a category keeps its colour everywhere. */
+const TINTS: Record<string, number> = {
+  Smartphone: 1,
+  Tablet: 1,
+  Display: 1,
+  Battery: 2,
+  Tool: 2,
+  Other: 2,
+  ChargingPort: 3,
+  Camera: 3,
+  Wearable: 3,
+  Housing: 4,
+  SmallParts: 4,
+  Accessory: 4,
+};
+
+/** Tint of a category; unknown categories get a stable tint derived from their name. */
+export function categoryTint(category: string): number {
+  const known = TINTS[category];
+  if (known) return known;
+  let h = 0;
+  for (const ch of category) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return (h % 4) + 1;
+}
+
 /**
  * Product area of the selling screen: category chips with counts and tiles for the products of the register's
  * warehouse with their till prices (`GET /api/pos/registers/{id}/products`, server search, paged with infinite
@@ -50,15 +75,16 @@ const ICONS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-0 flex-col' },
   template: `
-    <div class="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2" role="group" [attr.aria-label]="'pos.sell.categories' | t" data-testid="pos-categories">
+    <div class="flex shrink-0 gap-2 overflow-x-auto px-3.5 pb-3" role="group" [attr.aria-label]="'pos.sell.categories' | t" data-testid="pos-categories">
       <button type="button" class="pos-chip" [attr.aria-pressed]="category() === null" (click)="setCategory(null)" data-testid="pos-category-all">
         {{ 'pos.sell.allCategories' | t }}
-        <span class="ms-1 text-xs tabular-nums opacity-75">{{ categoryTotal() }}</span>
+        <span class="pos-chip-count">{{ categoryTotal() }}</span>
       </button>
       @for (c of categories(); track c.category) {
         <button type="button" class="pos-chip" [attr.aria-pressed]="category() === c.category" (click)="setCategory(c.category)" [attr.data-testid]="'pos-category-' + c.category">
+          <span class="size-2 shrink-0 rounded-full" [class]="'pos-dot-' + tint(c.category)" aria-hidden="true"></span>
           {{ c.category | tEnum: 'category' }}
-          <span class="ms-1 text-xs tabular-nums opacity-75">{{ c.productCount }}</span>
+          <span class="pos-chip-count">{{ c.productCount }}</span>
         </button>
       }
       <button type="button" class="pos-chip ms-auto" [attr.aria-pressed]="includeOutOfStock()" (click)="toggleOutOfStock()" data-testid="pos-show-soldout">
@@ -66,61 +92,65 @@ const ICONS: Record<string, string> = {
       </button>
     </div>
 
-    <div #scroller class="min-h-0 flex-1 overflow-y-auto px-3 pb-3" [attr.aria-busy]="loading() || null">
+    <div #scroller class="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3.5" [attr.aria-busy]="loading() || null">
       @if (error()) {
         <hn-banner [error]="error()" />
       } @else if (loading() && !items().length) {
-        <p class="py-10 text-center text-sm text-slate-500">{{ 'common.loading' | t }}</p>
+        <p class="py-10 text-center text-sm text-pos-muted">{{ 'common.loading' | t }}</p>
       } @else if (!items().length) {
         @if (appliedSearch() || category()) {
-          <p class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-none">{{ 'pos.sell.noMatch' | t }}</p>
+          <p class="py-10 text-center text-sm text-pos-muted" data-testid="pos-products-none">{{ 'pos.sell.noMatch' | t }}</p>
         } @else {
-          <div class="py-10 text-center text-sm text-slate-500" data-testid="pos-products-empty">
-            <p class="font-medium text-slate-700">{{ 'pos.sell.noProducts' | t }}</p>
+          <div class="py-10 text-center text-sm text-pos-muted" data-testid="pos-products-empty">
+            <p class="font-semibold text-pos-ink">{{ 'pos.sell.noProducts' | t }}</p>
             <p class="mt-1">{{ 'pos.sell.noProductsHint' | t }}</p>
           </div>
         }
       } @else {
-        <ul class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2" [attr.aria-label]="'pos.sell.products' | t" data-testid="pos-products">
+        <ul class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2.5" [attr.aria-label]="'pos.sell.products' | t" data-testid="pos-products">
           @for (p of items(); track p.productId) {
             @let soldOut = p.available <= 0;
-            <li class="relative">
+            <li class="group relative">
               <button type="button" class="pos-tile" [disabled]="soldOut" (click)="onTileClick(p)" (contextmenu)="onContextMenu($event, p)"
                 (pointerdown)="startPress(p)" (pointerup)="cancelPress()" (pointerleave)="cancelPress()" (pointercancel)="cancelPress()"
                 [attr.data-product]="p.name" [attr.aria-describedby]="'pos-tile-price-' + p.productId" data-testid="pos-product">
-                <span class="grid h-16 place-items-center overflow-hidden rounded-md bg-slate-100 text-slate-600" aria-hidden="true">
+                <span class="pos-tile-media" [class]="p.imageUrl ? 'bg-pos-panel' : 'pos-tint-' + tint(p.category)">
                   @if (p.imageUrl) {
-                    <img [src]="p.imageUrl" alt="" class="size-full object-contain" loading="lazy" />
+                    <img [src]="p.imageUrl" alt="" class="size-full object-cover" loading="lazy" />
                   } @else if (icons[p.category]) {
-                    <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="w-[38%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path [attr.d]="icons[p.category]" />
                     </svg>
                   } @else {
-                    <span class="text-lg font-semibold tracking-wide">{{ monogram(p) }}</span>
+                    <span class="text-2xl font-bold tracking-wide" aria-hidden="true">{{ monogram(p) }}</span>
                   }
-                </span>
-                <span class="mt-1.5 line-clamp-2 text-start text-sm font-semibold leading-snug text-slate-900">{{ p.name }}</span>
-                <span class="truncate text-start text-xs text-slate-500">{{ p.brand }}</span>
-                <span class="mt-auto flex items-end justify-between gap-1 pt-1.5 text-xs">
-                  <span [id]="'pos-tile-price-' + p.productId" class="tabular-nums" data-testid="pos-product-price">
+                  <span [id]="'pos-tile-price-' + p.productId" class="pos-price-tag" data-testid="pos-product-price">
                     @if (p.priceMinor !== null) {
-                      <span class="text-sm font-bold text-slate-900">{{ p.priceMinor | money }}</span>
+                      {{ p.priceMinor | money }}
                     } @else {
-                      <span class="text-slate-500">{{ 'pos.sell.noPrice' | t }}</span>
+                      <span class="text-xs font-semibold text-pos-muted" [title]="'pos.sell.noPrice' | t">{{ 'pos.sell.noPrice' | t }}</span>
                     }
                   </span>
-                  <span class="rounded px-1.5 py-0.5 font-medium tabular-nums" [class]="soldOut ? 'bg-red-50 text-red-800' : p.available <= 3 ? 'bg-amber-50 text-amber-900' : 'bg-slate-100 text-slate-700'">
-                    {{ soldOut ? ('pos.sell.soldOut' | t) : ('pos.sell.stock' | t: { count: p.available }) }}
-                  </span>
                 </span>
-                @if (p.serialized) {
-                  <span class="mt-1 text-start text-[11px] font-medium text-amber-900">{{ 'pos.sell.imeiOnly' | t }}</span>
-                }
+                <span class="flex min-w-0 flex-1 flex-col gap-0.5 px-2.5 pt-2 pb-2.5">
+                  <span class="line-clamp-2 text-[13.5px] leading-tight font-bold">{{ p.name }}</span>
+                  <span class="mt-auto flex items-baseline justify-between gap-2 pt-0.5 text-xs text-pos-muted">
+                    <span class="min-w-0 truncate">{{ p.brand }}</span>
+                    <span class="shrink-0 tabular-nums" [class]="soldOut ? 'font-semibold text-pos-danger' : p.available <= 2 ? 'font-semibold text-pos-warn' : ''" data-testid="pos-product-stock">
+                      {{ soldOut ? ('pos.sell.soldOut' | t) : ('pos.sell.stock' | t: { count: p.available }) }}
+                    </span>
+                  </span>
+                  @if (p.serialized) {
+                    <span class="text-[11px] font-semibold text-pos-warn">{{ 'pos.sell.imeiOnly' | t }}</span>
+                  }
+                </span>
               </button>
               @if (canManagePrices()) {
-                <button type="button" class="absolute end-1 top-1 grid size-11 place-items-center rounded-lg bg-white/90 text-slate-600 shadow-xs hover:text-accent-800"
+                <button type="button" class="absolute start-1 top-1 grid size-11 place-items-center rounded-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                   (click)="editPrice.emit(p)" [attr.aria-label]="'pos.price.editFor' | t: { name: p.name }" [title]="'pos.price.edit' | t" data-testid="pos-product-edit-price">
-                  <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></svg>
+                  <span class="grid size-8 place-items-center rounded-lg bg-pos-panel/90 text-pos-muted shadow-[0_1px_2px_rgb(0_0_0/0.12)] hover:text-pos-accent-text" aria-hidden="true">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></svg>
+                  </span>
                 </button>
               }
             </li>
@@ -128,7 +158,7 @@ const ICONS: Record<string, string> = {
         </ul>
         @if (hasMore()) {
           <div #sentinel class="mt-3 text-center">
-            <button hnButton type="button" class="min-h-11" [loading]="loading()" (click)="loadMore()" data-testid="pos-products-more">
+            <button type="button" class="pos-soft" [attr.aria-busy]="loading() || null" (click)="loadMore()" data-testid="pos-products-more">
               {{ 'pos.sell.loadMore' | t: { shown: items().length, total: total() } }}
             </button>
           </div>
@@ -223,6 +253,11 @@ export class PosProductGridComponent {
 
   protected toggleOutOfStock(): void {
     this.includeOutOfStock.update((v) => !v);
+  }
+
+  /** Soft tint 1–4 of a category (tiles without a photo, chip dots). */
+  protected tint(category: string): number {
+    return categoryTint(category);
   }
 
   protected monogram(p: PosProduct): string {

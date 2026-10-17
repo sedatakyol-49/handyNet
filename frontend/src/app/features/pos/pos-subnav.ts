@@ -16,11 +16,11 @@ import { PosContext } from './pos-context';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'hn-no-print mb-4 block' },
   template: `
-    <nav class="flex flex-wrap items-center gap-1 border-b border-slate-200 text-sm" [attr.aria-label]="'pos.subnav.label' | t">
+    <nav class="flex flex-wrap items-center gap-1 border-b border-pos-line text-sm" [attr.aria-label]="'pos.subnav.label' | t">
       @for (tab of visibleTabs(); track tab.id) {
-        <a [routerLink]="['/kasse', registerId(), ...tab.path]" routerLinkActive="border-accent-700 text-accent-800 font-semibold"
+        <a [routerLink]="['/kasse', registerId(), ...tab.path]" routerLinkActive="border-pos-accent text-pos-accent-text font-semibold"
           [routerLinkActiveOptions]="{ exact: true }" #rla="routerLinkActive" [attr.aria-current]="rla.isActive ? 'page' : null"
-          class="-mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-3 text-slate-700 hover:text-slate-900" [attr.data-testid]="'pos-tab-' + tab.id">
+          class="-mb-px inline-flex min-h-11 items-center border-b-[3px] border-transparent px-3.5 font-medium text-pos-muted hover:text-pos-ink" [attr.data-testid]="'pos-tab-' + tab.id">
           {{ tab.label | t }}
         </a>
       }

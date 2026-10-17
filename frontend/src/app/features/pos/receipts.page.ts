@@ -45,7 +45,7 @@ import {
       }
     </div>
 
-    <form class="hn-card mb-3 p-3" (submit)="$event.preventDefault(); apply()" novalidate [attr.aria-label]="'pos.receipts.filters' | t" data-testid="pos-receipts-filter">
+    <form class="pos-card mb-3 p-3" (submit)="$event.preventDefault(); apply()" novalidate [attr.aria-label]="'pos.receipts.filters' | t" data-testid="pos-receipts-filter">
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         <hn-field [label]="'pos.receipt.number' | t" for="pos-f-number" [errors]="err('number')">
           <input hnInput id="pos-f-number" inputmode="numeric" class="h-11" autocomplete="off" [value]="draft().number" (input)="set('number', $any($event.target).value)" data-testid="pos-f-number" />

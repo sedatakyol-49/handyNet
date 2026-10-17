@@ -59,7 +59,7 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
           @if (s.status === 'Open') {
             <!-- ======================================================== cash movement -->
             @if (rights().cashMovement) {
-              <section class="hn-card p-4" aria-labelledby="pos-mv-heading">
+              <section class="pos-card p-4" aria-labelledby="pos-mv-heading">
                 <h2 id="pos-mv-heading" class="mb-3 text-sm">{{ 'pos.session.movementTitle' | t }}</h2>
                 <form class="space-y-3" (ngSubmit)="addMovement(s)" novalidate>
                   <div class="grid grid-cols-2 gap-1.5" role="group" [attr.aria-label]="'pos.session.movementKind' | t">
@@ -102,7 +102,7 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
 
             <!-- ======================================================== closing -->
             @if (rights().closeSession) {
-              <section class="hn-card p-4" aria-labelledby="pos-close-heading" data-testid="pos-close">
+              <section class="pos-card p-4" aria-labelledby="pos-close-heading" data-testid="pos-close">
                 <h2 id="pos-close-heading" class="mb-1 text-sm">{{ 'pos.session.closeTitle' | t }}</h2>
                 <p class="mb-3 text-xs text-slate-600">{{ 'pos.session.closeText' | t }}</p>
                 <div class="mb-3 grid grid-cols-2 gap-1.5" role="group" [attr.aria-label]="'pos.cashCount.modeLabel' | t">
@@ -148,7 +148,7 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
           }
 
           <!-- ======================================================== movements -->
-          <section class="hn-card" aria-labelledby="pos-mvlist-heading">
+          <section class="pos-card" aria-labelledby="pos-mvlist-heading">
             <h2 id="pos-mvlist-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'pos.session.movements' | t }}</h2>
             @if (s.movements.length) {
               <div class="overflow-x-auto">

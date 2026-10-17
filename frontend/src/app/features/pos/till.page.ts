@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  TemplateRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -130,6 +132,7 @@ export class TillPage {
 
   private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeField');
   private readonly grid = viewChild(PosProductGridComponent);
+  private readonly ticketsTpl = viewChild<TemplateRef<unknown>>('ticketsTpl');
   private readonly lastPrices = new LastPrices(browserStorage('session'), this.store.organizationId() ?? 'none');
 
   // ---- data
@@ -238,6 +241,12 @@ export class TillPage {
       const s = this.session();
       untracked(() => this.ctx.session.set(known ? s : undefined));
     });
+    // Parked tickets live in the top bar while a session is open.
+    effect(() => {
+      const tpl = this.session() ? (this.ticketsTpl() ?? null) : null;
+      untracked(() => this.ctx.topbarTickets.set(tpl));
+    });
+    inject(DestroyRef).onDestroy(() => this.ctx.topbarTickets.set(null));
     effect(() => {
       const state = this.orders();
       untracked(() => this.ordersStorage().save(state));

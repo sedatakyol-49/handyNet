@@ -1789,6 +1789,8 @@
       "truncated": "Se muestran {count} posiciones de stock. Encuentre más productos escaneando.",
       "openOrders": "Pedidos abiertos",
       "orderLabel": "Pedido {number} ({count} artículos)",
+      "ticket": "Ticket {number}",
+      "newTicket": "Nuevo",
       "newOrder": "Nuevo pedido (aparcar el actual)",
       "discardOrder": "Descartar pedido",
       "tooManyOrders": "Como máximo puede haber 20 pedidos abiertos a la vez.",

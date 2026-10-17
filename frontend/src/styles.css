@@ -79,7 +79,7 @@
     @apply font-mono text-xs;
   }
 
-  /* ---- POS app (/kasse): touch-first controls, every target ≥ 44 px ---- */
+  /* ---- POS app (/kasse): touch-first controls, every target ≥ 44 px. Colours come from the POS tokens below. ---- */
   .hn-pos button,
   .hn-pos a {
     touch-action: manipulation;
@@ -87,88 +87,285 @@
   .pos-page {
     @apply mx-auto w-full max-w-7xl p-3 sm:p-5;
   }
-  .pos-menu-item {
-    @apply flex min-h-11 w-full items-center gap-2 px-3 text-start text-slate-800 hover:bg-slate-50;
+  .pos-card {
+    @apply rounded-xl border border-pos-line bg-pos-panel;
   }
+  .pos-section-label {
+    @apply text-xs font-semibold tracking-wide text-pos-muted uppercase;
+  }
+  .pos-menu-item {
+    @apply flex min-h-11 w-full items-center gap-2 px-3 text-start text-pos-ink hover:bg-pos-key;
+  }
+  /* Numpad keys: soft surfaces without borders. */
   .pos-key {
-    @apply grid min-h-12 place-items-center rounded-lg border border-slate-200 bg-white text-xl font-semibold text-slate-900 shadow-xs select-none;
-    @apply hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply grid min-h-12 place-items-center rounded-[10px] border-0 bg-pos-key text-lg font-semibold text-pos-key-ink select-none;
+    @apply hover:bg-pos-key-hover active:bg-pos-key-active disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-pos-key;
   }
   .pos-key-fn {
-    @apply bg-slate-100 text-lg text-slate-700;
+    @apply text-base text-pos-muted;
   }
-  .pos-mode {
-    @apply min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40;
+  /* Numpad mode keys (Menge / % Rabatt / Preis) in the fourth column; active = soft accent with an inset ring. */
+  .pos-key-mode {
+    @apply px-1 text-[13px] leading-tight font-semibold text-pos-muted;
     &[aria-pressed="true"] {
-      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
+      @apply bg-pos-accent-soft text-pos-accent-text shadow-[inset_0_0_0_1.5px_var(--pos-accent)] hover:bg-pos-accent-soft;
+    }
+  }
+  /* Segmented choices (opening mode, pane switch, …). */
+  .pos-mode {
+    @apply min-h-11 rounded-[10px] border border-pos-line bg-pos-tile px-2 text-sm font-semibold text-pos-ink hover:bg-pos-key disabled:cursor-not-allowed disabled:opacity-40;
+    &[aria-pressed="true"] {
+      @apply border-transparent bg-pos-accent-soft text-pos-accent-text shadow-[inset_0_0_0_1.5px_var(--pos-accent)] hover:bg-pos-accent-soft;
     }
   }
   .pos-chip {
-    @apply min-h-11 shrink-0 rounded-full border border-slate-300 bg-white px-4 text-sm font-medium whitespace-nowrap text-slate-700 hover:bg-slate-50;
+    @apply inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] border border-pos-line bg-pos-panel px-3 text-[13px] font-semibold whitespace-nowrap text-pos-ink hover:border-pos-accent;
     &[aria-pressed="true"] {
-      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
+      @apply border-transparent bg-pos-accent text-pos-accent-ink;
     }
+  }
+  .pos-chip-count {
+    @apply text-[11px] font-medium text-pos-muted tabular-nums;
+  }
+  .pos-chip[aria-pressed="true"] .pos-chip-count {
+    @apply text-current opacity-80;
   }
   .pos-tile {
-    @apply flex h-full min-h-40 w-full flex-col rounded-xl border border-slate-200 bg-white p-2 text-start shadow-xs;
-    @apply hover:border-accent-600 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-full w-full flex-col overflow-hidden rounded-xl border border-pos-line bg-pos-tile text-start text-pos-ink;
+    @apply hover:border-pos-accent disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:border-pos-line;
   }
-  .pos-order-tab {
-    @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50;
-    &[aria-pressed="true"] {
-      @apply border-accent-700 bg-accent-700 text-[#fff] hover:bg-accent-800;
-    }
+  .pos-tile-media {
+    @apply relative grid aspect-[4/3] w-full place-items-center overflow-hidden;
+  }
+  .pos-tint-1 {
+    @apply bg-pos-t1 text-pos-t1i;
+  }
+  .pos-tint-2 {
+    @apply bg-pos-t2 text-pos-t2i;
+  }
+  .pos-tint-3 {
+    @apply bg-pos-t3 text-pos-t3i;
+  }
+  .pos-tint-4 {
+    @apply bg-pos-t4 text-pos-t4i;
+  }
+  .pos-dot-1 {
+    @apply bg-pos-t1i;
+  }
+  .pos-dot-2 {
+    @apply bg-pos-t2i;
+  }
+  .pos-dot-3 {
+    @apply bg-pos-t3i;
+  }
+  .pos-dot-4 {
+    @apply bg-pos-t4i;
+  }
+  .pos-price-tag {
+    @apply absolute end-2 top-2 max-w-[calc(100%-3rem)] truncate rounded-lg bg-pos-panel px-2 py-0.5 text-[13px] font-extrabold text-pos-ink tabular-nums shadow-[0_1px_2px_rgb(0_0_0/0.12)];
+  }
+  /* Parked tickets in the top bar: a 44 px touch target around a small pill. */
+  .pos-ticket {
+    @apply inline-flex min-h-11 shrink-0 items-center rounded-full;
+  }
+  .pos-ticket-pill {
+    @apply inline-flex items-center gap-1 rounded-full border border-pos-line bg-pos-tile px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-pos-muted;
+  }
+  .pos-ticket:hover .pos-ticket-pill {
+    @apply bg-pos-key;
+  }
+  .pos-ticket[aria-pressed="true"] .pos-ticket-pill {
+    @apply border-transparent bg-pos-accent-soft text-pos-accent-text;
   }
   .pos-icon-btn {
-    @apply grid size-11 shrink-0 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply grid size-11 shrink-0 place-items-center rounded-[10px] text-pos-muted hover:bg-pos-key hover:text-pos-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent;
   }
   .pos-line {
-    @apply block min-h-14 w-full min-w-0 flex-1 border-s-4 border-transparent px-3 py-2 text-start;
+    @apply block min-h-14 w-full min-w-0 flex-1 border-s-[3px] border-transparent py-2.5 ps-[13px] pe-4 text-start;
   }
   .pos-line-selected {
-    @apply border-accent-700;
+    @apply border-pos-accent;
   }
+  /* The one strong button per screen. */
   .pos-pay-btn {
-    @apply flex min-h-14 w-full items-center justify-between gap-3 rounded-lg bg-accent-700 px-4 text-lg font-semibold text-[#fff] shadow-xs;
-    @apply hover:bg-accent-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex min-h-[60px] w-full items-center justify-between gap-3 rounded-xl bg-pos-pay px-[18px] text-lg font-extrabold text-pos-pay-ink;
+    @apply hover:bg-pos-pay-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-pos-pay;
+  }
+  .pos-soft {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-pos-line bg-pos-tile px-3 text-sm font-semibold text-pos-ink;
+    @apply hover:bg-pos-key disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-pos-tile;
+  }
+  .pos-soft-accent {
+    @apply border-transparent bg-pos-accent-soft text-pos-accent-text hover:bg-pos-accent-soft hover:shadow-[inset_0_0_0_1.5px_var(--pos-accent)];
   }
   .pos-back {
-    @apply inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50;
+    @apply inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-pos-line bg-pos-tile px-3 text-sm font-semibold text-pos-ink hover:bg-pos-key;
   }
   .pos-method {
-    @apply flex min-h-16 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-start text-base font-semibold text-slate-900 shadow-xs;
-    @apply hover:border-accent-600 hover:bg-accent-50;
+    @apply flex min-h-16 w-full items-center gap-3 rounded-xl border border-pos-line bg-pos-tile px-3 text-start text-base font-semibold text-pos-ink;
+    @apply hover:border-pos-accent hover:bg-pos-accent-soft;
+  }
+  .pos-method-icon {
+    @apply grid size-10 shrink-0 place-items-center rounded-lg bg-pos-accent-soft text-pos-accent-text;
   }
   .pos-quick {
-    @apply min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-800 hover:bg-slate-50;
+    @apply min-h-11 rounded-[10px] border-0 bg-pos-key px-2 text-sm font-semibold text-pos-key-ink hover:bg-pos-key-hover active:bg-pos-key-active;
+  }
+  .pos-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
   }
   .pos-kbd {
-    @apply rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono;
+    @apply rounded border border-pos-line bg-pos-panel px-1.5 py-0.5 font-mono;
   }
 }
 
 /*
- * POS dark theme (screen only, so printouts stay black on white). Tailwind utilities read the palette from CSS
- * variables, so remapping the neutral scale and the light tints inside .hn-pos-dark turns every surface, border and
- * text dark/light without per-component dark classes. Strong colours used as backgrounds (accent/red buttons) keep
- * their value; text in those hues is lightened below. The printed receipt keeps its paper look.
+ * POS design tokens (approved "Petrol" palette). They live on the POS root (.hn-pos, dark values on .hn-pos-dark) and
+ * are exposed as Tailwind colours (bg-pos-accent, text-pos-muted, …). Inside the POS the Tailwind neutral (slate) and
+ * accent scales are remapped onto the same palette, so shared controls (buttons, inputs, cards, banners) pick up the
+ * calm petrol look without per-component overrides. The back office keeps its own colours.
+ */
+@theme inline {
+  --color-pos-surface: var(--pos-surface);
+  --color-pos-panel: var(--pos-panel);
+  --color-pos-tile: var(--pos-tile);
+  --color-pos-key: var(--pos-key);
+  --color-pos-key-hover: var(--pos-key-hover);
+  --color-pos-key-active: var(--pos-key-active);
+  --color-pos-key-ink: var(--pos-key-ink);
+  --color-pos-ink: var(--pos-ink);
+  --color-pos-muted: var(--pos-muted);
+  --color-pos-line: var(--pos-line);
+  --color-pos-accent: var(--pos-accent);
+  --color-pos-accent-ink: var(--pos-accent-ink);
+  --color-pos-accent-soft: var(--pos-accent-soft);
+  --color-pos-accent-text: var(--pos-accent-text);
+  --color-pos-pay: var(--pos-pay);
+  --color-pos-pay-hover: var(--pos-pay-hover);
+  --color-pos-pay-ink: var(--pos-pay-ink);
+  --color-pos-sel: var(--pos-sel);
+  --color-pos-ok: var(--pos-ok);
+  --color-pos-ok-soft: var(--pos-ok-soft);
+  --color-pos-ok-text: var(--pos-ok-text);
+  --color-pos-warn: var(--pos-warn);
+  --color-pos-warn-soft: var(--pos-warn-soft);
+  --color-pos-danger: var(--pos-danger);
+  --color-pos-danger-soft: var(--pos-danger-soft);
+  --color-pos-t1: var(--pos-t1);
+  --color-pos-t1i: var(--pos-t1i);
+  --color-pos-t2: var(--pos-t2);
+  --color-pos-t2i: var(--pos-t2i);
+  --color-pos-t3: var(--pos-t3);
+  --color-pos-t3i: var(--pos-t3i);
+  --color-pos-t4: var(--pos-t4);
+  --color-pos-t4i: var(--pos-t4i);
+}
+
+.hn-pos {
+  --pos-surface: #f5f7f8;
+  --pos-panel: #ffffff;
+  --pos-tile: #ffffff;
+  --pos-key: #f1f4f5;
+  --pos-key-hover: #e6ebed;
+  --pos-key-active: #dae1e4;
+  --pos-key-ink: #1d2a33;
+  --pos-ink: #1d2a33;
+  --pos-muted: #5d6b75;
+  --pos-line: #d9dfe3;
+  --pos-accent: #0f766e;
+  --pos-accent-ink: #ffffff;
+  --pos-accent-soft: #e3f2f0;
+  --pos-accent-text: #0b5e58;
+  --pos-pay: #0f766e;
+  --pos-pay-hover: #0b5e58;
+  --pos-pay-ink: #ffffff;
+  --pos-sel: #e8f4f2;
+  --pos-ok: #16a34a;
+  --pos-ok-soft: #e6f4ea;
+  --pos-ok-text: #166534;
+  --pos-warn: #b45309;
+  --pos-warn-soft: #fdf3e2;
+  --pos-danger: #b42318;
+  --pos-danger-soft: #fdecea;
+  --pos-t1: #e6f0fb;
+  --pos-t1i: #2b5d8f;
+  --pos-t2: #eaf5e9;
+  --pos-t2i: #2f6b33;
+  --pos-t3: #f6ecfa;
+  --pos-t3i: #6b3d82;
+  --pos-t4: #fdf0e3;
+  --pos-t4i: #8a4b14;
+
+  --color-accent-50: var(--pos-accent-soft);
+  --color-accent-100: color-mix(in oklab, var(--pos-accent-soft), var(--pos-accent) 15%);
+  --color-accent-600: var(--pos-accent);
+  --color-accent-700: var(--pos-accent);
+  --color-accent-800: var(--pos-pay-hover);
+  --color-slate-50: #f7f9fa;
+  --color-slate-100: #eef2f3;
+  --color-slate-200: #dde3e6;
+  --color-slate-300: #c7d0d5;
+  --color-slate-400: #97a4ac;
+  --color-slate-500: #6e7c86;
+  --color-slate-600: #5d6b75;
+  --color-slate-700: #43515a;
+  --color-slate-800: #2d3a43;
+  --color-slate-900: #1d2a33;
+}
+
+/*
+ * POS dark theme (screen only, so printouts stay black on white): dark token values plus the dark neutral scale.
+ * Strong colours used as backgrounds keep their hue; text in red/amber/emerald is lightened below. The printed
+ * receipt keeps its paper look.
  */
 @media screen {
   .hn-pos-dark {
     color-scheme: dark;
-    --color-white: oklch(21.5% 0.035 262);
-    --color-slate-50: oklch(25.5% 0.035 262);
-    --color-slate-100: oklch(16.5% 0.03 264);
-    --color-slate-200: oklch(31% 0.035 260);
-    --color-slate-300: oklch(38% 0.038 258);
-    --color-slate-400: oklch(55.4% 0.046 257.417);
-    --color-slate-500: oklch(70.4% 0.04 256.788);
-    --color-slate-600: oklch(80% 0.025 255);
-    --color-slate-700: oklch(88% 0.015 255);
-    --color-slate-800: oklch(93% 0.01 255);
-    --color-slate-900: oklch(97% 0.005 250);
-    --color-accent-50: oklch(28.2% 0.091 267.935);
-    --color-accent-100: oklch(33% 0.12 266);
+    --pos-surface: #121a1e;
+    --pos-panel: #182127;
+    --pos-tile: #1c262c;
+    --pos-key: #222d34;
+    --pos-key-hover: #2a363e;
+    --pos-key-active: #324049;
+    --pos-key-ink: #e4ebee;
+    --pos-ink: #e4ebee;
+    --pos-muted: #93a2ab;
+    --pos-line: #26323a;
+    --pos-accent: #2bb3a6;
+    --pos-accent-ink: #062521;
+    --pos-accent-soft: #143430;
+    --pos-accent-text: #7fdcd2;
+    --pos-pay: #2bb3a6;
+    --pos-pay-hover: #3cc4b7;
+    --pos-pay-ink: #062521;
+    --pos-sel: #173a36;
+    --pos-ok: #4ade80;
+    --pos-ok-soft: #173322;
+    --pos-ok-text: #86efac;
+    --pos-warn: #f4b35e;
+    --pos-warn-soft: #3a2a12;
+    --pos-danger: #f28b82;
+    --pos-danger-soft: #3b1714;
+    --pos-t1: #1b2d40;
+    --pos-t1i: #9cc4ee;
+    --pos-t2: #1c3220;
+    --pos-t2i: #9fd6a2;
+    --pos-t3: #2f2238;
+    --pos-t3i: #d3a9e8;
+    --pos-t4: #3a2a18;
+    --pos-t4i: #f0bd85;
+
+    --color-white: #182127;
+    --color-slate-50: #1f2a30;
+    --color-slate-100: #121a1e;
+    --color-slate-200: #26323a;
+    --color-slate-300: #34424b;
+    --color-slate-400: #5f6f79;
+    --color-slate-500: #93a2ab;
+    --color-slate-600: #a9b6be;
+    --color-slate-700: #c3cdd3;
+    --color-slate-800: #d6dee2;
+    --color-slate-900: #e4ebee;
     --color-red-50: oklch(25.8% 0.092 26.042);
     --color-red-200: oklch(39.6% 0.141 25.723);
     --color-amber-50: oklch(27.9% 0.077 45.635);
@@ -182,6 +379,10 @@
   .hn-pos-dark .text-white {
     color: #fff;
   }
+  /* Accent-filled controls (primary buttons) use the dark ink on the light petrol. */
+  .hn-pos-dark :is(.bg-accent-700, .bg-accent-600) {
+    color: var(--pos-accent-ink);
+  }
   .hn-pos-dark :is(.text-red-700, .text-red-800, .text-red-900, .hover\:text-red-700:hover) {
     color: oklch(80.8% 0.114 19.571);
   }
@@ -191,26 +392,35 @@
   .hn-pos-dark :is(.text-emerald-800, .text-emerald-900) {
     color: oklch(84.5% 0.143 164.978);
   }
-  .hn-pos-dark :is(.text-accent-700, .text-accent-800, .text-blue-900, .hn-link) {
+  .hn-pos-dark :is(.text-blue-900) {
     color: oklch(80.9% 0.105 251.813);
+  }
+  .hn-pos-dark :is(.text-accent-700, .text-accent-800, .hn-link) {
+    color: var(--pos-accent-text);
   }
   .hn-pos-dark dialog::backdrop {
     background: rgb(0 0 0 / 0.6);
   }
-  /* The receipt is paper: light in both themes. */
-  .hn-pos-dark .hn-receipt {
-    color-scheme: light;
-    --color-white: #fff;
-    --color-slate-300: oklch(86.9% 0.022 252.894);
-    --color-slate-400: oklch(70.4% 0.04 256.788);
-    --color-slate-500: oklch(55.4% 0.046 257.417);
-    --color-slate-600: oklch(44.6% 0.043 257.281);
-    --color-slate-900: oklch(20.8% 0.042 265.755);
-    --color-amber-50: oklch(98.7% 0.022 95.277);
-  }
   .hn-pos-dark .hn-receipt .text-amber-900 {
     color: oklch(41.4% 0.112 45.904);
   }
+}
+
+/* The receipt is paper: Tailwind's default neutrals on white in both themes (screen and print). */
+.hn-pos .hn-receipt {
+  color-scheme: light;
+  --color-white: #fff;
+  --color-slate-50: oklch(98.4% 0.003 247.858);
+  --color-slate-100: oklch(96.8% 0.007 247.896);
+  --color-slate-200: oklch(92.9% 0.013 255.508);
+  --color-slate-300: oklch(86.9% 0.022 252.894);
+  --color-slate-400: oklch(70.4% 0.04 256.788);
+  --color-slate-500: oklch(55.4% 0.046 257.417);
+  --color-slate-600: oklch(44.6% 0.043 257.281);
+  --color-slate-700: oklch(37.2% 0.044 257.287);
+  --color-slate-800: oklch(27.9% 0.041 260.031);
+  --color-slate-900: oklch(20.8% 0.042 265.755);
+  --color-amber-50: oklch(98.7% 0.022 95.277);
 }
 
 /*

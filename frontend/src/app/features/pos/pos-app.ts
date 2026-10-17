@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { SessionStore } from '../../core/auth/session.store';
@@ -15,11 +16,11 @@ import { canSeeSessionReport, posRights } from './pos-rights';
  */
 @Component({
   selector: 'hn-pos-app',
-  imports: [RouterOutlet, RouterLink, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, TranslatePipe],
   providers: [PosContext],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'hn-pos fixed inset-0 flex flex-col bg-slate-100 text-slate-900',
+    class: 'hn-pos fixed inset-0 flex flex-col bg-pos-surface text-pos-ink',
     '[class.hn-pos-dark]': 'ctx.dark()',
     '[attr.data-theme]': 'ctx.dark() ? "dark" : "light"',
     '(document:click)': 'onDocumentClick($event)',
@@ -28,46 +29,54 @@ import { canSeeSessionReport, posRights } from './pos-rights';
     <a href="#pos-main" class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow">
       {{ 'shell.skipToContent' | t }}
     </a>
-    <header class="hn-no-print flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-2 sm:gap-3 sm:px-3" data-testid="pos-topbar">
-      <a routerLink="/kasse" class="flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
-        <span class="grid size-8 place-items-center rounded-md bg-accent-700 text-xs font-bold text-white" aria-hidden="true">HN</span>
-        <span class="hidden text-sm lg:inline">{{ 'pos.app.title' | t }}</span>
+    <header class="hn-no-print flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-pos-line bg-pos-panel px-2 sm:gap-x-3.5 sm:px-3.5" data-testid="pos-topbar">
+      <a routerLink="/kasse" class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-0.5 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
+        <span class="grid size-[30px] place-items-center rounded-lg bg-pos-accent text-xs font-extrabold text-pos-accent-ink" aria-hidden="true">HN</span>
+        @if (!ctx.registerId()) {
+          <span class="text-sm">{{ 'pos.app.title' | t }}</span>
+        }
       </a>
 
       @if (ctx.registerId()) {
-        <div class="min-w-0 border-s border-slate-200 ps-2 sm:ps-3">
-          <p class="truncate text-sm font-semibold leading-tight" data-testid="pos-topbar-register">{{ ctx.registerName() ?? '…' }}</p>
-          <p class="flex items-center gap-1.5 truncate text-xs leading-tight text-slate-600" data-testid="pos-topbar-session">
-            <span class="inline-block size-2 shrink-0 rounded-full" [class]="sessionDot()" aria-hidden="true"></span>
+        <div class="min-w-0 shrink leading-tight">
+          <p class="truncate text-sm font-bold" data-testid="pos-topbar-register">{{ ctx.registerName() ?? '…' }}</p>
+          <p class="flex items-center gap-1.5 truncate text-xs text-pos-muted" data-testid="pos-topbar-session">
+            <span class="inline-block size-[7px] shrink-0 rounded-full" [class]="sessionDot()" aria-hidden="true"></span>
             {{ sessionText() }}
           </p>
         </div>
         @if (!onTill()) {
-          <a [routerLink]="['/kasse', ctx.registerId()]" class="ms-1 inline-flex min-h-11 items-center rounded-md bg-accent-700 px-3 text-sm font-semibold text-white hover:bg-accent-800" data-testid="pos-topbar-sell">
+          <a [routerLink]="['/kasse', ctx.registerId()]" class="pos-soft pos-soft-accent ms-1" data-testid="pos-topbar-sell">
             {{ 'pos.app.sell' | t }}
           </a>
         }
       }
 
-      <div class="ms-auto flex items-center gap-1 sm:gap-3">
-        <span class="flex items-center gap-1.5 text-xs" [class]="ctx.online() ? 'text-emerald-800' : 'font-semibold text-red-800'" role="status" data-testid="pos-online">
-          <span class="inline-block size-2.5 rounded-full" [class]="ctx.online() ? 'bg-emerald-600' : 'bg-red-600'" aria-hidden="true"></span>
-          <span [class.sr-only]="ctx.online()" class="sm:not-sr-only">{{ (ctx.online() ? 'pos.app.online' : 'pos.app.offline') | t }}</span>
+      @if (ctx.topbarTickets(); as tickets) {
+        <div class="order-last -mx-2 flex min-w-0 basis-full border-t border-pos-line px-2 sm:-mx-3.5 sm:px-3.5 md:order-none md:mx-0 md:flex-1 md:basis-auto md:border-0 md:px-0 md:ps-2">
+          <ng-container [ngTemplateOutlet]="tickets" />
+        </div>
+      }
+
+      <div class="ms-auto flex items-center gap-1 sm:gap-3.5">
+        <span class="flex items-center gap-1.5 text-xs" [class]="ctx.online() ? 'text-pos-muted' : 'font-semibold text-pos-danger'" role="status" data-testid="pos-online">
+          <span class="inline-block size-2 rounded-full" [class]="ctx.online() ? 'bg-pos-ok' : 'bg-pos-danger'" aria-hidden="true"></span>
+          <span class="lg:not-sr-only" [class.sr-only]="ctx.online()">{{ (ctx.online() ? 'pos.app.online' : 'pos.app.offline') | t }}</span>
         </span>
-        <time class="hidden text-sm font-semibold tabular-nums sm:inline" [attr.datetime]="ctx.now().toISOString()" data-testid="pos-clock">{{ clock() }}</time>
-        <span class="hidden max-w-40 items-center gap-2 text-sm md:flex" data-testid="pos-cashier">
-          <span class="grid size-8 shrink-0 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700" aria-hidden="true">{{ cashierInitial() }}</span>
+        <time class="hidden text-sm font-semibold text-pos-muted tabular-nums sm:inline" [attr.datetime]="ctx.now().toISOString()" data-testid="pos-clock">{{ clock() }}</time>
+        <span class="hidden max-w-44 items-center gap-2 text-[13px] text-pos-muted md:flex" data-testid="pos-cashier">
+          <span class="grid size-7 shrink-0 place-items-center rounded-full bg-pos-key text-xs font-bold text-pos-ink" aria-hidden="true">{{ cashierInitial() }}</span>
           <span class="truncate"><span class="sr-only">{{ 'pos.receipt.cashier' | t }}: </span>{{ session.me()?.displayName }}</span>
         </span>
 
         <div class="relative" (keydown.escape)="onMenuEscape($event)">
-          <button #menuButton type="button" class="grid size-11 place-items-center rounded-md text-slate-700 hover:bg-slate-100"
+          <button #menuButton type="button" class="grid size-11 place-items-center rounded-[10px] text-pos-ink hover:bg-pos-key"
             aria-haspopup="menu" [attr.aria-expanded]="menuOpen()" aria-controls="pos-menu" (click)="toggleMenu($event)"
             [attr.aria-label]="'pos.app.menu' | t" data-testid="pos-menu">
             <svg class="size-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" /></svg>
           </button>
           @if (menuOpen()) {
-            <div id="pos-menu" class="absolute end-0 top-full z-40 mt-1 w-72 rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg" role="menu"
+            <div id="pos-menu" class="absolute end-0 top-full z-40 mt-1 w-72 rounded-xl border border-pos-line bg-pos-panel py-1 text-sm shadow-lg" role="menu"
               [attr.aria-label]="'pos.app.menu' | t" (click)="$event.stopPropagation()">
               <div class="border-b border-slate-100 px-3 py-2 text-xs">
                 <p class="font-semibold text-slate-900">{{ session.me()?.displayName }}</p>
@@ -99,8 +108,8 @@ import { canSeeSessionReport, posRights } from './pos-rights';
                 <div class="grid grid-cols-3 gap-1">
                   @for (t of themes; track t) {
                     <button type="button" role="menuitemradio" [attr.aria-checked]="ctx.theme() === t" (click)="ctx.setTheme(t)"
-                      class="min-h-11 rounded-md border text-xs font-medium"
-                      [class]="ctx.theme() === t ? 'border-accent-700 bg-accent-50 text-accent-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'"
+                      class="min-h-11 rounded-[10px] border text-xs font-semibold"
+                      [class]="ctx.theme() === t ? 'border-transparent bg-pos-accent-soft text-pos-accent-text shadow-[inset_0_0_0_1.5px_var(--pos-accent)]' : 'border-pos-line text-pos-ink hover:bg-pos-key'"
                       [attr.data-testid]="'pos-theme-' + t">{{ 'pos.app.themes.' + t | t }}</button>
                   }
                 </div>
@@ -177,7 +186,7 @@ export class PosAppComponent {
   });
   protected readonly sessionDot = computed(() => {
     const s = this.ctx.session();
-    return s ? 'bg-emerald-600' : s === null ? 'bg-slate-400' : 'bg-slate-300';
+    return s ? 'bg-pos-ok' : s === null ? 'bg-slate-400' : 'bg-slate-300';
   });
 
   protected toggleMenu(e: Event): void {

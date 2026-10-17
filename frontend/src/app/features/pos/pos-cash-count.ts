@@ -15,28 +15,28 @@ import { CashCounts, EURO_COINS, EURO_NOTES, MAX_COUNT_PER_DENOMINATION, countTo
     <div class="grid gap-3 @2xl:grid-cols-2" role="group" [attr.aria-label]="'pos.cashCount.label' | t">
       @for (group of groups; track group.key) {
         <fieldset class="min-w-0">
-          <legend class="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{{ 'pos.cashCount.' + group.key | t }}</legend>
+          <legend class="pos-section-label mb-1.5">{{ 'pos.cashCount.' + group.key | t }}</legend>
           <ul class="space-y-1">
             @for (v of group.values; track v) {
               @let n = counts()[v] ?? 0;
-              <li class="grid grid-cols-[4rem_auto_minmax(3.5rem,1fr)_auto_minmax(5.5rem,auto)] items-center gap-1.5" [attr.data-denomination]="v">
-                <label [for]="idPrefix() + v" class="text-sm font-semibold tabular-nums" dir="ltr">{{ label(v) }}</label>
-                <button type="button" class="pos-icon-btn border border-slate-200" [disabled]="!n" (click)="step(v, -1)"
+              <li class="grid grid-cols-[4.25rem_auto_minmax(3.5rem,1fr)_auto_minmax(5.5rem,auto)] items-center gap-1.5 rounded-[10px] py-0.5 ps-1 pe-2" [class.bg-pos-sel]="n > 0" [attr.data-denomination]="v">
+                <label [for]="idPrefix() + v" class="justify-self-start rounded-md px-2 py-1 text-sm font-bold tabular-nums" [class]="group.key === 'notes' ? 'bg-pos-t2 text-pos-t2i' : 'bg-pos-t4 text-pos-t4i'" dir="ltr">{{ label(v) }}</label>
+                <button type="button" class="pos-quick w-11 px-0 text-lg disabled:cursor-not-allowed disabled:opacity-40" [disabled]="!n" (click)="step(v, -1)"
                   [attr.aria-label]="'pos.cashCount.minus' | t: { value: label(v) }" data-testid="pos-count-minus">−</button>
-                <input [id]="idPrefix() + v" class="hn-control h-11 min-w-0 text-center text-base tabular-nums" inputmode="numeric" autocomplete="off" dir="ltr"
+                <input [id]="idPrefix() + v" class="hn-control h-11 min-w-0 rounded-[10px] text-center text-base font-semibold tabular-nums" inputmode="numeric" autocomplete="off" dir="ltr"
                   [value]="n || ''" placeholder="0" (input)="type(v, $any($event.target))" (focus)="$any($event.target).select()" data-testid="pos-count-input" />
-                <button type="button" class="pos-icon-btn border border-slate-200" (click)="step(v, 1)"
+                <button type="button" class="pos-quick w-11 px-0 text-lg disabled:cursor-not-allowed disabled:opacity-40" (click)="step(v, 1)"
                   [attr.aria-label]="'pos.cashCount.plus' | t: { value: label(v) }" data-testid="pos-count-plus">+</button>
-                <span class="text-end text-sm tabular-nums" [class.text-slate-400]="!n">{{ v * n | money }}</span>
+                <span class="text-end text-sm font-semibold tabular-nums" [class.text-pos-muted]="!n" [class.font-normal]="!n">{{ v * n | money }}</span>
               </li>
             }
           </ul>
         </fieldset>
       }
     </div>
-    <p class="mt-3 flex items-baseline justify-between border-t border-slate-200 pt-2 text-base font-semibold" role="status" aria-live="polite">
+    <p class="mt-3 flex items-baseline justify-between rounded-xl bg-pos-accent-soft px-4 py-3 text-base font-semibold text-pos-accent-text" role="status" aria-live="polite">
       <span>{{ 'pos.cashCount.total' | t }}</span>
-      <span class="text-xl tabular-nums" data-testid="pos-count-total">{{ total() | money }}</span>
+      <span class="text-[28px] leading-none font-bold tracking-tight tabular-nums" data-testid="pos-count-total">{{ total() | money }}</span>
     </p>
   `,
 })

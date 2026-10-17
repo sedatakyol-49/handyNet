@@ -1789,6 +1789,8 @@
       "truncated": "{count} stok kalemi gösteriliyor. Diğer ürünleri tarayarak bulun.",
       "openOrders": "Açık siparişler",
       "orderLabel": "Sipariş {number} ({count} ürün)",
+      "ticket": "Fiş {number}",
+      "newTicket": "Yeni",
       "newOrder": "Yeni sipariş (mevcut olanı beklet)",
       "discardOrder": "Siparişi iptal et",
       "tooManyOrders": "Aynı anda en fazla 20 sipariş açık olabilir.",
