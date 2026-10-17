@@ -66,14 +66,14 @@ test.describe('account security', () => {
     await page.goto('/email-bestaetigen#token=ungueltiger-token-' + RUN);
     await expect(page.getByTestId('verify-invalid')).toContainText('Der Link ist ungültig oder wurde bereits verwendet.');
     // The token is removed from the address bar.
-    expect(new URL(page.url()).hash).toBe('');
+    await expect.poll(() => new URL(page.url()).hash).toBe('');
     await expect(page.getByTestId('verify-invalid').getByRole('link', { name: 'Anmelden' })).toBeVisible();
 
     await page.goto('/email-bestaetigen');
     await expect(page.getByTestId('verify-missing')).toContainText('Dieser Link ist unvollständig');
 
     await page.goto('/passwort-zuruecksetzen#token=ungueltig-' + RUN);
-    expect(new URL(page.url()).hash).toBe('');
+    await expect.poll(() => new URL(page.url()).hash).toBe('');
     await page.locator('#reset-password').fill(NEW_PASSWORD);
     await page.locator('#reset-confirm').fill('anders-' + NEW_PASSWORD);
     await page.getByTestId('reset-submit').click();
