@@ -618,7 +618,9 @@
         "identify": "Ürün",
         "stock": "Stok",
         "offer": "Teklif",
-        "summary": "Kontrol et ve kaydet"
+        "summary": "Kontrol et ve kaydet",
+        "rows": "Miktarlar",
+        "review": "Kontrol et ve kaydet"
       },
       "identifyTitle": "Ürünü arayın veya yeni oluşturun",
       "scanLabel": "EAN, üretici numarası veya ad",
@@ -730,6 +732,53 @@
         "price": "Lütfen 0'dan büyük bir fiyat girin, örn. 12,50.",
         "moq": "En az 1.",
         "deliveryDays": "0 ile 60 gün arası."
+      },
+      "bulk": {
+        "selected": "Seçilenler ({count})",
+        "clearSelection": "Seçimi temizle",
+        "unselect": "{product} ürününü seçimden çıkar",
+        "selectedHint": "Seçim yeni aramalarda korunur. Sonraki adımda her ürün için miktar veya IMEI, alış fiyatı ve teklifi tek bir tabloda girersiniz.",
+        "tickHint": "birden fazla ürün işaretlenebilir",
+        "newProductSingle": "Yeni ürünler tek tek oluşturulur: önce seçimi temizleyin.",
+        "nextWith": "{count} ürünle devam et",
+        "rowsTitle": "{count} ürün için stok",
+        "warehouseHint": "Tüm satırlar için geçerlidir.",
+        "quantityAll": "Hepsi için miktar",
+        "apply": "Uygula",
+        "remove": "Kaldır",
+        "removeRow": "{product} satırını kaldır",
+        "ek": "Adet başı net alış fiyatı",
+        "ekShort": "Alış net",
+        "offerCreate": "Pazaryerinde teklif oluştur",
+        "offerUpdate": "Kendi teklifini güncelle",
+        "publish": "Yayınla",
+        "imeiInOtherRow": "başka bir satırda da girildi",
+        "rowSaved": "Kaydedildi: +{qty}, stok şimdi {onHand}.",
+        "status": {
+          "pending": "Açık",
+          "saving": "Kaydediliyor …",
+          "saved": "Kaydedildi",
+          "error": "Hata"
+        },
+        "resultTitle": "Sonuç",
+        "savedOf": "{total} satırdan {saved} kaydedildi",
+        "failedHint": "Başarısız: {count}. Satırları “Düzenle” ile düzeltip yeniden gönderin – kaydedilen satırlar tekrar gönderilmez.",
+        "editRow": "Düzenle",
+        "sendInfo": "Her satır ayrı kaydedilir. Biri başarısız olursa diğerleri kayıtlı kalır; yeniden göndermek hiçbir şeyi iki kez kaydetmez.",
+        "saveAll": "Tümünü kaydet ({count})",
+        "retryFailed": "Başarısız olanları yeniden gönder ({count})",
+        "moreItems": "Başka ürünler gir",
+        "savedNext": "{count} ürün kaydedildi. Sonraki seçim:",
+        "closeTitle": "Kaydedilmemiş satırlar silinsin mi?",
+        "closeText": "Henüz kaydedilmedi: {count} satır. Kapatırsanız bu bilgiler kaybolur.",
+        "closeBusy": "Kayıt hâlâ sürüyor ({count} satır açık). Gönderilmiş satırlar yine de kaydedilir.",
+        "keepEditing": "Düzenlemeye devam et",
+        "discardClose": "Sil ve kapat",
+        "v": {
+          "nothing": "En az 1 miktar girin veya bir teklif oluşturun.",
+          "imeiOtherRow": "En az bir IMEI başka bir satırda da girildi.",
+          "skuOtherRow": "Bu ürün numarası başka bir satırda zaten kullanılıyor."
+        }
       }
     }
   },

@@ -618,7 +618,9 @@
         "identify": "Artículo",
         "stock": "Stock",
         "offer": "Oferta",
-        "summary": "Revisar y guardar"
+        "summary": "Revisar y guardar",
+        "rows": "Cantidades",
+        "review": "Revisar y guardar"
       },
       "identifyTitle": "Buscar el artículo o crear uno nuevo",
       "scanLabel": "EAN, número de fabricante o denominación",
@@ -730,6 +732,53 @@
         "price": "Introduzca un precio mayor que 0, p. ej. 12,50.",
         "moq": "Al menos 1.",
         "deliveryDays": "De 0 a 60 días."
+      },
+      "bulk": {
+        "selected": "Seleccionados ({count})",
+        "clearSelection": "Vaciar selección",
+        "unselect": "Quitar {product} de la selección",
+        "selectedHint": "La selección se mantiene en nuevas búsquedas. En el siguiente paso introduce cantidad o IMEI, precio de compra y oferta por artículo en una tabla.",
+        "tickHint": "se pueden marcar varios artículos",
+        "newProductSingle": "Los artículos nuevos se crean de uno en uno: vacíe primero la selección.",
+        "nextWith": "Continuar con {count} artículos",
+        "rowsTitle": "Stock de {count} artículos",
+        "warehouseHint": "Se aplica a todas las filas.",
+        "quantityAll": "Cantidad para todos",
+        "apply": "Aplicar",
+        "remove": "Quitar",
+        "removeRow": "Quitar la fila {product}",
+        "ek": "Precio de compra neto por unidad",
+        "ekShort": "Compra neto",
+        "offerCreate": "Crear oferta en el marketplace",
+        "offerUpdate": "Actualizar oferta propia",
+        "publish": "Publicar",
+        "imeiInOtherRow": "también introducido en otra fila",
+        "rowSaved": "Guardado: +{qty}, stock actual {onHand}.",
+        "status": {
+          "pending": "Pendiente",
+          "saving": "Guardando …",
+          "saved": "Guardado",
+          "error": "Error"
+        },
+        "resultTitle": "Resultado",
+        "savedOf": "{saved} de {total} guardados",
+        "failedHint": "Fallidas: {count}. Corrija las filas con «Editar» y envíelas de nuevo; las filas guardadas no se vuelven a enviar.",
+        "editRow": "Editar",
+        "sendInfo": "Cada fila se guarda por separado. Si una falla, las demás quedan guardadas; reenviar nunca registra nada dos veces.",
+        "saveAll": "Guardar todo ({count})",
+        "retryFailed": "Reenviar las fallidas ({count})",
+        "moreItems": "Registrar más artículos",
+        "savedNext": "{count} artículos guardados. Siguiente selección:",
+        "closeTitle": "¿Descartar las filas no guardadas?",
+        "closeText": "Aún sin guardar: {count} filas. Al cerrar se perderán estos datos.",
+        "closeBusy": "El guardado sigue en curso ({count} filas pendientes). Las filas ya enviadas se registrarán igualmente.",
+        "keepEditing": "Seguir editando",
+        "discardClose": "Descartar y cerrar",
+        "v": {
+          "nothing": "Introduzca una cantidad de al menos 1 o cree una oferta.",
+          "imeiOtherRow": "Al menos un IMEI también está introducido en otra fila.",
+          "skuOtherRow": "Este número de artículo ya se usa en otra fila."
+        }
       }
     }
   },

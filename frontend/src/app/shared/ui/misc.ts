@@ -137,7 +137,8 @@ export class ToastHostComponent {
       [class]="widthClass()"
       [attr.aria-labelledby]="titleId"
       [attr.data-testid]="testId()"
-      (close)="closed.emit()"
+      (cancel)="onCancel($event)"
+      (close)="onNativeClose()"
     >
       <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <h2 class="text-base" [id]="titleId">{{ title() }}</h2>
@@ -157,6 +158,11 @@ export class DialogComponent {
   /** Wider dialog (lists with forms, e.g. the POS customer picker): 56rem unless a size is given. */
   readonly wide = input(false);
   readonly testId = input<string | null>(null);
+  /**
+   * Let the parent decide about closing: Esc does not close the dialog by itself but only emits `closed` (like the ✕
+   * button); the dialog closes when the parent sets `open` to false (e.g. after a "discard changes?" confirmation).
+   */
+  readonly guardClose = input(false);
   readonly closed = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   protected readonly widthClass = computed(() => {
@@ -178,6 +184,24 @@ export class DialogComponent {
       if (this.open() && !el.open) el.showModal();
       else if (!this.open() && el.open) el.close();
     });
+  }
+
+  protected onCancel(event: Event): void {
+    if (!this.guardClose()) return;
+    event.preventDefault();
+    this.closed.emit();
+  }
+
+  protected onNativeClose(): void {
+    this.closed.emit();
+    // The browser may close a guarded dialog anyway (repeated Esc without user activation): reopen it while the
+    // parent still wants it open, so `open` and the native state never disagree.
+    if (this.guardClose()) {
+      setTimeout(() => {
+        const el = this.dialog().nativeElement;
+        if (this.open() && !el.open && typeof el.showModal === 'function') el.showModal();
+      });
+    }
   }
 }
 

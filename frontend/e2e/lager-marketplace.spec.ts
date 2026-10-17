@@ -95,6 +95,7 @@ test.describe.serial('Lager manual entry and marketplace', () => {
     await expect(page.getByTestId('entry-saved-banner')).toContainText(product);
     await page.getByTestId('entry-scan').fill(randomEan());
     await page.getByTestId('entry-scan').press('Enter');
+    await expect(page.getByTestId('entry-no-match')).toBeVisible(); // lookup answered: the EAN is prefilled
     await page.getByTestId('entry-new-product').click();
     await page.getByTestId('entry-brand').fill(brand);
     await page.getByTestId('entry-name').fill(`Phone ${RUN}`);

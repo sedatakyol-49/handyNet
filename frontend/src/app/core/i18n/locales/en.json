@@ -618,7 +618,9 @@
         "identify": "Product",
         "stock": "Stock",
         "offer": "Offer",
-        "summary": "Review & save"
+        "summary": "Review & save",
+        "rows": "Quantities",
+        "review": "Review & save"
       },
       "identifyTitle": "Find the product or create a new one",
       "scanLabel": "EAN, part number or name",
@@ -730,6 +732,53 @@
         "price": "Please enter a price greater than 0, e.g. 12.50.",
         "moq": "At least 1.",
         "deliveryDays": "0 to 60 days."
+      },
+      "bulk": {
+        "selected": "Selected ({count})",
+        "clearSelection": "Clear selection",
+        "unselect": "Remove {product} from the selection",
+        "selectedHint": "The selection is kept across new searches. In the next step you enter quantity or IMEIs, purchase price and offer per item in one table.",
+        "tickHint": "you can tick several items",
+        "newProductSingle": "New items are created one at a time: clear the selection first.",
+        "nextWith": "Continue with {count} items",
+        "rowsTitle": "Stock for {count} items",
+        "warehouseHint": "Applies to all rows.",
+        "quantityAll": "Quantity for all",
+        "apply": "Apply",
+        "remove": "Remove",
+        "removeRow": "Remove row {product}",
+        "ek": "Net purchase price per unit",
+        "ekShort": "Purchase net",
+        "offerCreate": "Create marketplace offer",
+        "offerUpdate": "Update own offer",
+        "publish": "Publish",
+        "imeiInOtherRow": "also entered in another row",
+        "rowSaved": "Saved: +{qty}, stock now {onHand}.",
+        "status": {
+          "pending": "Open",
+          "saving": "Saving …",
+          "saved": "Saved",
+          "error": "Error"
+        },
+        "resultTitle": "Result",
+        "savedOf": "{saved} of {total} saved",
+        "failedHint": "Failed: {count}. Fix the rows via “Edit” and send them again – saved rows are not sent a second time.",
+        "editRow": "Edit",
+        "sendInfo": "Each row is saved on its own. If one fails, the others stay saved; sending again never books anything twice.",
+        "saveAll": "Save all ({count})",
+        "retryFailed": "Resend failed rows ({count})",
+        "moreItems": "Enter more items",
+        "savedNext": "{count} items saved. Next selection:",
+        "closeTitle": "Discard unsaved rows?",
+        "closeText": "Not saved yet: {count} rows. Closing loses this input.",
+        "closeBusy": "Saving is still running ({count} rows open). Rows already sent will be booked anyway.",
+        "keepEditing": "Keep editing",
+        "discardClose": "Discard and close",
+        "v": {
+          "nothing": "Enter a quantity of at least 1 or create an offer.",
+          "imeiOtherRow": "At least one IMEI is also entered in another row.",
+          "skuOtherRow": "This SKU is already used in another row."
+        }
       }
     }
   },

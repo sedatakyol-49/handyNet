@@ -1,11 +1,30 @@
-import { CatalogCategories, LookupMatch } from '../../../core/api/models';
+import { HttpErrorResponse } from '@angular/common/http';
+import { toApiProblem } from '../../../core/api/api-problem';
+import { CatalogCategories, LookupMatch, ManualEntryRequest, ManualEntryResult } from '../../../core/api/models';
 import {
+  BulkRow,
   EntryContext,
   EntryDraft,
+  addToSelection,
   attemptFor,
   buildEntryRequest,
+  buildRowRequest,
+  bulkSummary,
+  crossRowImeiDuplicates,
   emptyDraft,
   emptyNewProduct,
+  emptyOffer,
+  hasUnsavedRows,
+  isSelected,
+  removeFromSelection,
+  rowOfferPossible,
+  rowsToSend,
+  runBulk,
+  setQuantityForAll,
+  syncRows,
+  toggleSelection,
+  validateRow,
+  validateRows,
   entrySteps,
   firstInvalidStep,
   imeiPolicy,
@@ -212,6 +231,232 @@ describe('idempotency key', () => {
     expect(keepAttemptAfter(503)).toBe(true);
     expect(keepAttemptAfter(409)).toBe(false);
     expect(keepAttemptAfter(422)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------- multi-select / bulk
+
+function product(id: string, name: string, overrides: Partial<LookupMatch> = {}): LookupMatch {
+  return match({ product: { ...match().product, id, name, mpn: `MPN-${id}` }, suggestedSku: `MPN-${id}`, ...overrides });
+}
+
+const akku1 = product('a1', 'Akku iPhone 12');
+const akku2 = product('a2', 'Akku iPhone 13');
+const display = product('d1', 'Display iPhone 13');
+const phone = product('ph', 'iPhone 13', { imeiRequired: true, imeiAllowed: true });
+const phone2 = product('ph2', 'iPhone 14', { imeiRequired: true, imeiAllowed: true });
+
+function keys(): () => string {
+  let n = 0;
+  return () => `key-${++n}`;
+}
+
+function rowsFor(selected: LookupMatch[]): BulkRow[] {
+  return syncRows([], selected, keys());
+}
+
+function result(id: string, qty: number): ManualEntryResult {
+  return { entryId: `e-${id}`, quantityReceived: qty, product: { id }, stock: { onHand: qty } } as unknown as ManualEntryResult;
+}
+
+function problem(status: number, code: string): HttpErrorResponse {
+  return new HttpErrorResponse({ status, error: { status, code, title: code } });
+}
+
+describe('selection across searches', () => {
+  it('keeps ticked products of earlier searches and toggles by product id', () => {
+    // search "akku": tick 2
+    let selected = toggleSelection([], akku1);
+    selected = toggleSelection(selected, akku2);
+    // search "display": tick 1 – the akku matches are not in this result, they stay selected
+    selected = toggleSelection(selected, display);
+    expect(selected.map((m) => m.product.id)).toEqual(['a1', 'a2', 'd1']);
+    // ticking a match of the same product again (other search snapshot) unticks it
+    selected = toggleSelection(selected, product('a2', 'Akku iPhone 13 (other search)'));
+    expect(selected.map((m) => m.product.id)).toEqual(['a1', 'd1']);
+    expect(isSelected(selected, 'a1')).toBe(true);
+    expect(isSelected(selected, 'a2')).toBe(false);
+    expect(removeFromSelection(selected, 'a1').map((m) => m.product.id)).toEqual(['d1']);
+  });
+
+  it('auto-selection of an exact EAN match never adds a product twice', () => {
+    const selected = addToSelection([akku1], display);
+    expect(addToSelection(selected, display).map((m) => m.product.id)).toEqual(['a1', 'd1']);
+  });
+
+  it('syncs rows with the selection: keeps input and key, adds new, drops deselected unsaved, keeps saved rows', () => {
+    const newKey = keys();
+    let rows = syncRows([], [akku1, akku2], newKey);
+    expect(rows.map((r) => [r.id, r.key])).toEqual([['a1', 'key-1'], ['a2', 'key-2']]);
+    rows[0].quantity = '5';
+    rows[1].status = 'saved';
+    rows = syncRows(rows, [akku1, display], newKey);
+    expect(rows.map((r) => [r.id, r.key, r.status])).toEqual([
+      ['a2', 'key-2', 'saved'],
+      ['a1', 'key-1', 'pending'],
+      ['d1', 'key-3', 'pending'],
+    ]);
+    expect(rows.find((r) => r.id === 'a1')!.quantity).toBe('5');
+  });
+
+  it('prefills the row offer from the own offer or the suggested SKU with 1 / 2', () => {
+    const [plain] = rowsFor([akku1]);
+    expect(plain.offer).toEqual({ ...emptyOffer(), supplierSku: 'MPN-a1' });
+    const withOffer = product('o1', 'Akku X', {
+      ownOffers: [{ id: 'of', supplierSku: 'OWN-1', priceMinor: 1990, minOrderQuantity: 5, deliveryDays: 3, condition: 'Refurbished', status: 'Paused' }],
+    });
+    expect(rowsFor([withOffer])[0].offer).toEqual({
+      enabled: false, supplierSku: 'OWN-1', price: '19,90', minOrderQuantity: '5', deliveryDays: '3', condition: 'Refurbished', publish: false,
+    });
+    expect(rowsFor([phone])[0].stockMode).toBe('imei');
+  });
+});
+
+describe('bulk row validation', () => {
+  it('validates quantity and EK per row and requires stock or an offer', () => {
+    const rows = rowsFor([akku1, akku2]);
+    rows[0].quantity = '2,5';
+    rows[0].purchasePrice = 'x';
+    rows[1].quantity = '0';
+    const errors = validateRows(rows, ctx);
+    expect(errors.get('a1')).toEqual({ quantity: 'inventory.entry.v.quantity', purchasePrice: 'inventory.entry.v.money' });
+    expect(errors.get('a2')).toEqual({ quantity: 'inventory.entry.bulk.v.nothing' });
+    // quantity 0 is fine with an offer (only the offer is saved)
+    rows[1].offer = { ...rows[1].offer, enabled: true, price: '9,90' };
+    expect(validateRow(rows[1], rows, ctx)).toEqual({});
+  });
+
+  it('validates the offer per row only when enabled, and an SKU only once across rows', () => {
+    const rows = rowsFor([akku1, akku2]);
+    rows[0].offer = { ...rows[0].offer, enabled: true, price: '0', minOrderQuantity: '0', deliveryDays: '61' };
+    expect(Object.keys(validateRow(rows[0], rows, ctx)).sort()).toEqual(['deliveryDays', 'minOrderQuantity', 'price']);
+    rows[0].offer = { ...rows[0].offer, price: '10', minOrderQuantity: '1', deliveryDays: '2', supplierSku: 'same' };
+    rows[1].offer = { ...rows[1].offer, enabled: true, price: '11', supplierSku: ' SAME ' };
+    expect(validateRow(rows[0], rows, ctx)).toEqual({ supplierSku: 'inventory.entry.bulk.v.skuOtherRow' });
+    expect(validateRow(rows[1], rows, ctx)).toEqual({ supplierSku: 'inventory.entry.bulk.v.skuOtherRow' });
+    // without offer permission the offer is neither validated nor sent
+    expect(validateRow(rows[0], rows, { ...ctx, canCreateOffer: false })).toEqual({});
+    expect(buildRowRequest(rows[0], 'wh1', { ...ctx, canCreateOffer: false })).toEqual({ warehouseId: 'wh1', productId: 'a1', quantity: 1 });
+  });
+
+  it('requires IMEIs for serialized rows, never an offer there, and flags IMEIs entered in two rows', () => {
+    const rows = rowsFor([phone, phone2, akku1]);
+    expect(validateRow(rows[0], rows, ctx)).toEqual({ imeis: 'inventory.entry.v.imeiMissing' });
+    rows[0].imeiText = `${VALID_IMEI}\n${VALID_IMEI_2}`;
+    rows[1].imeiText = VALID_IMEI_2;
+    expect(crossRowImeiDuplicates(rows)).toEqual(new Map([['ph', [VALID_IMEI_2]], ['ph2', [VALID_IMEI_2]]]));
+    expect(validateRows(rows, ctx)).toEqual(
+      new Map([
+        ['ph', { imeis: 'inventory.entry.bulk.v.imeiOtherRow' }],
+        ['ph2', { imeis: 'inventory.entry.bulk.v.imeiOtherRow' }],
+      ]),
+    );
+    rows[1].imeiText = '490154203237519'; // Luhn error wins over the cross-row check
+    expect(validateRow(rows[1], rows, ctx)).toEqual({ imeis: 'inventory.entry.v.imeiInvalid' });
+    rows[1].imeiText = '';
+    rows[1].quantity = '3'; // a quantity is ignored for IMEI-only products
+    rows[0].offer = { ...rows[0].offer, enabled: true, price: '10' };
+    expect(rowOfferPossible(rows[0], ctx)).toBe(false);
+    expect(buildRowRequest(rows[0], 'wh1', ctx)).toEqual({ warehouseId: 'wh1', productId: 'ph', imeis: [VALID_IMEI, VALID_IMEI_2] });
+  });
+
+  it('does not validate saved rows but still counts their IMEIs', () => {
+    const rows = rowsFor([phone, phone2]);
+    rows[0].imeiText = VALID_IMEI;
+    rows[0].status = 'saved';
+    rows[0].quantity = 'garbage';
+    rows[1].imeiText = VALID_IMEI;
+    expect([...validateRows(rows, ctx).keys()]).toEqual(['ph2']);
+  });
+
+  it('"Menge für alle" sets unsaved quantity rows only', () => {
+    const rows = rowsFor([akku1, akku2, phone]);
+    rows[1].status = 'saved';
+    expect(setQuantityForAll(rows, ' 4 ')).toBe(1);
+    expect(rows.map((r) => r.quantity)).toEqual(['4', '1', '1']);
+  });
+});
+
+describe('bulk save run', () => {
+  function describeError(e: unknown) {
+    const p = toApiProblem(e);
+    return { code: p.code, text: `msg:${p.code}` };
+  }
+
+  it('sends every row with its own key and retries only failed rows with the same key, also after an edit', async () => {
+    const rows = rowsFor([akku1, akku2, phone]);
+    rows[0].quantity = '2';
+    rows[1].quantity = '3';
+    rows[2].imeiText = VALID_IMEI;
+    const calls: { productId: string; key: string; body: ManualEntryRequest }[] = [];
+    let imeiInStock = true;
+    const send = async (body: ManualEntryRequest, key: string) => {
+      calls.push({ productId: body.productId!, key, body });
+      if (body.productId === 'ph' && imeiInStock) throw problem(409, 'unit.imei_in_stock');
+      return result(body.productId!, body.quantity ?? body.imeis!.length);
+    };
+
+    const last = await runBulk(rows, { warehouseId: 'wh1', ctx, send, describe: describeError });
+    expect(calls.map((c) => [c.productId, c.key])).toEqual([['a1', 'key-1'], ['a2', 'key-2'], ['ph', 'key-3']]);
+    expect(new Set(calls.map((c) => c.key)).size).toBe(3);
+    expect(rows.map((r) => r.status)).toEqual(['saved', 'saved', 'error']);
+    expect(rows[2]).toMatchObject({ errorCode: 'unit.imei_in_stock', error: 'msg:unit.imei_in_stock' });
+    expect(bulkSummary(rows)).toEqual({ total: 3, saved: 2, failed: 1 });
+    expect(hasUnsavedRows(rows)).toBe(true);
+    expect(last?.entryId).toBe('e-a2');
+
+    // fix the failed row and resend: only that row, with its original key
+    rows[2].imeiText = VALID_IMEI_2;
+    imeiInStock = false;
+    calls.length = 0;
+    expect(rowsToSend(rows).map((r) => r.id)).toEqual(['ph']);
+    await runBulk(rows, { warehouseId: 'wh1', ctx, send, describe: describeError });
+    expect(calls.map((c) => [c.productId, c.key])).toEqual([['ph', 'key-3']]);
+    expect(calls[0].body.imeis).toEqual([VALID_IMEI_2]);
+    expect(rows.map((r) => r.status)).toEqual(['saved', 'saved', 'saved']);
+    expect(rows[2].error).toBeNull();
+    expect(hasUnsavedRows(rows)).toBe(false);
+
+    // nothing left to send: a further run sends nothing
+    calls.length = 0;
+    await runBulk(rows, { warehouseId: 'wh1', ctx, send, describe: describeError });
+    expect(calls).toEqual([]);
+  });
+
+  it('reuses the row key after an unknown outcome (network error / 5xx)', async () => {
+    const rows = rowsFor([akku1]);
+    const keysSeen: string[] = [];
+    let fail = true;
+    const send = async (body: ManualEntryRequest, key: string) => {
+      keysSeen.push(key);
+      if (fail) throw problem(0, 'network');
+      return result('a1', 1);
+    };
+    await runBulk(rows, { warehouseId: 'wh1', ctx, send, describe: describeError });
+    fail = false;
+    await runBulk(rows, { warehouseId: 'wh1', ctx, send, describe: describeError });
+    expect(keysSeen).toEqual(['key-1', 'key-1']);
+    expect(rows[0].status).toBe('saved');
+  });
+
+  it('keeps at most 3 requests in flight, and 1 without a warehouse', async () => {
+    async function maxInFlight(warehouseId: string): Promise<number> {
+      const rows = rowsFor([akku1, akku2, display, product('x1', 'X1'), product('x2', 'X2')]);
+      let inFlight = 0;
+      let max = 0;
+      const send = async (body: ManualEntryRequest) => {
+        inFlight++;
+        max = Math.max(max, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        inFlight--;
+        return result(body.productId!, 1);
+      };
+      await runBulk(rows, { warehouseId, ctx, send, describe: describeError });
+      expect(rows.every((r) => r.status === 'saved')).toBe(true);
+      return max;
+    }
+    expect(await maxInFlight('wh1')).toBe(3);
+    expect(await maxInFlight('')).toBe(1);
   });
 });
 
