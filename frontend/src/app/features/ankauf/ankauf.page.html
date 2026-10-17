@@ -30,7 +30,7 @@
             <ul id="ak-models" class="divide-y divide-slate-100" [attr.aria-label]="'ankauf.results' | t" data-testid="ak-models">
               @for (m of models.value() ?? []; track m.modelKey) {
                 <li>
-                  <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-sm hover:bg-slate-50 focus-visible:bg-accent-50 focus-visible:outline-2 focus-visible:outline-accent-600"
+                  <button type="button" class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-sm hover:bg-slate-100 focus-visible:bg-accent-50 focus-visible:outline-2 focus-visible:outline-accent-600"
                     (click)="selectModel(m)" [attr.data-model-key]="m.modelKey">
                     <span>{{ label(m) }}</span>
                     <span class="text-xs text-slate-500">{{ 'ankauf.until' | t: { date: (m.priceValidUntil | hnDate: 'date') } }}</span>
@@ -212,7 +212,7 @@
           <th scope="col">{{ 'ankauf.validUntilColumn' | t }}</th>
           <th scope="col" class="text-end">{{ 'ankauf.policyColumn' | t }}</th>
           @if (canIntake()) {
-            <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+            <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
           }
         </tr>
       </thead>
@@ -234,7 +234,7 @@
             <td class="whitespace-nowrap text-xs">{{ q.validUntil | hnDate }}</td>
             <td class="text-end tabular-nums">#{{ q.policyNumber }}</td>
             @if (canIntake()) {
-              <td class="text-end whitespace-nowrap">
+              <td class="hn-actions">
                 @if (intakeFor().get(q.id); as intake) {
                   <a class="hn-link text-xs" [routerLink]="['/app/ankauf/ankaeufe', intake.id]">{{ intake.status | tEnum: 'intakeStatus' }}</a>
                 } @else if (usable(q)) {

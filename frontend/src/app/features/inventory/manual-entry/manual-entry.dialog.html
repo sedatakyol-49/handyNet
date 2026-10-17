@@ -22,7 +22,7 @@
               <button
                 type="button"
                 class="flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-                [class]="step() === s ? 'border-accent-700 bg-accent-700 text-white' : i < stepIndex() ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50' : 'border-slate-200 bg-slate-50 text-slate-500'"
+                [class]="step() === s ? 'border-accent-700 bg-accent-700 text-white' : i < stepIndex() ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100' : 'border-slate-200 bg-slate-50 text-slate-500'"
                 [attr.aria-current]="step() === s ? 'step' : null"
                 [disabled]="step() !== s && stepDisabled(s)"
                 (click)="goTo(s)"
@@ -85,8 +85,8 @@
             @for (m of selection(); track m.product.id) {
               <li class="inline-flex max-w-full items-center gap-0.5 rounded-full border border-slate-300 bg-white ps-2.5 text-xs" data-testid="entry-chip">
                 <span class="truncate">{{ matchLabel(m) }}</span>
-                <button type="button" class="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  [attr.aria-label]="'inventory.entry.bulk.unselect' | t: { product: matchLabel(m) }" (click)="unselect(m.product.id)" data-testid="entry-chip-remove">
+                <button type="button" class="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-900 active:bg-slate-300"
+                  [attr.aria-label]="'inventory.entry.bulk.unselect' | t: { product: matchLabel(m) }" [title]="'inventory.entry.bulk.unselect' | t: { product: matchLabel(m) }" (click)="unselect(m.product.id)" data-testid="entry-chip-remove">
                   <span aria-hidden="true">✕</span>
                 </button>
               </li>
@@ -106,7 +106,7 @@
           <p class="text-xs text-slate-600" role="status">{{ 'inventory.entry.matches' | t: { count: r.matches.length } }} · {{ 'inventory.entry.bulk.tickHint' | t }}</p>
           <ul class="max-h-[28rem] space-y-1.5 overflow-y-auto pe-1" data-testid="entry-matches">
             @for (m of r.matches; track m.product.id) {
-              <li class="flex items-start gap-3 rounded-md border bg-white p-2" [class]="(isSelected(m) ? 'border-accent-600 ring-1 ring-accent-600 bg-accent-50' : 'border-slate-200') + (draft.productMode === 'new' ? '' : ' cursor-pointer hover:border-slate-300')"
+              <li class="flex items-start gap-3 rounded-md border p-2" [class]="(isSelected(m) ? 'border-accent-600 bg-accent-50 ring-1 ring-accent-600' : 'border-slate-200 bg-white') + (draft.productMode === 'new' ? '' : isSelected(m) ? ' cursor-pointer hover:bg-accent-100' : ' cursor-pointer hover:border-accent-600/50 hover:bg-slate-100')"
                 (click)="onMatchClick($event, m)" data-testid="entry-match">
                 <span class="flex min-h-11 min-w-8 shrink-0 items-center justify-center">
                   <input type="checkbox" class="hn-checkbox size-5" [id]="'entry-sel-' + m.product.id" [checked]="isSelected(m)" [disabled]="draft.productMode === 'new'"
@@ -433,7 +433,7 @@
               <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset" [class]="statusClass(row.status)" data-testid="bulk-status">{{ 'inventory.entry.bulk.status.' + row.status | t }}</span>
               @if (!rowLocked(row)) {
                 <button hnButton size="sm" variant="ghost" type="button" class="min-h-8 shrink-0" [disabled]="busy()" (click)="removeRow(row)"
-                  [attr.aria-label]="'inventory.entry.bulk.removeRow' | t: { product: matchLabel(row.match) }" data-testid="bulk-remove">
+                  [attr.aria-label]="'inventory.entry.bulk.removeRow' | t: { product: matchLabel(row.match) }" [title]="'inventory.entry.bulk.removeRow' | t: { product: matchLabel(row.match) }" data-testid="bulk-remove">
                   {{ 'inventory.entry.bulk.remove' | t }}
                 </button>
               }
@@ -554,7 +554,7 @@
           }
         }
       </div>
-      <div class="overflow-x-auto rounded-md border border-slate-200">
+      <div class="max-h-[50vh] overflow-auto rounded-md border border-slate-200">
         <table class="hn-table" data-testid="bulk-review">
           <thead>
             <tr>

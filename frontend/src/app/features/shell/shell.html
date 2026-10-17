@@ -68,10 +68,10 @@
               <p class="mt-1 text-slate-500">{{ m.role | tEnum: 'role' }} · {{ m.organizationName }}</p>
             }
           </div>
-          <a routerLink="/app/konto" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-50" data-testid="account-link">
+          <a routerLink="/app/konto" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100" data-testid="account-link">
             {{ 'shell.account' | t }}
           </a>
-          <button type="button" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-50" (click)="logout()" data-testid="logout">
+          <button type="button" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100" (click)="logout()" data-testid="logout">
             {{ 'shell.logout' | t }}
           </button>
         </div>
@@ -100,11 +100,11 @@
           <li>
             <a
               [routerLink]="item.path"
-              routerLinkActive="bg-slate-100 text-slate-900 font-semibold"
+              routerLinkActive="hn-nav-active"
               [routerLinkActiveOptions]="{ exact: !!item.exact }"
               #rla="routerLinkActive"
               [attr.aria-current]="rla.isActive ? 'page' : null"
-              class="flex items-center justify-between rounded px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              class="hn-nav-link"
             >
               <span>{{ item.labelKey | t }}</span>
               @if (item.badge === 'cart' && cart.count() > 0) {

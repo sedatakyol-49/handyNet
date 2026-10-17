@@ -133,7 +133,7 @@
       <ul class="max-h-56 divide-y divide-slate-100 overflow-y-auto rounded-md border border-slate-200 text-sm" [attr.aria-busy]="products.loading()">
         @for (p of products.value()?.items ?? []; track p.id) {
           <li>
-            <button type="button" class="block w-full px-3 py-2 text-start hover:bg-slate-50" (click)="create.product = p">
+            <button type="button" class="block w-full px-3 py-2 text-start hover:bg-slate-100" (click)="create.product = p">
               <span class="font-medium">{{ p.brand }} {{ p.name }}</span>
               <span class="block text-xs text-slate-500">{{ p.quality | tEnum: 'quality' }} · {{ p.ean ?? p.mpn }}</span>
             </button>
