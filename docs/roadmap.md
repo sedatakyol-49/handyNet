@@ -48,24 +48,24 @@ refused until serialized B2B sales exist), `GET /api/inventory/items/lookup` (EA
 SKU, `canCreateProduct`), product images (ADR-0011: `IFileStorage` local/S3, SkiaSharp re-encode to WebP, EXIF stripped,
 thumbnails, ≤ 8 per product, reorder/remove, public immutable serving), `GET /api/marketplace/offers/{id}/detail`,
 `GET /api/marketplace/facets`, filters (brand/category/quality/condition/seller lists, VK net price range, max delivery
-days, compatible model, has images) with indexes. Open: frontend (dialog, gallery, filter chips, e2e), S3 verification
+days, compatible model, has images) with indexes. Frontend ✅ (wizard, image manager, detail modal + gallery, filter bar with chips, e2e). Open: S3 verification
 against a real bucket, orphan-file cleanup job, gross price display (frontend).
-- 🟡 **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
+- ✅ **Manual single-item entry in Lager** (in addition to CSV/XLSX import): 3-step dialog "Artikel anlegen"
   1) identify — EAN scan/typing or MPN, conservative catalog match (same `ProductMatcher` as the import); no match →
   create a canonical product (brand, name, category, quality, EAN/MPN, model, compatible models, images);
   2) stock — warehouse, quantity or one IMEI per unit for serialized categories, optional purchase price (EK);
   3) offer (optional) — SKU (suggested), VK net price, MOQ, delivery days, condition, publish toggle.
   One idempotent backend command that runs the same validation/matching/apply path as a one-row import (atomic,
   audited); "Speichern & nächster Artikel" with scanner focus for fast entry.
-- 🟡 **Marketplace stays read-only for products** (backend: test asserts no non-GET route under `/api/marketplace`): no "add product" there by design (products enter only via Lager
+- ✅ **Marketplace stays read-only for products** (backend: test asserts no non-GET route under `/api/marketplace`): no "add product" there by design (products enter only via Lager
   manual entry or import); e2e asserts no create action on the marketplace page.
-- 🟡 **Marketplace detail modal**: clicking a row (or Enter on a focused row) opens a dialog with all product data
+- ✅ **Marketplace detail modal**: clicking a row (or Enter on a focused row) opens a dialog with all product data
   (brand, name, category, quality, EAN, MPN, model, compatible models), offer data (seller + city, SKU, condition,
   net + gross price, available, delivery days, MOQ, last update), image gallery (placeholder if none), other
   sellers' offers for the same product, quantity + add to cart; deep link `?offer={id}`. Needs product images:
   `IFileStorage` abstraction (local disk dev, S3-compatible object storage prod), JPEG/PNG/WebP ≤ 5 MB, EXIF
   stripped, thumbnails, MIT-licensed image library.
-- 🟡 **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
+- ✅ **Richer marketplace filters**: brand dropdown with counts, quality, condition, VK price range (min/max net),
   max delivery days, seller, compatible model ("passend für …"), "with images"; facet endpoint, active-filter chips,
   filters persisted in the URL, collapsible on mobile, supporting DB indexes. The requested "VKVK" filter was a typo for a
   Verkäufer (seller) filter (clarified 2026-10-17): seller multi-select with facet counts (`sellerId`).
@@ -73,39 +73,39 @@ against a real bucket, orphan-file cleanup job, gross price display (frontend).
 ## Phase 2c — Standalone POS app, Odoo-POS parity (requested 2026-10-16)
 Benchmark: Odoo 18 Point of Sale. Restaurant-only features (tables, kitchen display, self-ordering, food delivery)
 are out of scope for phone shops unless requested.
-- ⬜ **A. Standalone app**: POS leaves the back-office shell/menus; own full-screen route `/kasse` with its own
+- ✅ **A. Standalone app**: POS leaves the back-office shell/menus; own full-screen route `/kasse` with its own
   minimal top bar (register, session, cashier, online state, close), launched from the dashboard/registers list;
   touch-first, tablet + desktop, keyboard/scanner shortcuts kept.
-- ⬜ **B. Selling screen like Odoo**: product grid with category tabs and images, search/scan, cart with numpad
+- 🟡 **B. Selling screen like Odoo**: product grid with category tabs and images, search/scan, cart with numpad
   (Qty / % Disc / Price modes, +/-), line notes, price override with permission, parked orders (hold/resume,
   several open tickets), customer selection/creation at the till, payment screen with multiple methods, split,
   quick cash amounts, change, edit payment before finalizing, receipt screen (print / email / new order).
   Backend ✅ (ADR-0008 "Odoo-parity extensions"): product grid endpoint (own stock of the register's warehouse, paged,
   search, category filter + category list, serialized flag, available quantity, till price from own POS price → own
   offer net + 19 % → none, `imageUrl` placeholder), POS price maintenance, line notes on immutable receipts, price
-  override enforced. Open: ⬜ product images (Catalog), ⬜ frontend wiring.
+  override enforced. ✅ Frontend wired (grid with prices, notes, price dialog, parked tickets, split payment, receipt screen). Open: ⬜ product images on tiles (Catalog images exist; POS `imageUrl` not yet filled), ⬜ e-mail receipt.
 - 🟡 **C. Staff**: cashier switching with PIN on a shared device, per-cashier permissions (discount limit, price
   change, refund, cash in/out, closing), manager approval PIN. Backend ✅ per-cashier permissions on staff memberships
   (`pos.price_override`, `pos.discount` + max %, `pos.refund`, `pos.cash_movement`, `pos.close_session`; owners/managers
-  always all), enforced by the API. Open: ⬜ PIN switching, ⬜ manager approval PIN, ⬜ UI.
+  always all), enforced by the API. Open: ⬜ PIN switching, ⬜ manager approval PIN; ✅ UI (rights gating at the till, Team page editor).
 - 🟡 **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
   loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding. Backend ✅ customer master
   (RLS, `[PersonalData]` kept out of the audit log), optional customer on a sale, printed snapshot on the receipt,
   per-organization POS price. Open: ⬜ pricelists/customer prices, ⬜ loyalty/coupons/gift cards, ⬜ cash rounding,
-  ⬜ customer retention/anonymization job, ⬜ UI.
+  ⬜ customer retention/anonymization job; ✅ UI (customer picker, create/edit, on receipt).
 - 🟡 **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
   e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order. Backend ✅ history filters
   (number, dates, amount, cashier, customer, payment method, kind), refunds from an order (existing returns), recorded
-  reprints with copy number. Open: ⬜ invoice for a POS sale, ⬜ e-receipt, ⬜ ship-later, ⬜ quotations, ⬜ UI.
+  reprints with copy number. Open: ⬜ invoice for a POS sale, ⬜ e-receipt, ⬜ ship-later, ⬜ quotations; ✅ UI (filter bar, reprint "Kopie n").
 - 🟡 **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
   differences, session report, all-orders analytics, product/cashier/payment reports. Backend ✅ denominations at
   opening/closing (stored, total = opening/counted cash), predefined + free-text reasons, closing difference, sales
-  report by product/cashier/payment method per session or date range. Open: ⬜ UI, ⬜ export (CSV/PDF).
+  report by product/cashier/payment method per session or date range. ✅ UI (denomination counting, reasons, report page). Open: ⬜ export (CSV/PDF).
 - ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).
-- ⬜ **H. Design**: design spec and screens at least on par with Odoo POS (visual reference review before build),
-  light/dark, RTL, large touch targets, Playwright visual checks.
+- 🟡 **H. Design**: design spec and screens at least on par with Odoo POS (visual reference review before build),
+  light/dark, RTL, large touch targets, Playwright visual checks. ✅ Screens built and reviewed from screenshots (desktop, tablet, phone, dark, RTL). Open: ⬜ automated visual regression checks.
 
 ## Phase 3 — Store operations
 Dependencies: Phase 2 payments + invoicing.
