@@ -56,7 +56,7 @@ const en = loc('en');
 
 if (process.argv.includes('--list')) console.log([...used].sort().join('\n'));
 // Permission names and API codes that look like translation keys (e.g. 'pos.discount', error code 'pos.price').
-const IGNORE = new Set(['pos.sell','pos.manage','pos.discount','pos.refund','pos.price','pos.reason','imports.manage','inventory.manage','offers.manage','orders.fulfil','orders.place','orders.read','cart.items']);
+const IGNORE = new Set(['pos.sell','pos.manage','pos.discount','pos.refund','pos.price','pos.reason','pos.description','pos.quantity','imports.manage','inventory.manage','offers.manage','orders.fulfil','orders.place','orders.read','cart.items']);
 for (const k of IGNORE) used.delete(k);
 const missingDe = [...used].filter((k) => !(k in de)).sort();
 const missingEn = Object.keys(de).filter((k) => !(k in en)).sort();
