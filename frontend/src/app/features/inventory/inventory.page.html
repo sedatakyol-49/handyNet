@@ -6,13 +6,11 @@
 </hn-page-header>
 
 <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
-  <div role="tablist" class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" [attr.aria-label]="'inventory.title' | t">
-    <button type="button" role="tab" id="tab-stock" aria-controls="panel-stock" [attr.aria-selected]="tab() === 'stock'"
-      class="rounded px-3 py-1" [class]="tab() === 'stock' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'" (click)="tab.set('stock')">
+  <div role="tablist" class="hn-tabs" [attr.aria-label]="'inventory.title' | t">
+    <button type="button" role="tab" id="tab-stock" aria-controls="panel-stock" [attr.aria-selected]="tab() === 'stock'" [attr.tabindex]="tab() === 'stock' ? 0 : -1" (keydown)="onTabKey($event)" class="hn-tab" (click)="tab.set('stock')">
       {{ 'inventory.stock' | t }}
     </button>
-    <button type="button" role="tab" id="tab-movements" aria-controls="panel-movements" [attr.aria-selected]="tab() === 'movements'"
-      class="rounded px-3 py-1" [class]="tab() === 'movements' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'" (click)="tab.set('movements')">
+    <button type="button" role="tab" id="tab-movements" aria-controls="panel-movements" [attr.aria-selected]="tab() === 'movements'" [attr.tabindex]="tab() === 'movements' ? 0 : -1" (keydown)="onTabKey($event)" class="hn-tab" (click)="tab.set('movements')">
       {{ 'inventory.movements' | t }}
     </button>
   </div>
@@ -31,7 +29,7 @@
 @if (tab() === 'stock') {
   <div id="panel-stock" role="tabpanel" aria-labelledby="tab-stock">
     <hn-banner class="mb-3" [error]="stock.error()" />
-    <hn-table [loading]="stock.loading()">
+    <hn-table [loading]="stock.loading()" [scrollY]="true">
       <table class="hn-table" data-testid="stock-table">
         <thead>
           <tr>
@@ -42,29 +40,43 @@
             <th scope="col" class="num">{{ 'inventory.reserved' | t }}</th>
             <th scope="col" class="num">{{ 'inventory.available' | t }}</th>
             <th scope="col">{{ 'common.updatedAt' | t }}</th>
-            <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+            <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
           </tr>
         </thead>
         <tbody>
           @for (s of stock.value()?.items ?? []; track s.warehouseId + s.productId) {
-            <tr>
-              <td class="font-medium">{{ s.brand }} {{ s.productName }}</td>
+            <tr [class.hn-row-selected]="activeRow() === rowKey(s)" data-testid="stock-row">
+              <td class="min-w-48 font-medium">{{ s.brand }} {{ s.productName }}</td>
               <td class="hn-mono text-slate-600">{{ s.ean ?? s.mpn ?? '–' }}</td>
               <td>{{ warehouseCode(s.warehouseId) }}</td>
               <td class="num">{{ s.onHand }}</td>
               <td class="num">{{ s.reserved }}</td>
               <td class="num font-semibold" [class.text-red-700]="s.available <= 0">{{ s.available }}</td>
               <td class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
-              <td class="text-end whitespace-nowrap">
-                @if (canManage) {
-                  <button hnButton size="sm" variant="ghost" type="button" (click)="openAdjust(s)">{{ 'inventory.adjust' | t }}</button>
-                }
-                <button hnButton size="sm" variant="ghost" type="button" (click)="showMovements(s)">{{ 'inventory.movements' | t }}</button>
+              <td class="hn-actions">
+                <span class="hn-actions-inner">
+                  @if (canManage) {
+                    <button hnButton size="sm" type="button" (click)="openAdjust(s)"
+                      [attr.aria-label]="('inventory.adjust' | t) + ': ' + s.brand + ' ' + s.productName" [title]="'inventory.adjustTitle' | t">{{ 'inventory.adjust' | t }}</button>
+                  }
+                  <button hnButton size="sm" type="button" (click)="showMovements(s)"
+                    [attr.aria-label]="('inventory.movements' | t) + ': ' + s.brand + ' ' + s.productName" [title]="'inventory.movementsFor' | t: { product: s.brand + ' ' + s.productName }">{{ 'inventory.movements' | t }}</button>
+                </span>
               </td>
             </tr>
           } @empty {
-            @if (!stock.loading()) {
-              <tr><td colspan="8"><hn-empty-state [title]="'inventory.empty' | t" [text]="'inventory.emptyText' | t" /></td></tr>
+            @if (stock.loading()) {
+              <tr><td colspan="8"><hn-skeleton-rows /></td></tr>
+            } @else {
+              <tr>
+                <td colspan="8">
+                  <hn-empty-state [title]="'inventory.empty' | t" [text]="'inventory.emptyText' | t">
+                    @if (canManage) {
+                      <button hnButton size="sm" variant="primary" type="button" (click)="entryOpen.set(true)">{{ 'inventory.entry.open' | t }}</button>
+                    }
+                  </hn-empty-state>
+                </td>
+              </tr>
             }
           }
         </tbody>
@@ -83,7 +95,7 @@
       </p>
     }
     <hn-banner class="mb-3" [error]="movements.error()" />
-    <hn-table [loading]="movements.loading()">
+    <hn-table [loading]="movements.loading()" [scrollY]="true">
       <table class="hn-table">
         <thead>
           <tr>
@@ -108,7 +120,9 @@
               <td class="text-slate-600">{{ m.reference ?? '–' }}</td>
             </tr>
           } @empty {
-            @if (!movements.loading()) {
+            @if (movements.loading()) {
+              <tr><td colspan="6"><hn-skeleton-rows /></td></tr>
+            } @else {
               <tr><td colspan="6"><hn-empty-state [title]="'inventory.noMovements' | t" /></td></tr>
             }
           }

@@ -44,8 +44,8 @@
             @for (l of o.lines; track l.lineNumber) {
               <tr>
                 <td class="num text-slate-500">{{ l.lineNumber }}</td>
-                <td class="font-medium">{{ l.brand }} {{ l.productName }}</td>
-                <td class="hn-mono">{{ l.supplierSku }}</td>
+                <td class="min-w-48 font-medium">{{ l.brand }} {{ l.productName }}</td>
+                <td class="hn-mono whitespace-nowrap">{{ l.supplierSku }}</td>
                 <td class="num">{{ l.quantity }}</td>
                 <td class="num">{{ l.unitPriceMinor | money: o.currency }}</td>
                 <td class="num">{{ l.lineNetMinor | money: o.currency }}</td>

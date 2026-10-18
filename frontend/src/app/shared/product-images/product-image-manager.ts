@@ -61,11 +61,11 @@ interface PendingUpload {
             @if (canManage()) {
               <div class="mt-1 flex flex-wrap items-center gap-1">
                 <button hnButton size="sm" variant="ghost" type="button" [disabled]="first || busy()" (click)="move(i, i - 1)"
-                  [attr.aria-label]="'images.moveEarlier' | t: { n: i + 1 }">
+                  [attr.aria-label]="'images.moveEarlier' | t: { n: i + 1 }" [title]="'images.moveEarlier' | t: { n: i + 1 }">
                   <span aria-hidden="true" class="rtl:rotate-180 inline-block">◀</span>
                 </button>
                 <button hnButton size="sm" variant="ghost" type="button" [disabled]="last || busy()" (click)="move(i, i + 1)"
-                  [attr.aria-label]="'images.moveLater' | t: { n: i + 1 }">
+                  [attr.aria-label]="'images.moveLater' | t: { n: i + 1 }" [title]="'images.moveLater' | t: { n: i + 1 }">
                   <span aria-hidden="true" class="rtl:rotate-180 inline-block">▶</span>
                 </button>
                 @if (!first) {
@@ -124,7 +124,7 @@ interface PendingUpload {
             />
             <label
               [for]="inputId"
-              class="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-xs hover:bg-slate-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+              class="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-xs hover:bg-slate-100 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
             >
               {{ 'images.upload' | t }}
             </label>

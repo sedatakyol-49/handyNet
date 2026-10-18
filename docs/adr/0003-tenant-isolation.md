@@ -26,6 +26,13 @@ organizations. Leaking one tenant's stock, prices or orders to another is a crit
    - `marketplace.reserve_offer_stock(offer, qty, ref)` (`SECURITY DEFINER`): buyer must be verified with
      `B2BPurchasing`; offer must be published; single conditional `UPDATE … WHERE on_hand - reserved >= qty`.
    - `inventory.release_reservation(id)`: only the stock owner or the reserving organization.
+   - Marketplace moderation (added 2026-10-18, migration `MarketplaceModeration`): the listing view and
+     `reserve_offer_stock` also exclude offers with `moderation = 'Blocked'` and offers of sellers with an active row
+     in `marketplace.seller_blocks`. Platform-admin functions `admin_offers`, `admin_sellers`, `moderate_offers` and
+     `moderate_seller` (`SECURITY DEFINER`) refuse to run for a tenant session (`infra.current_org()` must be NULL)
+     and write `infra.audit_log` in the same statement. The app role may only read its own `seller_blocks` row; a
+     trigger rejects any change of the moderation columns on `offers` (and any status change of a blocked offer)
+     outside `moderate_offers`. `blocked_offers(ids)` only tells a caller which of the ids it already has are blocked.
 5. Identity/tenancy/catalog tables are not tenant-owned (users, memberships, organizations, canonical products)
    and are protected by application authorization instead.
 

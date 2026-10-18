@@ -44,7 +44,7 @@ const STATUSES: IntakeStatus[] = ['Received', 'Inspected', 'Completed', 'Rejecte
             <th scope="col" class="text-end">{{ 'ankauf.intake.quotedOffer' | t }}</th>
             <th scope="col" class="text-end">{{ 'ankauf.intake.inspectedOffer' | t }}</th>
             <th scope="col" class="text-end">{{ 'ankauf.intake.paid' | t }}</th>
-            <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+            <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -58,7 +58,7 @@ const STATUSES: IntakeStatus[] = ['Received', 'Inspected', 'Completed', 'Rejecte
               <td class="text-end tabular-nums whitespace-nowrap">{{ i.quotedOfferMinor | money }}</td>
               <td class="text-end tabular-nums whitespace-nowrap">{{ i.inspectedOfferMinor | money }}</td>
               <td class="text-end tabular-nums whitespace-nowrap font-medium">{{ i.paidMinor | money }}</td>
-              <td class="text-end whitespace-nowrap">
+              <td class="hn-actions">
                 <a hnButton size="sm" variant="ghost" [routerLink]="['/app/ankauf/ankaeufe', i.id]">{{ 'ankauf.intakes.open' | t }}</a>
               </td>
             </tr>

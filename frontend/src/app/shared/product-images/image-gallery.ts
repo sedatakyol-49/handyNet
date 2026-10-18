@@ -38,12 +38,12 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
       >
         <img [src]="api.imageUrl(current()?.fullUrl)" [alt]="alt(index())" class="size-full object-contain" />
         @if (sorted().length > 1) {
-          <button type="button" class="absolute start-1 top-1/2 -translate-y-1/2 rounded bg-white/90 px-2 py-1 text-slate-700 shadow-sm hover:bg-white"
-            (click)="go(index() - 1)" [attr.aria-label]="'images.previous' | t">
+          <button type="button" class="absolute start-1 top-1/2 -translate-y-1/2 rounded bg-white/90 px-2 py-1 text-slate-700 shadow-sm hover:bg-white hover:text-slate-950 active:bg-slate-100"
+            (click)="go(index() - 1)" [attr.aria-label]="'images.previous' | t" [title]="'images.previous' | t">
             <span aria-hidden="true" class="inline-block rtl:rotate-180">◀</span>
           </button>
-          <button type="button" class="absolute end-1 top-1/2 -translate-y-1/2 rounded bg-white/90 px-2 py-1 text-slate-700 shadow-sm hover:bg-white"
-            (click)="go(index() + 1)" [attr.aria-label]="'images.next' | t">
+          <button type="button" class="absolute end-1 top-1/2 -translate-y-1/2 rounded bg-white/90 px-2 py-1 text-slate-700 shadow-sm hover:bg-white hover:text-slate-950 active:bg-slate-100"
+            (click)="go(index() + 1)" [attr.aria-label]="'images.next' | t" [title]="'images.next' | t">
             <span aria-hidden="true" class="inline-block rtl:rotate-180">▶</span>
           </button>
           <span class="absolute bottom-1 end-1 rounded bg-slate-900/70 px-1.5 text-[11px] text-white" dir="ltr" aria-hidden="true">

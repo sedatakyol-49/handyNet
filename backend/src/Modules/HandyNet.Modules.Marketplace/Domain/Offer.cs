@@ -18,6 +18,16 @@ public enum OfferStatus
     Archived,
 }
 
+/// <summary>
+/// Platform moderation state of an offer, separate from the seller's own <see cref="OfferStatus"/>. Stored as text.
+/// Only the platform changes it (database function <c>marketplace.moderate_offers</c>; a trigger rejects any other change).
+/// </summary>
+public enum ModerationStatus
+{
+    None,
+    Blocked,
+}
+
 public sealed record OfferPriceChanged(Guid OfferId, Guid OrganizationId, long OldPriceMinor, long NewPriceMinor, string Currency) : IDomainEvent;
 
 /// <summary>
@@ -44,6 +54,21 @@ public sealed class Offer : Entity, IAuditable
     public int DeliveryDays { get; private set; }
     public OfferCondition Condition { get; private set; }
     public OfferStatus Status { get; private set; }
+
+    /// <summary>Platform moderation; never changed by the seller (see <see cref="ModerationStatus"/>).</summary>
+    public ModerationStatus Moderation { get; private set; }
+
+    /// <summary>Reason given by the platform for the current block (null when not blocked).</summary>
+    public string? ModerationReason { get; private set; }
+
+    /// <summary>When the platform last blocked or unblocked the offer.</summary>
+    public DateTimeOffset? ModeratedAt { get; private set; }
+
+    /// <summary>Platform admin (user id) who last blocked or unblocked the offer.</summary>
+    public Guid? ModeratedBy { get; private set; }
+
+    public bool IsBlocked => Moderation == ModerationStatus.Blocked;
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public uint Version { get; private set; }
@@ -99,10 +124,57 @@ public sealed class Offer : Entity, IAuditable
             return Error.Conflict("offer.archived", "Archived offers cannot be changed.");
         if (target == OfferStatus.Draft)
             return Error.Validation("offer.invalid_status", "An offer cannot return to draft.");
+        if (IsBlocked)
+            return Error.Conflict("offer.blocked", "The platform has blocked this offer; its status cannot be changed until the block is lifted.");
         Status = target;
         UpdatedAt = now;
         return Result.Success();
     }
+}
+
+/// <summary>Rules for platform moderation actions (blocking/unblocking offers and sellers).</summary>
+public static class OfferModeration
+{
+    public const int MaxReasonLength = 500;
+
+    /// <summary>Most offers one bulk action may name; larger sets are blocked per seller.</summary>
+    public const int MaxBatchSize = 500;
+
+    /// <summary>Trimmed reason, null when empty; rejects reasons over <see cref="MaxReasonLength"/> characters.</summary>
+    public static Result<string?> NormalizeReason(string? reason)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        if (trimmed is { Length: > MaxReasonLength })
+            return Error.Validation("moderation.reason_too_long", $"The reason may have at most {MaxReasonLength} characters.");
+        return Result<string?>.Success(trimmed);
+    }
+
+    /// <summary>Distinct, non-empty offer ids of one bulk action (1 to <see cref="MaxBatchSize"/>).</summary>
+    public static Result<IReadOnlyList<Guid>> NormalizeBatch(IEnumerable<Guid>? offerIds)
+    {
+        var ids = (offerIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+            return Error.Validation("moderation.no_offers", "Select at least one offer.");
+        if (ids.Count > MaxBatchSize)
+            return Error.Validation("moderation.too_many_offers", $"At most {MaxBatchSize} offers per action.");
+        return ids;
+    }
+}
+
+/// <summary>
+/// Platform block of a seller: while active, none of the seller's offers — existing or created later — appear on the
+/// marketplace or can be ordered. Read-only for the application; written only by <c>marketplace.moderate_seller</c>.
+/// Lifting the block keeps the row (with <see cref="IsBlocked"/> false) so the last decision stays visible.
+/// </summary>
+public sealed class SellerBlock
+{
+    private SellerBlock() { }
+
+    public Guid OrganizationId { get; private set; }
+    public bool IsBlocked { get; private set; }
+    public string? Reason { get; private set; }
+    public DateTimeOffset ChangedAt { get; private set; }
+    public Guid ChangedBy { get; private set; }
 }
 
 public sealed record OfferTerms(Money Price, int MinOrderQuantity, int DeliveryDays, OfferCondition Condition)

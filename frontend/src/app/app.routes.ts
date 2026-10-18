@@ -166,6 +166,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin-dispute-detail.page').then((m) => m.AdminDisputeDetailPage),
       },
       {
+        path: 'administration/marktplatz',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/moderation/admin-moderation.page').then((m) => m.AdminModerationPage),
+      },
+      {
         path: 'administration/ankauf',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/ankauf/admin-price-lists.page').then((m) => m.AdminPriceListsPage),

@@ -44,7 +44,7 @@
               <th scope="col" class="num">{{ 'cart.unitPrice' | t }}</th>
               <th scope="col" class="num">{{ 'common.quantity' | t }}</th>
               <th scope="col" class="num">{{ 'cart.lineNet' | t }}</th>
-              <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+              <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -85,7 +85,7 @@
                   <span class="mt-0.5 block text-[11px] text-slate-500">{{ 'cart.limits' | t: { min: item.minOrderQuantity, available: item.available } }}</span>
                 </td>
                 <td class="num font-medium">{{ item.priceMinor * item.quantity | money: item.currency }}</td>
-                <td class="text-end">
+                <td class="hn-actions">
                   <button hnButton variant="ghost" size="sm" type="button" (click)="cart.remove(item.offerId)" [disabled]="gs.busy"
                     [attr.aria-label]="('common.remove' | t) + ': ' + item.productName">
                     {{ 'common.remove' | t }}

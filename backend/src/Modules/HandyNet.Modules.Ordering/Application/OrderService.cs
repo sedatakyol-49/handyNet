@@ -106,7 +106,8 @@ internal sealed class OrderService(
         var listings = await offers.GetListingsAsync(offerIds, ct);
         var missing = offerIds.FirstOrDefault(id => !listings.ContainsKey(id));
         if (missing != Guid.Empty)
-            return Error.Validation("order.offer_unavailable", $"Offer {missing} is not available.");
+            return await BlockedErrorAsync(missing, ct)
+                   ?? Error.Validation("order.offer_unavailable", $"Offer {missing} is not available.");
 
         var sellers = listings.Values.Select(l => l.SellerOrganizationId).Distinct().ToList();
         if (sellers.Count != 1)
@@ -146,6 +147,9 @@ internal sealed class OrderService(
                 if (reservation is null)
                 {
                     await transaction.RollbackAsync(ct);
+                    // Blocked by the platform between pricing and reservation.
+                    if (await BlockedErrorAsync(line.OfferId, ct) is { } blocked)
+                        return blocked;
                     var current = (await offers.GetListingsAsync([line.OfferId], ct)).GetValueOrDefault(line.OfferId);
                     var available = current?.Available ?? 0;
                     return Error.Conflict("order.insufficient_stock",
@@ -180,6 +184,13 @@ internal sealed class OrderService(
 
         return new PlaceOrderResult(await ToDtoAsync(order, ct), Replayed: false);
     }
+
+    /// <summary><c>offer.blocked</c> when the platform has blocked this offer (or its seller); null otherwise.</summary>
+    private async Task<Error?> BlockedErrorAsync(Guid offerId, CancellationToken ct) =>
+        (await offers.GetBlockedAsync([offerId], ct)).Contains(offerId)
+            ? Error.Conflict("offer.blocked", "This offer has been removed from the marketplace by the platform and cannot be ordered.")
+                .WithDetails(new Dictionary<string, object?> { ["offerId"] = offerId })
+            : null;
 
     public async Task<PagedResult<OrderDto>> ListAsync(string? role, string? status, int? page, int? pageSize, CancellationToken ct)
     {

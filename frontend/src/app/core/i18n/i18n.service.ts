@@ -35,6 +35,22 @@ const LOADERS: Record<Lang, () => Promise<Dictionary>> = {
 
 const STORAGE_KEY = 'hn.lang';
 
+/**
+ * Formatting locales for dates and numbers. The business runs in Germany: dates are Gregorian and use Western digits
+ * in every language (plain `fa` would format in the Solar Hijri calendar with Persian digits, e.g. "۲۶ مهر ۱۴۰۵",
+ * which does not match invoices, receipts and the de-DE money amounts). English uses the European day-month order
+ * and the 24-hour clock.
+ */
+export const FORMAT_LOCALES: Record<Lang, string> = {
+  de: 'de-DE',
+  en: 'en-GB',
+  tr: 'tr-TR',
+  es: 'es-ES',
+  ru: 'ru-RU',
+  ar: 'ar-u-ca-gregory-nu-latn',
+  fa: 'fa-u-ca-gregory-nu-latn',
+};
+
 export function flatten(dict: Dictionary, prefix = '', out: Record<string, string> = {}): Record<string, string> {
   for (const [k, v] of Object.entries(dict)) {
     const key = prefix ? `${prefix}.${k}` : k;
@@ -58,8 +74,8 @@ export class I18nService {
   readonly lang = signal<Lang>('de');
   readonly dir = computed(() => LANGUAGES.find((l) => l.code === this.lang())?.dir ?? 'ltr');
   readonly languages = LANGUAGES;
-  /** BCP 47 tag used for date/number formatting (money is always de-DE). */
-  readonly locale = computed(() => (this.lang() === 'de' ? 'de-DE' : this.lang()));
+  /** BCP 47 tag used for date/number formatting (money is always de-DE). See FORMAT_LOCALES. */
+  readonly locale = computed(() => FORMAT_LOCALES[this.lang()]);
 
   constructor() {
     const saved = this.storage.get(STORAGE_KEY) as Lang | null;

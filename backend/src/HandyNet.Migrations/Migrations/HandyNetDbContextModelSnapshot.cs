@@ -2231,6 +2231,27 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("min_order_quantity");
 
+                    b.Property<DateTimeOffset?>("ModeratedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("moderated_at");
+
+                    b.Property<Guid?>("ModeratedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("moderated_by");
+
+                    b.Property<string>("Moderation")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("None")
+                        .HasColumnName("moderation");
+
+                    b.Property<string>("ModerationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("moderation_reason");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
@@ -2278,6 +2299,10 @@ namespace HandyNet.Migrations.Migrations
                     b.HasKey("Id")
                         .HasName("pk_offers");
 
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_offers_blocked")
+                        .HasFilter("moderation = 'Blocked'");
+
                     b.HasIndex("OrganizationId", "SkuKey")
                         .IsUnique()
                         .HasDatabaseName("ix_offers_organization_id_sku_key");
@@ -2299,6 +2324,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_offers_delivery_days", "delivery_days BETWEEN 0 AND 60");
 
                             t.HasCheckConstraint("ck_offers_min_quantity", "min_order_quantity >= 1");
+
+                            t.HasCheckConstraint("ck_offers_moderation", "(moderation = 'None' AND moderation_reason IS NULL) OR (moderation = 'Blocked' AND moderated_at IS NOT NULL AND moderated_by IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_offers_price", "price_minor > 0");
                         });
@@ -2416,6 +2443,38 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable((string)null);
 
                     b.ToView("offer_listings", "marketplace");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Marketplace.Domain.SellerBlock", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<Guid>("ChangedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("changed_by");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_blocked");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.HasKey("OrganizationId")
+                        .HasName("pk_seller_blocks");
+
+                    b.ToTable("seller_blocks", "marketplace", t =>
+                        {
+                            t.HasCheckConstraint("ck_seller_blocks_reason", "is_blocked OR reason IS NULL");
+                        });
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Notifications.Domain.EmailMessage", b =>

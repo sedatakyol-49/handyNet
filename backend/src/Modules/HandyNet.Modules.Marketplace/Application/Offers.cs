@@ -40,7 +40,17 @@ public sealed record OwnOfferDto(
     string Status,
     int OnHand,
     int Reserved,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    OfferModerationInfo Moderation);
+
+/// <summary>
+/// Platform moderation as the seller sees it. <see cref="BlockedBy"/>: "offer" (this offer is blocked; its status is
+/// frozen until the platform lifts the block), "seller" (the whole organization is blocked) or null.
+/// </summary>
+public sealed record OfferModerationInfo(bool Blocked, string? BlockedBy, string? Reason, DateTimeOffset? BlockedAt)
+{
+    public static readonly OfferModerationInfo None = new(false, null, null, null);
+}
 
 internal sealed class OfferInputValidator : AbstractValidator<OfferInput>
 {
@@ -151,8 +161,21 @@ internal sealed partial class OfferService(
         {
             return Error.Conflict("concurrency", "The offer was changed concurrently. Reload and try again.");
         }
+        catch (DbUpdateException ex) when (DbErrors.Find(ex)?.SqlState == DbErrors.InsufficientPrivilege)
+        {
+            // The database guard (trg_offers_moderation) caught a status change of a blocked offer.
+            return Error.Conflict("offer.blocked", "The platform has blocked this offer; its status cannot be changed until the block is lifted.");
+        }
 
         return (await ToDtosAsync([offer], ct))[0];
+    }
+
+    /// <summary>Whether the platform currently blocks the current tenant as a seller (all offers hidden).</summary>
+    public async Task<OwnModerationDto> GetOwnModerationAsync(CancellationToken ct)
+    {
+        var block = await db.Set<SellerBlock>().AsNoTracking()
+            .FirstOrDefaultAsync(b => b.OrganizationId == OrganizationId && b.IsBlocked, ct);
+        return block is null ? new OwnModerationDto(false, null, null) : new OwnModerationDto(true, block.Reason, block.ChangedAt);
     }
 
     private async Task<List<OwnOfferDto>> ToDtosAsync(IReadOnlyList<Offer> offers, CancellationToken ct)
@@ -166,13 +189,20 @@ internal sealed partial class OfferService(
                 stock[(level.WarehouseId, level.ProductId)] = level;
         }
 
+        var sellerBlock = offers.Count == 0 ? null : await GetOwnModerationAsync(ct);
+
         return offers.Select(o =>
         {
             var product = products[o.ProductId];
             stock.TryGetValue((o.WarehouseId, o.ProductId), out var level);
+            var moderation = o.IsBlocked
+                ? new OfferModerationInfo(true, "offer", o.ModerationReason, o.ModeratedAt)
+                : sellerBlock is { SellerBlocked: true }
+                    ? new OfferModerationInfo(true, "seller", sellerBlock.Reason, sellerBlock.BlockedAt)
+                    : OfferModerationInfo.None;
             return new OwnOfferDto(o.Id, o.ProductId, product.Brand, product.Name, product.Ean, product.Mpn, product.Quality,
                 o.WarehouseId, o.SupplierSku, o.PriceMinor, o.Currency, o.MinOrderQuantity, o.DeliveryDays,
-                o.Condition.ToString(), o.Status.ToString(), level?.OnHand ?? 0, level?.Reserved ?? 0, o.UpdatedAt);
+                o.Condition.ToString(), o.Status.ToString(), level?.OnHand ?? 0, level?.Reserved ?? 0, o.UpdatedAt, moderation);
         }).ToList();
     }
 
@@ -229,6 +259,15 @@ internal sealed partial class OfferService(
             .Select(ToExisting).FirstOrDefaultAsync(ct);
 
     // GetListingsAsync, browsing, facets and detail: Browse.cs
+
+    public async Task<IReadOnlySet<Guid>> GetBlockedAsync(IReadOnlyCollection<Guid> offerIds, CancellationToken ct)
+    {
+        if (offerIds.Count == 0)
+            return new HashSet<Guid>();
+        var ids = offerIds.ToArray();
+        return (await db.Database.SqlQuery<Guid>($"SELECT b AS \"Value\" FROM marketplace.blocked_offers({ids}::uuid[]) AS b").ToListAsync(ct))
+            .ToHashSet();
+    }
 
     public async Task<Guid?> ReserveAsync(Guid offerId, int quantity, string reference, CancellationToken ct) =>
         await db.Database
