@@ -375,7 +375,10 @@
       "image.limit_reached": "يمكن أن يحتوي الصنف على 8 صور كحد أقصى.",
       "image.not_found": "لم يتم العثور على الصورة.",
       "image.order_mismatch": "تغيّرت الصور في هذه الأثناء. يرجى إعادة تحميل العرض.",
-      "image.concurrent": "تم تغيير صور هذا الصنف في الوقت نفسه. يرجى المحاولة مرة أخرى."
+      "image.concurrent": "تم تغيير صور هذا الصنف في الوقت نفسه. يرجى المحاولة مرة أخرى.",
+      "pos.fiscal_disabled_in_production": "لا يمكن استخدام الصندوق في التشغيل الفعلي بدون TSE.",
+      "pos.fiscal_simulated_not_allowed": "TSE التجريبية غير مسموح بها في التشغيل الفعلي.",
+      "pos.fiscal_configuration_incomplete": "TSE غير مُعدّة بالكامل (معرّف TSS وبيانات الدخول مفقودة)."
     }
   },
   "dashboard": {
@@ -932,7 +935,8 @@
       "organizations": "الشركات",
       "disputes": "الشكاوى",
       "ankauf": "أسعار إعادة الشراء",
-      "invoices": "فواتير العمولة"
+      "invoices": "فواتير العمولة",
+      "fiscal": "الصناديق و TSE"
     },
     "disputes": {
       "subtitle": "مراجعة الشكاوى المحالة إلى HandyNet والبتّ فيها.",
@@ -959,6 +963,69 @@
       "decidedRefund": "القرار: استرداد كامل المبلغ.",
       "decidedNoRefund": "القرار: دون استرداد.",
       "notEscalated": "هذه الشكوى ليست (أو لم تعد) معروضة على HandyNet للبتّ فيها."
+    },
+    "fiscal": {
+      "subtitle": "الوضع الضريبي (TSE) لكل شركة وصندوق، وسلوك TSE التجريبية، وحالة TSE والأعطال.",
+      "disclaimer": "TSE التجريبية محاكاة وغير معتمدة – ليست للتشغيل الفعلي. محوّل fiskaly غير مُختبَر مع الخدمة الحقيقية. لم يراجعه مستشار ضريبي.",
+      "organizations": "الشركات التي لديها وحدة الصندوق",
+      "registerCount": "{count} صناديق",
+      "outageCount": "{count} عطل",
+      "noOrganizations": "لم يتم العثور على شركات لديها وحدة الصندوق.",
+      "choose": "يرجى الاختيار",
+      "effectiveMode": "الوضع الفعّال",
+      "source": {
+        "Register": "الصندوق",
+        "Organization": "الشركة",
+        "Default": "افتراضي (الإعدادات)",
+        "None": "غير مُعد"
+      },
+      "simulatedRefusedInProduction": "TSE التجريبية محظورة في بيئة الإنتاج (فقط بإذن صريح لبيئة staging).",
+      "mode": "الوضع الضريبي",
+      "algorithm": "خوارزمية التوقيع",
+      "algorithmHint": "تنطبق على TSE تجريبية جديدة؛ ثم لا تتغير.",
+      "latency": "تأخير اصطناعي (مللي ثانية)",
+      "failureRate": "نسبة الأخطاء (%)",
+      "forcedOutage": "فرض عطل TSE",
+      "fiskalyUnverified": "محوّل fiskaly: غير مُختبَر مع الخدمة الحقيقية. تُحفظ بيانات الدخول مشفّرة ولا تُعرض أبدًا.",
+      "tssId": "معرّف TSS (UUID)",
+      "environment": "البيئة",
+      "credentialReference": "مرجع بيانات الدخول",
+      "credentialReferenceHint": "الاسم تحت Pos:Fiskaly:Credentials في إعدادات الخادم (الأسرار).",
+      "credentialsStored": "بيانات دخول مشفّرة محفوظة.",
+      "credentialsMissing": "لا توجد بيانات دخول محفوظة.",
+      "apiKey": "مفتاح API (تعيين جديد)",
+      "apiSecret": "سرّ API (تعيين جديد)",
+      "clearCredentials": "حذف بيانات الدخول المحفوظة",
+      "tseStatus": "حالة TSE التجريبية",
+      "transactionCounter": "عدّاد المعاملات",
+      "signatureCounter": "عدّاد التوقيعات",
+      "publicKey": "المفتاح العام",
+      "lastSignature": "آخر معاملة",
+      "registers": "الصناديق",
+      "register": "الصندوق",
+      "behaviour": "السلوك",
+      "behaviourSummary": "تأخير {latency} مللي ثانية، أخطاء {rate} %",
+      "noRegisters": "لا توجد صناديق بعد.",
+      "overrideFor": "إعداد الصندوق {name}",
+      "inheritHint": "الحقول الفارغة تستخدم إعداد الشركة.",
+      "inherit": "استخدام إعداد الشركة",
+      "clientIdHint": "فارغ = معرّف الصندوق. لـ fiskaly معرّف عميل UUID.",
+      "yes": "نعم",
+      "no": "لا",
+      "outages": "أعطال TSE",
+      "outageStart": "البداية",
+      "outageEnd": "النهاية",
+      "reason": "السبب",
+      "ongoing": "مستمر",
+      "noOutages": "لا توجد أعطال.",
+      "saved": "تم حفظ الإعدادات الضريبية لـ {name}.",
+      "validation": {
+        "modeRequired": "يرجى اختيار وضع ضريبي.",
+        "latency": "من 0 إلى 30000 مللي ثانية.",
+        "failureRate": "من 0 إلى 100 %.",
+        "uuid": "يرجى إدخال UUID صالح.",
+        "credentialsPair": "أدخل مفتاح API والسرّ معًا."
+      }
     }
   },
   "moduleHelp": {
@@ -2246,6 +2313,26 @@
       "closeForbidden": "لا يغلق الجلسة إلا موظف لديه صلاحية «إغلاق الصندوق».",
       "reportForbidden": "ليست لديك صلاحية لهذا التقرير.",
       "manageOnly": "للمالكين والمديرين فقط (إدارة الصناديق)."
+    },
+    "tse": {
+      "blockTitle": "بيانات TSE",
+      "testLabel": "TSE تجريبية – ليست للتشغيل الفعلي",
+      "clientId": "الرقم التسلسلي للصندوق (العميل)",
+      "algorithm": "خوارزمية التوقيع",
+      "outageMarker": "تعطّل جهاز الأمان (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "رمز QR ببيانات TSE",
+      "serial": "الرقم التسلسلي لـ TSE",
+      "state": {
+        "Ok": "TSE نشطة",
+        "Test": "TSE تجريبية",
+        "Outage": "عطل TSE",
+        "Disabled": "بدون TSE",
+        "NotConfigured": "لا توجد TSE",
+        "Refused": "TSE محظورة"
+      },
+      "outageTitle": "عطل TSE.",
+      "outageText": "يستمر البيع؛ تحمل الإيصالات الملاحظة \"Sicherheitseinrichtung ausgefallen\" ويُسجَّل العطل.",
+      "outageSince": "منذ"
     }
   },
   "invoiceKind": {
@@ -2372,5 +2459,11 @@
     "next": "الصورة التالية",
     "thumbnails": "صور مصغّرة",
     "manageCount": "الصور ({count})"
+  },
+  "fiscalMode": {
+    "Disabled": "بدون TSE (تشغيل تجريبي)",
+    "SimulatedTse": "TSE تجريبية (محاكاة)",
+    "FiskalyCloudTse": "TSE سحابية من fiskaly",
+    "None": "غير مُعد"
   }
 }

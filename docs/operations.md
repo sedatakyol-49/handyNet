@@ -26,6 +26,27 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 | `Jwt:SigningKey` | ≥ 32 random bytes |
 | `Bootstrap:AdminEmail` / `Bootstrap:AdminPassword` | creates/promotes the platform admin at startup (idempotent) |
 | `FileStorage:S3:AccessKey` / `FileStorage:S3:SecretKey` | object storage credentials when `FileStorage:Provider` = `S3` (or leave empty for the AWS default credential chain) |
+| `Pos:Fiskaly:Credentials:{name}:ApiKey` / `…:ApiSecret` | fiskaly SIGN DE credentials referenced by name from an organization's fiscal configuration (alternative to entering them in the admin UI, where they are stored Data-Protection-encrypted) |
+
+## POS fiscal layer (ADR-0012)
+
+Not certified and not reviewed by a tax adviser. Non-secret settings:
+
+| Key | Default | Purpose |
+|---|---|---|
+| `Pos:FiscalSigner` | unset (`Disabled` in Development/tests) | default fiscal mode for organizations without their own configuration: `Disabled` or `SimulatedTse`. Unset + no configuration = sales refused. `Disabled` is refused in Production; `SimulatedTse` too unless the staging flag is set; `FiskalyCloudTse` is configured per organization only |
+| `Pos:Fiscal:AllowSimulatedTseInProduction` | `false` | **staging only**: allows the simulated test TSE in the Production environment (startup check, admin API and sale time) |
+| `Pos:Fiscal:MaxAttempts` | `3` | attempts per TSE call (start/finish, same idempotency key) before the sale continues as a TSE outage |
+| `Pos:Fiscal:RetryDelayMs` | `200` | pause between attempts (× attempt number) |
+| `Pos:Fiskaly:BaseUrl` | `https://kassensichv-middleware.fiskaly.com/api/v2` | fiskaly SIGN DE v2 base URL (https only) |
+| `Pos:Fiskaly:TimeoutSeconds` | `10` | HTTP timeout per fiskaly call |
+| `Pos:Fiskaly:MaxRetries` | `2` | HTTP retries on timeouts, 429 and 5xx |
+| `DataProtection:KeysPath` | unset (default key ring location of the host) | directory of the ASP.NET Data Protection key ring; **set it in every multi-instance or container deployment** (e.g. a volume) and back it up — without it stored fiskaly credentials and simulated TSE keys become unreadable after a restart |
+
+The platform admin chooses the mode per organization (and optionally per register) under Administration → "Kassen &
+TSE" (`/api/admin/pos/fiscal`). A TSE outage never blocks sales: receipts carry "Sicherheitseinrichtung ausgefallen",
+outages are listed there and in `pos.fiscal_outages`. DSFinV-K: `GET /api/pos/exports/dsfinvk?registerId=…&from=…&to=…`
+(`pos.manage`).
 
 ## File storage (ADR-0011)
 

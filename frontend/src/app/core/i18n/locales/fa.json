@@ -375,7 +375,10 @@
       "image.limit_reached": "هر کالا حداکثر 8 تصویر می‌تواند داشته باشد.",
       "image.not_found": "تصویر پیدا نشد.",
       "image.order_mismatch": "تصاویر در این فاصله تغییر کردند. لطفاً نما را دوباره بارگذاری کنید.",
-      "image.concurrent": "تصاویر این کالا هم‌زمان تغییر کردند. لطفاً دوباره تلاش کنید."
+      "image.concurrent": "تصاویر این کالا هم‌زمان تغییر کردند. لطفاً دوباره تلاش کنید.",
+      "pos.fiscal_disabled_in_production": "بدون TSE نمی‌توان از صندوق در استفادهٔ واقعی بهره برد.",
+      "pos.fiscal_simulated_not_allowed": "TSE آزمایشی در استفادهٔ واقعی مجاز نیست.",
+      "pos.fiscal_configuration_incomplete": "TSE کامل تنظیم نشده است (شناسهٔ TSS و اطلاعات ورود موجود نیست)."
     }
   },
   "dashboard": {
@@ -932,7 +935,8 @@
       "organizations": "شرکت‌ها",
       "disputes": "شکایت‌ها",
       "ankauf": "قیمت‌های بازخرید",
-      "invoices": "صورت‌حساب‌های کارمزد"
+      "invoices": "صورت‌حساب‌های کارمزد",
+      "fiscal": "صندوق‌ها و TSE"
     },
     "disputes": {
       "subtitle": "بررسی و تصمیم‌گیری درباره شکایت‌های ارجاع‌شده به HandyNet.",
@@ -959,6 +963,69 @@
       "decidedRefund": "تصمیم: استرداد کامل وجه.",
       "decidedNoRefund": "تصمیم: بدون استرداد وجه.",
       "notEscalated": "این شکایت (دیگر) برای تصمیم‌گیری نزد HandyNet نیست."
+    },
+    "fiscal": {
+      "subtitle": "حالت مالی (TSE) برای هر شرکت و صندوق، رفتار TSE آزمایشی، وضعیت TSE و قطعی‌ها.",
+      "disclaimer": "TSE آزمایشی شبیه‌سازی‌شده و بدون گواهی است – نه برای استفادهٔ واقعی. آداپتور fiskaly با سرویس واقعی آزموده نشده است. توسط مشاور مالیاتی بررسی نشده است.",
+      "organizations": "شرکت‌های دارای ماژول صندوق",
+      "registerCount": "{count} صندوق",
+      "outageCount": "{count} قطعی",
+      "noOrganizations": "شرکتی با ماژول صندوق یافت نشد.",
+      "choose": "لطفاً انتخاب کنید",
+      "effectiveMode": "حالت مؤثر",
+      "source": {
+        "Register": "صندوق",
+        "Organization": "شرکت",
+        "Default": "پیش‌فرض (پیکربندی)",
+        "None": "تنظیم نشده"
+      },
+      "simulatedRefusedInProduction": "در محیط تولید، TSE آزمایشی مسدود است (فقط با مجوز صریح staging).",
+      "mode": "حالت مالی",
+      "algorithm": "الگوریتم امضا",
+      "algorithmHint": "برای TSE آزمایشی تازه اعمال می‌شود؛ پس از آن ثابت است.",
+      "latency": "تأخیر مصنوعی (میلی‌ثانیه)",
+      "failureRate": "نرخ خطا (%)",
+      "forcedOutage": "اجبار قطعی TSE",
+      "fiskalyUnverified": "آداپتور fiskaly: با سرویس واقعی آزموده نشده است. اطلاعات ورود رمزگذاری‌شده ذخیره و هرگز نمایش داده نمی‌شود.",
+      "tssId": "شناسهٔ TSS (UUID)",
+      "environment": "محیط",
+      "credentialReference": "مرجع اطلاعات ورود",
+      "credentialReferenceHint": "نام زیر Pos:Fiskaly:Credentials در پیکربندی سرور (اسرار).",
+      "credentialsStored": "اطلاعات ورود رمزگذاری‌شده ذخیره است.",
+      "credentialsMissing": "اطلاعات ورودی ذخیره نشده است.",
+      "apiKey": "کلید API (تنظیم جدید)",
+      "apiSecret": "رمز API (تنظیم جدید)",
+      "clearCredentials": "حذف اطلاعات ورود ذخیره‌شده",
+      "tseStatus": "وضعیت TSE آزمایشی",
+      "transactionCounter": "شمارندهٔ تراکنش",
+      "signatureCounter": "شمارندهٔ امضا",
+      "publicKey": "کلید عمومی",
+      "lastSignature": "آخرین تراکنش",
+      "registers": "صندوق‌ها",
+      "register": "صندوق",
+      "behaviour": "رفتار",
+      "behaviourSummary": "تأخیر {latency} میلی‌ثانیه، خطا {rate} %",
+      "noRegisters": "هنوز صندوقی وجود ندارد.",
+      "overrideFor": "تنظیم برای صندوق {name}",
+      "inheritHint": "فیلدهای خالی از تنظیم شرکت استفاده می‌کنند.",
+      "inherit": "استفاده از تنظیم شرکت",
+      "clientIdHint": "خالی = شناسهٔ صندوق. برای fiskaly یک UUID مشتری.",
+      "yes": "بله",
+      "no": "خیر",
+      "outages": "قطعی‌های TSE",
+      "outageStart": "شروع",
+      "outageEnd": "پایان",
+      "reason": "دلیل",
+      "ongoing": "ادامه دارد",
+      "noOutages": "قطعی‌ای نیست.",
+      "saved": "تنظیمات مالی برای {name} ذخیره شد.",
+      "validation": {
+        "modeRequired": "لطفاً یک حالت مالی انتخاب کنید.",
+        "latency": "۰ تا ۳۰۰۰۰ میلی‌ثانیه.",
+        "failureRate": "۰ تا ۱۰۰ %.",
+        "uuid": "لطفاً یک UUID معتبر وارد کنید.",
+        "credentialsPair": "کلید و رمز API را با هم وارد کنید."
+      }
     }
   },
   "moduleHelp": {
@@ -2246,6 +2313,26 @@
       "closeForbidden": "فقط کارکنان دارای مجوز «بستن صندوق» می‌توانند جلسه را ببندند.",
       "reportForbidden": "مجوز دیدن این گزارش را ندارید.",
       "manageOnly": "فقط برای مالکان و مدیران (مدیریت صندوق)."
+    },
+    "tse": {
+      "blockTitle": "داده‌های TSE",
+      "testLabel": "TSE آزمایشی – نه برای استفادهٔ واقعی",
+      "clientId": "شمارهٔ سریال صندوق (مشتری)",
+      "algorithm": "الگوریتم امضا",
+      "outageMarker": "خرابی دستگاه امنیتی (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "کد QR با داده‌های TSE",
+      "serial": "شمارهٔ سریال TSE",
+      "state": {
+        "Ok": "TSE فعال",
+        "Test": "TSE آزمایشی",
+        "Outage": "قطعی TSE",
+        "Disabled": "بدون TSE",
+        "NotConfigured": "بدون TSE",
+        "Refused": "TSE مسدود"
+      },
+      "outageTitle": "قطعی TSE.",
+      "outageText": "فروش ادامه دارد؛ رسیدها یادداشت «Sicherheitseinrichtung ausgefallen» دارند و قطعی ثبت می‌شود.",
+      "outageSince": "از"
     }
   },
   "invoiceKind": {
@@ -2372,5 +2459,11 @@
     "next": "تصویر بعدی",
     "thumbnails": "تصاویر کوچک",
     "manageCount": "تصاویر ({count})"
+  },
+  "fiscalMode": {
+    "Disabled": "بدون TSE (حالت آزمایشی)",
+    "SimulatedTse": "TSE آزمایشی (شبیه‌سازی)",
+    "FiskalyCloudTse": "TSE ابری fiskaly",
+    "None": "تنظیم نشده"
   }
 }

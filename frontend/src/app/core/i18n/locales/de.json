@@ -375,7 +375,10 @@
       "image.limit_reached": "Ein Artikel kann höchstens 8 Bilder haben.",
       "image.not_found": "Das Bild wurde nicht gefunden.",
       "image.order_mismatch": "Die Bilder wurden zwischenzeitlich geändert. Bitte laden Sie die Ansicht neu.",
-      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut."
+      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut.",
+      "pos.fiscal_disabled_in_production": "Ohne TSE kann die Kasse im Echtbetrieb nicht verwendet werden.",
+      "pos.fiscal_simulated_not_allowed": "Die Test-TSE ist im Echtbetrieb nicht erlaubt.",
+      "pos.fiscal_configuration_incomplete": "Die TSE ist nicht vollständig eingerichtet (TSS-ID und Zugangsdaten fehlen)."
     }
   },
   "dashboard": {
@@ -932,7 +935,8 @@
       "organizations": "Unternehmen",
       "disputes": "Reklamationen",
       "ankauf": "Ankaufspreise",
-      "invoices": "Provisionsrechnungen"
+      "invoices": "Provisionsrechnungen",
+      "fiscal": "Kassen & TSE"
     },
     "disputes": {
       "subtitle": "An HandyNet übergebene Reklamationen prüfen und entscheiden.",
@@ -959,6 +963,69 @@
       "decidedRefund": "Entschieden: volle Erstattung.",
       "decidedNoRefund": "Entschieden: keine Erstattung.",
       "notEscalated": "Diese Reklamation liegt nicht (mehr) bei HandyNet zur Entscheidung."
+    },
+    "fiscal": {
+      "subtitle": "Fiskalmodus (TSE) je Unternehmen und Kasse, Verhalten der Test-TSE, TSE-Status und Ausfälle.",
+      "disclaimer": "Die Test-TSE ist simuliert und nicht zertifiziert – nicht für den Echtbetrieb. Der fiskaly-Adapter ist nicht gegen den echten Dienst geprüft. Keine Prüfung durch eine Steuerberatung.",
+      "organizations": "Unternehmen mit Kassenmodul",
+      "registerCount": "{count} Kassen",
+      "outageCount": "{count} Ausfall/Ausfälle",
+      "noOrganizations": "Keine Unternehmen mit Kassenmodul gefunden.",
+      "choose": "Bitte wählen",
+      "effectiveMode": "Wirksamer Modus",
+      "source": {
+        "Register": "Kasse",
+        "Organization": "Unternehmen",
+        "Default": "Standard (Konfiguration)",
+        "None": "nicht eingerichtet"
+      },
+      "simulatedRefusedInProduction": "In der Produktionsumgebung ist die Test-TSE gesperrt (nur mit ausdrücklicher Staging-Freigabe).",
+      "mode": "Fiskalmodus",
+      "algorithm": "Signaturalgorithmus",
+      "algorithmHint": "Gilt für eine neu angelegte Test-TSE; danach unveränderlich.",
+      "latency": "Künstliche Verzögerung (ms)",
+      "failureRate": "Fehlerquote (%)",
+      "forcedOutage": "TSE-Ausfall erzwingen",
+      "fiskalyUnverified": "fiskaly-Adapter: nicht gegen den echten Dienst geprüft. Zugangsdaten werden verschlüsselt gespeichert und nie angezeigt.",
+      "tssId": "TSS-ID (UUID)",
+      "environment": "Umgebung",
+      "credentialReference": "Zugangsdaten-Referenz",
+      "credentialReferenceHint": "Name unter Pos:Fiskaly:Credentials in der Server-Konfiguration (Secrets).",
+      "credentialsStored": "Verschlüsselte Zugangsdaten sind hinterlegt.",
+      "credentialsMissing": "Keine Zugangsdaten hinterlegt.",
+      "apiKey": "API-Key (neu setzen)",
+      "apiSecret": "API-Secret (neu setzen)",
+      "clearCredentials": "Hinterlegte Zugangsdaten löschen",
+      "tseStatus": "Status der Test-TSE",
+      "transactionCounter": "Transaktionszähler",
+      "signatureCounter": "Signaturzähler",
+      "publicKey": "Öffentlicher Schlüssel",
+      "lastSignature": "Letzte Transaktion",
+      "registers": "Kassen",
+      "register": "Kasse",
+      "behaviour": "Verhalten",
+      "behaviourSummary": "{latency} ms Verzögerung, {rate} % Fehler",
+      "noRegisters": "Noch keine Kassen.",
+      "overrideFor": "Einstellung für Kasse {name}",
+      "inheritHint": "Leere Felder übernehmen die Einstellung des Unternehmens.",
+      "inherit": "Vom Unternehmen übernehmen",
+      "clientIdHint": "Leer = Kassen-ID. Für fiskaly eine Client-UUID.",
+      "yes": "Ja",
+      "no": "Nein",
+      "outages": "TSE-Ausfälle",
+      "outageStart": "Beginn",
+      "outageEnd": "Ende",
+      "reason": "Grund",
+      "ongoing": "andauernd",
+      "noOutages": "Keine Ausfälle.",
+      "saved": "Fiskal-Einstellungen für {name} gespeichert.",
+      "validation": {
+        "modeRequired": "Bitte einen Fiskalmodus wählen.",
+        "latency": "0 bis 30000 ms.",
+        "failureRate": "0 bis 100 %.",
+        "uuid": "Bitte eine gültige UUID eingeben.",
+        "credentialsPair": "API-Key und Secret bitte zusammen eingeben."
+      }
     }
   },
   "moduleHelp": {
@@ -2246,6 +2313,26 @@
       "closeForbidden": "Den Kassenabschluss darf nur ein Mitarbeiter mit dem Recht „Kasse abschließen“ durchführen.",
       "reportForbidden": "Für diesen Bericht fehlt Ihnen das Recht.",
       "manageOnly": "Nur für Inhaber und Manager (Kasse verwalten)."
+    },
+    "tse": {
+      "blockTitle": "TSE-Daten",
+      "testLabel": "Test-TSE – nicht für den Echtbetrieb",
+      "clientId": "Kassen-Seriennr. (Client)",
+      "algorithm": "Signaturalgorithmus",
+      "outageMarker": "Sicherheitseinrichtung ausgefallen",
+      "qrLabel": "QR-Code mit den TSE-Daten",
+      "serial": "TSE-Seriennummer",
+      "state": {
+        "Ok": "TSE aktiv",
+        "Test": "Test-TSE",
+        "Outage": "TSE ausgefallen",
+        "Disabled": "Ohne TSE",
+        "NotConfigured": "Keine TSE",
+        "Refused": "TSE gesperrt"
+      },
+      "outageTitle": "TSE ausgefallen.",
+      "outageText": "Verkäufe sind weiter möglich; Belege erhalten den Vermerk „Sicherheitseinrichtung ausgefallen“ und der Ausfall wird protokolliert.",
+      "outageSince": "seit"
     }
   },
   "invoiceKind": {
@@ -2372,5 +2459,11 @@
     "next": "Nächstes Bild",
     "thumbnails": "Vorschaubilder",
     "manageCount": "Bilder ({count})"
+  },
+  "fiscalMode": {
+    "Disabled": "Ohne TSE (Testbetrieb)",
+    "SimulatedTse": "Test-TSE (simuliert)",
+    "FiskalyCloudTse": "fiskaly Cloud-TSE",
+    "None": "Nicht eingerichtet"
   }
 }

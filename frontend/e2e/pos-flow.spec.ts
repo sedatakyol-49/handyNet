@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, hasAdmin, login, randomEan } from './support/handynet';
+import { Locator, Page, expect, test } from '@playwright/test';
+import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, hasAdmin, login, logout, randomEan } from './support/handynet';
 
 /**
  * POS (standalone Kasse app under /kasse) through the UI against the real API (dev config: fiscal signer "Disabled"
@@ -304,5 +304,112 @@ test.describe.serial('POS', () => {
     await page.getByTestId('pos-menu').click();
     await page.getByTestId('pos-menu-backoffice').click();
     await expect(page).toHaveURL(/\/app\/uebersicht$/);
+  });
+});
+
+/**
+ * Test TSE (ADR-0012) through the UI: the platform admin switches a shop to the simulated TSE ("Kassen & TSE"), the till
+ * shows the TSE state in the top bar, a card sale prints the TSE block (serial, transaction no., signature counter,
+ * shortened signature, "Test-TSE" label) with a QR code; a forced outage shows the outage banner and the next receipt
+ * carries "Sicherheitseinrichtung ausgefallen"; the recorded outage ends with the next signed sale.
+ */
+test.describe.serial('POS test TSE', () => {
+  test.skip(!hasAdmin, 'Set HN_ADMIN_EMAIL and HN_ADMIN_PASSWORD to run e2e tests against the API.');
+
+  const shop = { ...company('shop'), name: `E2E TSE ${RUN}`, email: `pos-tse-${RUN}@e2e.handynet.test` };
+  const ean = randomEan();
+  let orgId = '';
+  let registerId = '';
+
+  test.beforeAll(async () => {
+    orgId = await Api.register(shop);
+    const admin = await Api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await admin.verifyWithModules(orgId, ['Inventory', 'ProductImport', 'Pos']);
+    await admin.dispose();
+
+    const api = await Api.login(shop.email, PASSWORD);
+    const warehouse = await api.call<{ id: string }>('POST', '/api/inventory/warehouses', orgId, { code: 'TSE', name: 'Laden' });
+    const created = await api.call<{ id: string }>('POST', '/api/catalog/products', orgId, { brand: 'E2E', name: `Hülle ${RUN}`, category: 'Accessory', ean });
+    await api.call('POST', '/api/inventory/adjustments', orgId, { warehouseId: warehouse.id, productId: created.id, delta: 5, reason: 'E2E', type: 'Receipt' }, 200);
+    await api.call('PUT', `/api/pos/prices/${created.id}`, orgId, { priceMinor: 990 });
+    registerId = (await api.call<{ id: string }>('POST', '/api/pos/registers', orgId, { name: `TSE-Kasse ${RUN}`, warehouseId: warehouse.id })).id;
+    await api.call('POST', `/api/pos/registers/${registerId}/sessions`, orgId, { openingCashMinor: 0 });
+    await api.dispose();
+  });
+
+  async function sellByCard(page: Page): Promise<Locator> {
+    await expect(page.getByTestId('pos-code')).toBeFocused();
+    await page.keyboard.type(ean);
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('pos-total')).toHaveText('9,90 €');
+    await page.getByTestId('pos-pay').click();
+    await page.getByTestId('pos-method-Card').click();
+    await page.getByTestId('pos-validate').click();
+    await expect(page.getByTestId('pos-sale-done')).toBeVisible();
+    return page.getByTestId('receipt');
+  }
+
+  test('admin enables the test TSE; receipts show the TSE block and QR code; an outage is marked and recorded', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.print = () => undefined;
+    });
+
+    // ---- platform admin: "Kassen & TSE" → simulated TSE for the shop
+    await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.goto('/app/administration/kassen-tse');
+    await expect(page.getByTestId('admin-fiscal-disclaimer')).toContainText('nicht zertifiziert');
+    await page.getByTestId('admin-fiscal-search').fill(shop.name);
+    await page.getByTestId('admin-fiscal-search').press('Enter');
+    await page.locator(`[data-org="${shop.name}"]`).click();
+    await expect(page.getByTestId('admin-fiscal-detail')).toBeVisible();
+    await page.getByTestId('admin-fiscal-mode').selectOption('SimulatedTse');
+    await page.getByTestId('admin-fiscal-save').click();
+    await expect(page.getByTestId('admin-fiscal-serial')).not.toBeEmpty();
+    const serial = (await page.getByTestId('admin-fiscal-serial').textContent())!.trim();
+    await expect(page.getByTestId('admin-fiscal-tx-counter')).toHaveText('0');
+    await logout(page);
+
+    // ---- till: TSE state "Test-TSE"; a sale prints the TSE block with the QR code
+    await login(page, shop.email, PASSWORD);
+    await page.goto(`/kasse/${registerId}`);
+    await expect(page.getByTestId('pos-tse-status')).toHaveAttribute('data-state', 'Test');
+    await expect(page.getByTestId('pos-tse-status')).toContainText('Test-TSE');
+    let receipt = await sellByCard(page);
+    const tse = receipt.getByTestId('receipt-tse');
+    await expect(tse).toBeVisible();
+    await expect(tse.getByTestId('receipt-tse-test')).toHaveText('Test-TSE – nicht für den Echtbetrieb');
+    await expect(tse.getByTestId('receipt-tse-serial')).toHaveText(serial);
+    await expect(tse.getByTestId('receipt-tse-transaction')).toHaveText('1');
+    await expect(tse.getByTestId('receipt-tse-counter')).toHaveText('2');
+    await expect(tse.getByTestId('receipt-tse-signature')).toContainText('…');
+    await expect(tse.getByTestId('qr-code')).toBeVisible();
+    await expect(receipt.getByTestId('receipt-fiscal-notice')).toHaveCount(0);
+    await page.getByTestId('pos-new-sale').click();
+
+    // ---- forced outage (admin API): banner at the till, next receipt carries the outage marker
+    const admin = await Api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await admin.call('PUT', `/api/admin/pos/fiscal/${orgId}`, '', { mode: 'SimulatedTse', forcedOutage: true });
+    await page.reload();
+    await expect(page.getByTestId('pos-tse-status')).toHaveAttribute('data-state', 'Outage');
+    await expect(page.getByTestId('pos-tse-outage-banner')).toContainText('TSE ausgefallen');
+    receipt = await sellByCard(page);
+    await expect(receipt.getByTestId('receipt-fiscal-notice')).toHaveText('Sicherheitseinrichtung ausgefallen');
+    await expect(receipt.getByTestId('receipt-tse-outage')).toBeVisible();
+    await expect(receipt.getByTestId('qr-code')).toHaveCount(0);
+    const status = await admin.call<{ outages: { endedAt: string | null }[]; simulatedTse: { transactionCounter: number } }>(
+      'GET', `/api/admin/pos/fiscal/${orgId}`, '');
+    expect(status.outages).toHaveLength(1);
+    expect(status.outages[0].endedAt).toBeNull();
+    expect(status.simulatedTse.transactionCounter).toBe(1);
+
+    // ---- TSE back: the next sale is signed again and ends the outage
+    await admin.call('PUT', `/api/admin/pos/fiscal/${orgId}`, '', { mode: 'SimulatedTse', forcedOutage: false });
+    await page.getByTestId('pos-new-sale').click();
+    receipt = await sellByCard(page);
+    await expect(receipt.getByTestId('receipt-tse-transaction')).toHaveText('2');
+    await expect(page.getByTestId('pos-tse-outage-banner')).toHaveCount(0);
+    const after = await admin.call<{ outages: { endedAt: string | null }[] }>('GET', `/api/admin/pos/fiscal/${orgId}`, '');
+    expect(after.outages[0].endedAt).not.toBeNull();
+    await admin.dispose();
   });
 });

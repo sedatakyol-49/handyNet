@@ -30,5 +30,6 @@ export class AdminTabsComponent {
     { path: '/app/administration/reklamationen', labelKey: 'admin.tabs.disputes', exact: false },
     { path: '/app/administration/ankauf', labelKey: 'admin.tabs.ankauf', exact: false },
     { path: '/app/administration/rechnungen', labelKey: 'admin.tabs.invoices', exact: false },
+    { path: '/app/administration/kassen-tse', labelKey: 'admin.tabs.fiscal', exact: false },
   ];
 }
