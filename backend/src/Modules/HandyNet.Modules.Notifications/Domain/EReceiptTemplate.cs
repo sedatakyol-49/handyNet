@@ -1,5 +1,6 @@
 using System.Globalization;
-using System.Net;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using System.Text;
 using HandyNet.Modules.Pos.Contracts;
 
@@ -14,6 +15,9 @@ public static class EReceiptTemplate
     public const string Template = "pos.receipt";
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
     private static readonly TimeZoneInfo Berlin = FindBerlin();
+
+    /// <summary>Encodes markup characters only; umlauts and other letters stay readable.</summary>
+    private static readonly HtmlEncoder Html = HtmlEncoder.Create(UnicodeRanges.All);
 
     private static string Euro(long minor) => EmailTemplates.Euro(minor);
 
@@ -69,7 +73,7 @@ public static class EReceiptTemplate
         text.AppendLine();
         text.AppendLine("Vielen Dank für Ihren Einkauf!");
 
-        string E(string s) => WebUtility.HtmlEncode(s);
+        string E(string s) => Html.Encode(s);
         var html = new StringBuilder();
         html.Append("<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>").Append(E(subject)).Append("</title></head>");
         html.Append("<body style=\"margin:0;padding:24px;background:#f3f6f7;font-family:Arial,Helvetica,sans-serif;color:#17282e\">");

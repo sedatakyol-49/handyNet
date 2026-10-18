@@ -501,7 +501,11 @@
       "pos.approver_not_found": "This member was not found.",
       "pos.approval_permissions": "Rights that can be approved: change price, discount, return, cash in/out, close the till.",
       "pos.approval_target": "An approval applies to exactly one receipt, cash movement or closing.",
-      "pos.cashier_none": "No cashier is signed in with a PIN on this device."
+      "pos.cashier_none": "No cashier is signed in with a PIN on this device.",
+      "pos.receipt_email_invalid": "The email address is invalid.",
+      "pos.receipt_email_limit": "This receipt has already been emailed 5 times.",
+      "pos.receipt_email_missing": "Please enter an email address – the receipt has no customer with an email.",
+      "pos.receipt_link_not_found": "This receipt link is invalid or has expired."
     }
   },
   "dashboard": {
@@ -2524,6 +2528,21 @@
       "granted": "Approved by {name} – valid for the next action.",
       "by": "Approved by {name}",
       "movementHint": "Cash in/out needs the “cash in/out” right or a manager approval."
+    },
+    "ereceipt": {
+      "title": "E-receipt",
+      "email": "Email address",
+      "send": "Send by email",
+      "sendToCustomer": "Send to customer",
+      "sent": "E-receipt is being sent to {to}.",
+      "invalid": "Please enter a valid email address.",
+      "showQr": "Show QR code for the receipt",
+      "qrLabel": "QR code: view the receipt online",
+      "qrHint": "The customer scans the code and sees the receipt (read only).",
+      "validUntil": "Link valid until {date}",
+      "publicMissingTitle": "Receipt not available",
+      "publicMissing": "This link is invalid or has expired. Please contact the shop.",
+      "publicCancelled": "This receipt has been cancelled."
     }
   },
   "invoiceKind": {

@@ -501,7 +501,11 @@
       "pos.approver_not_found": "Dieser Mitarbeiter wurde nicht gefunden.",
       "pos.approval_permissions": "Freigegeben werden können: Preis ändern, Rabatt, Rückgabe, Bargeld ein/aus, Kasse abschließen.",
       "pos.approval_target": "Eine Freigabe gilt für genau einen Beleg, eine Kassenbewegung oder einen Abschluss.",
-      "pos.cashier_none": "An diesem Gerät ist kein Kassierer per PIN angemeldet."
+      "pos.cashier_none": "An diesem Gerät ist kein Kassierer per PIN angemeldet.",
+      "pos.receipt_email_invalid": "Die E-Mail-Adresse ist ungültig.",
+      "pos.receipt_email_limit": "Dieser Beleg wurde bereits 5-mal per E-Mail gesendet.",
+      "pos.receipt_email_missing": "Bitte E-Mail-Adresse eingeben – der Beleg hat keinen Kunden mit E-Mail.",
+      "pos.receipt_link_not_found": "Dieser Beleg-Link ist ungültig oder abgelaufen."
     }
   },
   "dashboard": {
@@ -2524,6 +2528,21 @@
       "granted": "Freigegeben von {name} – gilt für die nächste Aktion.",
       "by": "Freigabe: {name}",
       "movementHint": "Einlagen und Entnahmen brauchen das Recht „Bargeld ein/aus“ oder eine Manager-Freigabe."
+    },
+    "ereceipt": {
+      "title": "E-Beleg",
+      "email": "E-Mail-Adresse",
+      "send": "Per E-Mail senden",
+      "sendToCustomer": "An Kunden senden",
+      "sent": "E-Beleg wird an {to} gesendet.",
+      "invalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "showQr": "QR-Code für den Beleg anzeigen",
+      "qrLabel": "QR-Code: Beleg online ansehen",
+      "qrHint": "Kunde scannt den Code und sieht den Beleg (nur lesen).",
+      "validUntil": "Link gültig bis {date}",
+      "publicMissingTitle": "Beleg nicht verfügbar",
+      "publicMissing": "Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an das Geschäft.",
+      "publicCancelled": "Dieser Beleg wurde storniert."
     }
   },
   "invoiceKind": {

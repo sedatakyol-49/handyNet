@@ -399,6 +399,7 @@
               </button>
             </div>
             <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
+            <hn-pos-ereceipt [receipt]="r" />
           </div>
           <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
         </div>

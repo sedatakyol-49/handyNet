@@ -21,6 +21,9 @@ import {
   PosCashierOption,
   PosCashierSignIn,
   PosPinStatus,
+  PosPublicReceipt,
+  PosReceiptEmail,
+  PosReceiptLink,
   PosRegister,
   PosRightsRequest,
   Receipt,
@@ -861,6 +864,22 @@ export class PosApi {
 
   lockCashier(): Observable<void> {
     return this.http.post<void>(`${this.url}/cashier/lock`, {});
+  }
+
+  // ---- e-receipts
+  /** Email the receipt (null = to the receipt's customer); sent by the Notifications outbox. */
+  emailReceipt(id: string, email: string | null): Observable<PosReceiptEmail> {
+    return this.http.post<PosReceiptEmail>(`${this.url}/sales/${id}/email`, { email });
+  }
+
+  /** A public, read-only link (QR) to the receipt; the token is only returned here. */
+  receiptLink(id: string): Observable<PosReceiptLink> {
+    return this.http.post<PosReceiptLink>(`${this.url}/sales/${id}/public-link`, {});
+  }
+
+  /** Anonymous public receipt view (no customer data). */
+  publicReceipt(token: string): Observable<PosPublicReceipt> {
+    return this.http.get<PosPublicReceipt>(`${this.base}/api/public/receipts/${encodeURIComponent(token)}`);
   }
 
   /** Owner/manager PIN approves the given rights for the next action on this register (posCashierInterceptor sends it). */

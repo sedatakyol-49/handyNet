@@ -32,6 +32,7 @@ import { posErrorText } from './pos-error';
 import { PosFiscalStatus } from './pos-fiscal-status';
 import { PosCashCountComponent } from './pos-cash-count';
 import { PosContext } from './pos-context';
+import { PosEReceiptComponent } from './pos-ereceipt';
 import { customerSummary } from './customer-form';
 import { PosCustomerDialogComponent } from './pos-customer-dialog';
 import { PosNumpadComponent } from './pos-numpad';
@@ -105,6 +106,7 @@ type Screen = 'products' | 'payment' | 'receipt';
     PosPriceDialogComponent,
     PosProductGridComponent,
     ReceiptViewComponent,
+    PosEReceiptComponent,
     ...UI,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

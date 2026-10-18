@@ -138,6 +138,37 @@ public class PosPinTests
     }
 
     [Fact]
+    public void E_receipt_email_renders_the_receipt_as_text_and_encoded_html()
+    {
+        var content = new HandyNet.Modules.Pos.Contracts.EReceiptContent("Kassenbeleg", "Handy <Shop>", "Handy Shop GmbH", ["Hauptstr. 1", "10115 Berlin"],
+            "DE123456789", "Kasse 1", 42, Now, "EUR",
+            [new HandyNet.Modules.Pos.Contracts.EReceiptLine("Panzerglas", null, 2, 10_00, 1_00, 19_00, "A", "montiert & geprüft"),
+             new HandyNet.Modules.Pos.Contracts.EReceiptLine("iPhone 12", "350000000000001", 1, 300_00, 0, 300_00, "§25a", null)],
+            [new HandyNet.Modules.Pos.Contracts.EReceiptVat("A 19 %", 15_97, 3_03, 19_00)], 319_00,
+            [new HandyNet.Modules.Pos.Contracts.EReceiptPayment("Cash", 319_00, 320_00)], 1_00, ["Gebrauchtgegenstände/Sonderregelung"]);
+        var email = HandyNet.Modules.Notifications.Domain.EReceiptTemplate.Render(content);
+        Assert.Equal("Kassenbeleg Nr. 42 – Handy <Shop>", email.Subject);
+        Assert.Contains("2 × Panzerglas  19,00 € A", email.Body);
+        Assert.Contains("Rabatt -1,00 €", email.Body);
+        Assert.Contains("IMEI 350000000000001", email.Body);
+        Assert.Contains("Bar 320,00 €", email.Body);
+        Assert.Contains("Rückgeld 1,00 €", email.Body);
+        Assert.Contains("Handy &lt;Shop&gt;", email.Html);
+        Assert.Contains("montiert &amp; geprüft", email.Html);
+        Assert.DoesNotContain("<Shop>", email.Html);
+    }
+
+    [Fact]
+    public void E_receipt_requests_validate_the_address_limit_per_receipt_and_mask_it()
+    {
+        Assert.Equal("pos.receipt_email_invalid", ReceiptEmail.NormalizeAddress("kein-at").Error?.Code);
+        Assert.Equal("pos.receipt_email_invalid", ReceiptEmail.NormalizeAddress("Name <a@b.de>").Error?.Code);
+        Assert.Equal("kunde@example.de", ReceiptEmail.NormalizeAddress(" Kunde@Example.de ").Value);
+        Assert.Equal("k***@example.de", HandyNet.Modules.Pos.Application.EReceiptService.Mask("kunde@example.de"));
+        Assert.Equal("***@x.de", HandyNet.Modules.Pos.Application.EReceiptService.Mask("a@x.de"));
+    }
+
+    [Fact]
     public void Register_auto_lock_is_off_or_between_1_and_240_minutes()
     {
         var register = Register.Create(Org, "Kasse", Guid.NewGuid(), Now).Value;

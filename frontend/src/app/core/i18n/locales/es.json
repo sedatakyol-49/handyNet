@@ -501,7 +501,11 @@
       "pos.approver_not_found": "No se encontró al empleado.",
       "pos.approval_permissions": "Se pueden autorizar: cambiar precio, descuento, devolución, efectivo, cierre de caja.",
       "pos.approval_target": "Una autorización vale para exactamente un tique, movimiento de caja o cierre.",
-      "pos.cashier_none": "No hay ningún cajero conectado con PIN en este dispositivo."
+      "pos.cashier_none": "No hay ningún cajero conectado con PIN en este dispositivo.",
+      "pos.receipt_email_invalid": "El correo no es válido.",
+      "pos.receipt_email_limit": "Este tique ya se envió 5 veces por correo.",
+      "pos.receipt_email_missing": "Introduzca un correo: el tique no tiene cliente con correo.",
+      "pos.receipt_link_not_found": "Este enlace de tique no es válido o ha caducado."
     }
   },
   "dashboard": {
@@ -2524,6 +2528,21 @@
       "granted": "Autorizado por {name}: vale para la próxima acción.",
       "by": "Autorizado por {name}",
       "movementHint": "Entradas y salidas de efectivo requieren el permiso correspondiente o una autorización."
+    },
+    "ereceipt": {
+      "title": "Tique electrónico",
+      "email": "Correo electrónico",
+      "send": "Enviar por correo",
+      "sendToCustomer": "Enviar al cliente",
+      "sent": "El tique se envía a {to}.",
+      "invalid": "Introduzca un correo válido.",
+      "showQr": "Mostrar código QR del tique",
+      "qrLabel": "Código QR: ver el tique en línea",
+      "qrHint": "El cliente escanea el código y ve el tique (solo lectura).",
+      "validUntil": "Enlace válido hasta {date}",
+      "publicMissingTitle": "Tique no disponible",
+      "publicMissing": "Este enlace no es válido o ha caducado. Contacte con la tienda.",
+      "publicCancelled": "Este tique ha sido anulado."
     }
   },
   "invoiceKind": {

@@ -1606,3 +1606,25 @@ export interface PosApprovalInfo {
   permissions: string[];
   approvedAt: string;
 }
+
+// ---- POS e-receipts -------------------------------------------------------------------------------------------------
+export interface PosReceiptEmail {
+  id: string;
+  receiptId: string;
+  /** e.g. "k***@example.de" (never the full address on a shared screen). */
+  recipientMasked: string;
+  requestedAt: string;
+}
+
+export interface PosReceiptLink {
+  token: string;
+  /** Web app path, e.g. "/beleg/{token}". */
+  path: string;
+  expiresAt: string;
+}
+
+export interface PosPublicReceipt {
+  document: ReceiptDocument;
+  cancelled: boolean;
+  expiresAt: string;
+}

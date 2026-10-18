@@ -501,7 +501,11 @@
       "pos.approver_not_found": "Bu çalışan bulunamadı.",
       "pos.approval_permissions": "Onaylanabilen yetkiler: fiyat değiştirme, indirim, iade, nakit giriş/çıkış, kasa kapanışı.",
       "pos.approval_target": "Bir onay tam olarak bir fiş, nakit hareketi veya kapanış için geçerlidir.",
-      "pos.cashier_none": "Bu cihazda PIN ile oturum açmış kasiyer yok."
+      "pos.cashier_none": "Bu cihazda PIN ile oturum açmış kasiyer yok.",
+      "pos.receipt_email_invalid": "E-posta adresi geçersiz.",
+      "pos.receipt_email_limit": "Bu fiş zaten 5 kez e-postayla gönderildi.",
+      "pos.receipt_email_missing": "Lütfen e-posta girin – fişte e-postası olan müşteri yok.",
+      "pos.receipt_link_not_found": "Bu fiş bağlantısı geçersiz veya süresi dolmuş."
     }
   },
   "dashboard": {
@@ -2524,6 +2528,21 @@
       "granted": "{name} tarafından onaylandı – bir sonraki işlem için geçerli.",
       "by": "Onaylayan: {name}",
       "movementHint": "Para giriş/çıkışı için „nakit giriş/çıkış“ yetkisi veya yönetici onayı gerekir."
+    },
+    "ereceipt": {
+      "title": "E-fiş",
+      "email": "E-posta adresi",
+      "send": "E-postayla gönder",
+      "sendToCustomer": "Müşteriye gönder",
+      "sent": "E-fiş {to} adresine gönderiliyor.",
+      "invalid": "Lütfen geçerli bir e-posta adresi girin.",
+      "showQr": "Fiş için QR kodu göster",
+      "qrLabel": "QR kod: fişi çevrimiçi görüntüle",
+      "qrHint": "Müşteri kodu tarar ve fişi görür (salt okunur).",
+      "validUntil": "Bağlantı {date} tarihine kadar geçerli",
+      "publicMissingTitle": "Fiş mevcut değil",
+      "publicMissing": "Bu bağlantı geçersiz veya süresi dolmuş. Lütfen mağazaya başvurun.",
+      "publicCancelled": "Bu fiş iptal edildi."
     }
   },
   "invoiceKind": {
