@@ -20,6 +20,7 @@ public static class TenancyModule
         services.AddScoped<OrganizationService>();
         services.AddScoped<AdministrationService>();
         services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
+        services.AddScoped<IOrganizationModuleDirectory, OrganizationModuleDirectory>();
         services.AddValidatorsFromAssemblyContaining<OrganizationService>(includeInternalTypes: true);
         return services;
     }
