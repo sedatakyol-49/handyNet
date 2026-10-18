@@ -375,7 +375,13 @@
       "image.limit_reached": "Un artículo puede tener como máximo 8 imágenes.",
       "image.not_found": "No se encontró la imagen.",
       "image.order_mismatch": "Las imágenes cambiaron mientras tanto. Vuelva a cargar la vista.",
-      "image.concurrent": "Las imágenes de este artículo se modificaron a la vez. Inténtelo de nuevo."
+      "image.concurrent": "Las imágenes de este artículo se modificaron a la vez. Inténtelo de nuevo.",
+      "offer.blocked": "La plataforma ha retirado esta oferta del marketplace y no se puede pedir.",
+      "moderation.offer_not_found": "Algunas de las ofertas seleccionadas ya no existen. No se ha cambiado nada.",
+      "moderation.no_offers": "Seleccione al menos una oferta.",
+      "moderation.too_many_offers": "Demasiadas ofertas para una sola acción.",
+      "moderation.reason_too_long": "El motivo es demasiado largo.",
+      "moderation.tenant_header": "La moderación se invoca sin contexto de empresa."
     }
   },
   "dashboard": {
@@ -932,7 +938,8 @@
       "organizations": "Empresas",
       "disputes": "Reclamaciones",
       "ankauf": "Precios de recompra",
-      "invoices": "Facturas de comisión"
+      "invoices": "Facturas de comisión",
+      "moderation": "Moderación del marketplace"
     },
     "disputes": {
       "subtitle": "Revisar y resolver las reclamaciones remitidas a HandyNet.",
@@ -2372,5 +2379,102 @@
     "next": "Imagen siguiente",
     "thumbnails": "Miniaturas",
     "manageCount": "Imágenes ({count})"
+  },
+  "moderation": {
+    "subtitle": "Retire ofertas del marketplace: una a una, como selección o todas las ofertas de un vendedor. Los vendedores no pueden levantar un bloqueo.",
+    "sellers": {
+      "heading": "Vendedores",
+      "hint": "«Bloquear todo» oculta todas las ofertas del vendedor, también las que cree más adelante, hasta que se levante el bloqueo.",
+      "search": "Buscar vendedores",
+      "name": "Vendedor",
+      "verification": "Verificación",
+      "offers": "Ofertas",
+      "published": "Publicadas",
+      "blockedOffers": "Bloqueadas individualmente",
+      "state": "Marketplace",
+      "showOffers": "Ver ofertas",
+      "blockAll": "Bloquear todo",
+      "unblockAll": "Levantar bloqueo",
+      "empty": "No se encontraron vendedores."
+    },
+    "sellerState": {
+      "Blocked": "Todas las ofertas bloqueadas",
+      "Visible": "Visible"
+    },
+    "offerState": {
+      "Blocked": "Bloqueada",
+      "SellerBlocked": "Vendedor bloqueado",
+      "Visible": "Visible"
+    },
+    "offers": {
+      "heading": "Ofertas",
+      "seller": "Vendedor",
+      "searchPlaceholder": "Producto, marca, EAN, MPN, referencia",
+      "brand": "Marca",
+      "category": "Categoría",
+      "visibility": "Moderación",
+      "visibilityAll": "Todas",
+      "visibilityBlocked": "Bloqueadas",
+      "visibilityVisible": "No bloqueadas",
+      "apply": "Filtrar",
+      "reset": "Restablecer",
+      "selected": "Seleccionadas: {count}",
+      "blockSelected": "Bloquear selección ({count})",
+      "unblockSelected": "Desbloquear selección ({count})",
+      "clearSelection": "Quitar selección",
+      "selectPage": "Seleccionar todas las ofertas de esta página",
+      "selectRow": "Seleccionar {product}",
+      "sellerStatus": "Estado (vendedor)",
+      "moderation": "Moderación",
+      "block": "Bloquear",
+      "unblock": "Desbloquear",
+      "empty": "No hay ofertas para estos filtros."
+    },
+    "dialog": {
+      "title": {
+        "blockOffer": "Bloquear oferta",
+        "unblockOffer": "Desbloquear oferta",
+        "blockSelected": "Bloquear selección",
+        "unblockSelected": "Desbloquear selección",
+        "blockSeller": "Bloquear todas las ofertas del vendedor",
+        "unblockSeller": "Levantar bloqueo del vendedor"
+      },
+      "text": {
+        "blockOffer": "«{product}» de {seller} se retira del marketplace de inmediato y ya no se puede pedir.",
+        "unblockOffer": "«{product}» de {seller} vuelve a ser visible si el vendedor la ha publicado.",
+        "blockSelected": "{count} ofertas se retiran del marketplace de inmediato.",
+        "unblockSelected": "{count} ofertas se vuelven a liberar.",
+        "blockSeller": "Todas las ofertas de {seller} ({count}) se retiran del marketplace.",
+        "unblockSeller": "Las ofertas de {seller} ({count}) vuelven a ser visibles, salvo las bloqueadas individualmente."
+      },
+      "sellerHint": "El bloqueo también se aplica a las ofertas que el vendedor cree más adelante.",
+      "reason": "Motivo (visible para el vendedor)",
+      "note": "Nota (opcional)",
+      "reasonHint": "Opcional, como máximo {max} caracteres. Se registra con fecha y administrador.",
+      "reasonTooLong": "Como máximo {max} caracteres.",
+      "confirmBlock": "Bloquear",
+      "confirmUnblock": "Desbloquear"
+    },
+    "toast": {
+      "offerBlocked": "Oferta bloqueada.",
+      "offerUnblocked": "Oferta desbloqueada.",
+      "selectionBlocked": "{count} ofertas bloqueadas.",
+      "selectionUnblocked": "{count} ofertas desbloqueadas.",
+      "sellerBlocked": "Todas las ofertas del vendedor bloqueadas.",
+      "sellerUnblocked": "Bloqueo del vendedor levantado."
+    },
+    "seller": {
+      "bannerHeading": "Sus ofertas están bloqueadas en el marketplace",
+      "bannerText": "La plataforma ha retirado todas las ofertas de su empresa del marketplace. Póngase en contacto con soporte.",
+      "bannerReason": "La plataforma ha retirado todas las ofertas de su empresa del marketplace. Motivo: {reason}",
+      "blockedBy": {
+        "Offer": "Bloqueada por la plataforma",
+        "Seller": "Vendedor bloqueado"
+      },
+      "editDisabled": "Bloqueada por la plataforma: el estado solo se puede cambiar cuando se levante el bloqueo."
+    },
+    "cart": {
+      "blocked": "La plataforma ha retirado una oferta del marketplace. Elimínela del carrito."
+    }
   }
 }

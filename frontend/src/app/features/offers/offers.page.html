@@ -18,6 +18,11 @@
   </hn-field>
 </form>
 
+@if (ownModeration.value()?.sellerBlocked) {
+  <hn-banner class="mb-3" tone="warning" [heading]="'moderation.seller.bannerHeading' | t"
+    [text]="ownModeration.value()?.reason ? ('moderation.seller.bannerReason' | t: { reason: ownModeration.value()?.reason }) : ('moderation.seller.bannerText' | t)"
+    data-testid="offers-seller-blocked" />
+}
 <hn-banner class="mb-3" [error]="offers.error()" />
 @if (editProblem() && editingId()) {
   <hn-banner class="mb-3" [error]="editProblem()" />
@@ -100,11 +105,22 @@
             <td class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
             <td>{{ o.condition | tEnum: 'condition' }}</td>
             <td class="num" [title]="'offers.stockTitle' | t">{{ o.onHand }} / {{ o.reserved }}</td>
-            <td><hn-status-badge [status]="o.status" kind="offerStatus" /></td>
+            <td [attr.data-blocked]="o.moderation?.blocked ?? false">
+              <hn-status-badge [status]="o.status" kind="offerStatus" />
+              @if (o.moderation?.blocked) {
+                <span class="mt-1 block" data-testid="offer-blocked">
+                  <hn-status-badge [status]="o.moderation.blockedBy === 'offer' ? 'Offer' : 'Seller'" kind="moderation.seller.blockedBy" tone="danger" />
+                  @if (o.moderation.reason) {
+                    <span class="mt-0.5 block max-w-xs text-xs text-slate-600" data-testid="offer-blocked-reason"><bdi>{{ o.moderation.reason }}</bdi></span>
+                  }
+                </span>
+              }
+            </td>
             <td class="text-end whitespace-nowrap">
               @if (canManage && o.status !== 'Archived') {
-                <button hnButton size="sm" variant="ghost" type="button" (click)="startEdit(o)" [disabled]="!!editingId()"
-                  [attr.aria-label]="('common.edit' | t) + ': ' + o.productName">{{ 'common.edit' | t }}</button>
+                <button hnButton size="sm" variant="ghost" type="button" (click)="startEdit(o)" [disabled]="!!editingId() || isFrozen(o)"
+                  [attr.title]="isFrozen(o) ? ('moderation.seller.editDisabled' | t) : null"
+                  [attr.aria-label]="('common.edit' | t) + ': ' + o.productName" data-testid="offer-edit">{{ 'common.edit' | t }}</button>
               }
               <button hnButton size="sm" variant="ghost" type="button" (click)="openImages(o)"
                 [attr.aria-label]="('images.title' | t) + ': ' + o.brand + ' ' + o.productName" data-testid="offer-images">{{ 'images.title' | t }}</button>

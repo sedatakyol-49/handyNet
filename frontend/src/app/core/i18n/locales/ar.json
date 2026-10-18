@@ -375,7 +375,13 @@
       "image.limit_reached": "يمكن أن يحتوي الصنف على 8 صور كحد أقصى.",
       "image.not_found": "لم يتم العثور على الصورة.",
       "image.order_mismatch": "تغيّرت الصور في هذه الأثناء. يرجى إعادة تحميل العرض.",
-      "image.concurrent": "تم تغيير صور هذا الصنف في الوقت نفسه. يرجى المحاولة مرة أخرى."
+      "image.concurrent": "تم تغيير صور هذا الصنف في الوقت نفسه. يرجى المحاولة مرة أخرى.",
+      "offer.blocked": "أزالت المنصة هذا العرض من السوق ولا يمكن طلبه.",
+      "moderation.offer_not_found": "بعض العروض المحددة لم تعد موجودة. لم يتم تغيير أي شيء.",
+      "moderation.no_offers": "يرجى تحديد عرض واحد على الأقل.",
+      "moderation.too_many_offers": "عدد كبير جدًا من العروض لإجراء واحد.",
+      "moderation.reason_too_long": "السبب طويل جدًا.",
+      "moderation.tenant_header": "يتم استدعاء الإشراف دون سياق شركة."
     }
   },
   "dashboard": {
@@ -932,7 +938,8 @@
       "organizations": "الشركات",
       "disputes": "الشكاوى",
       "ankauf": "أسعار إعادة الشراء",
-      "invoices": "فواتير العمولة"
+      "invoices": "فواتير العمولة",
+      "moderation": "إشراف السوق"
     },
     "disputes": {
       "subtitle": "مراجعة الشكاوى المحالة إلى HandyNet والبتّ فيها.",
@@ -2372,5 +2379,102 @@
     "next": "الصورة التالية",
     "thumbnails": "صور مصغّرة",
     "manageCount": "الصور ({count})"
+  },
+  "moderation": {
+    "subtitle": "إزالة العروض من السوق – بشكل فردي أو كمجموعة محددة أو جميع عروض بائع. لا يمكن للبائعين رفع الحظر بأنفسهم.",
+    "sellers": {
+      "heading": "البائعون",
+      "hint": "\"حظر الكل\" يخفي جميع عروض البائع، بما فيها التي تُنشأ لاحقًا، حتى يُرفع الحظر.",
+      "search": "البحث عن بائعين",
+      "name": "البائع",
+      "verification": "التحقق",
+      "offers": "العروض",
+      "published": "منشورة",
+      "blockedOffers": "محظورة بشكل فردي",
+      "state": "السوق",
+      "showOffers": "عرض العروض",
+      "blockAll": "حظر الكل",
+      "unblockAll": "رفع الحظر",
+      "empty": "لم يتم العثور على بائعين."
+    },
+    "sellerState": {
+      "Blocked": "جميع العروض محظورة",
+      "Visible": "مرئي"
+    },
+    "offerState": {
+      "Blocked": "محظور",
+      "SellerBlocked": "البائع محظور",
+      "Visible": "مرئي"
+    },
+    "offers": {
+      "heading": "العروض",
+      "seller": "البائع",
+      "searchPlaceholder": "المنتج، العلامة التجارية، EAN، MPN، رقم الصنف",
+      "brand": "العلامة التجارية",
+      "category": "الفئة",
+      "visibility": "الإشراف",
+      "visibilityAll": "الكل",
+      "visibilityBlocked": "محظورة",
+      "visibilityVisible": "غير محظورة",
+      "apply": "تصفية",
+      "reset": "إعادة تعيين",
+      "selected": "المحدد: {count}",
+      "blockSelected": "حظر المحدد ({count})",
+      "unblockSelected": "رفع حظر المحدد ({count})",
+      "clearSelection": "إلغاء التحديد",
+      "selectPage": "تحديد جميع العروض في هذه الصفحة",
+      "selectRow": "تحديد {product}",
+      "sellerStatus": "الحالة (البائع)",
+      "moderation": "الإشراف",
+      "block": "حظر",
+      "unblock": "رفع الحظر",
+      "empty": "لا توجد عروض لهذه المرشحات."
+    },
+    "dialog": {
+      "title": {
+        "blockOffer": "حظر العرض",
+        "unblockOffer": "رفع حظر العرض",
+        "blockSelected": "حظر المحدد",
+        "unblockSelected": "رفع حظر المحدد",
+        "blockSeller": "حظر جميع عروض البائع",
+        "unblockSeller": "رفع حظر البائع"
+      },
+      "text": {
+        "blockOffer": "تتم إزالة \"{product}\" من {seller} من السوق فورًا ولا يمكن طلبه بعد ذلك.",
+        "unblockOffer": "يصبح \"{product}\" من {seller} مرئيًا مجددًا إذا كان البائع قد نشره.",
+        "blockSelected": "تتم إزالة {count} عروض من السوق فورًا.",
+        "unblockSelected": "يتم رفع الحظر عن {count} عروض.",
+        "blockSeller": "تتم إزالة جميع عروض {seller} ({count}) من السوق.",
+        "unblockSeller": "تصبح عروض {seller} ({count}) مرئية مجددًا – باستثناء المحظورة بشكل فردي."
+      },
+      "sellerHint": "ينطبق الحظر أيضًا على العروض التي ينشئها البائع لاحقًا.",
+      "reason": "السبب (مرئي للبائع)",
+      "note": "ملاحظة (اختياري)",
+      "reasonHint": "اختياري، {max} حرف كحد أقصى. يُسجَّل مع الوقت والمسؤول.",
+      "reasonTooLong": "{max} حرف كحد أقصى.",
+      "confirmBlock": "حظر",
+      "confirmUnblock": "رفع الحظر"
+    },
+    "toast": {
+      "offerBlocked": "تم حظر العرض.",
+      "offerUnblocked": "تم رفع حظر العرض.",
+      "selectionBlocked": "تم حظر {count} عروض.",
+      "selectionUnblocked": "تم رفع الحظر عن {count} عروض.",
+      "sellerBlocked": "تم حظر جميع عروض البائع.",
+      "sellerUnblocked": "تم رفع حظر البائع."
+    },
+    "seller": {
+      "bannerHeading": "عروضكم محظورة في السوق",
+      "bannerText": "أزالت المنصة جميع عروض شركتكم من السوق. يرجى التواصل مع الدعم.",
+      "bannerReason": "أزالت المنصة جميع عروض شركتكم من السوق. السبب: {reason}",
+      "blockedBy": {
+        "Offer": "محظور من قبل المنصة",
+        "Seller": "البائع محظور"
+      },
+      "editDisabled": "محظور من قبل المنصة – لا يمكن تغيير الحالة إلا بعد رفع الحظر."
+    },
+    "cart": {
+      "blocked": "أزالت المنصة عرضًا من السوق. يرجى إزالته من سلة التسوق."
+    }
   }
 }

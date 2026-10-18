@@ -58,6 +58,17 @@ export class OffersPage {
     (q) => this.api.list(q),
   );
 
+  /** Platform block of the whole organization as a seller (banner). */
+  protected readonly ownModeration = createQuery(
+    () => true,
+    () => this.api.moderation(),
+  );
+
+  /** Offer blocked by the platform: its status is frozen, so editing is disabled until the block is lifted. */
+  protected isFrozen(o: OwnOffer): boolean {
+    return o.moderation?.blockedBy === 'offer';
+  }
+
   // Inline editing
   protected readonly editingId = signal<string | null>(null);
   protected draft: EditDraft = { price: '', minOrderQuantity: 1, deliveryDays: 2, condition: 'New', status: '' };
