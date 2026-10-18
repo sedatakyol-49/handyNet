@@ -462,7 +462,13 @@
       "image.limit_reached": "Ein Artikel kann höchstens 8 Bilder haben.",
       "image.not_found": "Das Bild wurde nicht gefunden.",
       "image.order_mismatch": "Die Bilder wurden zwischenzeitlich geändert. Bitte laden Sie die Ansicht neu.",
-      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut."
+      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut.",
+      "offer.blocked": "Dieses Angebot wurde von der Plattform aus dem Marktplatz entfernt und kann nicht bestellt werden.",
+      "moderation.offer_not_found": "Einige der ausgewählten Angebote gibt es nicht mehr. Es wurde nichts geändert.",
+      "moderation.no_offers": "Bitte mindestens ein Angebot auswählen.",
+      "moderation.too_many_offers": "Zu viele Angebote für eine Aktion.",
+      "moderation.reason_too_long": "Die Begründung ist zu lang.",
+      "moderation.tenant_header": "Moderation wird ohne Unternehmenskontext aufgerufen."
     }
   },
   "dashboard": {
@@ -1020,7 +1026,8 @@
       "organizations": "Unternehmen",
       "disputes": "Reklamationen",
       "ankauf": "Ankaufspreise",
-      "invoices": "Provisionsrechnungen"
+      "invoices": "Provisionsrechnungen",
+      "moderation": "Marktplatz-Moderation"
     },
     "disputes": {
       "subtitle": "An HandyNet übergebene Reklamationen prüfen und entscheiden.",
@@ -2464,5 +2471,102 @@
     "next": "Nächstes Bild",
     "thumbnails": "Vorschaubilder",
     "manageCount": "Bilder ({count})"
+  },
+  "moderation": {
+    "subtitle": "Angebote aus dem Marktplatz nehmen – einzeln, als Auswahl oder alle Angebote eines Verkäufers. Verkäufer können eine Sperre nicht selbst aufheben.",
+    "sellers": {
+      "heading": "Verkäufer",
+      "hint": "„Alle sperren“ verbirgt alle Angebote des Verkäufers, auch künftig angelegte, bis die Sperre aufgehoben wird.",
+      "search": "Verkäufer suchen",
+      "name": "Verkäufer",
+      "verification": "Verifizierung",
+      "offers": "Angebote",
+      "published": "Veröffentlicht",
+      "blockedOffers": "Einzeln gesperrt",
+      "state": "Marktplatz",
+      "showOffers": "Angebote anzeigen",
+      "blockAll": "Alle sperren",
+      "unblockAll": "Sperre aufheben",
+      "empty": "Keine Verkäufer gefunden."
+    },
+    "sellerState": {
+      "Blocked": "Alle Angebote gesperrt",
+      "Visible": "Sichtbar"
+    },
+    "offerState": {
+      "Blocked": "Gesperrt",
+      "SellerBlocked": "Verkäufer gesperrt",
+      "Visible": "Sichtbar"
+    },
+    "offers": {
+      "heading": "Angebote",
+      "seller": "Verkäufer",
+      "searchPlaceholder": "Produkt, Marke, EAN, MPN, Artikelnummer",
+      "brand": "Marke",
+      "category": "Kategorie",
+      "visibility": "Moderation",
+      "visibilityAll": "Alle",
+      "visibilityBlocked": "Gesperrt",
+      "visibilityVisible": "Nicht gesperrt",
+      "apply": "Filtern",
+      "reset": "Zurücksetzen",
+      "selected": "Ausgewählt: {count}",
+      "blockSelected": "Auswahl sperren ({count})",
+      "unblockSelected": "Auswahl freigeben ({count})",
+      "clearSelection": "Auswahl aufheben",
+      "selectPage": "Alle Angebote dieser Seite auswählen",
+      "selectRow": "{product} auswählen",
+      "sellerStatus": "Status (Verkäufer)",
+      "moderation": "Moderation",
+      "block": "Sperren",
+      "unblock": "Freigeben",
+      "empty": "Keine Angebote für diese Filter."
+    },
+    "dialog": {
+      "title": {
+        "blockOffer": "Angebot sperren",
+        "unblockOffer": "Angebot freigeben",
+        "blockSelected": "Auswahl sperren",
+        "unblockSelected": "Auswahl freigeben",
+        "blockSeller": "Alle Angebote des Verkäufers sperren",
+        "unblockSeller": "Verkäufersperre aufheben"
+      },
+      "text": {
+        "blockOffer": "„{product}“ von {seller} wird sofort aus dem Marktplatz entfernt und kann nicht mehr bestellt werden.",
+        "unblockOffer": "„{product}“ von {seller} wird wieder sichtbar, sofern der Verkäufer es veröffentlicht hat.",
+        "blockSelected": "{count} Angebote werden sofort aus dem Marktplatz entfernt.",
+        "unblockSelected": "{count} Angebote werden wieder freigegeben.",
+        "blockSeller": "Alle Angebote von {seller} ({count}) werden aus dem Marktplatz entfernt.",
+        "unblockSeller": "Die Angebote von {seller} ({count}) werden wieder sichtbar – außer einzeln gesperrten."
+      },
+      "sellerHint": "Die Sperre gilt auch für Angebote, die der Verkäufer später anlegt.",
+      "reason": "Begründung (für den Verkäufer sichtbar)",
+      "note": "Notiz (optional)",
+      "reasonHint": "Optional, höchstens {max} Zeichen. Wird mit Zeitpunkt und Admin protokolliert.",
+      "reasonTooLong": "Höchstens {max} Zeichen.",
+      "confirmBlock": "Sperren",
+      "confirmUnblock": "Freigeben"
+    },
+    "toast": {
+      "offerBlocked": "Angebot gesperrt.",
+      "offerUnblocked": "Angebot freigegeben.",
+      "selectionBlocked": "{count} Angebote gesperrt.",
+      "selectionUnblocked": "{count} Angebote freigegeben.",
+      "sellerBlocked": "Alle Angebote des Verkäufers gesperrt.",
+      "sellerUnblocked": "Verkäufersperre aufgehoben."
+    },
+    "seller": {
+      "bannerHeading": "Ihre Angebote sind im Marktplatz gesperrt",
+      "bannerText": "Die Plattform hat alle Angebote Ihres Unternehmens aus dem Marktplatz genommen. Bitte wenden Sie sich an den Support.",
+      "bannerReason": "Die Plattform hat alle Angebote Ihres Unternehmens aus dem Marktplatz genommen. Begründung: {reason}",
+      "blockedBy": {
+        "Offer": "Von der Plattform gesperrt",
+        "Seller": "Verkäufer gesperrt"
+      },
+      "editDisabled": "Von der Plattform gesperrt – Änderungen am Status sind erst nach Freigabe möglich."
+    },
+    "cart": {
+      "blocked": "Ein Angebot wurde von der Plattform aus dem Marktplatz entfernt. Bitte entfernen Sie es aus dem Warenkorb."
+    }
   }
 }

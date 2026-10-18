@@ -38,6 +38,12 @@ public interface IOfferReservations
     /// Returns null when the offer is not orderable or available stock is insufficient.
     /// </summary>
     Task<Guid?> ReserveAsync(Guid offerId, int quantity, string reference, CancellationToken ct);
+
+    /// <summary>
+    /// The subset of these offers that the platform has blocked (the offer itself or its whole seller). Blocked offers are
+    /// never listed or reservable; this only lets callers report <c>offer.blocked</c> instead of a generic "unavailable".
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetBlockedAsync(IReadOnlyCollection<Guid> offerIds, CancellationToken ct);
 }
 
 public sealed record ExistingOffer(

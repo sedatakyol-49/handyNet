@@ -462,7 +462,13 @@
       "image.limit_reached": "A product can have at most 8 images.",
       "image.not_found": "Image not found.",
       "image.order_mismatch": "The images were changed in the meantime. Please reload the view.",
-      "image.concurrent": "The images of this product were changed concurrently. Please try again."
+      "image.concurrent": "The images of this product were changed concurrently. Please try again.",
+      "offer.blocked": "This offer has been removed from the marketplace by the platform and cannot be ordered.",
+      "moderation.offer_not_found": "Some of the selected offers no longer exist. Nothing was changed.",
+      "moderation.no_offers": "Please select at least one offer.",
+      "moderation.too_many_offers": "Too many offers for one action.",
+      "moderation.reason_too_long": "The reason is too long.",
+      "moderation.tenant_header": "Moderation is called without an organization context."
     }
   },
   "dashboard": {
@@ -1020,7 +1026,8 @@
       "organizations": "Companies",
       "disputes": "Complaints",
       "ankauf": "Buyback prices",
-      "invoices": "Commission invoices"
+      "invoices": "Commission invoices",
+      "moderation": "Marketplace moderation"
     },
     "disputes": {
       "subtitle": "Review and decide complaints handed over to HandyNet.",
@@ -2464,5 +2471,102 @@
     "next": "Next image",
     "thumbnails": "Thumbnails",
     "manageCount": "Images ({count})"
+  },
+  "moderation": {
+    "subtitle": "Remove offers from the marketplace – individually, as a selection or all offers of a seller. Sellers cannot lift a block themselves.",
+    "sellers": {
+      "heading": "Sellers",
+      "hint": "\"Block all\" hides all offers of the seller, including ones created later, until the block is lifted.",
+      "search": "Search sellers",
+      "name": "Seller",
+      "verification": "Verification",
+      "offers": "Offers",
+      "published": "Published",
+      "blockedOffers": "Blocked individually",
+      "state": "Marketplace",
+      "showOffers": "Show offers",
+      "blockAll": "Block all",
+      "unblockAll": "Lift block",
+      "empty": "No sellers found."
+    },
+    "sellerState": {
+      "Blocked": "All offers blocked",
+      "Visible": "Visible"
+    },
+    "offerState": {
+      "Blocked": "Blocked",
+      "SellerBlocked": "Seller blocked",
+      "Visible": "Visible"
+    },
+    "offers": {
+      "heading": "Offers",
+      "seller": "Seller",
+      "searchPlaceholder": "Product, brand, EAN, MPN, SKU",
+      "brand": "Brand",
+      "category": "Category",
+      "visibility": "Moderation",
+      "visibilityAll": "All",
+      "visibilityBlocked": "Blocked",
+      "visibilityVisible": "Not blocked",
+      "apply": "Filter",
+      "reset": "Reset",
+      "selected": "Selected: {count}",
+      "blockSelected": "Block selection ({count})",
+      "unblockSelected": "Unblock selection ({count})",
+      "clearSelection": "Clear selection",
+      "selectPage": "Select all offers on this page",
+      "selectRow": "Select {product}",
+      "sellerStatus": "Status (seller)",
+      "moderation": "Moderation",
+      "block": "Block",
+      "unblock": "Unblock",
+      "empty": "No offers for these filters."
+    },
+    "dialog": {
+      "title": {
+        "blockOffer": "Block offer",
+        "unblockOffer": "Unblock offer",
+        "blockSelected": "Block selection",
+        "unblockSelected": "Unblock selection",
+        "blockSeller": "Block all offers of the seller",
+        "unblockSeller": "Lift seller block"
+      },
+      "text": {
+        "blockOffer": "\"{product}\" from {seller} is removed from the marketplace immediately and can no longer be ordered.",
+        "unblockOffer": "\"{product}\" from {seller} becomes visible again if the seller has published it.",
+        "blockSelected": "{count} offers are removed from the marketplace immediately.",
+        "unblockSelected": "{count} offers are released again.",
+        "blockSeller": "All offers of {seller} ({count}) are removed from the marketplace.",
+        "unblockSeller": "The offers of {seller} ({count}) become visible again – except individually blocked ones."
+      },
+      "sellerHint": "The block also applies to offers the seller creates later.",
+      "reason": "Reason (visible to the seller)",
+      "note": "Note (optional)",
+      "reasonHint": "Optional, at most {max} characters. Logged with time and admin.",
+      "reasonTooLong": "At most {max} characters.",
+      "confirmBlock": "Block",
+      "confirmUnblock": "Unblock"
+    },
+    "toast": {
+      "offerBlocked": "Offer blocked.",
+      "offerUnblocked": "Offer unblocked.",
+      "selectionBlocked": "{count} offers blocked.",
+      "selectionUnblocked": "{count} offers unblocked.",
+      "sellerBlocked": "All offers of the seller blocked.",
+      "sellerUnblocked": "Seller block lifted."
+    },
+    "seller": {
+      "bannerHeading": "Your offers are blocked on the marketplace",
+      "bannerText": "The platform has removed all offers of your organization from the marketplace. Please contact support.",
+      "bannerReason": "The platform has removed all offers of your organization from the marketplace. Reason: {reason}",
+      "blockedBy": {
+        "Offer": "Blocked by the platform",
+        "Seller": "Seller blocked"
+      },
+      "editDisabled": "Blocked by the platform – the status can only be changed after the block is lifted."
+    },
+    "cart": {
+      "blocked": "An offer has been removed from the marketplace by the platform. Please remove it from the cart."
+    }
   }
 }

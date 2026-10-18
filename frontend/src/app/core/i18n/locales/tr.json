@@ -462,7 +462,13 @@
       "image.limit_reached": "Bir ürünün en fazla 8 görseli olabilir.",
       "image.not_found": "Görsel bulunamadı.",
       "image.order_mismatch": "Görseller bu sırada değiştirildi. Lütfen görünümü yeniden yükleyin.",
-      "image.concurrent": "Bu ürünün görselleri aynı anda değiştirildi. Lütfen tekrar deneyin."
+      "image.concurrent": "Bu ürünün görselleri aynı anda değiştirildi. Lütfen tekrar deneyin.",
+      "offer.blocked": "Bu teklif platform tarafından pazar yerinden kaldırıldı ve sipariş edilemez.",
+      "moderation.offer_not_found": "Seçilen tekliflerin bazıları artık mevcut değil. Hiçbir değişiklik yapılmadı.",
+      "moderation.no_offers": "Lütfen en az bir teklif seçin.",
+      "moderation.too_many_offers": "Tek bir işlem için çok fazla teklif.",
+      "moderation.reason_too_long": "Gerekçe çok uzun.",
+      "moderation.tenant_header": "Moderasyon şirket bağlamı olmadan çağrılır."
     }
   },
   "dashboard": {
@@ -1020,7 +1026,8 @@
       "organizations": "Şirketler",
       "disputes": "Şikâyetler",
       "ankauf": "Geri alım fiyatları",
-      "invoices": "Komisyon faturaları"
+      "invoices": "Komisyon faturaları",
+      "moderation": "Pazar yeri moderasyonu"
     },
     "disputes": {
       "subtitle": "HandyNet'e devredilen şikâyetleri inceleyin ve karara bağlayın.",
@@ -2464,5 +2471,102 @@
     "next": "Sonraki görsel",
     "thumbnails": "Küçük resimler",
     "manageCount": "Görseller ({count})"
+  },
+  "moderation": {
+    "subtitle": "Teklifleri pazar yerinden kaldırın – tek tek, seçim olarak veya bir satıcının tüm teklifleri. Satıcılar bir engeli kendileri kaldıramaz.",
+    "sellers": {
+      "heading": "Satıcılar",
+      "hint": "\"Tümünü engelle\", engel kaldırılana kadar satıcının sonradan oluşturulanlar dahil tüm tekliflerini gizler.",
+      "search": "Satıcı ara",
+      "name": "Satıcı",
+      "verification": "Doğrulama",
+      "offers": "Teklifler",
+      "published": "Yayında",
+      "blockedOffers": "Tek tek engellenen",
+      "state": "Pazar yeri",
+      "showOffers": "Teklifleri göster",
+      "blockAll": "Tümünü engelle",
+      "unblockAll": "Engeli kaldır",
+      "empty": "Satıcı bulunamadı."
+    },
+    "sellerState": {
+      "Blocked": "Tüm teklifler engelli",
+      "Visible": "Görünür"
+    },
+    "offerState": {
+      "Blocked": "Engelli",
+      "SellerBlocked": "Satıcı engelli",
+      "Visible": "Görünür"
+    },
+    "offers": {
+      "heading": "Teklifler",
+      "seller": "Satıcı",
+      "searchPlaceholder": "Ürün, marka, EAN, MPN, ürün kodu",
+      "brand": "Marka",
+      "category": "Kategori",
+      "visibility": "Moderasyon",
+      "visibilityAll": "Tümü",
+      "visibilityBlocked": "Engelli",
+      "visibilityVisible": "Engelli değil",
+      "apply": "Filtrele",
+      "reset": "Sıfırla",
+      "selected": "Seçili: {count}",
+      "blockSelected": "Seçimi engelle ({count})",
+      "unblockSelected": "Seçimin engelini kaldır ({count})",
+      "clearSelection": "Seçimi temizle",
+      "selectPage": "Bu sayfadaki tüm teklifleri seç",
+      "selectRow": "{product} seç",
+      "sellerStatus": "Durum (satıcı)",
+      "moderation": "Moderasyon",
+      "block": "Engelle",
+      "unblock": "Engeli kaldır",
+      "empty": "Bu filtreler için teklif yok."
+    },
+    "dialog": {
+      "title": {
+        "blockOffer": "Teklifi engelle",
+        "unblockOffer": "Teklifin engelini kaldır",
+        "blockSelected": "Seçimi engelle",
+        "unblockSelected": "Seçimin engelini kaldır",
+        "blockSeller": "Satıcının tüm tekliflerini engelle",
+        "unblockSeller": "Satıcı engelini kaldır"
+      },
+      "text": {
+        "blockOffer": "{seller} satıcısının \"{product}\" teklifi hemen pazar yerinden kaldırılır ve artık sipariş edilemez.",
+        "unblockOffer": "{seller} satıcısının \"{product}\" teklifi, satıcı yayınladıysa yeniden görünür olur.",
+        "blockSelected": "{count} teklif hemen pazar yerinden kaldırılır.",
+        "unblockSelected": "{count} teklifin engeli kaldırılır.",
+        "blockSeller": "{seller} satıcısının tüm teklifleri ({count}) pazar yerinden kaldırılır.",
+        "unblockSeller": "{seller} satıcısının teklifleri ({count}) yeniden görünür olur – tek tek engellenenler hariç."
+      },
+      "sellerHint": "Engel, satıcının daha sonra oluşturacağı teklifler için de geçerlidir.",
+      "reason": "Gerekçe (satıcı tarafından görülür)",
+      "note": "Not (isteğe bağlı)",
+      "reasonHint": "İsteğe bağlı, en fazla {max} karakter. Zaman ve yönetici ile kaydedilir.",
+      "reasonTooLong": "En fazla {max} karakter.",
+      "confirmBlock": "Engelle",
+      "confirmUnblock": "Engeli kaldır"
+    },
+    "toast": {
+      "offerBlocked": "Teklif engellendi.",
+      "offerUnblocked": "Teklifin engeli kaldırıldı.",
+      "selectionBlocked": "{count} teklif engellendi.",
+      "selectionUnblocked": "{count} teklifin engeli kaldırıldı.",
+      "sellerBlocked": "Satıcının tüm teklifleri engellendi.",
+      "sellerUnblocked": "Satıcı engeli kaldırıldı."
+    },
+    "seller": {
+      "bannerHeading": "Teklifleriniz pazar yerinde engellendi",
+      "bannerText": "Platform, şirketinizin tüm tekliflerini pazar yerinden kaldırdı. Lütfen destekle iletişime geçin.",
+      "bannerReason": "Platform, şirketinizin tüm tekliflerini pazar yerinden kaldırdı. Gerekçe: {reason}",
+      "blockedBy": {
+        "Offer": "Platform tarafından engellendi",
+        "Seller": "Satıcı engelli"
+      },
+      "editDisabled": "Platform tarafından engellendi – durum ancak engel kaldırıldıktan sonra değiştirilebilir."
+    },
+    "cart": {
+      "blocked": "Bir teklif platform tarafından pazar yerinden kaldırıldı. Lütfen sepetten çıkarın."
+    }
   }
 }
