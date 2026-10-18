@@ -30,7 +30,7 @@ public sealed record SalesReportDto(
     IReadOnlyList<CashierSalesDto> ByCashier,
     IReadOnlyList<PaymentMethodSalesDto> ByPaymentMethod);
 
-internal sealed class ReportService(HandyNetDbContext db, ITenantContext tenant, IUserAccounts users)
+internal sealed class ReportService(HandyNetDbContext db, ITenantContext tenant, IUserAccounts users, PosActor actor)
 {
     public const int MaxRangeDays = 366;
 
@@ -42,11 +42,11 @@ internal sealed class ReportService(HandyNetDbContext db, ITenantContext tenant,
     /// </summary>
     public async Task<Result<SalesReportDto>> SalesAsync(Guid? sessionId, Guid? registerId, DateTimeOffset? from, DateTimeOffset? to, CancellationToken ct)
     {
-        var manage = tenant.Permissions.Contains(Permissions.PosManage);
+        var manage = actor.Has(Permissions.PosManage);
         var receipts = db.Set<Receipt>().AsNoTracking().Where(r => r.OrganizationId == OrganizationId);
         if (sessionId is { } session)
         {
-            if (!manage && !tenant.Permissions.Contains(Permissions.PosCloseSession))
+            if (!manage && !actor.Has(Permissions.PosCloseSession))
                 return Error.Forbidden("permission.denied", $"Missing permission '{Permissions.PosCloseSession}'.");
             if (!await db.Set<CashSession>().AnyAsync(s => s.Id == session && s.OrganizationId == OrganizationId, ct))
                 return Error.NotFound("pos.session_not_found", "Cash session not found.");

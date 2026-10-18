@@ -144,6 +144,83 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
   refunds, gross) and by payment method — for a session (`pos.close_session` or `pos.manage`) or a date range of at
   most 366 days, optionally per register (`pos.manage`). Gross only: per-product VAT would reveal §25a purchase prices.
 
+## Staff, approvals, e-receipts, invoices, cash rounding (2026-10-18, roadmap Phase 2c B–F)
+
+### Product images on tiles
+
+- `imageUrl` of the product grid is the thumbnail of the catalog product's primary image, read through the Catalog
+  contract (`IProductCatalog.GetImagesAsync`, one query per page); relative to the API base, public and immutable (ADR-0011).
+
+### POS PIN and cashier switching on a shared device
+
+- Every member may have a POS PIN per organization (`pos.cashier_pins`): 4–6 ASCII digits, no repeated digit or plain
+  run (1234/4321), stored as salted PBKDF2-SHA256 (100,000 iterations), `[PersonalData]` (never in the audit log). Own PIN
+  `PUT /api/pos/me/pin` with the account password (`IUserAccounts.VerifyPasswordAsync`); the owner sets/clears any member's
+  PIN on the Team page (`PUT /api/pos/cashiers/{userId}/pin`, `organization.manage`), which also lifts a lockout.
+- A 4–6 digit PIN has few combinations, so the protection is the attempt limit: 5 wrong entries in a row lock the PIN
+  for 15 minutes (stored, survives restarts; the PIN row is locked `FOR UPDATE` during a check so parallel guesses queue);
+  PIN endpoints are rate-limited per signed-in user (`RateLimits:PosPinPerMinute`, 20).
+- `POST /api/pos/registers/{id}/cashier` {userId, pin} starts a **cashier session** (`pos.cashier_sessions`): an opaque
+  256-bit token (only its SHA-256 is stored) sent as `X-Pos-Cashier`. It is valid only for the same organization (RLS), the
+  same device login (the user who signed in on the device), not ended, not expired (`Pos:CashierSessionHours`, 12), and not
+  idle beyond the register's `auto_lock_minutes` (last-seen updated at most every 30 s). The cashier must still be a member
+  with `pos.sell`; their rights are read fresh per request. A new sign-in ends earlier ones of the same device login and
+  register; `POST /api/pos/cashier/lock` ends it. Invalid/expired tokens answer `403 pos.cashier_invalid`.
+- A POS endpoint filter resolves the token into the request's **PosActor**: receipts, reprints, sessions, cash movements,
+  customers and prices record the cashier as `created_by`; endpoint rights (`RequirePosPermission`) and the line policy use
+  the cashier's permissions and discount limit. The device stays logged in as its user; without the header the till acts as
+  that user (unchanged behaviour). Writes on another register are refused (`pos.cashier_register_mismatch`).
+- The web till keeps the cashier per browser tab (sessionStorage), shows the PIN pad for "Kassierer wechseln", locks on
+  request or after the register's idle minutes (client timer; the server enforces the same on the token).
+
+### Manager approval by PIN
+
+- `POST /api/pos/registers/{id}/approvals` {approverUserId, pin, permissions} — an owner or manager (not the cashier
+  asking) holding the rights enters their PIN; the result is a single-use token (`X-Pos-Approval`) valid for
+  `Pos:ApprovalSeconds` (120), bound to the organization, register, device login and the requesting cashier. Approvable
+  rights: `pos.price_override`, `pos.discount` (the limit becomes the approver's, 100 %), `pos.refund`, `pos.cash_movement`,
+  `pos.close_session`.
+- The approval is locked (`FOR UPDATE`, usable?) before the TSE signs and used in the same transaction as the record it
+  allows: `pos.approvals` stores `used_at`, `used_for` (Sale/Storno/Return/CashMovement/CloseSession) and the receipt,
+  cash movement or closed session. The receipt document prints "Freigabe: <name>"; receipt, cash movement and session DTOs
+  return the approval. Insert and use are audited; the row is final after use (trigger), never deleted.
+
+### E-receipts
+
+- `POST /api/pos/sales/{id}/email` {email | null = the receipt customer's email} records `pos.receipt_emails`
+  (recipient `[PersonalData]`, at most 5 per receipt) and raises `ReceiptEmailRequested` (Pos **contract**) in the same
+  transaction; the Notifications module (now depending on Pos contracts, architecture tests) renders a German text + HTML
+  email (HTML-encoded values) and sends it with the existing queue/retry. The payload carries the receipt as printed
+  without the customer block; the recipient address is the only personal data in it.
+- `POST /api/pos/sales/{id}/public-link` returns a 256-bit token (only its hash stored, `pos.receipt_links`) and the path
+  `/beleg/{token}`; the QR on the receipt screen encodes the full URL. `GET /api/public/receipts/{token}` (anonymous,
+  rate-limited per IP) reads through the SECURITY DEFINER function `pos.public_receipt`, which returns exactly one unexpired
+  receipt document; the API removes the customer snapshot. Unknown, malformed and expired tokens answer the same 404.
+  Expiry `Pos:PublicReceiptLinkDays` (90).
+
+### Invoices for POS sales (Rechnung, §14 UStG)
+
+- `POST /api/pos/sales/{id}/invoice` {customer | null = the receipt's customer} issues one invoice per sale receipt
+  (repeat = the same invoice, 200). Refused for refund receipts, cancelled or (partly) returned sales (a correction invoice
+  is not supported yet), without the seller's VAT id, and without the customer's name and full address.
+- Number `RE-YYYY-nnnnnn` per organization and calendar year (Europe/Berlin): `INSERT … ON CONFLICT DO UPDATE +1 RETURNING`
+  on `pos.invoice_sequences` (row-locked until commit); triggers: counter starts at 1 and moves by +1, a deferred check
+  fails any commit that took a number without its invoice, and an invoice must carry the number just allocated and match a
+  sale receipt of the organization. All checks run before the number is taken, so a refusal never touches the counter.
+- Content (stored as jsonb, immutable, PDF rendered on download with SimplePdf): seller name/legal name/address/VAT id,
+  customer name/company/address/VAT id, number, issue date, date of supply (receipt date), lines with quantity, unit price,
+  discount and amount, net/VAT/gross per rate for regularly taxed lines; §25a lines as gross only with the note
+  "Gebrauchtgegenstände/Sonderregelung" (§14a Abs. 6 UStG), never their VAT; payment lines and the receipt reference.
+  `GET /api/pos/sales/{id}/invoice` (204 when none), `GET /api/pos/invoices/{id}/pdf`.
+
+### Cash rounding
+
+- Per register `cash_rounding`: the part of a sale paid in cash (total − card) is rounded to 0.05 € (1–2 cents down, 3–4 up);
+  `receipts.rounding_minor` (−2…+2, check) with payments = total + rounding. Lines, VAT and the receipt total stay exact
+  (TSE and VAT see the exact amounts; the payment totals include the rounding). Storno mirrors the rounding, cash returns
+  on a rounding register round the payout. The receipt document, e-receipt, invoice payment lines and the Z-report
+  (`summary.roundingMinor`, expected cash from the rounded payments) show it.
+
 ## Consequences
 
 - The till cannot be used in production until a certified TSE adapter exists. A real adapter must also handle TSE
@@ -153,6 +230,10 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
   for one till, to be measured with a real adapter.
 
 ## Not done (no compliance claimed)
+
+Added 2026-10-18: invoice corrections (Rechnungskorrektur) for invoiced sales that are later returned, XRechnung/ZUGFeRD
+for POS invoices, e-receipt languages other than German, a PIN reset by the member without the owner, and a legal review of
+the invoice and e-receipt wording.
 
 Certified TSE adapter (fiskaly, sandbox first), DSFinV-K export, notification of the till to the tax office (§146a
 Abs. 4 AO), receipt printing (ESC/POS, PDF) and electronic receipts, card terminal integration (ZVT/OPI; card payments

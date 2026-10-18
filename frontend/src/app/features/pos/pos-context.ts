@@ -54,6 +54,13 @@ export class PosContext {
     });
   }
 
+  /** Rights a page asks a manager to approve for the next action (the app shell shows the PIN pad); null = none. */
+  readonly approvalRequest = signal<string[] | null>(null);
+
+  requestApproval(permissions: string[]): void {
+    this.approvalRequest.set([...new Set(permissions)]);
+  }
+
   setRegister(id: string | null, name: string | null): void {
     this.registerId.set(id);
     this.registerName.set(name);

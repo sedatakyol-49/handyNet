@@ -96,7 +96,9 @@ public sealed record ReceiptDto(
     Guid? CustomerId,
     DocumentCustomer? Customer,
     int ReprintCount,
-    DateTimeOffset? LastReprintedAt);
+    DateTimeOffset? LastReprintedAt,
+    ApprovalInfoDto? Approval = null,
+    long RoundingMinor = 0);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -181,7 +183,6 @@ internal sealed class ReturnValidator : AbstractValidator<ReturnRequest>
 internal sealed class SaleService(
     HandyNetDbContext db,
     ITenantContext tenant,
-    ICurrentUser currentUser,
     IInventory inventory,
     IProductCatalog catalog,
     IOrganizationDirectory organizations,
@@ -189,7 +190,9 @@ internal sealed class SaleService(
     FiscalSealer fiscal,
     PriceResolver prices,
     IClock clock,
-    ILogger<SaleService> logger)
+    ILogger<SaleService> logger,
+    PosActor actor,
+    ApprovalService approvals)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -211,6 +214,8 @@ internal sealed class SaleService(
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RegisterId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        if (actor.CheckRegister(register.Id) is { } otherRegister)
+            return otherRegister;
         DocumentCustomer? customer = null;
         if (request.CustomerId is { } customerId)
         {
@@ -278,9 +283,10 @@ internal sealed class SaleService(
                 margin ? s.Unit!.PurchasePriceMinor : null, s.Request.Note);
         }).ToList();
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, currentUser.UserId, clock.UtcNow,
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash, customer);
-        var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList());
+        var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
+            register.CashRounding);
         if (!receipt.IsSuccess)
             return receipt.Error!;
 
@@ -292,6 +298,8 @@ internal sealed class SaleService(
         try
         {
             await db.SaveChangesAsync(ct);
+            if (await approvals.ConsumeAsync(actor, ApprovalUse.Sale, receipt.Value.Id, null, null, ct) is { } approvalError)
+                return approvalError; // disposing the transaction rolls back the receipt and its number
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ix_receipts_organization_id_idempotency_key"))
@@ -330,7 +338,7 @@ internal sealed class SaleService(
             return issuing.Error!;
         var (register, number, sessionId) = issuing.Value;
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, currentUser.UserId, clock.UtcNow);
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow);
         var storno = Receipt.CreateStorno(header, original, hasReturns, request.Reason);
         if (!storno.IsSuccess)
             return storno.Error!;
@@ -363,10 +371,10 @@ internal sealed class SaleService(
             return issuing.Error!;
         var (register, number, sessionId) = issuing.Value;
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, currentUser.UserId, clock.UtcNow,
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash);
         var returned = Receipt.CreateReturn(header, original, request.Lines.ToDictionary(l => l.LineNumber, l => l.Quantity), alreadyReturned,
-            request.RefundMethod, request.Reason);
+            request.RefundMethod, request.Reason, register.CashRounding);
         if (!returned.IsSuccess)
             return returned.Error!;
 
@@ -451,7 +459,7 @@ internal sealed class SaleService(
             return Error.NotFound("pos.receipt_not_found", "Receipt not found.");
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"reprint:" + receiptId}, 0))", ct);
         var previous = await db.Set<ReceiptReprint>().CountAsync(r => r.ReceiptId == receiptId, ct);
-        var reprint = ReceiptReprint.Record(receipt, previous, currentUser.UserId, clock.UtcNow);
+        var reprint = ReceiptReprint.Record(receipt, previous, actor.UserId, clock.UtcNow);
         if (!reprint.IsSuccess)
             return reprint.Error!;
         db.Add(reprint.Value);
@@ -505,8 +513,8 @@ internal sealed class SaleService(
 
     // ---- internals ------------------------------------------------------------------------------------------------------
 
-    private CashierRights Rights() => new(tenant.Permissions.Contains(Permissions.PosPriceOverride), tenant.Permissions.Contains(Permissions.PosDiscount),
-        tenant.MaxDiscountPercent);
+    private CashierRights Rights() => new(actor.Has(Permissions.PosPriceOverride), actor.Has(Permissions.PosDiscount),
+        actor.MaxDiscountPercent);
 
     /// <summary>Serializes storno/returns of the same original receipt (the receipt rows themselves can never be locked or updated).</summary>
     private Task LockOriginalAsync(Guid receiptId, CancellationToken ct) =>
@@ -517,6 +525,8 @@ internal sealed class SaleService(
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == registerId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        if (actor.CheckRegister(register.Id) is { } otherRegister)
+            return otherRegister;
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
             return Error.Conflict("pos.register_inactive", "The register is deactivated.");
         // Refunds may pay out cash: exclusive lock so the drawer check below cannot race with withdrawals.
@@ -557,6 +567,9 @@ internal sealed class SaleService(
         try
         {
             await db.SaveChangesAsync(ct);
+            var use = refund.Kind == ReceiptKind.Storno ? ApprovalUse.Storno : ApprovalUse.Return;
+            if (await approvals.ConsumeAsync(actor, use, refund.Id, null, null, ct) is { } approvalError)
+                return approvalError;
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_stock_units_imei_in_stock"))
@@ -582,6 +595,8 @@ internal sealed class SaleService(
     /// <summary>Fiscal signature (or the TSE outage marker, see <see cref="FiscalSealer"/>) and the printable document.</summary>
     private async Task<Result> SealAsync(Receipt receipt, string registerName, long? referencedNumber, CancellationToken ct)
     {
+        if (await approvals.LockAsync(actor, ct) is { } approvalUnusable)
+            return approvalUnusable; // checked before the TSE signs
         var signed = await fiscal.SignReceiptAsync(receipt, ct);
         if (!signed.IsSuccess)
             return signed.Error!;
@@ -590,6 +605,9 @@ internal sealed class SaleService(
                      ?? throw new InvalidOperationException("Organization of the current tenant not found.");
         var document = ReceiptDocument.For(receipt, new SellerInfo(seller.Name, seller.LegalName, seller.Street, seller.PostalCode, seller.City,
             seller.CountryCode, seller.VatId), registerName, referencedNumber, signed.Value);
+        // A manager approval is printed with the receipt (who approved).
+        if (actor.Approval is { ApproverName: { } approver })
+            document = document with { Notes = [.. document.Notes, $"Freigabe: {approver}"] };
         return receipt.Seal(signed.Value, document);
     }
 
@@ -667,6 +685,7 @@ internal sealed class SaleService(
         return new ReceiptDto(r.Id, r.RegisterId, registerName, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, referencedNumber, cancelledBy,
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
-            r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last);
+            r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
+            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor);
     }
 }

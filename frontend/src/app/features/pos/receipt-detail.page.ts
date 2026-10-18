@@ -10,6 +10,9 @@ import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { posErrorText } from './pos-error';
+import { PosCashierStore } from './pos-cashier.store';
+import { PosContext } from './pos-context';
+import { posRights } from './pos-rights';
 import {
   PendingAttempt,
   POS_LIMITS,
@@ -26,12 +29,14 @@ import {
 } from './pos.logic';
 import { PosSubnavComponent } from './pos-subnav';
 import { ReceiptViewComponent } from './receipt-view';
+import { PosEReceiptComponent } from './pos-ereceipt';
+import { PosInvoiceComponent } from './pos-invoice';
 
 /** One receipt as issued (printable) with Storno (`pos.manage`) and Return (select lines/quantities). */
 @Component({
   selector: 'hn-pos-receipt-detail-page',
   host: { class: 'pos-page block' },
-  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, ...UI],
+  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, PosEReceiptComponent, PosInvoiceComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (receipt(); as r) {
@@ -53,6 +58,10 @@ import { ReceiptViewComponent } from './receipt-view';
         <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" [copy]="copy()" />
 
         <div class="hn-no-print min-w-0 space-y-4">
+          <hn-pos-ereceipt [receipt]="r" />
+          @if (r.kind === 'Sale') {
+            <hn-pos-invoice [receipt]="r" />
+          }
           <section class="pos-card p-4 text-sm" aria-labelledby="pos-detail-info">
             <h2 id="pos-detail-info" class="mb-2 text-sm">{{ 'pos.detail.info' | t }}</h2>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
@@ -88,6 +97,10 @@ import { ReceiptViewComponent } from './receipt-view';
               <div class="mt-3 flex flex-wrap gap-2">
                 @if (returnable()) {
                   <button hnButton type="button" class="min-h-11" (click)="startReturn()" [disabled]="returning()" data-testid="pos-start-return">{{ 'pos.detail.return' | t }}</button>
+                } @else if (refundNeedsApproval()) {
+                  <button hnButton type="button" class="min-h-11" (click)="ctx?.requestApproval(['pos.refund'])" data-testid="pos-approval-refund">
+                    {{ 'pos.approval.refund' | t }}
+                  </button>
                 }
                 @if (stornoAllowed()) {
                   <button hnButton variant="danger" type="button" class="min-h-11" (click)="openStorno()" data-testid="pos-start-storno">{{ 'pos.detail.storno' | t }}</button>
@@ -229,14 +242,23 @@ export class PosReceiptDetailPage {
     (id) => this.api.receipt(id),
   );
   protected readonly receipt = computed(() => this.query.value());
-  protected readonly canManage = computed(() => this.session.can('pos.manage'));
+  protected readonly cashiers = inject(PosCashierStore);
+  /** Inside the POS app (a manager can approve a refund on the spot); null in the back office. */
+  protected readonly ctx = inject(PosContext, { optional: true });
+  private readonly rights = computed(() => posRights(this.cashiers.membership()));
+  protected readonly canManage = computed(() => this.rights().manage);
   protected readonly stornoAllowed = computed(() => {
     const r = this.receipt();
     return !!r && this.canManage() && canStorno(r);
   });
   protected readonly returnable = computed(() => {
     const r = this.receipt();
-    return !!r && this.session.can('pos.refund') && canReturn(r);
+    return !!r && this.rights().refund && canReturn(r);
+  });
+  /** Returnable, but the cashier lacks the refund right: a manager may approve it. */
+  protected readonly refundNeedsApproval = computed(() => {
+    const r = this.receipt();
+    return !!r && !!this.ctx && !this.rights().refund && canReturn(r);
   });
 
   /** Copy number shown on the receipt after a recorded reprint ("Kopie n"). */

@@ -268,4 +268,19 @@ internal sealed class OrganizationDirectory(HandyNetDbContext db) : IOrganizatio
             .Where(m => m.OrganizationId == organizationId && roles.Contains(m.Role))
             .Select(m => m.UserId)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<MemberAccess>> GetMembersAccessAsync(Guid organizationId, CancellationToken ct) =>
+        (await db.Set<Membership>().AsNoTracking().Where(m => m.OrganizationId == organizationId)
+            .Select(m => new { m.UserId, m.Role, m.PosPermissions, m.PosMaxDiscountPercent }).ToListAsync(ct))
+        .Select(m => Access(m.UserId, m.Role, m.PosPermissions, m.PosMaxDiscountPercent)).ToList();
+
+    public async Task<MemberAccess?> GetMemberAccessAsync(Guid organizationId, Guid userId, CancellationToken ct)
+    {
+        var m = await db.Set<Membership>().AsNoTracking().Where(x => x.OrganizationId == organizationId && x.UserId == userId)
+            .Select(x => new { x.UserId, x.Role, x.PosPermissions, x.PosMaxDiscountPercent }).FirstOrDefaultAsync(ct);
+        return m is null ? null : Access(m.UserId, m.Role, m.PosPermissions, m.PosMaxDiscountPercent);
+    }
+
+    private static MemberAccess Access(Guid userId, MembershipRole role, List<string>? pos, int? maxDiscount) =>
+        new(userId, role, Permissions.For(role, pos), Permissions.MaxDiscountPercentFor(role, maxDiscount));
 }

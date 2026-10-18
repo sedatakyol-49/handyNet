@@ -22,6 +22,25 @@ public sealed class Register : IAuditable
     public DateTimeOffset CreatedAt { get; private set; }
     public uint Version { get; private set; }
 
+    /// <summary>Shared device: lock the till (cashier PIN needed again) after this many minutes without activity. Null = off.</summary>
+    public int? AutoLockMinutes { get; private set; }
+
+    public const int MaxAutoLockMinutes = 240;
+
+    /// <summary>Round cash totals to 0.05 € on this register (Rappenrundung); card payments stay exact.</summary>
+    public bool CashRounding { get; private set; }
+
+    public void SetCashRounding(bool on) => CashRounding = on;
+
+    /// <summary>Sets the auto-lock; 0 or null turns it off.</summary>
+    public Result SetAutoLock(int? minutes)
+    {
+        if (minutes is < 0 or > MaxAutoLockMinutes)
+            return Error.Validation("pos.auto_lock_minutes", $"The auto-lock must be between 1 and {MaxAutoLockMinutes} minutes (0 = off).");
+        AutoLockMinutes = minutes is > 0 ? minutes : null;
+        return Result.Success();
+    }
+
     public static Result<Register> Create(Guid organizationId, string name, Guid warehouseId, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength)

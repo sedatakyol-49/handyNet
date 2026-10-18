@@ -1,4 +1,5 @@
 using HandyNet.Modules.Catalog.Domain;
+using HandyNet.Modules.Identity.Domain;
 using HandyNet.Modules.Inventory.Domain;
 using HandyNet.Modules.Pos.Domain;
 using HandyNet.Persistence;
@@ -14,7 +15,11 @@ public sealed class PosModel : IModuleModel
     {
         modelBuilder.Entity<Register>(b =>
         {
-            b.ToTable("registers", Schema, t => t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1"));
+            b.ToTable("registers", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+                t.HasCheckConstraint("ck_registers_auto_lock", $"auto_lock_minutes BETWEEN 1 AND {Register.MaxAutoLockMinutes}");
+            });
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(Register.MaxNameLength).IsRequired();
             b.Property(x => x.Version).IsRowVersion();
@@ -66,6 +71,7 @@ public sealed class PosModel : IModuleModel
             b.ToTable("receipts", Schema, t =>
             {
                 t.HasCheckConstraint("ck_receipts_number", "number >= 1");
+                t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
                 t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                 t.HasCheckConstraint("ck_receipts_kind",
                     "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) "
@@ -176,6 +182,114 @@ public sealed class PosModel : IModuleModel
             b.HasIndex(x => new { x.OrganizationId, x.Name });
         });
 
+        modelBuilder.Entity<CashierPin>(b =>
+        {
+            b.ToTable("cashier_pins", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_cashier_pins_attempts", $"failed_attempts BETWEEN 0 AND {CashierPin.MaxFailedAttempts}");
+                t.HasCheckConstraint("ck_cashier_pins_hash", "pin_hash IS NULL OR pin_hash LIKE 'pbkdf2-sha256$%'");
+            });
+            b.HasKey(x => new { x.OrganizationId, x.UserId });
+            b.Property(x => x.PinHash).HasMaxLength(200);
+            b.Property(x => x.Version).IsRowVersion();
+            b.Ignore(x => x.HasPin);
+            b.Ignore(x => x.RemainingAttempts);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashierSession>(b =>
+        {
+            b.ToTable("cashier_sessions", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_cashier_sessions_times", "expires_at > created_at");
+                t.HasCheckConstraint("ck_cashier_sessions_end", "(ended_at IS NULL) = (ended_reason IS NULL)");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.EndedReason).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.RegisterId, x.DeviceUserId }).HasFilter("ended_at IS NULL");
+            b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.CashierUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.DeviceUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PosApproval>(b =>
+        {
+            b.ToTable("approvals", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
+                t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
+                t.HasCheckConstraint("ck_approvals_use",
+                    "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) "
+                    + "OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                t.HasCheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Permissions).HasColumnType("text[]");
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.UsedFor).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => x.ReceiptId).HasFilter("receipt_id IS NOT NULL");
+            b.HasIndex(x => x.CashMovementId).HasFilter("cash_movement_id IS NOT NULL");
+            b.HasIndex(x => x.SessionId).HasFilter("session_id IS NOT NULL");
+            b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<CashMovement>().WithMany().HasForeignKey(x => x.CashMovementId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<CashSession>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SessionId })
+                .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.ApproverUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReceiptEmail>(b =>
+        {
+            b.ToTable("receipt_emails", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Recipient).HasMaxLength(ReceiptEmail.MaxEmailLength).IsRequired();
+            b.Ignore(x => x.DomainEvents);
+            b.HasIndex(x => new { x.OrganizationId, x.ReceiptId });
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PosInvoice>(b =>
+        {
+            b.ToTable("invoices", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_invoices_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 "
+                    + "AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0')");
+                t.HasCheckConstraint("ck_invoices_totals", "total_gross_minor > 0 AND total_vat_minor >= 0 AND total_net_minor + total_vat_minor = total_gross_minor");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Number).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Customer).HasJsonConversion().IsRequired();
+            b.Property(x => x.Document).HasJsonConversion().IsRequired();
+            b.HasIndex(x => x.ReceiptId).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Year, x.SequenceNumber }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Number }).IsUnique();
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PosInvoiceSequence>(b =>
+        {
+            b.ToTable("invoice_sequences", Schema, t => t.HasCheckConstraint("ck_invoice_sequences_next", "next_number >= 2"));
+            b.HasKey(x => new { x.OrganizationId, x.Year });
+        });
+
+        modelBuilder.Entity<ReceiptLink>(b =>
+        {
+            b.ToTable("receipt_links", Schema, t => t.HasCheckConstraint("ck_receipt_links_expiry", "expires_at > created_at"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.ReceiptId });
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
         ConfigureFiscal(modelBuilder);
 
         modelBuilder.Entity<ReceiptReprint>(b =>

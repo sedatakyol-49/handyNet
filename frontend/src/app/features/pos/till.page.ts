@@ -21,6 +21,7 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
 import { PosCustomer, PosLookup, PosPaymentMethod, PosPrice, PosProduct, Receipt } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
+import { PosCashierStore } from './pos-cashier.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { formatMoney } from '../../core/format/money';
@@ -31,12 +32,13 @@ import { posErrorText } from './pos-error';
 import { PosFiscalStatus } from './pos-fiscal-status';
 import { PosCashCountComponent } from './pos-cash-count';
 import { PosContext } from './pos-context';
+import { PosEReceiptComponent } from './pos-ereceipt';
 import { customerSummary } from './customer-form';
 import { PosCustomerDialogComponent } from './pos-customer-dialog';
 import { PosNumpadComponent } from './pos-numpad';
 import { PosPriceDialogComponent, PriceTarget } from './pos-price-dialog';
 import { PosProductGridComponent } from './pos-product-grid';
-import { LinePolicyIssue, canEditPrice, canGiveDiscount, linePolicyIssue, posRights } from './pos-rights';
+import { LinePolicyIssue, approvalPermissionsFor, canEditPrice, canGiveDiscount, linePolicyIssue, posRights } from './pos-rights';
 import {
   CartLine,
   LastPrices,
@@ -104,6 +106,7 @@ type Screen = 'products' | 'payment' | 'receipt';
     PosPriceDialogComponent,
     PosProductGridComponent,
     ReceiptViewComponent,
+    PosEReceiptComponent,
     ...UI,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +116,7 @@ type Screen = 'products' | 'payment' | 'receipt';
 export class TillPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
+  protected readonly cashiers = inject(PosCashierStore);
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
@@ -127,7 +131,7 @@ export class TillPage {
   protected readonly itemCount = orderItemCount;
   protected readonly hasInventory = computed(() => this.store.hasModule('Inventory'));
   /** Per-cashier rights (price override, discount limit, …) of the selected membership. */
-  protected readonly rights = computed(() => posRights(this.store.membership()));
+  protected readonly rights = computed(() => posRights(this.cashiers.membership()));
   protected readonly canDiscount = computed(() => canGiveDiscount(this.rights()));
   protected readonly noteMax = POS_LIMITS.lineNoteLength;
   protected readonly customerSummary = customerSummary;
@@ -171,6 +175,8 @@ export class TillPage {
   protected readonly tax = computed(() => cartTax(this.lines()));
   protected readonly customer = computed(() => this.order().customer ?? null);
   /** Lines the cashier may not sell like this (price override, discount right/limit), by key. */
+  /** Rights a manager must approve for the cart as it is (price change, discount beyond the cashier's rights). */
+  protected readonly approvalNeeded = computed(() => approvalPermissionsFor([...this.issues().values()]));
   protected readonly issues = computed(() => {
     const rights = this.rights();
     const out = new Map<string, LinePolicyIssue>();
@@ -212,7 +218,7 @@ export class TillPage {
   protected readonly selectedPaymentId = signal<string | null>(null);
   protected readonly selectedPayment = computed(() => this.payments().find((p) => p.id === this.selectedPaymentId()) ?? null);
   private payFresh = true;
-  protected readonly settlement = computed(() => settlePayments(this.totals().totalMinor, this.payments()));
+  protected readonly settlement = computed(() => settlePayments(this.totals().totalMinor, this.payments(), this.register.value()?.cashRounding ?? false));
   /** Next banknotes for the amount the cash line has to cover. */
   protected readonly cashQuick = computed(() => {
     const cashLine = this.payments().find((p) => p.method === 'Cash');

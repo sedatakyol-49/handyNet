@@ -15,6 +15,9 @@ public sealed record OrganizationLegalDetails(
     string CountryCode,
     string? VatId);
 
+/// <summary>A member's role and effective permissions in one organization (POS: who may act as cashier or approve).</summary>
+public sealed record MemberAccess(Guid UserId, MembershipRole Role, IReadOnlySet<string> Permissions, int MaxDiscountPercent);
+
 /// <summary>Public read API of the Tenancy module for other modules.</summary>
 public interface IOrganizationDirectory
 {
@@ -25,4 +28,10 @@ public interface IOrganizationDirectory
 
     /// <summary>Users of an organization holding one of the given roles (e.g. who receives order notifications).</summary>
     Task<IReadOnlyList<Guid>> GetMemberUserIdsAsync(Guid organizationId, IReadOnlyCollection<MembershipRole> roles, CancellationToken ct);
+
+    /// <summary>Role and effective permissions of every member (same rules as the request's tenant context).</summary>
+    Task<IReadOnlyList<MemberAccess>> GetMembersAccessAsync(Guid organizationId, CancellationToken ct);
+
+    /// <summary>Role and effective permissions of one member; null if the user is not a member.</summary>
+    Task<MemberAccess?> GetMemberAccessAsync(Guid organizationId, Guid userId, CancellationToken ct);
 }

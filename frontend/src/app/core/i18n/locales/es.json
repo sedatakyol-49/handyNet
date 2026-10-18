@@ -482,7 +482,40 @@
       "pos.fiscal_mode_required": "La empresa necesita un modo fiscal.",
       "pos.fiscal_register_scope": "TSS, credenciales y algoritmo se definen para la empresa, no por caja.",
       "pos.fiskaly_conflict": "fiskaly informó de un conflicto. Inténtelo de nuevo.",
-      "pos.outage_ended": "El fallo de la TSE ya ha terminado."
+      "pos.outage_ended": "El fallo de la TSE ya ha terminado.",
+      "pos.pin_invalid": "El PIN es incorrecto.",
+      "pos.pin_locked": "Demasiados PIN erróneos: bloqueado 15 minutos. El propietario puede definir uno nuevo.",
+      "pos.pin_not_set": "Este empleado no tiene PIN de caja.",
+      "pos.pin_format": "El PIN debe tener de 4 a 6 dígitos.",
+      "pos.pin_too_simple": "Este PIN es demasiado fácil (dígitos repetidos o secuencia como 1234).",
+      "pos.password_invalid": "La contraseña no es correcta.",
+      "pos.cashier_invalid": "La sesión del cajero ha terminado (bloqueada, caducada o inactiva). Introduzca el PIN de nuevo.",
+      "pos.cashier_register_mismatch": "El cajero está conectado en otra caja. Entre en esta caja.",
+      "pos.cashier_not_found": "Este empleado no puede trabajar como cajero.",
+      "pos.auto_lock_minutes": "El bloqueo automático debe estar entre 1 y 240 minutos (0 = desactivado).",
+      "pos.approval_invalid": "La autorización ya no es válida: caducada, usada o de otro cajero o caja. Pídala de nuevo.",
+      "pos.approval_used": "Esta autorización ya se usó.",
+      "pos.approval_self": "No puede autorizar su propia acción.",
+      "pos.approver_not_manager": "Solo propietarios y gerentes pueden autorizar.",
+      "pos.approver_lacks_right": "Quien autoriza no tiene este permiso.",
+      "pos.approver_not_found": "No se encontró al empleado.",
+      "pos.approval_permissions": "Se pueden autorizar: cambiar precio, descuento, devolución, efectivo, cierre de caja.",
+      "pos.approval_target": "Una autorización vale para exactamente un tique, movimiento de caja o cierre.",
+      "pos.cashier_none": "No hay ningún cajero conectado con PIN en este dispositivo.",
+      "pos.receipt_email_invalid": "El correo no es válido.",
+      "pos.receipt_email_limit": "Este tique ya se envió 5 veces por correo.",
+      "pos.receipt_email_missing": "Introduzca un correo: el tique no tiene cliente con correo.",
+      "pos.receipt_link_not_found": "Este enlace de tique no es válido o ha caducado.",
+      "pos.invoice_not_a_sale": "Solo se emiten facturas de tiques de venta.",
+      "pos.invoice_receipt_refunded": "El tique se anuló o hubo devoluciones; no se puede facturar.",
+      "pos.invoice_seller_vat_id_missing": "Una factura (§14 UStG) requiere el NIF-IVA de su empresa. Añádalo al perfil.",
+      "pos.invoice_customer_required": "La factura requiere nombre y dirección del cliente.",
+      "pos.invoice_customer_address": "Falta el nombre o la dirección completa del cliente, o son demasiado largos.",
+      "pos.invoice_customer_country": "El país debe ser un código ISO de dos letras (p. ej. DE).",
+      "pos.invoice_customer_vat_id": "El NIF-IVA del cliente es demasiado largo.",
+      "pos.invoice_totals": "Los totales del tique no cuadran; no se puede emitir la factura.",
+      "pos.invoice_number": "Los números de factura empiezan en 1.",
+      "pos.invoice_not_found": "Factura no encontrada."
     }
   },
   "dashboard": {
@@ -1015,6 +1048,21 @@
         "cashMovement": "Meter o sacar efectivo de la caja.",
         "closeSession": "Cierre diario e informe de sesión."
       }
+    },
+    "pin": {
+      "locked": "PIN bloqueado",
+      "set": "PIN de caja definido",
+      "none": "Sin PIN de caja",
+      "edit": "PIN",
+      "editFor": "PIN de caja de {name}",
+      "title": "PIN de caja: {name}",
+      "text": "Con el PIN un empleado cambia una caja compartida a su nombre (los tiques llevan su nombre y valen sus permisos); propietarios y gerentes autorizan acciones con él. Un PIN nuevo levanta el bloqueo.",
+      "pin": "PIN nuevo",
+      "hint": "4–6 dígitos, sin secuencias como 1234 o 0000.",
+      "clear": "Quitar PIN",
+      "invalid": "Introduzca de 4 a 6 dígitos.",
+      "saved": "PIN de caja de {name} guardado.",
+      "cleared": "PIN de caja de {name} eliminado."
     }
   },
   "admin": {
@@ -2028,7 +2076,12 @@
       "renameTitle": "Cambiar nombre de la caja",
       "toggleTitle": "Cambiar estado de la caja",
       "deactivateText": "¿Desactivar la caja «{name}»? En una caja desactivada no se puede vender. Antes debe cerrarse una sesión abierta.",
-      "activateText": "¿Volver a activar la caja «{name}»?"
+      "activateText": "¿Volver a activar la caja «{name}»?",
+      "settings": "Ajustes",
+      "settingsTitle": "Editar caja",
+      "autoLock": "Bloquear automáticamente tras (minutos)",
+      "autoLockHint": "0 = desactivado. Tras estos minutos sin uso el cajero necesita su PIN de nuevo (máx. 240).",
+      "autoLockInvalid": "Introduzca de 0 a 240 minutos."
     },
     "till": {
       "title": "Caja {name}",
@@ -2443,6 +2496,88 @@
       "outageTitle": "Fallo de la TSE.",
       "outageText": "Las ventas continúan; los tiques llevan la nota «Sicherheitseinrichtung ausgefallen» y el fallo queda registrado.",
       "outageSince": "desde"
+    },
+    "cashier": {
+      "switch": "Cambiar cajero",
+      "member": "Empleado",
+      "locked": "Bloqueado (demasiados intentos fallidos)",
+      "digits": "{count} dígitos introducidos",
+      "pinPad": "Teclado PIN",
+      "device": "Dispositivo conectado como {name}",
+      "lock": "Bloquear caja",
+      "lockedTitle": "Caja bloqueada",
+      "lockedHint": "Elija su nombre e introduzca su PIN para continuar.",
+      "signIn": "Entrar",
+      "nobody": "Nadie tiene aún un PIN de caja. El propietario puede fijarlos en Equipo y cada empleado en «Cuenta y seguridad».",
+      "signedIn": "La caja actúa ahora como {name}.",
+      "wrongPin": "PIN incorrecto. Quedan {count} intentos antes del bloqueo."
+    },
+    "pinSettings": {
+      "title": "PIN de caja",
+      "text": "Sirve para entrar en una caja compartida («Cambiar cajero») y, como propietario/gerente, para autorizar acciones.",
+      "locked": "Su PIN está bloqueado tras demasiados intentos. Defina un PIN nuevo.",
+      "isSet": "Tiene un PIN de caja.",
+      "notSet": "Aún no tiene PIN de caja.",
+      "pin": "PIN nuevo",
+      "confirm": "Repetir PIN",
+      "mismatch": "Los dos PIN no coinciden.",
+      "passwordRequired": "Introduzca su contraseña para confirmar.",
+      "saved": "PIN de caja guardado.",
+      "cleared": "PIN de caja eliminado."
+    },
+    "approval": {
+      "title": "Autorización del gerente",
+      "hint": "Un propietario o gerente autoriza con su PIN: {rights}. Vale para la próxima acción en esta caja.",
+      "approve": "Autorizar",
+      "nobody": "Ningún propietario o gerente tiene PIN de caja.",
+      "active": "Autorizado: {name}",
+      "discard": "Descartar autorización",
+      "menu": "Pedir autorización del gerente",
+      "request": "Autorización del gerente",
+      "refund": "Devolución con autorización",
+      "granted": "Autorizado por {name}: vale para la próxima acción.",
+      "by": "Autorizado por {name}",
+      "movementHint": "Entradas y salidas de efectivo requieren el permiso correspondiente o una autorización."
+    },
+    "ereceipt": {
+      "title": "Tique electrónico",
+      "email": "Correo electrónico",
+      "send": "Enviar por correo",
+      "sendToCustomer": "Enviar al cliente",
+      "sent": "El tique se envía a {to}.",
+      "invalid": "Introduzca un correo válido.",
+      "showQr": "Mostrar código QR del tique",
+      "qrLabel": "Código QR: ver el tique en línea",
+      "qrHint": "El cliente escanea el código y ve el tique (solo lectura).",
+      "validUntil": "Enlace válido hasta {date}",
+      "publicMissingTitle": "Tique no disponible",
+      "publicMissing": "Este enlace no es válido o ha caducado. Contacte con la tienda.",
+      "publicCancelled": "Este tique ha sido anulado."
+    },
+    "invoice": {
+      "title": "Factura",
+      "pdf": "Descargar PDF",
+      "none": "Aún no se ha emitido factura para este tique.",
+      "create": "Crear factura",
+      "issue": "Emitir factura",
+      "issued": "Factura {number} emitida.",
+      "hint": "La factura se emite una vez con número correlativo y no se puede modificar después.",
+      "required": "Obligatorio para la factura",
+      "fields": {
+        "name": "Nombre",
+        "company": "Empresa",
+        "street": "Calle y número",
+        "postalCode": "Código postal",
+        "city": "Ciudad",
+        "countryCode": "País (ISO, p. ej. DE)",
+        "vatId": "NIF-IVA (opcional)"
+      }
+    },
+    "rounding": {
+      "label": "Redondeo",
+      "zTotal": "Diferencias de redondeo (efectivo)",
+      "setting": "Redondear importes en efectivo a 0,05 €",
+      "settingHint": "Solo se redondea la parte en efectivo (1–2 céntimos abajo, 3–4 arriba); tarjeta, líneas e IVA quedan exactos. El redondeo aparece en el tique y el informe Z."
     }
   },
   "invoiceKind": {

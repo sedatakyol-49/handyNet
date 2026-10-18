@@ -482,7 +482,40 @@
       "pos.fiscal_mode_required": "Für das Unternehmen ist ein Fiskalmodus erforderlich.",
       "pos.fiscal_register_scope": "TSS, Zugangsdaten und Algorithmus werden für das Unternehmen festgelegt, nicht je Kasse.",
       "pos.fiskaly_conflict": "fiskaly meldet einen Konflikt. Bitte erneut versuchen.",
-      "pos.outage_ended": "Der TSE-Ausfall ist bereits beendet."
+      "pos.outage_ended": "Der TSE-Ausfall ist bereits beendet.",
+      "pos.pin_invalid": "Die PIN ist falsch.",
+      "pos.pin_locked": "Zu viele falsche PINs – die PIN ist für 15 Minuten gesperrt. Der Inhaber kann eine neue PIN setzen.",
+      "pos.pin_not_set": "Für diesen Mitarbeiter ist keine Kassen-PIN gesetzt.",
+      "pos.pin_format": "Die PIN muss aus 4 bis 6 Ziffern bestehen.",
+      "pos.pin_too_simple": "Diese PIN ist zu leicht zu erraten (gleiche Ziffern oder Folge wie 1234).",
+      "pos.password_invalid": "Das Passwort ist nicht korrekt.",
+      "pos.cashier_invalid": "Die Kassierer-Anmeldung ist beendet (gesperrt, abgelaufen oder inaktiv). Bitte PIN erneut eingeben.",
+      "pos.cashier_register_mismatch": "Der Kassierer ist an einer anderen Kasse angemeldet. Bitte an dieser Kasse anmelden.",
+      "pos.cashier_not_found": "Dieser Mitarbeiter kann nicht kassieren.",
+      "pos.auto_lock_minutes": "Die automatische Sperre muss zwischen 1 und 240 Minuten liegen (0 = aus).",
+      "pos.approval_invalid": "Die Freigabe ist nicht (mehr) gültig – abgelaufen, schon verwendet oder für einen anderen Kassierer bzw. eine andere Kasse. Bitte neu freigeben lassen.",
+      "pos.approval_used": "Diese Freigabe wurde bereits verwendet.",
+      "pos.approval_self": "Eine eigene Aktion kann man nicht selbst freigeben.",
+      "pos.approver_not_manager": "Nur Inhaber und Manager können freigeben.",
+      "pos.approver_lacks_right": "Der Freigebende hat dieses Recht selbst nicht.",
+      "pos.approver_not_found": "Dieser Mitarbeiter wurde nicht gefunden.",
+      "pos.approval_permissions": "Freigegeben werden können: Preis ändern, Rabatt, Rückgabe, Bargeld ein/aus, Kasse abschließen.",
+      "pos.approval_target": "Eine Freigabe gilt für genau einen Beleg, eine Kassenbewegung oder einen Abschluss.",
+      "pos.cashier_none": "An diesem Gerät ist kein Kassierer per PIN angemeldet.",
+      "pos.receipt_email_invalid": "Die E-Mail-Adresse ist ungültig.",
+      "pos.receipt_email_limit": "Dieser Beleg wurde bereits 5-mal per E-Mail gesendet.",
+      "pos.receipt_email_missing": "Bitte E-Mail-Adresse eingeben – der Beleg hat keinen Kunden mit E-Mail.",
+      "pos.receipt_link_not_found": "Dieser Beleg-Link ist ungültig oder abgelaufen.",
+      "pos.invoice_not_a_sale": "Rechnungen gibt es nur für Verkaufsbelege.",
+      "pos.invoice_receipt_refunded": "Der Beleg wurde storniert oder es wurden Artikel zurückgenommen – dafür kann keine Rechnung erstellt werden.",
+      "pos.invoice_seller_vat_id_missing": "Für eine Rechnung (§ 14 UStG) fehlt die USt-IdNr. Ihres Unternehmens. Bitte im Unternehmensprofil ergänzen.",
+      "pos.invoice_customer_required": "Für die Rechnung sind Name und Anschrift des Kunden erforderlich.",
+      "pos.invoice_customer_address": "Name und vollständige Anschrift (Straße, PLZ, Ort) des Kunden fehlen oder sind zu lang.",
+      "pos.invoice_customer_country": "Das Land muss ein zweistelliger ISO-Code sein (z. B. DE).",
+      "pos.invoice_customer_vat_id": "Die USt-IdNr. des Kunden ist zu lang.",
+      "pos.invoice_totals": "Die Summen des Belegs passen nicht zusammen; die Rechnung kann nicht erstellt werden.",
+      "pos.invoice_number": "Rechnungsnummern beginnen bei 1.",
+      "pos.invoice_not_found": "Rechnung nicht gefunden."
     }
   },
   "dashboard": {
@@ -1015,6 +1048,21 @@
         "cashMovement": "Bargeld in die Kasse einlegen oder entnehmen.",
         "closeSession": "Tagesabschluss und Sitzungsbericht."
       }
+    },
+    "pin": {
+      "locked": "PIN gesperrt",
+      "set": "Kassen-PIN gesetzt",
+      "none": "Keine Kassen-PIN",
+      "edit": "PIN",
+      "editFor": "Kassen-PIN für {name}",
+      "title": "Kassen-PIN: {name}",
+      "text": "Mit der PIN wechselt der Mitarbeiter an einer gemeinsam genutzten Kasse auf sich (Belege tragen seinen Namen, seine Rechte gelten); Inhaber und Manager geben damit Aktionen frei. Eine neue PIN hebt eine Sperre auf.",
+      "pin": "Neue PIN",
+      "hint": "4–6 Ziffern, keine Folgen wie 1234 oder 0000.",
+      "clear": "PIN entfernen",
+      "invalid": "Bitte 4 bis 6 Ziffern eingeben.",
+      "saved": "Kassen-PIN für {name} gespeichert.",
+      "cleared": "Kassen-PIN von {name} entfernt."
     }
   },
   "admin": {
@@ -2028,7 +2076,12 @@
       "renameTitle": "Kasse umbenennen",
       "toggleTitle": "Status der Kasse ändern",
       "deactivateText": "Kasse „{name}“ deaktivieren? An einer deaktivierten Kasse kann nicht verkauft werden. Eine offene Sitzung muss vorher abgeschlossen werden.",
-      "activateText": "Kasse „{name}“ wieder aktivieren?"
+      "activateText": "Kasse „{name}“ wieder aktivieren?",
+      "settings": "Einstellungen",
+      "settingsTitle": "Kasse bearbeiten",
+      "autoLock": "Automatisch sperren nach (Minuten)",
+      "autoLockHint": "0 = aus. Nach so vielen Minuten ohne Eingabe braucht der Kassierer seine PIN erneut (höchstens 240).",
+      "autoLockInvalid": "Bitte 0 bis 240 Minuten eingeben."
     },
     "till": {
       "title": "Kasse {name}",
@@ -2443,6 +2496,88 @@
       "outageTitle": "TSE ausgefallen.",
       "outageText": "Verkäufe sind weiter möglich; Belege erhalten den Vermerk „Sicherheitseinrichtung ausgefallen“ und der Ausfall wird protokolliert.",
       "outageSince": "seit"
+    },
+    "cashier": {
+      "switch": "Kassierer wechseln",
+      "member": "Mitarbeiter",
+      "locked": "Gesperrt (zu viele Fehlversuche)",
+      "digits": "{count} Ziffern eingegeben",
+      "pinPad": "PIN-Eingabe",
+      "device": "Gerät angemeldet als {name}",
+      "lock": "Kasse sperren",
+      "lockedTitle": "Kasse gesperrt",
+      "lockedHint": "Zum Weiterarbeiten Mitarbeiter wählen und PIN eingeben.",
+      "signIn": "Anmelden",
+      "nobody": "Noch niemand hat eine Kassen-PIN. Der Inhaber kann PINs im Team festlegen, jeder Mitarbeiter unter „Konto & Sicherheit“.",
+      "signedIn": "Kasse arbeitet jetzt als {name}.",
+      "wrongPin": "PIN falsch. Noch {count} Versuche bis zur Sperre."
+    },
+    "pinSettings": {
+      "title": "Kassen-PIN",
+      "text": "Damit melden Sie sich an einer gemeinsam genutzten Kasse an („Kassierer wechseln“) und geben als Inhaber/Manager Aktionen frei.",
+      "locked": "Ihre PIN ist nach zu vielen Fehlversuchen gesperrt. Setzen Sie eine neue PIN.",
+      "isSet": "Sie haben eine Kassen-PIN.",
+      "notSet": "Sie haben noch keine Kassen-PIN.",
+      "pin": "Neue PIN",
+      "confirm": "PIN wiederholen",
+      "mismatch": "Die beiden PINs stimmen nicht überein.",
+      "passwordRequired": "Bitte zur Bestätigung Ihr Passwort eingeben.",
+      "saved": "Kassen-PIN gespeichert.",
+      "cleared": "Kassen-PIN entfernt."
+    },
+    "approval": {
+      "title": "Manager-Freigabe",
+      "hint": "Inhaber oder Manager gibt mit PIN frei: {rights}. Die Freigabe gilt für die nächste Aktion an dieser Kasse.",
+      "approve": "Freigeben",
+      "nobody": "Kein Inhaber oder Manager hat eine Kassen-PIN.",
+      "active": "Freigabe: {name}",
+      "discard": "Freigabe verwerfen",
+      "menu": "Manager-Freigabe anfordern",
+      "request": "Manager-Freigabe",
+      "refund": "Rückgabe mit Manager-Freigabe",
+      "granted": "Freigegeben von {name} – gilt für die nächste Aktion.",
+      "by": "Freigabe: {name}",
+      "movementHint": "Einlagen und Entnahmen brauchen das Recht „Bargeld ein/aus“ oder eine Manager-Freigabe."
+    },
+    "ereceipt": {
+      "title": "E-Beleg",
+      "email": "E-Mail-Adresse",
+      "send": "Per E-Mail senden",
+      "sendToCustomer": "An Kunden senden",
+      "sent": "E-Beleg wird an {to} gesendet.",
+      "invalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "showQr": "QR-Code für den Beleg anzeigen",
+      "qrLabel": "QR-Code: Beleg online ansehen",
+      "qrHint": "Kunde scannt den Code und sieht den Beleg (nur lesen).",
+      "validUntil": "Link gültig bis {date}",
+      "publicMissingTitle": "Beleg nicht verfügbar",
+      "publicMissing": "Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an das Geschäft.",
+      "publicCancelled": "Dieser Beleg wurde storniert."
+    },
+    "invoice": {
+      "title": "Rechnung",
+      "pdf": "PDF herunterladen",
+      "none": "Für diesen Beleg wurde noch keine Rechnung erstellt.",
+      "create": "Rechnung erstellen",
+      "issue": "Rechnung ausstellen",
+      "issued": "Rechnung {number} wurde ausgestellt.",
+      "hint": "Die Rechnung wird einmal mit fortlaufender Nummer ausgestellt und kann danach nicht mehr geändert werden.",
+      "required": "Pflichtangabe für die Rechnung",
+      "fields": {
+        "name": "Name",
+        "company": "Firma",
+        "street": "Straße und Hausnummer",
+        "postalCode": "PLZ",
+        "city": "Ort",
+        "countryCode": "Land (ISO, z. B. DE)",
+        "vatId": "USt-IdNr. (optional)"
+      }
+    },
+    "rounding": {
+      "label": "Rundung",
+      "zTotal": "Rundungsdifferenzen (Bargeld)",
+      "setting": "Barbeträge auf 0,05 € runden",
+      "settingHint": "Nur der bar bezahlte Teil wird gerundet (1–2 Cent ab, 3–4 Cent auf); Kartenzahlungen, Positionen und Umsatzsteuer bleiben exakt. Die Rundung steht auf Beleg und Z-Bericht."
     }
   },
   "invoiceKind": {

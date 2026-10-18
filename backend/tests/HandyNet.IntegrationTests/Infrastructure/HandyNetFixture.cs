@@ -93,6 +93,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("RateLimits:AuthPerMinute", "10000");
             web.UseSetting("RateLimits:RefreshPerMinute", "10000");
             web.UseSetting("RateLimits:AccountEmailsPerHour", "10000");
+            web.UseSetting("RateLimits:PosPinPerMinute", "10000");
+            web.UseSetting("RateLimits:PublicReceiptsPerMinute", "10000");
             web.UseSetting("Shipping:EnabledCarriers:0", "Manual");
             web.UseSetting("Shipping:EnabledCarriers:1", "Simulated");
             web.UseSetting("Shipping:SimulatedTransitMinutes", "0");
@@ -158,9 +160,19 @@ public sealed class CapturingEmailSender : IEmailSender
 {
     public ConcurrentQueue<(string To, string Subject, string Body)> Sent { get; } = new();
 
+    /// <summary>HTML alternatives of sent emails (e-receipts), by recipient and subject.</summary>
+    public ConcurrentQueue<(string To, string Subject, string Html)> SentHtml { get; } = new();
+
     public Task SendAsync(string to, string subject, string body, CancellationToken ct)
     {
         Sent.Enqueue((to, subject, body));
         return Task.CompletedTask;
+    }
+
+    public Task SendAsync(string to, string subject, string body, string? htmlBody, CancellationToken ct)
+    {
+        if (htmlBody is not null)
+            SentHtml.Enqueue((to, subject, htmlBody));
+        return SendAsync(to, subject, body, ct);
     }
 }

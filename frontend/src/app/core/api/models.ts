@@ -1032,6 +1032,10 @@ export interface PosRegister {
   nextReceiptNumber: number;
   openSessionId: string | null;
   createdAt: string;
+  /** Shared device: lock the till after this many idle minutes (null = off). */
+  autoLockMinutes?: number | null;
+  /** Round cash totals to 0.05 € on this register. */
+  cashRounding?: boolean;
 }
 
 export interface CashMovement {
@@ -1043,6 +1047,7 @@ export interface CashMovement {
   createdBy: string;
   createdByName: string | null;
   reasonCode?: string | null;
+  approval?: PosApprovalInfo | null;
 }
 
 /** `GET /api/pos/cash-movement-reasons`; `Other` needs a free text. */
@@ -1097,6 +1102,8 @@ export interface SessionSummary {
   expectedCashMinor: number;
   firstReceiptNumber: number | null;
   lastReceiptNumber: number | null;
+  /** Sum of cash rounding of the session (0.05 € registers). */
+  roundingMinor?: number;
 }
 
 export interface CashSession {
@@ -1120,6 +1127,8 @@ export interface CashSession {
   /** Opening/closing cash counted by denomination (null when entered as a plain amount). */
   openingDenominations?: DenominationCount[] | null;
   closingDenominations?: DenominationCount[] | null;
+  /** Manager approval used for the closing, if any. */
+  closingApproval?: PosApprovalInfo | null;
 }
 
 /** Where the till's price comes from: own POS price, own marketplace offer (net + 19 %), or none (cashier types it). */
@@ -1406,6 +1415,8 @@ export interface ReceiptDocument {
   notes: string[];
   fiscal: ReceiptFiscal;
   customer?: ReceiptCustomer | null;
+  /** Cash rounding to 0.05 € (payments = total + rounding); 0/absent without rounding. */
+  roundingMinor?: number;
 }
 
 export interface Receipt {
@@ -1434,6 +1445,9 @@ export interface Receipt {
   customer?: ReceiptCustomer | null;
   reprintCount?: number;
   lastReprintedAt?: string | null;
+  /** Manager approval used for this receipt (who approved), if any. */
+  approval?: PosApprovalInfo | null;
+  roundingMinor?: number;
 }
 
 export interface ReceiptSummary {
@@ -1545,4 +1559,108 @@ export interface IssueRunResult {
   /** Created and already existing documents of the run, ordered by number. */
   documents: InvoiceSummary[];
   failures: IssueFailure[];
+}
+
+// ---- POS cashier switching (PIN) -------------------------------------------------------------------------------------
+export interface PosPinStatus {
+  userId: string;
+  hasPin: boolean;
+  lockedUntil: string | null;
+  updatedAt: string | null;
+}
+
+/** A member who can be switched to at the till (has a PIN). */
+export interface PosCashierOption {
+  userId: string;
+  displayName: string;
+  role: string;
+  locked: boolean;
+}
+
+/** The cashier the till acts as (effective POS rights of that member). */
+export interface PosCashier {
+  sessionId: string;
+  registerId: string;
+  userId: string;
+  displayName: string | null;
+  role: string;
+  permissions: string[];
+  maxDiscountPercent: number;
+  expiresAt: string;
+  autoLockMinutes: number | null;
+}
+
+export interface PosCashierSignIn {
+  token: string;
+  cashier: PosCashier;
+}
+
+/** A manager approval by PIN for the next action (value of X-Pos-Approval; single use). */
+export interface PosApprovalGrant {
+  token: string;
+  approvalId: string;
+  expiresAt: string;
+  approverUserId: string;
+  approverName: string | null;
+  permissions: string[];
+}
+
+/** Who approved a recorded action (receipt, cash movement, closing). */
+export interface PosApprovalInfo {
+  approvalId: string;
+  approverUserId: string;
+  approverName: string | null;
+  permissions: string[];
+  approvedAt: string;
+}
+
+// ---- POS e-receipts -------------------------------------------------------------------------------------------------
+export interface PosReceiptEmail {
+  id: string;
+  receiptId: string;
+  /** e.g. "k***@example.de" (never the full address on a shared screen). */
+  recipientMasked: string;
+  requestedAt: string;
+}
+
+export interface PosReceiptLink {
+  token: string;
+  /** Web app path, e.g. "/beleg/{token}". */
+  path: string;
+  expiresAt: string;
+}
+
+export interface PosPublicReceipt {
+  document: ReceiptDocument;
+  cancelled: boolean;
+  expiresAt: string;
+}
+
+// ---- POS invoices (Rechnung for a sale) -----------------------------------------------------------------------------
+export interface PosInvoiceCustomerInput {
+  name: string;
+  company?: string | null;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode?: string | null;
+  vatId?: string | null;
+}
+
+export interface PosInvoice {
+  id: string;
+  receiptId: string;
+  number: string;
+  issueDate: string;
+  issuedAt: string;
+  issuedBy: string;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  totalGrossMinor: number;
+  document: {
+    customer: { name: string; company: string | null; street: string; postalCode: string; city: string; countryCode: string; vatId: string | null };
+    marginGrossMinor: number;
+    vat: { rateBasisPoints: number; netMinor: number; vatMinor: number; grossMinor: number }[];
+  };
+  pdfUrl: string;
 }

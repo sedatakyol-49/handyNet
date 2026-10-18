@@ -16,6 +16,16 @@ import {
   PosLookup,
   PosPrice,
   PosProduct,
+  PosApprovalGrant,
+  PosCashier,
+  PosCashierOption,
+  PosCashierSignIn,
+  PosInvoice,
+  PosInvoiceCustomerInput,
+  PosPinStatus,
+  PosPublicReceipt,
+  PosReceiptEmail,
+  PosReceiptLink,
   PosRegister,
   PosRightsRequest,
   Receipt,
@@ -707,7 +717,7 @@ export class PosApi {
     return this.http.post<PosRegister>(`${this.url}/registers`, body);
   }
 
-  updateRegister(id: string, body: { name: string; isActive: boolean }): Observable<PosRegister> {
+  updateRegister(id: string, body: { name: string; isActive: boolean; autoLockMinutes?: number | null; cashRounding?: boolean }): Observable<PosRegister> {
     return this.http.put<PosRegister>(`${this.url}/registers/${id}`, body);
   }
 
@@ -819,6 +829,79 @@ export class PosApi {
 
   storno(id: string, body: { reason: string; registerId?: string | null }): Observable<Receipt> {
     return this.http.post<Receipt>(`${this.url}/sales/${id}/storno`, body);
+  }
+
+  // ---- PINs and cashier switching (shared device)
+  myPin(): Observable<PosPinStatus> {
+    return this.http.get<PosPinStatus>(`${this.url}/me/pin`);
+  }
+
+  /** Own PIN (4–6 digits; null clears it); needs the account password. */
+  setMyPin(pin: string | null, currentPassword: string): Observable<PosPinStatus> {
+    return this.http.put<PosPinStatus>(`${this.url}/me/pin`, { pin, currentPassword });
+  }
+
+  /** `organization.manage`: PIN status of every member. */
+  pins(): Observable<PosPinStatus[]> {
+    return this.http.get<PosPinStatus[]>(`${this.url}/pins`);
+  }
+
+  /** `organization.manage`: set or clear (null) a member's PIN; also lifts a lockout. */
+  setPin(userId: string, pin: string | null): Observable<PosPinStatus> {
+    return this.http.put<PosPinStatus>(`${this.url}/cashiers/${userId}/pin`, { pin });
+  }
+
+  cashiers(): Observable<PosCashierOption[]> {
+    return this.http.get<PosCashierOption[]>(`${this.url}/cashiers`);
+  }
+
+  /** Switch the till to a cashier with their PIN; the token goes into the X-Pos-Cashier header (posCashierInterceptor). */
+  signInCashier(registerId: string, userId: string, pin: string): Observable<PosCashierSignIn> {
+    return this.http.post<PosCashierSignIn>(`${this.url}/registers/${registerId}/cashier`, { userId, pin });
+  }
+
+  currentCashier(): Observable<PosCashier> {
+    return this.http.get<PosCashier>(`${this.url}/cashier`);
+  }
+
+  lockCashier(): Observable<void> {
+    return this.http.post<void>(`${this.url}/cashier/lock`, {});
+  }
+
+  // ---- invoices for POS sales (Rechnung)
+  /** The receipt's invoice, or null (204) when none was issued yet. */
+  receiptInvoice(receiptId: string): Observable<PosInvoice | null> {
+    return this.http.get<PosInvoice | null>(`${this.url}/sales/${receiptId}/invoice`);
+  }
+
+  /** Issues the invoice (201) or returns the existing one (200). Customer null = the receipt's customer. */
+  createInvoice(receiptId: string, customer: PosInvoiceCustomerInput | null): Observable<PosInvoice> {
+    return this.http.post<PosInvoice>(`${this.url}/sales/${receiptId}/invoice`, { customer });
+  }
+
+  invoicePdf(invoiceId: string): Observable<Blob> {
+    return this.http.get(`${this.url}/invoices/${invoiceId}/pdf`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+
+  // ---- e-receipts
+  /** Email the receipt (null = to the receipt's customer); sent by the Notifications outbox. */
+  emailReceipt(id: string, email: string | null): Observable<PosReceiptEmail> {
+    return this.http.post<PosReceiptEmail>(`${this.url}/sales/${id}/email`, { email });
+  }
+
+  /** A public, read-only link (QR) to the receipt; the token is only returned here. */
+  receiptLink(id: string): Observable<PosReceiptLink> {
+    return this.http.post<PosReceiptLink>(`${this.url}/sales/${id}/public-link`, {});
+  }
+
+  /** Anonymous public receipt view (no customer data). */
+  publicReceipt(token: string): Observable<PosPublicReceipt> {
+    return this.http.get<PosPublicReceipt>(`${this.base}/api/public/receipts/${encodeURIComponent(token)}`);
+  }
+
+  /** Owner/manager PIN approves the given rights for the next action on this register (posCashierInterceptor sends it). */
+  requestApproval(registerId: string, body: { approverUserId: string; pin: string; permissions: string[] }): Observable<PosApprovalGrant> {
+    return this.http.post<PosApprovalGrant>(`${this.url}/registers/${registerId}/approvals`, body);
   }
 
   returnItems(id: string, body: ReturnRequest, idempotencyKey: string): Observable<Receipt> {

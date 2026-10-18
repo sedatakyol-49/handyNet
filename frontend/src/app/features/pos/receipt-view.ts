@@ -119,6 +119,10 @@ import { QrCodeComponent } from './qr-code';
               <dd class="text-end tabular-nums">{{ p.amountMinor | money: d.currency }}</dd>
             }
           }
+          @if (d.roundingMinor) {
+            <dt>{{ 'pos.rounding.label' | t }}</dt>
+            <dd class="text-end tabular-nums" data-testid="receipt-rounding">{{ d.roundingMinor | signedMoney }}</dd>
+          }
           @if (d.changeMinor) {
             <dt class="font-semibold">{{ 'pos.receipt.change' | t }}</dt>
             <dd class="text-end font-semibold tabular-nums" data-testid="receipt-change">{{ d.changeMinor | money: d.currency }}</dd>

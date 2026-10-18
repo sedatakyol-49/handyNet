@@ -8,13 +8,14 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService, describeProblem } from '../../core/ui-state/toast.service';
 import { UI } from '../../shared/ui';
 import { EmailVerificationBannerComponent } from '../shell/email-verification-banner';
+import { PosPinSettingsComponent } from '../pos/pos-pin-settings';
 
 type PasswordField = keyof NewPasswordInput;
 
 /** Konto & Sicherheit: account data, change password, sign out everywhere. */
 @Component({
   selector: 'hn-account-page',
-  imports: [FormsModule, EmailVerificationBannerComponent, ...UI],
+  imports: [FormsModule, EmailVerificationBannerComponent, PosPinSettingsComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-page-header [title]="'account.title' | t" [description]="'account.subtitle' | t" />
@@ -83,6 +84,11 @@ type PasswordField = keyof NewPasswordInput;
         </button>
       </section>
     </div>
+
+    <!-- POS PIN (shared till: cashier switching, approvals) -->
+    @if (session.hasModule('Pos')) {
+      <hn-pos-pin-settings class="mt-4 max-w-xl" />
+    }
 
     <hn-dialog [open]="confirmOpen()" [title]="'account.sessions.confirmTitle' | t" (closed)="confirmOpen.set(false)">
       <p class="text-sm text-slate-700">{{ 'account.sessions.confirmText' | t }}</p>

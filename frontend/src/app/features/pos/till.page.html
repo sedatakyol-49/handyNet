@@ -197,6 +197,11 @@
         @if (checkoutError() && screen() === 'products') {
           <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
         }
+        @if (approvalNeeded().length) {
+          <button type="button" class="pos-soft pos-soft-accent min-h-11 w-full" (click)="ctx.requestApproval(approvalNeeded())" data-testid="pos-request-approval">
+            {{ 'pos.approval.request' | t }}
+          </button>
+        }
         <button type="button" class="pos-pay-btn" [disabled]="!lines().length" (click)="openPayment()" data-testid="pos-pay">
           <span>{{ 'pos.sell.payment' | t }}<small class="ms-1.5 text-xs font-semibold opacity-75">F9</small></span>
           <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
@@ -308,6 +313,9 @@
             }
             <p class="mt-1 text-sm text-pos-muted">
               {{ 'pos.till.paid' | t }} <span class="font-semibold text-pos-ink tabular-nums" data-testid="pos-paid">{{ settlement().paidMinor | money }}</span>
+              @if (settlement().roundingMinor) {
+                · {{ 'pos.rounding.label' | t }} <span class="font-semibold text-pos-ink tabular-nums" data-testid="pos-rounding">{{ settlement().roundingMinor! | signedMoney }}</span>
+              }
             </p>
           </div>
 
@@ -394,6 +402,7 @@
               </button>
             </div>
             <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
+            <hn-pos-ereceipt [receipt]="r" />
           </div>
           <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
         </div>

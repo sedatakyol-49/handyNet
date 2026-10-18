@@ -482,7 +482,40 @@
       "pos.fiscal_mode_required": "İşletme için bir mali mod gereklidir.",
       "pos.fiscal_register_scope": "TSS, erişim bilgileri ve algoritma kasa başına değil, işletme için belirlenir.",
       "pos.fiskaly_conflict": "fiskaly bir çakışma bildirdi. Lütfen tekrar deneyin.",
-      "pos.outage_ended": "TSE arızası zaten sona erdi."
+      "pos.outage_ended": "TSE arızası zaten sona erdi.",
+      "pos.pin_invalid": "PIN hatalı.",
+      "pos.pin_locked": "Çok fazla hatalı PIN – PIN 15 dakika kilitli. Sahip yeni PIN belirleyebilir.",
+      "pos.pin_not_set": "Bu çalışanın kasa PIN’i yok.",
+      "pos.pin_format": "PIN 4 ile 6 rakamdan oluşmalı.",
+      "pos.pin_too_simple": "Bu PIN tahmin edilmesi çok kolay (aynı rakamlar veya 1234 gibi dizi).",
+      "pos.password_invalid": "Şifre doğru değil.",
+      "pos.cashier_invalid": "Kasiyer oturumu sona erdi (kilitli, süresi doldu veya işlem yok). Lütfen PIN’i yeniden girin.",
+      "pos.cashier_register_mismatch": "Kasiyer başka bir kasada oturum açmış. Lütfen bu kasada giriş yapın.",
+      "pos.cashier_not_found": "Bu çalışan kasiyer olarak çalışamaz.",
+      "pos.auto_lock_minutes": "Otomatik kilit 1 ile 240 dakika arasında olmalı (0 = kapalı).",
+      "pos.approval_invalid": "Onay geçerli değil – süresi doldu, kullanıldı veya başka kasiyer/kasa için. Lütfen yeniden isteyin.",
+      "pos.approval_used": "Bu onay zaten kullanıldı.",
+      "pos.approval_self": "Kendi işleminizi onaylayamazsınız.",
+      "pos.approver_not_manager": "Yalnızca sahip ve yöneticiler onaylayabilir.",
+      "pos.approver_lacks_right": "Onaylayan kişinin bu yetkisi yok.",
+      "pos.approver_not_found": "Bu çalışan bulunamadı.",
+      "pos.approval_permissions": "Onaylanabilen yetkiler: fiyat değiştirme, indirim, iade, nakit giriş/çıkış, kasa kapanışı.",
+      "pos.approval_target": "Bir onay tam olarak bir fiş, nakit hareketi veya kapanış için geçerlidir.",
+      "pos.cashier_none": "Bu cihazda PIN ile oturum açmış kasiyer yok.",
+      "pos.receipt_email_invalid": "E-posta adresi geçersiz.",
+      "pos.receipt_email_limit": "Bu fiş zaten 5 kez e-postayla gönderildi.",
+      "pos.receipt_email_missing": "Lütfen e-posta girin – fişte e-postası olan müşteri yok.",
+      "pos.receipt_link_not_found": "Bu fiş bağlantısı geçersiz veya süresi dolmuş.",
+      "pos.invoice_not_a_sale": "Fatura yalnızca satış fişleri için düzenlenir.",
+      "pos.invoice_receipt_refunded": "Fiş iptal edildi veya ürün iade edildi – fatura düzenlenemez.",
+      "pos.invoice_seller_vat_id_missing": "Fatura (§14 UStG) için şirketinizin KDV numarası gerekir. Lütfen şirket profiline ekleyin.",
+      "pos.invoice_customer_required": "Fatura için müşterinin adı ve adresi gerekir.",
+      "pos.invoice_customer_address": "Müşterinin adı ve tam adresi eksik veya çok uzun.",
+      "pos.invoice_customer_country": "Ülke iki harfli ISO kodu olmalı (ör. DE).",
+      "pos.invoice_customer_vat_id": "Müşterinin KDV numarası çok uzun.",
+      "pos.invoice_totals": "Fiş toplamları tutmuyor; fatura düzenlenemez.",
+      "pos.invoice_number": "Fatura numaraları 1’den başlar.",
+      "pos.invoice_not_found": "Fatura bulunamadı."
     }
   },
   "dashboard": {
@@ -1015,6 +1048,21 @@
         "cashMovement": "Kasaya nakit koy veya kasadan nakit al.",
         "closeSession": "Gün sonu kapanışı ve oturum raporu."
       }
+    },
+    "pin": {
+      "locked": "PIN kilitli",
+      "set": "Kasa PIN’i var",
+      "none": "Kasa PIN’i yok",
+      "edit": "PIN",
+      "editFor": "{name} için kasa PIN’i",
+      "title": "Kasa PIN’i: {name}",
+      "text": "PIN ile çalışan ortak kasayı kendi adına geçirir (fişlerde adı yazar, yetkileri geçerlidir); sahip ve yöneticiler işlemleri bununla onaylar. Yeni PIN kilidi kaldırır.",
+      "pin": "Yeni PIN",
+      "hint": "4–6 rakam, 1234 veya 0000 gibi diziler olmaz.",
+      "clear": "PIN’i kaldır",
+      "invalid": "Lütfen 4 ile 6 rakam girin.",
+      "saved": "{name} için kasa PIN’i kaydedildi.",
+      "cleared": "{name} kasa PIN’i kaldırıldı."
     }
   },
   "admin": {
@@ -2028,7 +2076,12 @@
       "renameTitle": "Kasayı yeniden adlandır",
       "toggleTitle": "Kasa durumunu değiştir",
       "deactivateText": "“{name}” kasası devre dışı bırakılsın mı? Devre dışı bir kasada satış yapılamaz. Açık bir oturum önce kapatılmalıdır.",
-      "activateText": "“{name}” kasası yeniden etkinleştirilsin mi?"
+      "activateText": "“{name}” kasası yeniden etkinleştirilsin mi?",
+      "settings": "Ayarlar",
+      "settingsTitle": "Kasayı düzenle",
+      "autoLock": "Otomatik kilit (dakika)",
+      "autoLockHint": "0 = kapalı. Bu kadar dakika işlem olmazsa kasiyerin yeniden PIN girmesi gerekir (en fazla 240).",
+      "autoLockInvalid": "Lütfen 0 ile 240 dakika girin."
     },
     "till": {
       "title": "Kasa {name}",
@@ -2443,6 +2496,88 @@
       "outageTitle": "TSE arızalı.",
       "outageText": "Satışlar devam eder; fişlere \"Sicherheitseinrichtung ausgefallen\" notu eklenir ve arıza kaydedilir.",
       "outageSince": "şu tarihten beri:"
+    },
+    "cashier": {
+      "switch": "Kasiyer değiştir",
+      "member": "Çalışan",
+      "locked": "Kilitli (çok fazla hatalı deneme)",
+      "digits": "{count} rakam girildi",
+      "pinPad": "PIN tuş takımı",
+      "device": "Cihaz {name} olarak oturum açtı",
+      "lock": "Kasayı kilitle",
+      "lockedTitle": "Kasa kilitli",
+      "lockedHint": "Devam etmek için adınızı seçip PIN girin.",
+      "signIn": "Giriş yap",
+      "nobody": "Henüz kimsenin kasa PIN’i yok. Sahip PIN’leri Ekip sayfasında, her çalışan „Hesap ve güvenlik“ altında belirleyebilir.",
+      "signedIn": "Kasa artık {name} olarak çalışıyor.",
+      "wrongPin": "PIN hatalı. Kilitlenmeye {count} deneme kaldı."
+    },
+    "pinSettings": {
+      "title": "Kasa PIN’i",
+      "text": "Ortak kasada oturum açmak („Kasiyer değiştir“) ve sahip/yönetici olarak işlemleri onaylamak için kullanılır.",
+      "locked": "PIN’iniz çok fazla hatalı denemeden sonra kilitlendi. Yeni bir PIN belirleyin.",
+      "isSet": "Bir kasa PIN’iniz var.",
+      "notSet": "Henüz kasa PIN’iniz yok.",
+      "pin": "Yeni PIN",
+      "confirm": "PIN’i tekrarlayın",
+      "mismatch": "İki PIN eşleşmiyor.",
+      "passwordRequired": "Onaylamak için lütfen şifrenizi girin.",
+      "saved": "Kasa PIN’i kaydedildi.",
+      "cleared": "Kasa PIN’i kaldırıldı."
+    },
+    "approval": {
+      "title": "Yönetici onayı",
+      "hint": "Sahip veya yönetici PIN ile onaylar: {rights}. Onay bu kasadaki bir sonraki işlem için geçerlidir.",
+      "approve": "Onayla",
+      "nobody": "Hiçbir sahip veya yöneticinin kasa PIN’i yok.",
+      "active": "Onay: {name}",
+      "discard": "Onayı iptal et",
+      "menu": "Yönetici onayı iste",
+      "request": "Yönetici onayı",
+      "refund": "Yönetici onayıyla iade",
+      "granted": "{name} tarafından onaylandı – bir sonraki işlem için geçerli.",
+      "by": "Onaylayan: {name}",
+      "movementHint": "Para giriş/çıkışı için „nakit giriş/çıkış“ yetkisi veya yönetici onayı gerekir."
+    },
+    "ereceipt": {
+      "title": "E-fiş",
+      "email": "E-posta adresi",
+      "send": "E-postayla gönder",
+      "sendToCustomer": "Müşteriye gönder",
+      "sent": "E-fiş {to} adresine gönderiliyor.",
+      "invalid": "Lütfen geçerli bir e-posta adresi girin.",
+      "showQr": "Fiş için QR kodu göster",
+      "qrLabel": "QR kod: fişi çevrimiçi görüntüle",
+      "qrHint": "Müşteri kodu tarar ve fişi görür (salt okunur).",
+      "validUntil": "Bağlantı {date} tarihine kadar geçerli",
+      "publicMissingTitle": "Fiş mevcut değil",
+      "publicMissing": "Bu bağlantı geçersiz veya süresi dolmuş. Lütfen mağazaya başvurun.",
+      "publicCancelled": "Bu fiş iptal edildi."
+    },
+    "invoice": {
+      "title": "Fatura",
+      "pdf": "PDF indir",
+      "none": "Bu fiş için henüz fatura oluşturulmadı.",
+      "create": "Fatura oluştur",
+      "issue": "Faturayı düzenle",
+      "issued": "{number} numaralı fatura düzenlendi.",
+      "hint": "Fatura bir kez ardışık numarayla düzenlenir ve sonra değiştirilemez.",
+      "required": "Fatura için zorunlu",
+      "fields": {
+        "name": "Ad",
+        "company": "Firma",
+        "street": "Sokak ve numara",
+        "postalCode": "Posta kodu",
+        "city": "Şehir",
+        "countryCode": "Ülke (ISO, ör. DE)",
+        "vatId": "KDV no. (isteğe bağlı)"
+      }
+    },
+    "rounding": {
+      "label": "Yuvarlama",
+      "zTotal": "Nakit yuvarlama farkları",
+      "setting": "Nakit tutarları 0,05 €’ya yuvarla",
+      "settingHint": "Yalnızca nakit ödenen kısım yuvarlanır (1–2 sent aşağı, 3–4 sent yukarı); kart ödemeleri, kalemler ve KDV aynı kalır. Yuvarlama fişte ve Z raporunda görünür."
     }
   },
   "invoiceKind": {

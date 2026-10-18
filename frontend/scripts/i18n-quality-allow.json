@@ -3,6 +3,7 @@
   "words": ["Service", "Pack", "Ticket", "Marketplace", "Mollie"],
   "*": ["quality.ServicePack"],
   "en": [
+    "pos.invoice.fields.name",
     "moderation.offers.visibility",
     "moderation.offers.moderation",
     "common.name",
@@ -36,6 +37,7 @@
     "invoices.admin.code"
   ],
   "tr": [
+    "pos.invoice.fields.company",
     "category.Tablet",
     "category.Camera",
     "pos.customers.fields.company",

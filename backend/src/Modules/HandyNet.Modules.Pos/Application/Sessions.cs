@@ -11,9 +11,15 @@ namespace HandyNet.Modules.Pos.Application;
 
 public sealed record CreateRegisterRequest(string Name, Guid? WarehouseId);
 
-public sealed record UpdateRegisterRequest(string Name, bool IsActive);
+/// <summary>
+/// AutoLockMinutes: null = unchanged, 0 = off, 1–240 = lock the till after that many idle minutes. CashRounding: null =
+/// unchanged; true rounds cash totals to 0.05 €.
+/// </summary>
+public sealed record UpdateRegisterRequest(string Name, bool IsActive, int? AutoLockMinutes = null, bool? CashRounding = null);
 
-public sealed record RegisterDto(Guid Id, string Name, Guid WarehouseId, bool IsActive, long NextReceiptNumber, Guid? OpenSessionId, DateTimeOffset CreatedAt);
+public sealed record RegisterDto(Guid Id, string Name, Guid WarehouseId, bool IsActive, long NextReceiptNumber, Guid? OpenSessionId, DateTimeOffset CreatedAt,
+    int? AutoLockMinutes = null,
+    bool CashRounding = false);
 
 /// <summary>Opening cash as an amount and/or as denomination counts (if both, they must agree).</summary>
 public sealed record OpenSessionRequest(long? OpeningCashMinor, IReadOnlyList<DenominationCount>? Denominations = null);
@@ -25,7 +31,8 @@ public sealed record CashMovementRequest(CashMovementKind Kind, long AmountMinor
 public sealed record CloseSessionRequest(long? CountedCashMinor, string? Note, IReadOnlyList<DenominationCount>? Denominations = null);
 
 public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy, string? CreatedByName,
-    string? ReasonCode);
+    string? ReasonCode,
+    ApprovalInfoDto? Approval = null);
 
 public sealed record CashMovementReasonDto(string Code, string Kind, string Label, bool RequiresText);
 
@@ -49,7 +56,8 @@ public sealed record SessionDto(
     SessionSummary Summary,
     IReadOnlyList<CashMovementDto> Movements,
     IReadOnlyList<DenominationCount>? OpeningDenominations,
-    IReadOnlyList<DenominationCount>? ClosingDenominations);
+    IReadOnlyList<DenominationCount>? ClosingDenominations,
+    ApprovalInfoDto? ClosingApproval = null);
 
 internal static class PosLimits
 {
@@ -64,7 +72,11 @@ internal sealed class CreateRegisterValidator : AbstractValidator<CreateRegister
 
 internal sealed class UpdateRegisterValidator : AbstractValidator<UpdateRegisterRequest>
 {
-    public UpdateRegisterValidator() => RuleFor(x => x.Name).NotEmpty().MaximumLength(Register.MaxNameLength);
+    public UpdateRegisterValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(Register.MaxNameLength);
+        RuleFor(x => x.AutoLockMinutes).InclusiveBetween(0, Register.MaxAutoLockMinutes).When(x => x.AutoLockMinutes is not null);
+    }
 }
 
 internal sealed class OpenSessionValidator : AbstractValidator<OpenSessionRequest>
@@ -193,6 +205,10 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
         var updated = register.Update(request.Name, request.IsActive, openSession is not null);
         if (!updated.IsSuccess)
             return updated.Error!;
+        if (request.AutoLockMinutes is { } autoLock && register.SetAutoLock(autoLock) is { IsSuccess: false } invalidLock)
+            return invalidLock.Error!;
+        if (request.CashRounding is { } rounding)
+            register.SetCashRounding(rounding);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -215,11 +231,11 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
             .ToDictionaryAsync(s => s.RegisterId, s => (Guid?)s.Id, ct);
 
     private static RegisterDto ToDto(Register r, Guid? openSessionId) =>
-        new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt);
+        new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt, r.AutoLockMinutes, r.CashRounding);
 }
 
-internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IUserAccounts users, IClock clock,
-    FiscalSealer fiscal)
+internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IUserAccounts users, IClock clock,
+    FiscalSealer fiscal, ApprovalService approvals)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
@@ -228,13 +244,15 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == registerId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        if (actor.CheckRegister(registerId) is { } otherRegister)
+            return otherRegister;
         if (await db.Set<CashSession>().AnyAsync(s => s.RegisterId == registerId && s.Status == CashSessionStatus.Open, ct))
             return Error.Conflict("pos.session_already_open", "This register already has an open cash session.");
 
         var count = CashCount.Resolve(request.OpeningCashMinor, request.Denominations, "opening cash");
         if (!count.IsSuccess)
             return count.Error!;
-        var session = CashSession.Open(OrganizationId, register, count.Value.AmountMinor, currentUser.UserId, clock.UtcNow, count.Value.Counts);
+        var session = CashSession.Open(OrganizationId, register, count.Value.AmountMinor, actor.UserId, clock.UtcNow, count.Value.Counts);
         if (!session.IsSuccess)
             return session.Error!;
         db.Add(session.Value);
@@ -291,23 +309,29 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var session = await db.Set<CashSession>().AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == OrganizationId, ct);
         if (session is null)
             return Error.NotFound("pos.session_not_found", "Cash session not found.");
+        if (actor.CheckRegister(session.RegisterId) is { } otherRegister)
+            return otherRegister;
         if (await PosSql.LockOpenSessionAsync(db, session.RegisterId, exclusive: true, ct) != session.Id)
             return Error.Conflict("pos.session_closed", "The cash session is closed.");
 
         var expected = await PosSql.ExpectedCashAsync(db, session, ct);
-        var movement = CashMovement.Record(session, request.Kind, request.AmountMinor, request.Reason, expected, currentUser.UserId, clock.UtcNow,
+        var movement = CashMovement.Record(session, request.Kind, request.AmountMinor, request.Reason, expected, actor.UserId, clock.UtcNow,
             request.ReasonCode);
         if (!movement.IsSuccess)
             return movement.Error!;
         // KassenSichV: cash in/out is a signed "SonstigerVorgang" (TSE outage does not block it; see FiscalSealer).
+        if (await approvals.LockAsync(actor, ct) is { } movementApproval)
+            return movementApproval;
         await fiscal.SignOtherAsync(session.RegisterId, session.Id, FiscalRecordKind.CashMovement, movement.Value.Id,
             KassenSichV.OtherProcessData(movement.Value.Kind == CashMovementKind.Deposit ? "Einlage" : "Entnahme",
                 movement.Value.ReasonCode?.ToString(), movement.Value.AmountMinor), ct);
         db.Add(movement.Value);
         await db.SaveChangesAsync(ct);
+        if (await approvals.ConsumeAsync(actor, ApprovalUse.CashMovement, null, movement.Value.Id, null, ct) is { } approvalError)
+            return approvalError;
         await tx.CommitAsync(ct);
         var name = (await users.GetAsync([movement.Value.CreatedBy], ct)).GetValueOrDefault(movement.Value.CreatedBy)?.DisplayName;
-        return ToDto(movement.Value, name);
+        return ToDto(movement.Value, name, (await approvals.ForMovementsAsync([movement.Value.Id], ct)).GetValueOrDefault(movement.Value.Id));
     }
 
     /// <summary>
@@ -324,19 +348,25 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
             .Select(s => (Guid?)s.RegisterId).FirstOrDefaultAsync(ct);
         if (registerId is null)
             return Error.NotFound("pos.session_not_found", "Cash session not found.");
+        if (actor.CheckRegister(registerId.Value) is { } otherRegister)
+            return otherRegister;
         if (await PosSql.LockOpenSessionAsync(db, registerId.Value, exclusive: true, ct) != sessionId)
             return Error.Conflict("pos.session_closed", "The cash session is already closed.");
 
         var session = await db.Set<CashSession>().FirstAsync(s => s.Id == sessionId, ct);
         var summary = await SummarizeAsync(session, ct);
-        var closed = session.Close(summary, count.Value.AmountMinor, request.Note, currentUser.UserId, clock.UtcNow, count.Value.Counts);
+        var closed = session.Close(summary, count.Value.AmountMinor, request.Note, actor.UserId, clock.UtcNow, count.Value.Counts);
         if (!closed.IsSuccess)
             return closed.Error!;
+        if (await approvals.LockAsync(actor, ct) is { } closingApproval)
+            return closingApproval;
         await fiscal.SignOtherAsync(session.RegisterId, session.Id, FiscalRecordKind.SessionClosing, session.Id,
             KassenSichV.OtherProcessData("Kassenabschluss", $"{summary.ReceiptCount} Belege", summary.TotalGrossMinor), ct);
         try
         {
             await db.SaveChangesAsync(ct);
+            if (await approvals.ConsumeAsync(actor, ApprovalUse.CloseSession, null, null, session.Id, ct) is { } approvalError)
+                return approvalError;
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateConcurrencyException)
@@ -364,15 +394,18 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var ids = movements.Select(m => m.CreatedBy).Append(s.OpenedBy).Concat(s.ClosedBy is { } c ? [c] : Array.Empty<Guid>()).Distinct().ToList();
         var people = await users.GetAsync(ids, ct);
         string? NameOf(Guid? id) => id is { } x && people.TryGetValue(x, out var u) ? u.DisplayName : null;
+        var movementApprovals = await approvals.ForMovementsAsync(movements.Select(m => m.Id).ToList(), ct);
+        var closingApproval = s.Status == CashSessionStatus.Closed ? await approvals.ForClosingAsync(s.Id, ct) : null;
         return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, NameOf(s.OpenedBy), s.OpeningCashMinor,
             s.ClosedAt, s.ClosedBy, NameOf(s.ClosedBy), s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor,
-            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy))).ToList(), s.OpeningDenominations, s.ClosingDenominations);
+            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy), movementApprovals.GetValueOrDefault(m.Id))).ToList(), s.OpeningDenominations,
+            s.ClosingDenominations, closingApproval);
     }
 
     public static IReadOnlyList<CashMovementReasonDto> Reasons() =>
         CashMovementReasons.All.Select(r => new CashMovementReasonDto(r.Code.ToString(), r.Kind.ToString(), r.Label, r.Code == CashMovementReason.Other))
             .ToList();
 
-    private static CashMovementDto ToDto(CashMovement m, string? createdByName) =>
-        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName, m.ReasonCode?.ToString());
+    private static CashMovementDto ToDto(CashMovement m, string? createdByName, ApprovalInfoDto? approval) =>
+        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName, m.ReasonCode?.ToString(), approval);
 }

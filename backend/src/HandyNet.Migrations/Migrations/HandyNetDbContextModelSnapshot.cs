@@ -2497,6 +2497,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("text")
+                        .HasColumnName("html_body");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -3091,6 +3095,133 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierPin", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_attempts");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
+
+                    b.Property<string>("PinHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("pin_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganizationId", "UserId")
+                        .HasName("pk_cashier_pins");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_cashier_pins_user_id");
+
+                    b.ToTable("cashier_pins", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cashier_pins_attempts", "failed_attempts BETWEEN 0 AND 5");
+
+                            t.HasCheckConstraint("ck_cashier_pins_hash", "pin_hash IS NULL OR pin_hash LIKE 'pbkdf2-sha256$%'");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cashier_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_user_id");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("EndedReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("ended_reason");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.HasKey("Id")
+                        .HasName("pk_cashier_sessions");
+
+                    b.HasIndex("CashierUserId")
+                        .HasDatabaseName("ix_cashier_sessions_cashier_user_id");
+
+                    b.HasIndex("DeviceUserId")
+                        .HasDatabaseName("ix_cashier_sessions_device_user_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cashier_sessions_token_hash");
+
+                    b.HasIndex("OrganizationId", "RegisterId", "DeviceUserId")
+                        .HasDatabaseName("ix_cashier_sessions_organization_id_register_id_device_user_id")
+                        .HasFilter("ended_at IS NULL");
+
+                    b.ToTable("cashier_sessions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cashier_sessions_end", "(ended_at IS NULL) = (ended_reason IS NULL)");
+
+                            t.HasCheckConstraint("ck_cashier_sessions_times", "expires_at > created_at");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3406,6 +3537,229 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("fiscal_records", "pos");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ApproverUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approver_user_id");
+
+                    b.Property<Guid?>("CashMovementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cash_movement_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_user_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.PrimitiveCollection<List<string>>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("permissions");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<string>("UsedFor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("used_for");
+
+                    b.HasKey("Id")
+                        .HasName("pk_approvals");
+
+                    b.HasIndex("ApproverUserId")
+                        .HasDatabaseName("ix_approvals_approver_user_id");
+
+                    b.HasIndex("CashMovementId")
+                        .HasDatabaseName("ix_approvals_cash_movement_id")
+                        .HasFilter("cash_movement_id IS NOT NULL");
+
+                    b.HasIndex("ReceiptId")
+                        .HasDatabaseName("ix_approvals_receipt_id")
+                        .HasFilter("receipt_id IS NOT NULL");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_approvals_session_id")
+                        .HasFilter("session_id IS NOT NULL");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_approvals_token_hash");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_approvals_organization_id_receipt_id");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_approvals_organization_id_register_id");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_approvals_organization_id_session_id");
+
+                    b.ToTable("approvals", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
+
+                            t.HasCheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
+
+                            t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_approvals_use", "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Customer")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("customer");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document");
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issue_date");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("issued_by");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoices1");
+
+                    b.HasIndex("ReceiptId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_receipt_id");
+
+                    b.HasIndex("OrganizationId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_organization_id_number");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_invoices_organization_id_receipt_id");
+
+                    b.HasIndex("OrganizationId", "Year", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_organization_id_year_sequence_number");
+
+                    b.ToTable("invoices", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoices_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0')");
+
+                            t.HasCheckConstraint("ck_invoices_totals", "total_gross_minor > 0 AND total_vat_minor >= 0 AND total_net_minor + total_vat_minor = total_gross_minor");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoiceSequence", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<long>("NextNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_number");
+
+                    b.HasKey("OrganizationId", "Year")
+                        .HasName("pk_invoice_sequences");
+
+                    b.ToTable("invoice_sequences", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoice_sequences_next", "next_number >= 2");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -3605,6 +3959,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnName("request_hash")
                         .IsFixedLength();
 
+                    b.Property<long>("RoundingMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("rounding_minor");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -3673,8 +4031,48 @@ namespace HandyNet.Migrations.Migrations
 
                             t.HasCheckConstraint("ck_receipts_number", "number >= 1");
 
+                            t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
+
                             t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                         });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_emails");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_emails_organization_id_receipt_id");
+
+                    b.ToTable("receipt_emails", "pos");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
@@ -3783,6 +4181,56 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_links");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipt_links_token_hash");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_links_organization_id_receipt_id");
+
+                    b.ToTable("receipt_links", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_links_expiry", "expires_at > created_at");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptPayment", b =>
                 {
                     b.Property<Guid>("ReceiptId")
@@ -3868,6 +4316,14 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int?>("AutoLockMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("auto_lock_minutes");
+
+                    b.Property<bool>("CashRounding")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cash_rounding");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -3915,6 +4371,8 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("registers", "pos", t =>
                         {
+                            t.HasCheckConstraint("ck_registers_auto_lock", "auto_lock_minutes BETWEEN 1 AND 240");
+
                             t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
                         });
                 });
@@ -4903,6 +5361,41 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_cash_sessions_registers_organization_id_register_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierPin", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_pins_users_user_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierSession", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CashierUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_users_cashier_user_id");
+
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_users_device_user_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_registers_organization_id_register_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalConfiguration", b =>
                 {
                     b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
@@ -4948,6 +5441,55 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_fiscal_records_cash_sessions_organization_id_session_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApproverUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_approvals_users_approver_user_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashMovement", null)
+                        .WithMany()
+                        .HasForeignKey("CashMovementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_cash_movements_cash_movement_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_receipts_organization_id_receipt_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_approvals_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_cash_sessions_organization_id_session_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoice", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoices_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
@@ -5001,6 +5543,17 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_receipts_warehouses_organization_id_warehouse_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptEmail", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_emails_receipts_organization_id_receipt_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
                 {
                     b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
@@ -5023,6 +5576,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_receipt_lines_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLink", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_links_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptPayment", b =>

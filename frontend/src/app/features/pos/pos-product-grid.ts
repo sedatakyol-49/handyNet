@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { PosApi } from '../../core/api/handynet-api';
+import { CatalogApi, PosApi } from '../../core/api/handynet-api';
 import { PosCategoryCount, PosProduct } from '../../core/api/models';
 import { UI } from '../../shared/ui';
 import { gridSearch, initials, mergeProductPages } from './pos.logic';
@@ -116,7 +116,7 @@ export function categoryTint(category: string): number {
                 [attr.data-product]="p.name" [attr.aria-describedby]="'pos-tile-price-' + p.productId" data-testid="pos-product">
                 <span class="pos-tile-media" [class]="p.imageUrl ? 'bg-pos-panel' : 'pos-tint-' + tint(p.category)">
                   @if (p.imageUrl) {
-                    <img [src]="p.imageUrl" alt="" class="size-full object-cover" loading="lazy" />
+                    <img [src]="catalog.imageUrl(p.imageUrl)" alt="" class="size-full bg-white object-contain p-1.5" loading="lazy" data-testid="pos-product-image" />
                   } @else if (icons[p.category]) {
                     <svg class="w-[38%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path [attr.d]="icons[p.category]" />
@@ -169,6 +169,7 @@ export function categoryTint(category: string): number {
 })
 export class PosProductGridComponent {
   private readonly api = inject(PosApi);
+  protected readonly catalog = inject(CatalogApi);
 
   readonly registerId = input.required<string>();
   /** Text of the search/scan field (codes are looked up by the till, not searched). */

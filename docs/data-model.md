@@ -72,6 +72,16 @@ erDiagram
 | `pos.receipt_reprints` | id, **organization_id**, receipt_id, sequence, printed_at/by | unique (receipt, sequence), sequence ≥ 1; FK (org, receipt); append-only (no UPDATE/DELETE grant + trigger); RLS |
 | `pos.prices` | (**organization_id**, product_id), price_minor (gross, nullable = cleared), updated_at/by, xmin | price > 0 when set; no DELETE grant; RLS; changes in the audit log |
 | `pos.customers` | id, **organization_id**, name, company, email, phone, street, postal_code, city, country_code, vat_id, created/updated | AK (org, id); no DELETE grant; RLS; all identifying fields `[PersonalData]` → never copied into the audit log |
+| `pos.cashier_pins` | (**organization_id**, user_id), pin_hash (PBKDF2-SHA256, nullable = cleared), failed_attempts (0–5), locked_until, updated_at/by, xmin | RLS; no DELETE (grant + trigger); pin_hash `[PersonalData]` (never in the audit log); 5 wrong PINs lock 15 min; a new PIN lifts the lock (ADR-0008 "Staff") |
+| `pos.cashier_sessions` | id, **organization_id**, register_id, cashier_user_id, device_user_id, token_hash (SHA-256, unique), created/expires/last_seen_at, ended_at, ended_reason (Locked/Replaced) | RLS; FK (org, register); identity columns fixed and an ended session final (trigger); no DELETE |
+| `pos.approvals` | id, **organization_id**, register_id, permissions text[], approver_user_id, requested_by_user_id, device_user_id, token_hash (unique), created/expires_at, used_at, used_for, receipt_id / cash_movement_id / session_id | RLS; ≥ 1 permission; approver ≠ requester; used ⇔ exactly one target (check); grant fixed, used once, then final (trigger); no DELETE |
+| `pos.receipt_emails` | id, **organization_id**, receipt_id, recipient (`[PersonalData]`), requested_at/by | append-only (grant + trigger); RLS; ≤ 5 per receipt (code, serialized per receipt); raises `ReceiptEmailRequested` (outbox) |
+| `pos.receipt_links` | id, **organization_id**, receipt_id, token_hash (unique), created/expires_at, created_by | append-only; RLS; read anonymously only through `pos.public_receipt(token_hash)` (SECURITY DEFINER, one unexpired receipt, document without customer) |
+| `pos.invoices` | id, **organization_id**, receipt_id (unique), number `RE-YYYY-nnnnnn`, year, sequence_number, issue_date, issued_at/by, customer jsonb, document jsonb, totals | RLS; immutable (grant + trigger); number format and totals (check); insert trigger: number just allocated and a sale receipt of the org with the same total |
+| `pos.invoice_sequences` | (**organization_id**, year), next_number | RLS; starts at 1 and moves only by +1 (trigger); deferred trigger: every allocated number has its invoice at commit (gapless); no DELETE |
+| `pos.registers` (added) | auto_lock_minutes (1–240, null = off), cash_rounding (bool) | |
+| `pos.receipts` (added) | rounding_minor (−2…+2; payments = total + rounding) | check |
+| `notifications.email_messages` (added) | html_body (nullable; e-receipts) | redacted like the body for account emails |
 | `pos.sellable_stock` (view) | stock levels of a warehouse + catalog product fields + serialized flag + own POS price | `security_invoker` → caller's RLS on stock levels, stock units and prices applies |
 
 Inventory movement types now include `Sale` and `Return`; `stock_units` go `InStock → Sold` (POS sale) and back to

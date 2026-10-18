@@ -482,7 +482,40 @@
       "pos.fiscal_mode_required": "The organization needs a fiscal mode.",
       "pos.fiscal_register_scope": "TSS, credentials and algorithm are set for the organization, not per register.",
       "pos.fiskaly_conflict": "fiskaly reported a conflict. Please try again.",
-      "pos.outage_ended": "The TSE outage has already ended."
+      "pos.outage_ended": "The TSE outage has already ended.",
+      "pos.pin_invalid": "The PIN is wrong.",
+      "pos.pin_locked": "Too many wrong PINs – the PIN is locked for 15 minutes. The owner can set a new PIN.",
+      "pos.pin_not_set": "This member has no POS PIN.",
+      "pos.pin_format": "The PIN must have 4 to 6 digits.",
+      "pos.pin_too_simple": "This PIN is too easy to guess (repeated digits or a sequence like 1234).",
+      "pos.password_invalid": "The password is not correct.",
+      "pos.cashier_invalid": "The cashier sign-in has ended (locked, expired or idle). Please enter the PIN again.",
+      "pos.cashier_register_mismatch": "The cashier is signed in on another register. Please sign in on this register.",
+      "pos.cashier_not_found": "This member cannot work as cashier.",
+      "pos.auto_lock_minutes": "The auto-lock must be between 1 and 240 minutes (0 = off).",
+      "pos.approval_invalid": "The approval is not valid (any more) – expired, already used or for another cashier or till. Please ask again.",
+      "pos.approval_used": "This approval has already been used.",
+      "pos.approval_self": "You cannot approve your own action.",
+      "pos.approver_not_manager": "Only owners and managers can approve.",
+      "pos.approver_lacks_right": "The approver does not hold this right.",
+      "pos.approver_not_found": "This member was not found.",
+      "pos.approval_permissions": "Rights that can be approved: change price, discount, return, cash in/out, close the till.",
+      "pos.approval_target": "An approval applies to exactly one receipt, cash movement or closing.",
+      "pos.cashier_none": "No cashier is signed in with a PIN on this device.",
+      "pos.receipt_email_invalid": "The email address is invalid.",
+      "pos.receipt_email_limit": "This receipt has already been emailed 5 times.",
+      "pos.receipt_email_missing": "Please enter an email address – the receipt has no customer with an email.",
+      "pos.receipt_link_not_found": "This receipt link is invalid or has expired.",
+      "pos.invoice_not_a_sale": "Invoices exist for sale receipts only.",
+      "pos.invoice_receipt_refunded": "The receipt was cancelled or items were returned – no invoice can be issued for it.",
+      "pos.invoice_seller_vat_id_missing": "An invoice (§14 UStG) needs your company’s VAT ID. Please add it to the company profile.",
+      "pos.invoice_customer_required": "The invoice needs the customer’s name and address.",
+      "pos.invoice_customer_address": "The customer’s name and full address (street, postal code, city) are missing or too long.",
+      "pos.invoice_customer_country": "The country must be a two-letter ISO code (e.g. DE).",
+      "pos.invoice_customer_vat_id": "The customer’s VAT ID is too long.",
+      "pos.invoice_totals": "The receipt totals do not add up; the invoice cannot be issued.",
+      "pos.invoice_number": "Invoice numbers start at 1.",
+      "pos.invoice_not_found": "Invoice not found."
     }
   },
   "dashboard": {
@@ -1015,6 +1048,21 @@
         "cashMovement": "Put cash into or take cash out of the drawer.",
         "closeSession": "End-of-day closing and session report."
       }
+    },
+    "pin": {
+      "locked": "PIN locked",
+      "set": "POS PIN set",
+      "none": "No POS PIN",
+      "edit": "PIN",
+      "editFor": "POS PIN for {name}",
+      "title": "POS PIN: {name}",
+      "text": "With the PIN a member switches a shared till to themselves (receipts carry their name, their rights apply); owners and managers also approve actions with it. A new PIN lifts a lockout.",
+      "pin": "New PIN",
+      "hint": "4–6 digits, no sequences like 1234 or 0000.",
+      "clear": "Remove PIN",
+      "invalid": "Please enter 4 to 6 digits.",
+      "saved": "POS PIN for {name} saved.",
+      "cleared": "POS PIN of {name} removed."
     }
   },
   "admin": {
@@ -2028,7 +2076,12 @@
       "renameTitle": "Rename till",
       "toggleTitle": "Change till status",
       "deactivateText": "Deactivate till “{name}”? A deactivated till cannot sell. An open session must be closed first.",
-      "activateText": "Reactivate till “{name}”?"
+      "activateText": "Reactivate till “{name}”?",
+      "settings": "Settings",
+      "settingsTitle": "Edit register",
+      "autoLock": "Lock automatically after (minutes)",
+      "autoLockHint": "0 = off. After this many idle minutes the cashier needs their PIN again (at most 240).",
+      "autoLockInvalid": "Please enter 0 to 240 minutes."
     },
     "till": {
       "title": "Till {name}",
@@ -2443,6 +2496,88 @@
       "outageTitle": "TSE outage.",
       "outageText": "Sales continue; receipts carry the note \"Sicherheitseinrichtung ausgefallen\" and the outage is recorded.",
       "outageSince": "since"
+    },
+    "cashier": {
+      "switch": "Switch cashier",
+      "member": "Staff member",
+      "locked": "Locked (too many wrong PINs)",
+      "digits": "{count} digits entered",
+      "pinPad": "PIN pad",
+      "device": "Device signed in as {name}",
+      "lock": "Lock till",
+      "lockedTitle": "Till locked",
+      "lockedHint": "Choose your name and enter your PIN to continue.",
+      "signIn": "Sign in",
+      "nobody": "Nobody has a POS PIN yet. The owner can set PINs on the Team page, every member under “Account & security”.",
+      "signedIn": "The till now acts as {name}.",
+      "wrongPin": "Wrong PIN. {count} attempts left before the lock."
+    },
+    "pinSettings": {
+      "title": "POS PIN",
+      "text": "Use it to sign in on a shared till (“Switch cashier”) and, as owner/manager, to approve actions.",
+      "locked": "Your PIN is locked after too many wrong entries. Set a new PIN.",
+      "isSet": "You have a POS PIN.",
+      "notSet": "You have no POS PIN yet.",
+      "pin": "New PIN",
+      "confirm": "Repeat PIN",
+      "mismatch": "The two PINs do not match.",
+      "passwordRequired": "Please enter your password to confirm.",
+      "saved": "POS PIN saved.",
+      "cleared": "POS PIN removed."
+    },
+    "approval": {
+      "title": "Manager approval",
+      "hint": "An owner or manager approves with their PIN: {rights}. The approval applies to the next action on this till.",
+      "approve": "Approve",
+      "nobody": "No owner or manager has a POS PIN.",
+      "active": "Approved by {name}",
+      "discard": "Discard approval",
+      "menu": "Request manager approval",
+      "request": "Manager approval",
+      "refund": "Return with manager approval",
+      "granted": "Approved by {name} – valid for the next action.",
+      "by": "Approved by {name}",
+      "movementHint": "Cash in/out needs the “cash in/out” right or a manager approval."
+    },
+    "ereceipt": {
+      "title": "E-receipt",
+      "email": "Email address",
+      "send": "Send by email",
+      "sendToCustomer": "Send to customer",
+      "sent": "E-receipt is being sent to {to}.",
+      "invalid": "Please enter a valid email address.",
+      "showQr": "Show QR code for the receipt",
+      "qrLabel": "QR code: view the receipt online",
+      "qrHint": "The customer scans the code and sees the receipt (read only).",
+      "validUntil": "Link valid until {date}",
+      "publicMissingTitle": "Receipt not available",
+      "publicMissing": "This link is invalid or has expired. Please contact the shop.",
+      "publicCancelled": "This receipt has been cancelled."
+    },
+    "invoice": {
+      "title": "Invoice",
+      "pdf": "Download PDF",
+      "none": "No invoice has been issued for this receipt yet.",
+      "create": "Create invoice",
+      "issue": "Issue invoice",
+      "issued": "Invoice {number} has been issued.",
+      "hint": "The invoice is issued once with a consecutive number and cannot be changed afterwards.",
+      "required": "Required for the invoice",
+      "fields": {
+        "name": "Name",
+        "company": "Company",
+        "street": "Street and number",
+        "postalCode": "Postal code",
+        "city": "City",
+        "countryCode": "Country (ISO, e.g. DE)",
+        "vatId": "VAT ID (optional)"
+      }
+    },
+    "rounding": {
+      "label": "Rounding",
+      "zTotal": "Cash rounding differences",
+      "setting": "Round cash amounts to €0.05",
+      "settingHint": "Only the part paid in cash is rounded (1–2 cents down, 3–4 cents up); card payments, lines and VAT stay exact. The rounding is shown on the receipt and Z report."
     }
   },
   "invoiceKind": {

@@ -62,7 +62,7 @@ public sealed class EmailDeliveryWorker(IServiceScopeFactory scopeFactory, ILogg
         {
             try
             {
-                await sender.SendAsync(email.Recipient, email.Subject, email.Body, ct);
+                await sender.SendAsync(email.Recipient, email.Subject, email.Body, email.HtmlBody, ct);
                 email.MarkSent(clock.UtcNow);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

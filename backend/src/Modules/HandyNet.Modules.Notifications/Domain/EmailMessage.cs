@@ -25,6 +25,9 @@ public sealed class EmailMessage
     public Guid? RecipientUserId { get; private set; }
     public string Subject { get; private set; } = null!;
     public string Body { get; private set; } = null!;
+
+    /// <summary>Optional HTML alternative of <see cref="Body"/> (e-receipts).</summary>
+    public string? HtmlBody { get; private set; }
     public EmailStatus Status { get; private set; }
     public int Attempts { get; private set; }
     public DateTimeOffset NextAttemptAt { get; private set; }
@@ -42,6 +45,7 @@ public sealed class EmailMessage
         RecipientUserId = recipientUserId,
         Subject = content.Subject,
         Body = content.Body,
+        HtmlBody = content.Html,
         Status = EmailStatus.Pending,
         NextAttemptAt = now,
         CreatedAt = now,
@@ -82,7 +86,10 @@ public sealed class EmailMessage
     private void RedactIfSecret()
     {
         if (ContainsSecret)
+        {
             Body = RedactedBody;
+            HtmlBody = null;
+        }
     }
 
     /// <summary>1, 2, 4, 8 … minutes, capped at 6 hours.</summary>
@@ -90,4 +97,5 @@ public sealed class EmailMessage
         TimeSpan.FromMinutes(Math.Min(Math.Pow(2, attempts - 1), 360));
 }
 
-public sealed record RenderedEmail(string Subject, string Body);
+/// <summary>Html: optional HTML alternative (sent as multipart/alternative with the plain text).</summary>
+public sealed record RenderedEmail(string Subject, string Body, string? Html = null);

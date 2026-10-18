@@ -27,6 +27,11 @@ export const routes: Routes = [
     path: 'email-bestaetigen',
     loadComponent: () => import('./features/auth/verify-email.page').then((m) => m.VerifyEmailPage),
   },
+  // Public, read-only POS receipt (QR link on the receipt screen); no login.
+  {
+    path: 'beleg/:token',
+    loadComponent: () => import('./features/pos/public-receipt.page').then((m) => m.PublicReceiptPage),
+  },
   {
     path: 'app',
     canActivate: [authGuard],
