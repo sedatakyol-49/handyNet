@@ -385,7 +385,14 @@
       "pos.cashier_invalid": "Die Kassierer-Anmeldung ist beendet (gesperrt, abgelaufen oder inaktiv). Bitte PIN erneut eingeben.",
       "pos.cashier_register_mismatch": "Der Kassierer ist an einer anderen Kasse angemeldet. Bitte an dieser Kasse anmelden.",
       "pos.cashier_not_found": "Dieser Mitarbeiter kann nicht kassieren.",
-      "pos.auto_lock_minutes": "Die automatische Sperre muss zwischen 1 und 240 Minuten liegen (0 = aus)."
+      "pos.auto_lock_minutes": "Die automatische Sperre muss zwischen 1 und 240 Minuten liegen (0 = aus).",
+      "pos.approval_invalid": "Die Freigabe ist nicht (mehr) gültig – abgelaufen, schon verwendet oder für einen anderen Kassierer bzw. eine andere Kasse. Bitte neu freigeben lassen.",
+      "pos.approval_used": "Diese Freigabe wurde bereits verwendet.",
+      "pos.approval_self": "Eine eigene Aktion kann man nicht selbst freigeben.",
+      "pos.approver_not_manager": "Nur Inhaber und Manager können freigeben.",
+      "pos.approver_lacks_right": "Der Freigebende hat dieses Recht selbst nicht.",
+      "pos.approver_not_found": "Dieser Mitarbeiter wurde nicht gefunden.",
+      "pos.approval_permissions": "Freigegeben werden können: Preis ändern, Rabatt, Rückgabe, Bargeld ein/aus, Kasse abschließen."
     }
   },
   "dashboard": {
@@ -2304,6 +2311,20 @@
       "passwordRequired": "Bitte zur Bestätigung Ihr Passwort eingeben.",
       "saved": "Kassen-PIN gespeichert.",
       "cleared": "Kassen-PIN entfernt."
+    },
+    "approval": {
+      "title": "Manager-Freigabe",
+      "hint": "Inhaber oder Manager gibt mit PIN frei: {rights}. Die Freigabe gilt für die nächste Aktion an dieser Kasse.",
+      "approve": "Freigeben",
+      "nobody": "Kein Inhaber oder Manager hat eine Kassen-PIN.",
+      "active": "Freigabe: {name}",
+      "discard": "Freigabe verwerfen",
+      "menu": "Manager-Freigabe anfordern",
+      "request": "Manager-Freigabe",
+      "refund": "Rückgabe mit Manager-Freigabe",
+      "granted": "Freigegeben von {name} – gilt für die nächste Aktion.",
+      "by": "Freigabe: {name}",
+      "movementHint": "Einlagen und Entnahmen brauchen das Recht „Bargeld ein/aus“ oder eine Manager-Freigabe."
     }
   },
   "invoiceKind": {

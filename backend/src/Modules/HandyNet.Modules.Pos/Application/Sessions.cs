@@ -27,7 +27,8 @@ public sealed record CashMovementRequest(CashMovementKind Kind, long AmountMinor
 public sealed record CloseSessionRequest(long? CountedCashMinor, string? Note, IReadOnlyList<DenominationCount>? Denominations = null);
 
 public sealed record CashMovementDto(Guid Id, string Kind, long AmountMinor, string Reason, DateTimeOffset CreatedAt, Guid CreatedBy, string? CreatedByName,
-    string? ReasonCode);
+    string? ReasonCode,
+    ApprovalInfoDto? Approval = null);
 
 public sealed record CashMovementReasonDto(string Code, string Kind, string Label, bool RequiresText);
 
@@ -51,7 +52,8 @@ public sealed record SessionDto(
     SessionSummary Summary,
     IReadOnlyList<CashMovementDto> Movements,
     IReadOnlyList<DenominationCount>? OpeningDenominations,
-    IReadOnlyList<DenominationCount>? ClosingDenominations);
+    IReadOnlyList<DenominationCount>? ClosingDenominations,
+    ApprovalInfoDto? ClosingApproval = null);
 
 internal static class PosLimits
 {
@@ -226,7 +228,8 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
         new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt, r.AutoLockMinutes);
 }
 
-internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IUserAccounts users, IClock clock)
+internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IUserAccounts users, IClock clock,
+    ApprovalService approvals)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
@@ -312,9 +315,11 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
             return movement.Error!;
         db.Add(movement.Value);
         await db.SaveChangesAsync(ct);
+        if (await approvals.ConsumeAsync(actor, ApprovalUse.CashMovement, null, movement.Value.Id, null, ct) is { } approvalError)
+            return approvalError;
         await tx.CommitAsync(ct);
         var name = (await users.GetAsync([movement.Value.CreatedBy], ct)).GetValueOrDefault(movement.Value.CreatedBy)?.DisplayName;
-        return ToDto(movement.Value, name);
+        return ToDto(movement.Value, name, (await approvals.ForMovementsAsync([movement.Value.Id], ct)).GetValueOrDefault(movement.Value.Id));
     }
 
     /// <summary>
@@ -344,6 +349,8 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         try
         {
             await db.SaveChangesAsync(ct);
+            if (await approvals.ConsumeAsync(actor, ApprovalUse.CloseSession, null, null, session.Id, ct) is { } approvalError)
+                return approvalError;
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateConcurrencyException)
@@ -371,15 +378,18 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var ids = movements.Select(m => m.CreatedBy).Append(s.OpenedBy).Concat(s.ClosedBy is { } c ? [c] : Array.Empty<Guid>()).Distinct().ToList();
         var people = await users.GetAsync(ids, ct);
         string? NameOf(Guid? id) => id is { } x && people.TryGetValue(x, out var u) ? u.DisplayName : null;
+        var movementApprovals = await approvals.ForMovementsAsync(movements.Select(m => m.Id).ToList(), ct);
+        var closingApproval = s.Status == CashSessionStatus.Closed ? await approvals.ForClosingAsync(s.Id, ct) : null;
         return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, NameOf(s.OpenedBy), s.OpeningCashMinor,
             s.ClosedAt, s.ClosedBy, NameOf(s.ClosedBy), s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor,
-            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy))).ToList(), s.OpeningDenominations, s.ClosingDenominations);
+            s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy), movementApprovals.GetValueOrDefault(m.Id))).ToList(), s.OpeningDenominations,
+            s.ClosingDenominations, closingApproval);
     }
 
     public static IReadOnlyList<CashMovementReasonDto> Reasons() =>
         CashMovementReasons.All.Select(r => new CashMovementReasonDto(r.Code.ToString(), r.Kind.ToString(), r.Label, r.Code == CashMovementReason.Other))
             .ToList();
 
-    private static CashMovementDto ToDto(CashMovement m, string? createdByName) =>
-        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName, m.ReasonCode?.ToString());
+    private static CashMovementDto ToDto(CashMovement m, string? createdByName, ApprovalInfoDto? approval) =>
+        new(m.Id, m.Kind.ToString(), m.AmountMinor, m.Reason, m.CreatedAt, m.CreatedBy, createdByName, m.ReasonCode?.ToString(), approval);
 }

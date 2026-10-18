@@ -36,7 +36,7 @@ import { PosCustomerDialogComponent } from './pos-customer-dialog';
 import { PosNumpadComponent } from './pos-numpad';
 import { PosPriceDialogComponent, PriceTarget } from './pos-price-dialog';
 import { PosProductGridComponent } from './pos-product-grid';
-import { LinePolicyIssue, canEditPrice, canGiveDiscount, linePolicyIssue, posRights } from './pos-rights';
+import { LinePolicyIssue, approvalPermissionsFor, canEditPrice, canGiveDiscount, linePolicyIssue, posRights } from './pos-rights';
 import {
   CartLine,
   LastPrices,
@@ -171,6 +171,8 @@ export class TillPage {
   protected readonly tax = computed(() => cartTax(this.lines()));
   protected readonly customer = computed(() => this.order().customer ?? null);
   /** Lines the cashier may not sell like this (price override, discount right/limit), by key. */
+  /** Rights a manager must approve for the cart as it is (price change, discount beyond the cashier's rights). */
+  protected readonly approvalNeeded = computed(() => approvalPermissionsFor([...this.issues().values()]));
   protected readonly issues = computed(() => {
     const rights = this.rights();
     const out = new Map<string, LinePolicyIssue>();

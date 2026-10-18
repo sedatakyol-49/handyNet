@@ -8,14 +8,14 @@ namespace HandyNet.Migrations.Migrations;
 /// </summary>
 internal static class PosStaffAndDocumentsSql
 {
-    private static readonly string[] TenantTables = ["cashier_pins", "cashier_sessions"];
+    private static readonly string[] TenantTables = ["cashier_pins", "cashier_sessions", "approvals"];
 
     public static void Up(MigrationBuilder m)
     {
         // ---- Grants: PINs and cashier sessions are updated (attempts, lockout, last seen, end) but never deleted ------------
         m.Sql("""
-            GRANT SELECT, INSERT, UPDATE ON pos.cashier_pins, pos.cashier_sessions TO handynet_app;
-            REVOKE DELETE, TRUNCATE ON pos.cashier_pins, pos.cashier_sessions FROM handynet_app;
+            GRANT SELECT, INSERT, UPDATE ON pos.cashier_pins, pos.cashier_sessions, pos.approvals TO handynet_app;
+            REVOKE DELETE, TRUNCATE ON pos.cashier_pins, pos.cashier_sessions, pos.approvals FROM handynet_app;
             """);
 
         foreach (var table in TenantTables)
@@ -44,6 +44,28 @@ internal static class PosStaffAndDocumentsSql
             CREATE TRIGGER cashier_pins_no_delete BEFORE DELETE ON pos.cashier_pins
                 FOR EACH ROW EXECUTE FUNCTION pos.forbid_change();
             """);
+
+        // ---- Approvals: the grant is fixed; it is used once (used_at + what it was used for) and never deleted ------------
+        m.Sql("""
+            CREATE FUNCTION pos.guard_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN
+                IF TG_OP = 'DELETE' THEN
+                    RAISE EXCEPTION 'approvals are never deleted' USING ERRCODE = '42501';
+                END IF;
+                IF OLD.used_at IS NOT NULL
+                   OR (NEW.id, NEW.organization_id, NEW.register_id, NEW.permissions, NEW.approver_user_id, NEW.requested_by_user_id, NEW.device_user_id,
+                       NEW.token_hash, NEW.created_at, NEW.expires_at)
+                   IS DISTINCT FROM (OLD.id, OLD.organization_id, OLD.register_id, OLD.permissions, OLD.approver_user_id, OLD.requested_by_user_id,
+                       OLD.device_user_id, OLD.token_hash, OLD.created_at, OLD.expires_at) THEN
+                    RAISE EXCEPTION 'approval % is fixed once given or used', OLD.id USING ERRCODE = '42501';
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER approvals_guard BEFORE UPDATE OR DELETE ON pos.approvals
+                FOR EACH ROW EXECUTE FUNCTION pos.guard_approval();
+            CREATE TRIGGER approvals_no_truncate BEFORE TRUNCATE ON pos.approvals
+                FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
+            """);
     }
 
     public static void Down(MigrationBuilder m)
@@ -52,6 +74,9 @@ internal static class PosStaffAndDocumentsSql
             DROP TRIGGER IF EXISTS cashier_sessions_guard ON pos.cashier_sessions;
             DROP TRIGGER IF EXISTS cashier_pins_no_delete ON pos.cashier_pins;
             DROP FUNCTION IF EXISTS pos.guard_cashier_session();
+            DROP TRIGGER IF EXISTS approvals_guard ON pos.approvals;
+            DROP TRIGGER IF EXISTS approvals_no_truncate ON pos.approvals;
+            DROP FUNCTION IF EXISTS pos.guard_approval();
             """);
     }
 }

@@ -4,11 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { Me, PosCashier } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
-import { POS_CASHIER_HEADER, PosCashierStore, posCashierInterceptor } from './pos-cashier.store';
+import { POS_APPROVAL_HEADER, POS_CASHIER_HEADER, PosCashierStore, posCashierInterceptor } from './pos-cashier.store';
 import { canSubmitPin, pinInput } from './pos-pin-dialog';
 import { pinFormatError } from './pos-pin-settings';
 import { autoLockInput } from './registers.page';
-import { posRights } from './pos-rights';
+import { approvalPermissionForCode, approvalPermissionsFor, posRights } from './pos-rights';
 
 const cashier: PosCashier = {
   sessionId: 's1',
@@ -122,6 +122,39 @@ describe('PosCashierStore and posCashierInterceptor', () => {
     // Locked: back to the device user's rights, no header any more.
     void firstValueFrom(client.get('/api/pos/registers'));
     expect(http.expectOne('/api/pos/registers').request.headers.has(POS_CASHIER_HEADER)).toBe(false);
+  });
+
+  it('adds an approval to the next approvable write only and uses it up on success', async () => {
+    store.signedIn({ token: 'tok', cashier });
+    store.approved('r1', {
+      token: 'appr', approvalId: 'a1', expiresAt: new Date(Date.now() + 60_000).toISOString(), approverUserId: 'u-m', approverName: 'Cleo',
+      permissions: ['pos.discount'],
+    });
+    // Approved rights apply (the approver has no discount limit).
+    expect(posRights(store.membership())).toMatchObject({ discount: true, maxDiscountPercent: 100, refund: false });
+
+    void firstValueFrom(client.get('/api/pos/sales'));
+    expect(http.expectOne('/api/pos/sales').request.headers.has(POS_APPROVAL_HEADER)).toBe(false);
+    void firstValueFrom(client.post('/api/pos/sales/x/reprints', {}));
+    expect(http.expectOne('/api/pos/sales/x/reprints').request.headers.has(POS_APPROVAL_HEADER)).toBe(false);
+
+    const sale = firstValueFrom(client.post('/api/pos/sales', {}));
+    const req = http.expectOne('/api/pos/sales');
+    expect(req.request.headers.get(POS_APPROVAL_HEADER)).toBe('appr');
+    req.flush({ id: 'r' }, { status: 201, statusText: 'Created' });
+    await sale;
+    expect(store.approval()).toBeNull();
+    expect(posRights(store.membership()).discount).toBe(false);
+  });
+
+  it('maps line issues and API refusals to the rights a manager must approve', () => {
+    expect(approvalPermissionsFor([{ kind: 'discountLimit', maxPercent: 5, maxDiscountMinor: 10 }, { kind: 'priceOverride', expectedMinor: 1 }])).toEqual([
+      'pos.price_override',
+      'pos.discount',
+    ]);
+    expect(approvalPermissionForCode('pos.discount_limit_exceeded', 'pos.refund')).toBe('pos.discount');
+    expect(approvalPermissionForCode('permission.denied', 'pos.refund')).toBe('pos.refund');
+    expect(approvalPermissionForCode('pos.no_open_session', 'pos.refund')).toBeNull();
   });
 
   it('ignores a cashier of another organization', () => {

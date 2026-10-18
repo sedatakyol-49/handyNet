@@ -304,6 +304,136 @@ public sealed class PosStaffAndDocumentsTests(HandyNetFixture fixture)
         Assert.Equal("42501", change.SqlState);
     }
 
+    // ---- 3. manager approval by PIN -----------------------------------------------------------------------------------------
+
+    private static Dictionary<string, string> Approved(string approvalToken, Dictionary<string, string>? more = null)
+    {
+        var headers = more ?? new Dictionary<string, string>();
+        headers["X-Pos-Approval"] = approvalToken;
+        return headers;
+    }
+
+    private async Task<(ApiClient Shop, Guid Register, Guid Product, Guid StaffId, string StaffToken, Guid ManagerId)> ApprovalSetupAsync()
+    {
+        var shop = await PosShopAsync();
+        var register = await RegisterAsync(shop);
+        var product = await StockProductAsync(shop, 20, "Panzerglas");
+        (await shop.PutAsync($"/api/pos/prices/{product}", new { priceMinor = 20_00 })).Expect(HttpStatusCode.OK);
+        var (_, staffId, _) = await StaffAsync(shop, name: "Kassierer Ben");
+        var (_, managerId, _) = await StaffAsync(shop, "Manager", "Managerin Cleo");
+        (await shop.PutAsync($"/api/organization/staff/{staffId}/pos-rights", new { permissions = Array.Empty<string>(), maxDiscountPercent = (int?)null }))
+            .Expect(HttpStatusCode.OK);
+        (await shop.PutAsync($"/api/pos/cashiers/{staffId}/pin", new { pin = "4711" })).Expect(HttpStatusCode.OK);
+        (await shop.PutAsync($"/api/pos/cashiers/{managerId}/pin", new { pin = "2580" })).Expect(HttpStatusCode.OK);
+        await OpenSessionAsync(shop, register);
+        var staffToken = await SignInAsync(shop, register, staffId, "4711");
+        return (shop, register, product, staffId, staffToken, managerId);
+    }
+
+    private static async Task<ApiResponse> ApproveAsync(ApiClient device, Guid register, string cashierToken, Guid approver, string pin, params string[] permissions) =>
+        await device.PostAsync($"/api/pos/registers/{register}/approvals", new { approverUserId = approver, pin, permissions }, As(cashierToken));
+
+    [Fact]
+    public async Task Manager_pin_approves_a_discount_once_and_the_receipt_records_who_approved()
+    {
+        var (shop, register, product, staffId, staffToken, managerId) = await ApprovalSetupAsync();
+        Assert.Equal("pos.discount_forbidden", (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 5_00), As(staffToken, Key()))).Code);
+
+        // Only owners/managers approve; never the cashier for themselves; the PIN must be right.
+        Assert.Equal("pos.approver_not_manager", (await ApproveAsync(shop, register, staffToken, staffId, "4711", "pos.discount")).Code);
+        Assert.Equal("pos.pin_invalid", (await ApproveAsync(shop, register, staffToken, managerId, "9999", "pos.discount")).Code);
+        Assert.Equal("pos.approval_permissions", (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.manage")).Code);
+        var approval = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.discount")).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal("Managerin Cleo", approval["approverName"]!.GetValue<string>());
+        var approvalToken = approval["token"]!.GetValue<string>();
+
+        var receipt = (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 5_00), As(staffToken, Approved(approvalToken, Key()))))
+            .Expect(HttpStatusCode.Created).Json;
+        Assert.Equal(staffId, Id(receipt, "createdBy"));
+        Assert.Equal(managerId, Id(receipt["approval"]!, "approverUserId"));
+        Assert.Equal("Managerin Cleo", receipt["approval"]!["approverName"]!.GetValue<string>());
+        Assert.Contains("Freigabe: Managerin Cleo", receipt["document"]!["notes"]!.AsArray().Select(n => n!.GetValue<string>()));
+        Assert.Equal("Managerin Cleo", (await shop.GetAsync($"/api/pos/sales/{Id(receipt)}")).Json["approval"]!["approverName"]!.GetValue<string>());
+
+        // Single use: the same approval cannot allow a second discount.
+        Assert.Equal("pos.approval_invalid",
+            (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 5_00), As(staffToken, Approved(approvalToken, Key())))).Code);
+        Assert.Equal("Sale", await AsOwnerAsync<string>($"SELECT used_for FROM pos.approvals WHERE receipt_id = '{Id(receipt)}'"));
+        // Audited (granted and used).
+        Assert.True(await AsOwnerAsync<long>($"SELECT count(*) FROM infra.audit_log WHERE entity_type LIKE '%PosApproval' AND entity_id LIKE '%{Id(approval, "approvalId")}%'") >= 2);
+    }
+
+    [Fact]
+    public async Task Approvals_allow_refund_cash_movement_and_closing_and_are_recorded()
+    {
+        var (shop, register, product, _, staffToken, managerId) = await ApprovalSetupAsync();
+        var sale = (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00), As(staffToken, Key()))).Expect(HttpStatusCode.Created).Json;
+        var session = Id((await shop.GetAsync($"/api/pos/registers/{register}/sessions/current")).Json);
+
+        // Refund
+        var returnBody = new { lines = new[] { new { lineNumber = 1, quantity = 1 } }, refundMethod = "Cash", reason = "Defekt", registerId = register };
+        Assert.Equal(HttpStatusCode.Forbidden, (await shop.PostAsync($"/api/pos/sales/{Id(sale)}/returns", returnBody, As(staffToken, Key()))).Status);
+        var refundApproval = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.refund")).Expect(HttpStatusCode.Created).Json;
+        var refund = (await shop.PostAsync($"/api/pos/sales/{Id(sale)}/returns", returnBody,
+            As(staffToken, Approved(refundApproval["token"]!.GetValue<string>(), Key())))).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal(managerId, Id(refund["approval"]!, "approverUserId"));
+
+        // Cash movement
+        var movementBody = new { kind = "Deposit", amountMinor = 50_00, reasonCode = "ChangeFund" };
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await shop.SendAsync(HttpMethod.Post, $"/api/pos/sessions/{session}/cash-movements", movementBody, headers: As(staffToken))).Status);
+        var cashApproval = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.cash_movement")).Json["token"]!.GetValue<string>();
+        var movement = (await shop.SendAsync(HttpMethod.Post, $"/api/pos/sessions/{session}/cash-movements", movementBody,
+            headers: As(staffToken, Approved(cashApproval)))).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal("Managerin Cleo", movement["approval"]!["approverName"]!.GetValue<string>());
+
+        // An approval for one right does not allow another (closing needs its own approval).
+        var wrong = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.refund")).Json["token"]!.GetValue<string>();
+        Assert.Equal("permission.denied", (await shop.SendAsync(HttpMethod.Post, $"/api/pos/sessions/{session}/close", new { countedCashMinor = 0 },
+            headers: As(staffToken, Approved(wrong)))).Code);
+        var closeApproval = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.close_session")).Json["token"]!.GetValue<string>();
+        var closed = (await shop.SendAsync(HttpMethod.Post, $"/api/pos/sessions/{session}/close", new { countedCashMinor = 150_00 },
+            headers: As(staffToken, Approved(closeApproval)))).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(managerId, Id(closed["closingApproval"]!, "approverUserId"));
+        Assert.Equal("Managerin Cleo", closed["movements"]!.AsArray().Single()!["approval"]!["approverName"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Approval_is_bound_to_register_device_cashier_and_expires()
+    {
+        var (shop, register, product, staffId, staffToken, managerId) = await ApprovalSetupAsync();
+        var other = await RegisterAsync(shop, "Kasse 2");
+        await OpenSessionAsync(shop, other);
+        var otherToken = await SignInAsync(shop, other, staffId, "4711");
+
+        // Another register: refused (also when the cashier is signed in there).
+        var token = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.discount")).Json["token"]!.GetValue<string>();
+        Assert.Equal("pos.approval_invalid",
+            (await shop.PostAsync("/api/pos/sales", Sale(other, product, 20_00, 1_00), As(otherToken, Approved(token, Key())))).Code);
+
+        // Another cashier on the same device (here: the device user without cashier token) cannot use it.
+        Assert.Equal("pos.approval_invalid", (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 1_00), Approved(token, Key()))).Code);
+
+        // Expired: refused.
+        await AsOwnerAsync<int>($"""
+            SET session_replication_role = replica;
+            UPDATE pos.approvals SET created_at = now() - interval '10 minutes', expires_at = now() - interval '1 minute'
+            WHERE approver_user_id = '{managerId}';
+            SET session_replication_role = origin;
+            SELECT 1;
+            """);
+        Assert.Equal("pos.approval_invalid",
+            (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 1_00), As(staffToken, Approved(token, Key())))).Code);
+
+        // The database refuses a second use and any change of a used approval, even for the owner role.
+        var fresh = (await ApproveAsync(shop, register, staffToken, managerId, "2580", "pos.discount")).Json["token"]!.GetValue<string>();
+        var receipt = (await shop.PostAsync("/api/pos/sales", Sale(register, product, 20_00, 1_00), As(staffToken, Approved(fresh, Key()))))
+            .Expect(HttpStatusCode.Created).Json;
+        var change = await Assert.ThrowsAsync<PostgresException>(() =>
+            AsOwnerAsync<int>($"UPDATE pos.approvals SET used_for = 'Return' WHERE receipt_id = '{Id(receipt)}' RETURNING 1"));
+        Assert.Equal("42501", change.SqlState);
+    }
+
     // ---- 1. product images on POS tiles ------------------------------------------------------------------------------------
 
     [Fact]

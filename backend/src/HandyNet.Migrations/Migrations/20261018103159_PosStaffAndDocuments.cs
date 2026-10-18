@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -17,6 +18,71 @@ namespace HandyNet.Migrations.Migrations
                 table: "registers",
                 type: "integer",
                 nullable: true);
+
+            migrationBuilder.CreateTable(
+                name: "approvals",
+                schema: "pos",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    organization_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    register_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    permissions = table.Column<List<string>>(type: "text[]", nullable: false),
+                    approver_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    requested_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    device_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    token_hash = table.Column<string>(type: "character(64)", fixedLength: true, maxLength: 64, nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    used_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    used_for = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    receipt_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    cash_movement_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_approvals", x => x.id);
+                    table.CheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
+                    table.CheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
+                    table.CheckConstraint("ck_approvals_times", "expires_at > created_at");
+                    table.CheckConstraint("ck_approvals_use", "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                    table.ForeignKey(
+                        name: "fk_approvals_cash_movements_cash_movement_id",
+                        column: x => x.cash_movement_id,
+                        principalSchema: "pos",
+                        principalTable: "cash_movements",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_approvals_cash_sessions_organization_id_session_id",
+                        columns: x => new { x.organization_id, x.session_id },
+                        principalSchema: "pos",
+                        principalTable: "cash_sessions",
+                        principalColumns: new[] { "organization_id", "id" },
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_approvals_receipts_organization_id_receipt_id",
+                        columns: x => new { x.organization_id, x.receipt_id },
+                        principalSchema: "pos",
+                        principalTable: "receipts",
+                        principalColumns: new[] { "organization_id", "id" },
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_approvals_registers_organization_id_register_id",
+                        columns: x => new { x.organization_id, x.register_id },
+                        principalSchema: "pos",
+                        principalTable: "registers",
+                        principalColumns: new[] { "organization_id", "id" },
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_approvals_users_approver_user_id",
+                        column: x => x.approver_user_id,
+                        principalSchema: "identity",
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
 
             migrationBuilder.CreateTable(
                 name: "cashier_pins",
@@ -98,6 +164,58 @@ namespace HandyNet.Migrations.Migrations
                 sql: "auto_lock_minutes BETWEEN 1 AND 240");
 
             migrationBuilder.CreateIndex(
+                name: "ix_approvals_approver_user_id",
+                schema: "pos",
+                table: "approvals",
+                column: "approver_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_cash_movement_id",
+                schema: "pos",
+                table: "approvals",
+                column: "cash_movement_id",
+                filter: "cash_movement_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_organization_id_receipt_id",
+                schema: "pos",
+                table: "approvals",
+                columns: new[] { "organization_id", "receipt_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_organization_id_register_id",
+                schema: "pos",
+                table: "approvals",
+                columns: new[] { "organization_id", "register_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_organization_id_session_id",
+                schema: "pos",
+                table: "approvals",
+                columns: new[] { "organization_id", "session_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_receipt_id",
+                schema: "pos",
+                table: "approvals",
+                column: "receipt_id",
+                filter: "receipt_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_session_id",
+                schema: "pos",
+                table: "approvals",
+                column: "session_id",
+                filter: "session_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_approvals_token_hash",
+                schema: "pos",
+                table: "approvals",
+                column: "token_hash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_cashier_pins_user_id",
                 schema: "pos",
                 table: "cashier_pins",
@@ -136,6 +254,10 @@ namespace HandyNet.Migrations.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             PosStaffAndDocumentsSql.Down(migrationBuilder);
+
+            migrationBuilder.DropTable(
+                name: "approvals",
+                schema: "pos");
 
             migrationBuilder.DropTable(
                 name: "cashier_pins",

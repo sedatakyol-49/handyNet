@@ -205,6 +205,35 @@ public sealed class PosModel : IModuleModel
             b.HasOne<User>().WithMany().HasForeignKey(x => x.DeviceUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<PosApproval>(b =>
+        {
+            b.ToTable("approvals", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
+                t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
+                t.HasCheckConstraint("ck_approvals_use",
+                    "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) "
+                    + "OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                t.HasCheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Permissions).HasColumnType("text[]");
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.UsedFor).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => x.ReceiptId).HasFilter("receipt_id IS NOT NULL");
+            b.HasIndex(x => x.CashMovementId).HasFilter("cash_movement_id IS NOT NULL");
+            b.HasIndex(x => x.SessionId).HasFilter("session_id IS NOT NULL");
+            b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<CashMovement>().WithMany().HasForeignKey(x => x.CashMovementId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<CashSession>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SessionId })
+                .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.ApproverUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ReceiptReprint>(b =>
         {
             b.ToTable("receipt_reprints", Schema, t => t.HasCheckConstraint("ck_receipt_reprints_sequence", "sequence >= 1"));

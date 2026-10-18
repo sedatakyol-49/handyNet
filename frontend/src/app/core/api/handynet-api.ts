@@ -16,6 +16,7 @@ import {
   PosLookup,
   PosPrice,
   PosProduct,
+  PosApprovalGrant,
   PosCashier,
   PosCashierOption,
   PosCashierSignIn,
@@ -804,6 +805,11 @@ export class PosApi {
 
   lockCashier(): Observable<void> {
     return this.http.post<void>(`${this.url}/cashier/lock`, {});
+  }
+
+  /** Owner/manager PIN approves the given rights for the next action on this register (posCashierInterceptor sends it). */
+  requestApproval(registerId: string, body: { approverUserId: string; pin: string; permissions: string[] }): Observable<PosApprovalGrant> {
+    return this.http.post<PosApprovalGrant>(`${this.url}/registers/${registerId}/approvals`, body);
   }
 
   returnItems(id: string, body: ReturnRequest, idempotencyKey: string): Observable<Receipt> {

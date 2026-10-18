@@ -42,6 +42,7 @@ public static class PosModule
         services.AddScoped<ReportService>();
         services.AddScoped<PosActor>();
         services.AddScoped<CashierService>();
+        services.AddScoped<ApprovalService>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<SaleService>(includeInternalTypes: true);
@@ -204,6 +205,13 @@ public static class PosModule
                 CashierService service, CancellationToken ct) =>
                 await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SignInAsync(id, request, ct)).ToHttp(Results.Ok))
             .WithMetadata(new IgnoreCashierTokenMetadata())
+            .RequireRateLimiting(PinRateLimitPolicy);
+
+        // Manager approval by PIN for the cashier's next action on this register (header X-Pos-Approval, single use).
+        sell.MapPost("/registers/{id:guid}/approvals", async (Guid id, ApprovalRequest request, IValidator<ApprovalRequest> validator, PosActor actor,
+                ApprovalService service, CancellationToken ct) =>
+                await validator.ProblemIfInvalidAsync(request, ct)
+                ?? (await service.GrantAsync(id, request, actor, ct)).ToHttp(a => Results.Created($"/api/pos/registers/{id}", a)))
             .RequireRateLimiting(PinRateLimitPolicy);
 
         sell.MapGet("/cashier", async (PosActor actor, CashierService service, CancellationToken ct) =>

@@ -76,23 +76,37 @@ internal sealed class PosActor(ITenantContext tenant, ICurrentUser currentUser)
 {
     public const string CashierHeader = "X-Pos-Cashier";
 
+    public const string ApprovalHeader = "X-Pos-Approval";
+
     public ActingCashier? Cashier { get; private set; }
+
+    /// <summary>A manager approval presented with this request (used once by the write it allows).</summary>
+    public ActingApproval? Approval { get; private set; }
 
     public Guid UserId => Cashier?.UserId ?? currentUser.UserId;
 
+    public Guid DeviceUserId => currentUser.UserId;
+
     public IReadOnlySet<string> Permissions => Cashier?.Permissions ?? tenant.Permissions;
 
-    public int MaxDiscountPercent => Cashier?.MaxDiscountPercent ?? tenant.MaxDiscountPercent;
+    /// <summary>The cashier's limit, or the approver's (owner/manager: 100 %) when an approval covers discounts.</summary>
+    public int MaxDiscountPercent => Approval is { } a && a.Permissions.Contains(HandyNet.SharedKernel.Tenancy.Permissions.PosDiscount)
+        ? Math.Max(a.MaxDiscountPercent, Cashier?.MaxDiscountPercent ?? tenant.MaxDiscountPercent)
+        : Cashier?.MaxDiscountPercent ?? tenant.MaxDiscountPercent;
 
-    public bool Has(string permission) => Permissions.Contains(permission);
+    public bool Has(string permission) => Permissions.Contains(permission) || Approval?.Permissions.Contains(permission) == true;
 
     public void ActAs(ActingCashier cashier) => Cashier = cashier;
 
-    /// <summary>A cashier session is bound to its register: writes on another register are refused.</summary>
+    public void Approve(ActingApproval approval) => Approval = approval;
+
+    /// <summary>A cashier session and an approval are bound to their register: writes on another register are refused.</summary>
     public Error? CheckRegister(Guid registerId) =>
         Cashier is { } c && c.RegisterId != registerId
             ? Error.Forbidden("pos.cashier_register_mismatch", "The cashier signed in on another register. Sign in on this register first.")
-            : null;
+            : Approval is { } a && a.RegisterId != registerId
+                ? Error.Forbidden("pos.approval_invalid", "The approval was given for another register.")
+                : null;
 }
 
 /// <summary>Endpoints that read the cashier header themselves (sign-in with a stale token, lock).</summary>
@@ -115,6 +129,19 @@ internal static class PosActorEndpoints
             if (!resolved.IsSuccess)
                 return Problems.From(resolved.Error!);
             http.RequestServices.GetRequiredService<PosActor>().ActAs(resolved.Value);
+            return await next(context);
+        });
+        builder.AddEndpointFilter(async (context, next) =>
+        {
+            var http = context.HttpContext;
+            var token = http.Request.Headers[PosActor.ApprovalHeader].ToString();
+            if (string.IsNullOrWhiteSpace(token) || http.RequestServices.GetRequiredService<ITenantContext>().OrganizationId is null)
+                return await next(context);
+            var actor = http.RequestServices.GetRequiredService<PosActor>();
+            var resolved = await http.RequestServices.GetRequiredService<ApprovalService>().ResolveAsync(token.Trim(), actor, http.RequestAborted);
+            if (!resolved.IsSuccess)
+                return Problems.From(resolved.Error!);
+            actor.Approve(resolved.Value);
             return await next(context);
         });
         return builder;

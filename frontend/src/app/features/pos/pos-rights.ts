@@ -140,3 +140,17 @@ export function effectivePosRights(s: Pick<StaffMember, 'role' | 'effectivePermi
   const set = new Set<string>(effective);
   return POS_CONFIGURABLE_PERMISSIONS.filter((p) => set.has(p));
 }
+
+/** Rights a manager approval must grant so that these line issues go away (price override, discount). */
+export function approvalPermissionsFor(issues: LinePolicyIssue[]): PosConfigurablePermission[] {
+  const wanted = new Set<PosConfigurablePermission>();
+  for (const i of issues) wanted.add(i.kind === 'priceOverride' ? 'pos.price_override' : 'pos.discount');
+  return POS_CONFIGURABLE_PERMISSIONS.filter((p) => wanted.has(p));
+}
+
+/** An API refusal for a missing POS right that a manager approval can allow, mapped to that right (else null). */
+export function approvalPermissionForCode(code: string | null | undefined, fallback: PosConfigurablePermission): PosConfigurablePermission | null {
+  if (code === 'pos.price_override_forbidden') return 'pos.price_override';
+  if (code === 'pos.discount_forbidden' || code === 'pos.discount_limit_exceeded') return 'pos.discount';
+  return code === 'permission.denied' ? fallback : null;
+}

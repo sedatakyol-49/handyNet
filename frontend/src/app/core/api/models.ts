@@ -955,6 +955,7 @@ export interface CashMovement {
   createdBy: string;
   createdByName: string | null;
   reasonCode?: string | null;
+  approval?: PosApprovalInfo | null;
 }
 
 /** `GET /api/pos/cash-movement-reasons`; `Other` needs a free text. */
@@ -1032,6 +1033,8 @@ export interface CashSession {
   /** Opening/closing cash counted by denomination (null when entered as a plain amount). */
   openingDenominations?: DenominationCount[] | null;
   closingDenominations?: DenominationCount[] | null;
+  /** Manager approval used for the closing, if any. */
+  closingApproval?: PosApprovalInfo | null;
 }
 
 /** Where the till's price comes from: own POS price, own marketplace offer (net + 19 %), or none (cashier types it). */
@@ -1334,6 +1337,8 @@ export interface Receipt {
   customer?: ReceiptCustomer | null;
   reprintCount?: number;
   lastReprintedAt?: string | null;
+  /** Manager approval used for this receipt (who approved), if any. */
+  approval?: PosApprovalInfo | null;
 }
 
 export interface ReceiptSummary {
@@ -1479,4 +1484,23 @@ export interface PosCashier {
 export interface PosCashierSignIn {
   token: string;
   cashier: PosCashier;
+}
+
+/** A manager approval by PIN for the next action (value of X-Pos-Approval; single use). */
+export interface PosApprovalGrant {
+  token: string;
+  approvalId: string;
+  expiresAt: string;
+  approverUserId: string;
+  approverName: string | null;
+  permissions: string[];
+}
+
+/** Who approved a recorded action (receipt, cash movement, closing). */
+export interface PosApprovalInfo {
+  approvalId: string;
+  approverUserId: string;
+  approverName: string | null;
+  permissions: string[];
+  approvedAt: string;
 }

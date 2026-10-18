@@ -385,7 +385,14 @@
       "pos.cashier_invalid": "La sesión del cajero ha terminado (bloqueada, caducada o inactiva). Introduzca el PIN de nuevo.",
       "pos.cashier_register_mismatch": "El cajero está conectado en otra caja. Entre en esta caja.",
       "pos.cashier_not_found": "Este empleado no puede trabajar como cajero.",
-      "pos.auto_lock_minutes": "El bloqueo automático debe estar entre 1 y 240 minutos (0 = desactivado)."
+      "pos.auto_lock_minutes": "El bloqueo automático debe estar entre 1 y 240 minutos (0 = desactivado).",
+      "pos.approval_invalid": "La autorización ya no es válida: caducada, usada o de otro cajero o caja. Pídala de nuevo.",
+      "pos.approval_used": "Esta autorización ya se usó.",
+      "pos.approval_self": "No puede autorizar su propia acción.",
+      "pos.approver_not_manager": "Solo propietarios y gerentes pueden autorizar.",
+      "pos.approver_lacks_right": "Quien autoriza no tiene este permiso.",
+      "pos.approver_not_found": "No se encontró al empleado.",
+      "pos.approval_permissions": "Se pueden autorizar: cambiar precio, descuento, devolución, efectivo, cierre de caja."
     }
   },
   "dashboard": {
@@ -2304,6 +2311,20 @@
       "passwordRequired": "Introduzca su contraseña para confirmar.",
       "saved": "PIN de caja guardado.",
       "cleared": "PIN de caja eliminado."
+    },
+    "approval": {
+      "title": "Autorización del gerente",
+      "hint": "Un propietario o gerente autoriza con su PIN: {rights}. Vale para la próxima acción en esta caja.",
+      "approve": "Autorizar",
+      "nobody": "Ningún propietario o gerente tiene PIN de caja.",
+      "active": "Autorizado: {name}",
+      "discard": "Descartar autorización",
+      "menu": "Pedir autorización del gerente",
+      "request": "Autorización del gerente",
+      "refund": "Devolución con autorización",
+      "granted": "Autorizado por {name}: vale para la próxima acción.",
+      "by": "Autorizado por {name}",
+      "movementHint": "Entradas y salidas de efectivo requieren el permiso correspondiente o una autorización."
     }
   },
   "invoiceKind": {

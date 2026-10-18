@@ -7,12 +7,12 @@ import { SessionStore } from '../../core/auth/session.store';
 import { I18nService, Lang } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PosContext, PosTheme } from './pos-context';
-import { canSeeSessionReport, posRights } from './pos-rights';
+import { canSeeSessionReport, posRights, posRightsKey } from './pos-rights';
 import { PosCashierStore } from './pos-cashier.store';
 import { PinEntry, PosPinDialogComponent } from './pos-pin-dialog';
 import { posErrorText } from './pos-error';
 import { PosApi } from '../../core/api/handynet-api';
-import { PosCashierOption } from '../../core/api/models';
+import { POS_CONFIGURABLE_PERMISSIONS, PosCashierOption } from '../../core/api/models';
 import { ToastService } from '../../core/ui-state/toast.service';
 
 /**
@@ -74,6 +74,14 @@ import { ToastService } from '../../core/ui-state/toast.service';
           <span class="grid size-7 shrink-0 place-items-center rounded-full bg-pos-key text-xs font-bold text-pos-ink" aria-hidden="true">{{ cashierInitial() }}</span>
           <span class="truncate"><span class="sr-only">{{ 'pos.receipt.cashier' | t }}: </span>{{ cashiers.actingName() }}</span>
         </span>
+        @if (cashiers.approval(); as a) {
+          <span class="flex min-h-9 items-center gap-1.5 rounded-full bg-pos-accent-soft px-2.5 text-xs font-semibold text-pos-accent-text" role="status"
+            data-testid="pos-approval-active">
+            {{ 'pos.approval.active' | t: { name: a.approverName ?? '' } }}
+            <button type="button" class="grid size-6 place-items-center rounded-full hover:bg-pos-key" (click)="cashiers.clearApproval()"
+              [attr.aria-label]="'pos.approval.discard' | t">✕</button>
+          </span>
+        }
         @if (ctx.registerId()) {
           <button type="button" class="pos-soft min-h-11 px-2.5 text-[13px]" (click)="openSwitch()" data-testid="pos-switch-cashier">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
@@ -102,6 +110,11 @@ import { ToastService } from '../../core/ui-state/toast.service';
               </div>
               @if (ctx.registerId(); as rid) {
                 <button type="button" role="menuitem" class="pos-menu-item" (click)="closeMenu(); lockTill()" data-testid="pos-menu-lock">{{ 'pos.cashier.lock' | t }}</button>
+                @if (missingRights().length) {
+                  <button type="button" role="menuitem" class="pos-menu-item" (click)="closeMenu(); ctx.requestApproval(missingRights())" data-testid="pos-menu-approval">
+                    {{ 'pos.approval.menu' | t }}
+                  </button>
+                }
               }
               @if (ctx.registerId(); as rid) {
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid]" (click)="closeMenu()" data-testid="pos-menu-sell">{{ 'pos.app.sell' | t }}</a>
@@ -159,6 +172,9 @@ import { ToastService } from '../../core/ui-state/toast.service';
     @if (pinRequired()) {
       <div class="fixed inset-x-0 top-14 bottom-0 z-30 bg-pos-surface/95" data-testid="pos-locked" aria-hidden="true"></div>
     }
+    <hn-pos-pin-dialog [open]="!!approvalWanted() && !pinRequired()" [title]="'pos.approval.title' | t" testId="pos-approval-dialog"
+      [hint]="'pos.approval.hint' | t: { rights: approvalRightsText() }" [submitLabel]="'pos.approval.approve' | t" [emptyText]="'pos.approval.nobody' | t"
+      [members]="approvers()" [busy]="pinBusy()" [error]="pinError()" (entered)="approve($event)" (closed)="ctx.approvalRequest.set(null)" />
     <hn-pos-pin-dialog [open]="pinOpen()" [title]="(pinRequired() ? 'pos.cashier.lockedTitle' : 'pos.cashier.switch') | t"
       [hint]="pinRequired() ? ('pos.cashier.lockedHint' | t) : null" [submitLabel]="'pos.cashier.signIn' | t" [emptyText]="'pos.cashier.nobody' | t"
       [members]="members()" [busy]="pinBusy()" [error]="pinError()" [extraAction]="pinRequired()" (entered)="signIn($event)" (closed)="closeSwitch()">
@@ -193,10 +209,31 @@ export class PosAppComponent {
   });
   protected readonly pinOpen = computed(() => this.switchOpen() || this.pinRequired());
 
+  // ---- manager approval (owner/manager PIN for the cashier's next action)
+  protected readonly approvalWanted = computed(() => {
+    const wanted = this.ctx.approvalRequest();
+    return wanted?.length && this.ctx.registerId() ? wanted : null;
+  });
+  /** POS rights the till currently lacks (offered in the menu for an approval). */
+  protected readonly missingRights = computed(() => {
+    const held = new Set(this.cashiers.membership()?.permissions ?? []);
+    return POS_CONFIGURABLE_PERMISSIONS.filter((p) => !held.has(p));
+  });
+  protected readonly approvers = computed(() => {
+    const self = this.cashiers.cashier()?.userId ?? this.session.me()?.userId;
+    return this.members().filter((m) => (m.role === 'Owner' || m.role === 'Manager') && m.userId !== self);
+  });
+  protected readonly approvalRightsText = computed(() =>
+    (this.approvalWanted() ?? []).map((p) => this.i18n.t('team.posRights.names.' + posRightsKey(p))).join(', '),
+  );
+
   constructor() {
-    // Load the members with a PIN whenever the pad is shown.
+    // Load the members with a PIN whenever a pad is shown.
     effect(() => {
-      if (this.pinOpen()) untracked(() => void this.loadMembers());
+      if (this.pinOpen() || this.approvalWanted()) untracked(() => {
+        this.pinError.set(null);
+        void this.loadMembers();
+      });
     });
     // Auto-lock after the register's idle minutes (the API enforces the same on the cashier token).
     effect((onCleanup) => {
@@ -312,6 +349,25 @@ export class PosAppComponent {
     } catch (e) {
       this.pinError.set(posErrorText(this.i18n, e));
       void this.loadMembers(); // a lockout shows up in the list
+    } finally {
+      this.pinBusy.set(false);
+    }
+  }
+
+  protected async approve(entry: PinEntry): Promise<void> {
+    const rid = this.ctx.registerId();
+    const permissions = this.approvalWanted();
+    if (!rid || !permissions) return;
+    this.pinBusy.set(true);
+    this.pinError.set(null);
+    try {
+      const grant = await firstValueFrom(this.api.requestApproval(rid, { approverUserId: entry.userId, pin: entry.pin, permissions }));
+      this.cashiers.approved(rid, grant);
+      this.ctx.approvalRequest.set(null);
+      this.toast.success(this.i18n.t('pos.approval.granted', { name: grant.approverName ?? '' }));
+    } catch (e) {
+      this.pinError.set(posErrorText(this.i18n, e));
+      void this.loadMembers();
     } finally {
       this.pinBusy.set(false);
     }

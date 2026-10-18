@@ -24,7 +24,7 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
         <p class="mb-1 text-xs text-slate-600" data-testid="z-opened-by">{{ 'pos.z.openedBy' | t: { name: s.openedByName } }}</p>
       }
       @if (s.closedByName) {
-        <p class="mb-3 text-xs text-slate-600" data-testid="z-closed-by">{{ 'pos.z.closedBy' | t: { name: s.closedByName } }}</p>
+        <p class="mb-3 text-xs text-slate-600" data-testid="z-closed-by">{{ 'pos.z.closedBy' | t: { name: s.closedByName } }}@if (s.closingApproval) { · {{ 'pos.approval.by' | t: { name: s.closingApproval.approverName ?? '' } }}}</p>
       }
 
       <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">

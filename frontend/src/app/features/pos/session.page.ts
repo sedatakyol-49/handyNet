@@ -6,6 +6,7 @@ import { PosApi } from '../../core/api/handynet-api';
 import { CashMovementKind, CashMovementReason, CashSession } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { PosCashierStore } from './pos-cashier.store';
+import { PosContext } from './pos-context';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
@@ -99,6 +100,13 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
                   </div>
                 </form>
               </section>
+            } @else if (ctx) {
+              <div class="pos-card flex flex-wrap items-center justify-between gap-2 p-4 text-sm" data-testid="pos-movement-forbidden">
+                <span>{{ 'pos.approval.movementHint' | t }}</span>
+                <button type="button" class="pos-soft pos-soft-accent min-h-11" (click)="ctx.requestApproval(['pos.cash_movement'])" data-testid="pos-approval-movement">
+                  {{ 'pos.approval.request' | t }}
+                </button>
+              </div>
             }
 
             <!-- ======================================================== closing -->
@@ -143,6 +151,11 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
               </section>
             } @else {
               <hn-banner tone="info" [text]="'pos.rights.closeForbidden' | t" data-testid="pos-close-forbidden" />
+              @if (ctx) {
+                <button type="button" class="pos-soft pos-soft-accent min-h-11 w-full" (click)="ctx.requestApproval(['pos.close_session'])" data-testid="pos-approval-close">
+                  {{ 'pos.approval.request' | t }}
+                </button>
+              }
             }
           } @else {
             <hn-banner tone="success" [text]="'pos.session.closedText' | t: { date: (s.closedAt | hnDate) }" data-testid="pos-session-closed" />
@@ -169,7 +182,7 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
                         <td class="text-xs whitespace-nowrap">{{ m.createdAt | hnDate }}</td>
                         <td>{{ m.kind | tEnum: 'cashMovementKind' }}</td>
                         <td>{{ m.reason }}</td>
-                        <td class="text-xs">{{ m.createdByName ?? '–' }}</td>
+                        <td class="text-xs">{{ m.createdByName ?? '–' }}@if (m.approval) {<span class="block text-pos-muted" data-testid="pos-movement-approval">{{ 'pos.approval.by' | t: { name: m.approval.approverName ?? '' } }}</span>}</td>
                         <td class="num">{{ (m.kind === 'Withdrawal' ? -m.amountMinor : m.amountMinor) | signedMoney }}</td>
                       </tr>
                     }
@@ -210,6 +223,8 @@ export class PosSessionPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
   protected readonly cashiers = inject(PosCashierStore);
+  /** Inside the POS app: a manager can approve a missing right on the spot. */
+  protected readonly ctx = inject(PosContext, { optional: true });
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly subnav = viewChild(PosSubnavComponent);

@@ -10,6 +10,9 @@ import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { posErrorText } from './pos-error';
+import { PosCashierStore } from './pos-cashier.store';
+import { PosContext } from './pos-context';
+import { posRights } from './pos-rights';
 import {
   PendingAttempt,
   POS_LIMITS,
@@ -88,6 +91,10 @@ import { ReceiptViewComponent } from './receipt-view';
               <div class="mt-3 flex flex-wrap gap-2">
                 @if (returnable()) {
                   <button hnButton type="button" class="min-h-11" (click)="startReturn()" [disabled]="returning()" data-testid="pos-start-return">{{ 'pos.detail.return' | t }}</button>
+                } @else if (refundNeedsApproval()) {
+                  <button hnButton type="button" class="min-h-11" (click)="ctx?.requestApproval(['pos.refund'])" data-testid="pos-approval-refund">
+                    {{ 'pos.approval.refund' | t }}
+                  </button>
                 }
                 @if (stornoAllowed()) {
                   <button hnButton variant="danger" type="button" class="min-h-11" (click)="openStorno()" data-testid="pos-start-storno">{{ 'pos.detail.storno' | t }}</button>
@@ -229,14 +236,23 @@ export class PosReceiptDetailPage {
     (id) => this.api.receipt(id),
   );
   protected readonly receipt = computed(() => this.query.value());
-  protected readonly canManage = computed(() => this.session.can('pos.manage'));
+  protected readonly cashiers = inject(PosCashierStore);
+  /** Inside the POS app (a manager can approve a refund on the spot); null in the back office. */
+  protected readonly ctx = inject(PosContext, { optional: true });
+  private readonly rights = computed(() => posRights(this.cashiers.membership()));
+  protected readonly canManage = computed(() => this.rights().manage);
   protected readonly stornoAllowed = computed(() => {
     const r = this.receipt();
     return !!r && this.canManage() && canStorno(r);
   });
   protected readonly returnable = computed(() => {
     const r = this.receipt();
-    return !!r && this.session.can('pos.refund') && canReturn(r);
+    return !!r && this.rights().refund && canReturn(r);
+  });
+  /** Returnable, but the cashier lacks the refund right: a manager may approve it. */
+  protected readonly refundNeedsApproval = computed(() => {
+    const r = this.receipt();
+    return !!r && !!this.ctx && !this.rights().refund && canReturn(r);
   });
 
   /** Copy number shown on the receipt after a recorded reprint ("Kopie n"). */

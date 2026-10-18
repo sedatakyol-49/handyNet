@@ -3247,6 +3247,117 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("customers", "pos");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ApproverUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approver_user_id");
+
+                    b.Property<Guid?>("CashMovementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cash_movement_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_user_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.PrimitiveCollection<List<string>>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("permissions");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<string>("UsedFor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("used_for");
+
+                    b.HasKey("Id")
+                        .HasName("pk_approvals");
+
+                    b.HasIndex("ApproverUserId")
+                        .HasDatabaseName("ix_approvals_approver_user_id");
+
+                    b.HasIndex("CashMovementId")
+                        .HasDatabaseName("ix_approvals_cash_movement_id")
+                        .HasFilter("cash_movement_id IS NOT NULL");
+
+                    b.HasIndex("ReceiptId")
+                        .HasDatabaseName("ix_approvals_receipt_id")
+                        .HasFilter("receipt_id IS NOT NULL");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_approvals_session_id")
+                        .HasFilter("session_id IS NOT NULL");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_approvals_token_hash");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_approvals_organization_id_receipt_id");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_approvals_organization_id_register_id");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_approvals_organization_id_session_id");
+
+                    b.ToTable("approvals", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
+
+                            t.HasCheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
+
+                            t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_approvals_use", "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -4568,6 +4679,44 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_cashier_sessions_registers_organization_id_register_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApproverUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_approvals_users_approver_user_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashMovement", null)
+                        .WithMany()
+                        .HasForeignKey("CashMovementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_cash_movements_cash_movement_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_receipts_organization_id_receipt_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_approvals_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_cash_sessions_organization_id_session_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>

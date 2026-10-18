@@ -111,6 +111,33 @@ public class PosPinTests
     }
 
     [Fact]
+    public void Approval_needs_a_manager_with_the_rights_and_is_used_exactly_once()
+    {
+        var manager = Guid.NewGuid();
+        var managerRights = HandyNet.SharedKernel.Tenancy.Permissions.For(HandyNet.SharedKernel.Tenancy.MembershipRole.Manager, null);
+        PosApproval Grant(params string[] permissions) => PosApproval.Grant(Org, Guid.NewGuid(), permissions, manager,
+            HandyNet.SharedKernel.Tenancy.MembershipRole.Manager, managerRights, User, User, "h", Now, TimeSpan.FromMinutes(2)).Value;
+
+        Assert.Equal("pos.approval_permissions", PosApproval.Grant(Org, Guid.NewGuid(), [], manager,
+            HandyNet.SharedKernel.Tenancy.MembershipRole.Manager, managerRights, User, User, "h", Now, TimeSpan.FromMinutes(2)).Error?.Code);
+        Assert.Equal("pos.approval_permissions", PosApproval.Grant(Org, Guid.NewGuid(), ["pos.manage"], manager,
+            HandyNet.SharedKernel.Tenancy.MembershipRole.Manager, managerRights, User, User, "h", Now, TimeSpan.FromMinutes(2)).Error?.Code);
+        Assert.Equal("pos.approver_not_manager", PosApproval.Grant(Org, Guid.NewGuid(), ["pos.discount"], manager,
+            HandyNet.SharedKernel.Tenancy.MembershipRole.Staff, managerRights, User, User, "h", Now, TimeSpan.FromMinutes(2)).Error?.Code);
+        Assert.Equal("pos.approval_self", PosApproval.Grant(Org, Guid.NewGuid(), ["pos.discount"], User,
+            HandyNet.SharedKernel.Tenancy.MembershipRole.Manager, managerRights, User, User, "h", Now, TimeSpan.FromMinutes(2)).Error?.Code);
+
+        var approval = Grant("pos.refund", "pos.discount", "pos.discount");
+        Assert.Equal(["pos.discount", "pos.refund"], approval.Permissions);
+        Assert.True(approval.IsUsable(Now.AddSeconds(119)));
+        Assert.False(approval.IsUsable(Now.AddSeconds(120)));
+        Assert.Equal("pos.approval_target", approval.MarkUsed(ApprovalUse.Sale, null, null, null, Now).Error?.Code);
+        Assert.True(approval.MarkUsed(ApprovalUse.Sale, Guid.NewGuid(), null, null, Now).IsSuccess);
+        Assert.Equal("pos.approval_used", approval.MarkUsed(ApprovalUse.Sale, Guid.NewGuid(), null, null, Now).Error?.Code);
+        Assert.Equal("pos.approval_used", Grant("pos.refund").MarkUsed(ApprovalUse.Return, Guid.NewGuid(), null, null, Now.AddMinutes(3)).Error?.Code);
+    }
+
+    [Fact]
     public void Register_auto_lock_is_off_or_between_1_and_240_minutes()
     {
         var register = Register.Create(Org, "Kasse", Guid.NewGuid(), Now).Value;

@@ -96,7 +96,8 @@ public sealed record ReceiptDto(
     Guid? CustomerId,
     DocumentCustomer? Customer,
     int ReprintCount,
-    DateTimeOffset? LastReprintedAt);
+    DateTimeOffset? LastReprintedAt,
+    ApprovalInfoDto? Approval = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -199,7 +200,8 @@ internal sealed class SaleService(
     PriceResolver prices,
     IClock clock,
     ILogger<SaleService> logger,
-    PosActor actor)
+    PosActor actor,
+    ApprovalService approvals)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -304,6 +306,8 @@ internal sealed class SaleService(
         try
         {
             await db.SaveChangesAsync(ct);
+            if (await approvals.ConsumeAsync(actor, ApprovalUse.Sale, receipt.Value.Id, null, null, ct) is { } approvalError)
+                return approvalError; // disposing the transaction rolls back the receipt and its number
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ix_receipts_organization_id_idempotency_key"))
@@ -574,6 +578,9 @@ internal sealed class SaleService(
         try
         {
             await db.SaveChangesAsync(ct);
+            var use = refund.Kind == ReceiptKind.Storno ? ApprovalUse.Storno : ApprovalUse.Return;
+            if (await approvals.ConsumeAsync(actor, use, refund.Id, null, null, ct) is { } approvalError)
+                return approvalError;
             await tx.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_stock_units_imei_in_stock"))
@@ -611,6 +618,9 @@ internal sealed class SaleService(
                      ?? throw new InvalidOperationException("Organization of the current tenant not found.");
         var document = ReceiptDocument.For(receipt, new SellerInfo(seller.Name, seller.LegalName, seller.Street, seller.PostalCode, seller.City,
             seller.CountryCode, seller.VatId), registerName, referencedNumber, fiscal.Value);
+        // A manager approval is printed with the receipt (who approved).
+        if (actor.Approval is { ApproverName: { } approver })
+            document = document with { Notes = [.. document.Notes, $"Freigabe: {approver}"] };
         return receipt.Seal(fiscal.Value, document);
     }
 
@@ -688,6 +698,7 @@ internal sealed class SaleService(
         return new ReceiptDto(r.Id, r.RegisterId, registerName, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, referencedNumber, cancelledBy,
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
-            r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last);
+            r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
+            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id));
     }
 }

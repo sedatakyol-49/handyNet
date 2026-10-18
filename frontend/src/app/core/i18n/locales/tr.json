@@ -385,7 +385,14 @@
       "pos.cashier_invalid": "Kasiyer oturumu sona erdi (kilitli, süresi doldu veya işlem yok). Lütfen PIN’i yeniden girin.",
       "pos.cashier_register_mismatch": "Kasiyer başka bir kasada oturum açmış. Lütfen bu kasada giriş yapın.",
       "pos.cashier_not_found": "Bu çalışan kasiyer olarak çalışamaz.",
-      "pos.auto_lock_minutes": "Otomatik kilit 1 ile 240 dakika arasında olmalı (0 = kapalı)."
+      "pos.auto_lock_minutes": "Otomatik kilit 1 ile 240 dakika arasında olmalı (0 = kapalı).",
+      "pos.approval_invalid": "Onay geçerli değil – süresi doldu, kullanıldı veya başka kasiyer/kasa için. Lütfen yeniden isteyin.",
+      "pos.approval_used": "Bu onay zaten kullanıldı.",
+      "pos.approval_self": "Kendi işleminizi onaylayamazsınız.",
+      "pos.approver_not_manager": "Yalnızca sahip ve yöneticiler onaylayabilir.",
+      "pos.approver_lacks_right": "Onaylayan kişinin bu yetkisi yok.",
+      "pos.approver_not_found": "Bu çalışan bulunamadı.",
+      "pos.approval_permissions": "Onaylanabilen yetkiler: fiyat değiştirme, indirim, iade, nakit giriş/çıkış, kasa kapanışı."
     }
   },
   "dashboard": {
@@ -2304,6 +2311,20 @@
       "passwordRequired": "Onaylamak için lütfen şifrenizi girin.",
       "saved": "Kasa PIN’i kaydedildi.",
       "cleared": "Kasa PIN’i kaldırıldı."
+    },
+    "approval": {
+      "title": "Yönetici onayı",
+      "hint": "Sahip veya yönetici PIN ile onaylar: {rights}. Onay bu kasadaki bir sonraki işlem için geçerlidir.",
+      "approve": "Onayla",
+      "nobody": "Hiçbir sahip veya yöneticinin kasa PIN’i yok.",
+      "active": "Onay: {name}",
+      "discard": "Onayı iptal et",
+      "menu": "Yönetici onayı iste",
+      "request": "Yönetici onayı",
+      "refund": "Yönetici onayıyla iade",
+      "granted": "{name} tarafından onaylandı – bir sonraki işlem için geçerli.",
+      "by": "Onaylayan: {name}",
+      "movementHint": "Para giriş/çıkışı için „nakit giriş/çıkış“ yetkisi veya yönetici onayı gerekir."
     }
   },
   "invoiceKind": {
