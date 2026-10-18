@@ -3,6 +3,8 @@
   "words": ["Service", "Pack", "Ticket", "Marketplace", "Mollie"],
   "*": ["quality.ServicePack"],
   "en": [
+    "moderation.offers.visibility",
+    "moderation.offers.moderation",
     "common.name",
     "common.status",
     "nav.admin",
@@ -49,6 +51,8 @@
     "disputeParty.Platform"
   ],
   "es": [
+    "moderation.sellerState.Visible",
+    "moderation.offerState.Visible",
     "orders.lines",
     "quality.Original",
     "category.Smartphone",
