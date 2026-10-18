@@ -51,6 +51,20 @@ internal sealed class EmailQueue(
     }
 }
 
+/// <summary>E-receipt requested at the till: one email to the given address per request (idempotent per outbox message).</summary>
+internal sealed class ReceiptEmailRequestedHandler(HandyNetDbContext db, IClock clock) : IOutboxHandler
+{
+    public string EventType => typeof(HandyNet.Modules.Pos.Contracts.ReceiptEmailRequested).FullName!;
+
+    public async Task HandleAsync(Guid messageId, string payload, CancellationToken ct)
+    {
+        if (await db.Set<EmailMessage>().AsNoTracking().AnyAsync(e => e.SourceId == messageId, ct))
+            return;
+        var e = JsonSerializer.Deserialize<HandyNet.Modules.Pos.Contracts.ReceiptEmailRequested>(payload)!;
+        db.Add(EmailMessage.Queue(messageId, EReceiptTemplate.Template, e.Recipient, null, EReceiptTemplate.Render(e.Content), clock.UtcNow));
+    }
+}
+
 internal sealed class OrderPlacedHandler(EmailQueue queue, IOptions<NotificationOptions> options) : IOutboxHandler
 {
     public string EventType => typeof(OrderPlaced).FullName!;

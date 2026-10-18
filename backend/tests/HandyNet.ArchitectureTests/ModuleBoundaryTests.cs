@@ -25,6 +25,7 @@ public class ModuleBoundaryTests
         { "Tenancy", "HandyNet.Modules.Notifications" },
         { "Identity", "HandyNet.Modules.Notifications" },
         { "Marketplace", "HandyNet.Modules.Notifications" },
+        { "Pos", "HandyNet.Modules.Notifications" },
         // Shipping sits above Ordering; Ordering talks to it only through events.
         { "Ordering", "HandyNet.Modules.Shipping" },
         { "Inventory", "HandyNet.Modules.Shipping" },
@@ -131,6 +132,7 @@ public class ModuleBoundaryTests
     [InlineData("Tenancy", "Pos")]
     [InlineData("Identity", "Pos")]
     [InlineData("Identity", "Notifications")]
+    [InlineData("Pos", "Notifications")]
     [InlineData("Identity", "Tenancy")]
     [InlineData("Payments", "Invoicing")]
     [InlineData("Tenancy", "Invoicing")]

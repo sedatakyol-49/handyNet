@@ -234,6 +234,28 @@ public sealed class PosModel : IModuleModel
             b.HasOne<User>().WithMany().HasForeignKey(x => x.ApproverUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<ReceiptEmail>(b =>
+        {
+            b.ToTable("receipt_emails", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Recipient).HasMaxLength(ReceiptEmail.MaxEmailLength).IsRequired();
+            b.Ignore(x => x.DomainEvents);
+            b.HasIndex(x => new { x.OrganizationId, x.ReceiptId });
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReceiptLink>(b =>
+        {
+            b.ToTable("receipt_links", Schema, t => t.HasCheckConstraint("ck_receipt_links_expiry", "expires_at > created_at"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.ReceiptId });
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ReceiptReprint>(b =>
         {
             b.ToTable("receipt_reprints", Schema, t => t.HasCheckConstraint("ck_receipt_reprints_sequence", "sequence >= 1"));

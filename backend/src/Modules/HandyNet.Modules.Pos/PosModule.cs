@@ -43,6 +43,7 @@ public static class PosModule
         services.AddScoped<PosActor>();
         services.AddScoped<CashierService>();
         services.AddScoped<ApprovalService>();
+        services.AddScoped<EReceiptService>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<SaleService>(includeInternalTypes: true);
@@ -175,6 +176,7 @@ public static class PosModule
             (await service.LookupAsync(code, registerId, ct)).ToHttp(Results.Ok));
 
         MapCashierEndpoints(pos, sell);
+        MapDocumentEndpoints(app, sell);
         return app;
     }
 
@@ -223,6 +225,26 @@ public static class PosModule
                 return Results.NoContent();
             })
             .WithMetadata(new IgnoreCashierTokenMetadata());
+    }
+
+    /// <summary>Anonymous public receipt view (QR link): per client IP and minute.</summary>
+    public const string PublicReceiptRateLimitPolicy = "pos-public-receipt";
+
+    // ---- e-receipts and invoices for POS sales -----------------------------------------------------------------------------
+    private static void MapDocumentEndpoints(IEndpointRouteBuilder app, RouteGroupBuilder sell)
+    {
+        sell.MapPost("/sales/{id:guid}/email", async (Guid id, EmailReceiptRequest request, IValidator<EmailReceiptRequest> validator,
+                EReceiptService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.EmailAsync(id, request, ct)).ToHttp(r => Results.Accepted(null, r)));
+
+        sell.MapPost("/sales/{id:guid}/public-link", async (Guid id, EReceiptService service, CancellationToken ct) =>
+            (await service.CreateLinkAsync(id, ct)).ToHttp(r => Results.Created(r.Path, r)));
+
+        app.MapGet("/api/public/receipts/{token}", async (string token, EReceiptService service, CancellationToken ct) =>
+                (await service.GetPublicAsync(token, ct)).ToHttp(Results.Ok))
+            .WithTags("POS")
+            .AllowAnonymous()
+            .RequireRateLimiting(PublicReceiptRateLimitPolicy);
     }
 
     private static IResult? InvalidKey(string? key) =>

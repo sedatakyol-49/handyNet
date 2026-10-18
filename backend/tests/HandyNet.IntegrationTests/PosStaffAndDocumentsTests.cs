@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 using HandyNet.IntegrationTests.Infrastructure;
+using HandyNet.Modules.Notifications.Application;
+using HandyNet.Persistence;
 using HandyNet.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace HandyNet.IntegrationTests;
@@ -433,6 +436,122 @@ public sealed class PosStaffAndDocumentsTests(HandyNetFixture fixture)
             AsOwnerAsync<int>($"UPDATE pos.approvals SET used_for = 'Return' WHERE receipt_id = '{Id(receipt)}' RETURNING 1"));
         Assert.Equal("42501", change.SqlState);
     }
+
+    // ---- 4. e-receipts ---------------------------------------------------------------------------------------------------
+
+    private async Task ProcessEmailsUntilAsync(Func<bool> done)
+    {
+        var outbox = fixture.Factory.Services.GetRequiredService<OutboxDispatcher>();
+        var email = fixture.Factory.Services.GetRequiredService<EmailDeliveryWorker>();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (!done())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "Expected emails were not delivered within 30 s.");
+            await outbox.DispatchBatchAsync(CancellationToken.None);
+            await email.DeliverBatchAsync(CancellationToken.None);
+            await Task.Delay(100);
+        }
+    }
+
+    private async Task<(ApiClient Shop, Guid Register, JsonNode Receipt, string CustomerEmail)> SaleWithCustomerAsync()
+    {
+        var shop = await PosShopAsync();
+        var register = await RegisterAsync(shop);
+        var product = await StockProductAsync(shop, 5, "Ladegerät");
+        var customerEmail = $"kundin-{Scenario.UniqueSuffix()}@example.de";
+        var customer = (await shop.PostAsync("/api/pos/customers", new
+        {
+            name = "Erika Mustermann", email = customerEmail, street = "Lindenweg 3", postalCode = "10405", city = "Berlin", countryCode = "DE",
+        })).Expect(HttpStatusCode.Created).Json;
+        await OpenSessionAsync(shop, register);
+        var receipt = (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            customerId = Id(customer),
+            lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 29_99, discountMinor = 0, note = "mit Kabel <b>" } },
+            payments = new[] { new { method = "Cash", amountMinor = 30_00 } },
+        }, Key())).Expect(HttpStatusCode.Created).Json;
+        return (shop, register, receipt, customerEmail);
+    }
+
+    [Fact]
+    public async Task Receipt_is_emailed_through_the_notifications_outbox_as_text_and_html()
+    {
+        var (shop, _, receipt, customerEmail) = await SaleWithCustomerAsync();
+        var receiptId = Id(receipt);
+
+        // Without an address: the customer's email; the response does not echo the full address.
+        var sent = (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = (string?)null })).Expect(HttpStatusCode.Accepted).Json;
+        Assert.DoesNotContain(customerEmail, sent.ToJsonString());
+        Assert.StartsWith("k***@", sent["recipientMasked"]!.GetValue<string>());
+        var other = $"privat-{Scenario.UniqueSuffix()}@example.de";
+        (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = other })).Expect(HttpStatusCode.Accepted);
+        Assert.Equal("pos.receipt_email_invalid", (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = "kein-at" })).Code);
+
+        await ProcessEmailsUntilAsync(() => fixture.Emails.Sent.Any(e => e.To == customerEmail) && fixture.Emails.Sent.Any(e => e.To == other));
+        var mail = fixture.Emails.Sent.Single(e => e.To == customerEmail);
+        Assert.StartsWith($"Kassenbeleg Nr. {receipt["number"]}", mail.Subject);
+        Assert.Contains("29,99 €", mail.Body);
+        Assert.Contains("Rückgeld 0,01 €", mail.Body);
+        Assert.DoesNotContain("Erika", mail.Body); // no customer block in the e-receipt
+        var html = fixture.Emails.SentHtml.Single(e => e.To == customerEmail).Html;
+        Assert.Contains("mit Kabel &lt;b&gt;", html); // encoded
+        Assert.DoesNotContain("<b>", html);
+
+        // Recorded per receipt (address kept out of the audit log), at most 5 per receipt.
+        Assert.Equal(2L, await AsOwnerAsync<long>($"SELECT count(*) FROM pos.receipt_emails WHERE receipt_id = '{receiptId}'"));
+        Assert.Equal(0L, await AsOwnerAsync<long>($"SELECT count(*) FROM infra.audit_log WHERE changes::text LIKE '%{customerEmail}%'"));
+        for (var i = 0; i < 3; i++)
+            (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = other })).Expect(HttpStatusCode.Accepted);
+        Assert.Equal("pos.receipt_email_limit", (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = other })).Code);
+
+        // Another organization cannot email (or even see) the receipt.
+        var foreign = await PosShopAsync();
+        Assert.Equal(HttpStatusCode.NotFound, (await foreign.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = other })).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await foreign.PostAsync($"/api/pos/sales/{receiptId}/public-link")).Status);
+    }
+
+    [Fact]
+    public async Task Public_receipt_link_is_unguessable_read_only_without_customer_data_and_expires()
+    {
+        var (shop, _, receipt, _) = await SaleWithCustomerAsync();
+        Assert.Equal("Erika Mustermann", receipt["document"]!["customer"]!["name"]!.GetValue<string>());
+        var link = (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/public-link")).Expect(HttpStatusCode.Created).Json;
+        var token = link["token"]!.GetValue<string>();
+        Assert.Equal($"/beleg/{token}", link["path"]!.GetValue<string>());
+        Assert.True(DateTimeOffset.Parse(link["expiresAt"]!.GetValue<string>()) > DateTimeOffset.UtcNow.AddDays(80));
+
+        var anonymous = fixture.CreateClient();
+        var view = (await anonymous.GetAsync($"/api/public/receipts/{token}")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(receipt["number"]!.GetValue<long>(), view["document"]!["receiptNumber"]!.GetValue<long>());
+        Assert.Null(view["document"]!["customer"]);
+        Assert.DoesNotContain("Erika", view.ToJsonString());
+        Assert.False(view["cancelled"]!.GetValue<bool>());
+        // Only the hash is stored.
+        Assert.Equal(0L, await AsOwnerAsync<long>($"SELECT count(*) FROM pos.receipt_links WHERE token_hash = '{token}'"));
+
+        // Unknown, malformed and expired tokens look the same.
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/public/receipts/{OpaqueTokenLike()}")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync("/api/public/receipts/kurz")).Status);
+        await AsOwnerAsync<int>($"""
+            SET session_replication_role = replica;
+            UPDATE pos.receipt_links SET created_at = now() - interval '100 days', expires_at = now() - interval '1 second' WHERE receipt_id = '{Id(receipt)}';
+            SET session_replication_role = origin;
+            SELECT 1;
+            """);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/public/receipts/{token}")).Status);
+
+        // The app role cannot change or delete links, and only reaches other tenants' receipts through the function.
+        await using var app = new NpgsqlConnection(fixture.AppConnectionString);
+        await app.OpenAsync();
+        await using var delete = new NpgsqlCommand("DELETE FROM pos.receipt_links", app);
+        Assert.Equal("42501", (await Assert.ThrowsAsync<PostgresException>(() => delete.ExecuteNonQueryAsync())).SqlState);
+        await using var read = new NpgsqlCommand("SELECT count(*) FROM pos.receipt_links", app);
+        Assert.Equal(0L, (long)(await read.ExecuteScalarAsync())!); // no tenant set: RLS hides everything
+    }
+
+    private static string OpaqueTokenLike() => Convert.ToBase64String(Guid.NewGuid().ToByteArray().Concat(Guid.NewGuid().ToByteArray()).ToArray())
+        .TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     // ---- 1. product images on POS tiles ------------------------------------------------------------------------------------
 

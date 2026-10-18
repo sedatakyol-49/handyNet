@@ -37,18 +37,25 @@ public sealed class SmtpOptions
 public interface IEmailSender
 {
     Task SendAsync(string to, string subject, string body, CancellationToken ct);
+
+    /// <summary>With an optional HTML alternative; senders without HTML support send the plain text.</summary>
+    Task SendAsync(string to, string subject, string body, string? htmlBody, CancellationToken ct) => SendAsync(to, subject, body, ct);
 }
 
 internal sealed class SmtpEmailSender(IOptions<NotificationOptions> options) : IEmailSender
 {
-    public async Task SendAsync(string to, string subject, string body, CancellationToken ct)
+    public Task SendAsync(string to, string subject, string body, CancellationToken ct) => SendAsync(to, subject, body, null, ct);
+
+    public async Task SendAsync(string to, string subject, string body, string? htmlBody, CancellationToken ct)
     {
         var o = options.Value;
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(o.FromName, o.FromAddress));
         message.To.Add(MailboxAddress.Parse(to));
         message.Subject = subject;
-        message.Body = new TextPart("plain") { Text = body };
+        message.Body = htmlBody is null
+            ? new TextPart("plain") { Text = body }
+            : new BodyBuilder { TextBody = body, HtmlBody = htmlBody }.ToMessageBody();
 
         using var client = new SmtpClient();
         var security = Enum.TryParse<SecureSocketOptions>(o.Smtp.Security, true, out var parsed) ? parsed : SecureSocketOptions.Auto;
@@ -84,6 +91,7 @@ public sealed class NotificationsModel : IModuleModel
             b.Property(x => x.Recipient).HasMaxLength(320).IsRequired();
             b.Property(x => x.Subject).HasMaxLength(300).IsRequired();
             b.Property(x => x.Body).IsRequired();
+            b.Property(x => x.HtmlBody);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.LastError).HasMaxLength(2000);
             b.HasIndex(x => new { x.SourceId, x.Recipient }).IsUnique();

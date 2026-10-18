@@ -66,6 +66,39 @@ internal static class PosStaffAndDocumentsSql
             CREATE TRIGGER approvals_no_truncate BEFORE TRUNCATE ON pos.approvals
                 FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
             """);
+
+        // ---- E-receipts: email requests and public links are append-only records ----------------------------------------
+        foreach (var table in new[] { "receipt_emails", "receipt_links" })
+            m.Sql($"""
+                GRANT SELECT, INSERT ON pos.{table} TO handynet_app;
+                REVOKE UPDATE, DELETE, TRUNCATE ON pos.{table} FROM handynet_app;
+                ALTER TABLE pos.{table} ENABLE ROW LEVEL SECURITY;
+                CREATE POLICY tenant_isolation ON pos.{table}
+                    USING (organization_id = infra.current_org()) WITH CHECK (organization_id = infra.current_org());
+                CREATE TRIGGER {table}_immutable BEFORE UPDATE OR DELETE ON pos.{table}
+                    FOR EACH ROW EXECUTE FUNCTION pos.forbid_change();
+                CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON pos.{table}
+                    FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
+                """);
+
+        // Public, anonymous receipt view (QR): the only cross-tenant read path, by the SHA-256 of an unguessable token. Returns
+        // exactly one unexpired receipt document (the caller removes the customer block), nothing else.
+        m.Sql("""
+            CREATE FUNCTION pos.public_receipt(p_token_hash text)
+                RETURNS TABLE (document jsonb, cancelled boolean, expires_at timestamptz)
+                LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
+            AS $$
+                SELECT r.document,
+                       EXISTS (SELECT 1 FROM pos.receipts s WHERE s.referenced_receipt_id = r.id AND s.kind = 'Storno'),
+                       l.expires_at
+                FROM pos.receipt_links l
+                JOIN pos.receipts r ON r.id = l.receipt_id AND r.organization_id = l.organization_id
+                WHERE l.token_hash = p_token_hash AND l.expires_at > now()
+                LIMIT 1
+            $$;
+            REVOKE ALL ON FUNCTION pos.public_receipt(text) FROM PUBLIC;
+            GRANT EXECUTE ON FUNCTION pos.public_receipt(text) TO handynet_app;
+            """);
     }
 
     public static void Down(MigrationBuilder m)
@@ -77,6 +110,7 @@ internal static class PosStaffAndDocumentsSql
             DROP TRIGGER IF EXISTS approvals_guard ON pos.approvals;
             DROP TRIGGER IF EXISTS approvals_no_truncate ON pos.approvals;
             DROP FUNCTION IF EXISTS pos.guard_approval();
+            DROP FUNCTION IF EXISTS pos.public_receipt(text);
             """);
     }
 }

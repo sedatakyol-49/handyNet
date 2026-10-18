@@ -129,6 +129,14 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = builder.Configuration.GetValue("RateLimits:PosPinPerMinute", 20),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // Public receipt view (QR link, anonymous): per client IP and minute.
+    options.AddPolicy(PosModule.PublicReceiptRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:PublicReceiptsPerMinute", 30),
+            Window = TimeSpan.FromMinutes(1),
+        }));
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy

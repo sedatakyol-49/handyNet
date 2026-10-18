@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261018175009_PosStaffAndDocuments")]
+    [Migration("20261018175600_PosStaffAndDocuments")]
     partial class PosStaffAndDocuments
     {
         /// <inheritdoc />
@@ -2500,6 +2500,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("text")
+                        .HasColumnName("html_body");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -3642,6 +3646,44 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_emails");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_emails_organization_id_receipt_id");
+
+                    b.ToTable("receipt_emails", "pos");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
                 {
                     b.Property<Guid>("ReceiptId")
@@ -3745,6 +3787,56 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_receipt_lines_margin", "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_receipt_lines_quantity", "quantity <> 0 AND unit_price_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.HasKey("Id")
+                        .HasName("pk_receipt_links");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_receipt_links_token_hash");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_receipt_links_organization_id_receipt_id");
+
+                    b.ToTable("receipt_links", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_links_expiry", "expires_at > created_at");
                         });
                 });
 
@@ -4832,6 +4924,17 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_receipts_warehouses_organization_id_warehouse_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptEmail", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_emails_receipts_organization_id_receipt_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
                 {
                     b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
@@ -4854,6 +4957,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_receipt_lines_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLink", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_receipt_links_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptPayment", b =>
