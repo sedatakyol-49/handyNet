@@ -30,6 +30,12 @@ export class PageHeaderComponent {
   host: { class: 'block' },
   template: `
     <div class="px-4 py-10 text-center">
+      <span class="mx-auto mb-2 grid size-10 place-items-center rounded-full bg-slate-100 text-slate-400" aria-hidden="true">
+        <svg class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 7.5 10 4l7 3.5v5L10 16l-7-3.5v-5Z" stroke-linejoin="round" />
+          <path d="M3 7.5 10 11l7-3.5M10 11v5" stroke-linejoin="round" />
+        </svg>
+      </span>
       <p class="text-sm font-medium text-slate-800">{{ title() }}</p>
       @if (text()) {
         <p class="mt-1 text-sm text-slate-500">{{ text() }}</p>
@@ -41,6 +47,31 @@ export class PageHeaderComponent {
 export class EmptyStateComponent {
   readonly title = input.required<string>();
   readonly text = input<string | null>(null);
+}
+
+/**
+ * Placeholder rows while a list loads for the first time (no data yet). Put it in a full-width cell:
+ * `<tr class="hn-row-static"><td colspan="8"><hn-skeleton-rows /></td></tr>`. Static unless motion is allowed.
+ */
+@Component({
+  selector: 'hn-skeleton-rows',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block py-1', role: 'status', '[attr.aria-label]': 'label()' },
+  template: `
+    @for (r of rowList(); track $index) {
+      <div class="flex items-center gap-4 border-b border-slate-100 py-2.5 last:border-b-0" aria-hidden="true">
+        <span class="h-3 rounded bg-slate-200 motion-safe:animate-pulse" [style.width.%]="38 - ($index % 3) * 6"></span>
+        <span class="h-3 flex-1 rounded bg-slate-100 motion-safe:animate-pulse"></span>
+        <span class="h-3 w-16 rounded bg-slate-200 motion-safe:animate-pulse"></span>
+      </div>
+    }
+  `,
+})
+export class SkeletonRowsComponent {
+  private readonly i18n = inject(I18nService);
+  protected readonly label = computed(() => this.i18n.t('common.loading'));
+  readonly rows = input(5);
+  protected readonly rowList = computed(() => Array.from({ length: this.rows() }));
 }
 
 /** Inline error/warning/info banner. Pass an API error via `error` (shows the problem title). */
@@ -62,8 +93,14 @@ export class EmptyStateComponent {
           <ng-content />
         </div>
         @if (dismissible()) {
-          <button type="button" class="rounded px-1 text-current/70 hover:text-current" (click)="dismissed.emit()" [attr.aria-label]="'common.close' | t">
-            ✕
+          <button
+            type="button"
+            class="hn-icon-btn -my-1 -me-1 size-7 text-current/70 hover:bg-current/10 hover:text-current"
+            (click)="dismissed.emit()"
+            [attr.aria-label]="'common.close' | t"
+            [title]="'common.close' | t"
+          >
+            <span aria-hidden="true">✕</span>
           </button>
         }
       </div>
@@ -115,7 +152,7 @@ export class BannerComponent {
           [attr.role]="toast.kind === 'error' ? 'alert' : 'status'"
         >
           <p class="flex-1">{{ toast.text }}</p>
-          <button type="button" class="px-1 opacity-70 hover:opacity-100" (click)="toasts.dismiss(toast.id)" [attr.aria-label]="'common.close' | t">✕</button>
+          <button type="button" class="hn-icon-btn -my-1 -me-1 size-7 text-current/70 hover:bg-current/10 hover:text-current" (click)="toasts.dismiss(toast.id)" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t"><span aria-hidden="true">✕</span></button>
         </div>
       }
     </div>
@@ -140,9 +177,9 @@ export class ToastHostComponent {
       (cancel)="onCancel($event)"
       (close)="onNativeClose()"
     >
-      <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+      <div class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
         <h2 class="text-base" [id]="titleId">{{ title() }}</h2>
-        <button type="button" class="rounded px-1 text-slate-500 hover:text-slate-900" (click)="closed.emit()" [attr.aria-label]="'common.close' | t">✕</button>
+        <button type="button" class="hn-icon-btn -me-1" (click)="closed.emit()" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" data-testid="dialog-close"><span aria-hidden="true">✕</span></button>
       </div>
       <div class="px-4 py-4"><ng-content /></div>
     </dialog>

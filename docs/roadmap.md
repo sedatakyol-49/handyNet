@@ -69,6 +69,14 @@ against a real bucket, orphan-file cleanup job, gross price display (frontend).
   max delivery days, seller, compatible model ("passend für …"), "with images"; facet endpoint, active-filter chips,
   filters persisted in the URL, collapsible on mobile, supporting DB indexes. The requested "VKVK" filter was a typo for a
   Verkäufer (seller) filter (clarified 2026-10-17): seller multi-select with facet counts (`sellerId`).
+- ✅ **Platform moderation of marketplace offers** (requested 2026-10-18: "deactivate products directly — all products
+  of wholesaler A, or individual products"): admin tab "Marktplatz-Moderation" (`/api/admin/marketplace`). Seller list
+  with offer counts and "block all / lift block" (seller-level block, also covers offers created later), offer table
+  across all sellers (filters seller/brand/category/status/blocked/text, paging), single and bulk block/unblock (≤ 500,
+  all or nothing), optional reason, confirmation dialogs. Moderation is separate from the seller's own status: blocked
+  offers vanish from browse, facets, detail, cart refresh and ordering (`offer.blocked`, 409); the seller sees the block
+  and reason and cannot change the status of a blocked offer (domain rule + DB trigger). Every action is written to
+  `infra.audit_log` (admin, time, reason). Not yet: moderation history view, notifying the seller by email.
 
 ## Phase 2c — Standalone POS app, Odoo-POS parity (requested 2026-10-16)
 Benchmark: Odoo 18 Point of Sale. Restaurant-only features (tables, kitchen display, self-ordering, food delivery)

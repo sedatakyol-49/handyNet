@@ -273,6 +273,96 @@ export interface OwnOffer {
   onHand: number;
   reserved: number;
   updatedAt: string;
+  /** Platform moderation as the seller sees it. */
+  moderation: OfferModerationInfo;
+}
+
+/**
+ * `blockedBy`: 'offer' = this offer is blocked by the platform (its status is frozen until the block is lifted);
+ * 'seller' = the whole organization is blocked as a seller (all offers hidden, also new ones).
+ */
+export interface OfferModerationInfo {
+  blocked: boolean;
+  blockedBy: 'offer' | 'seller' | null;
+  reason: string | null;
+  blockedAt: string | null;
+}
+
+/** `GET /api/offers/moderation`: platform block of the current organization as a seller. */
+export interface OwnModeration {
+  sellerBlocked: boolean;
+  reason: string | null;
+  blockedAt: string | null;
+}
+
+// ---- platform moderation of marketplace offers (/api/admin/marketplace, no X-Organization-Id) ----
+
+export type ModerationStatus = 'None' | 'Blocked';
+
+export interface AdminModerationOffer {
+  offerId: string;
+  sellerOrganizationId: string;
+  sellerName: string;
+  sellerCity: string;
+  productId: string;
+  brand: string;
+  productName: string;
+  category: string;
+  ean: string | null;
+  mpn: string | null;
+  supplierSku: string;
+  priceMinor: number;
+  currency: string;
+  status: OfferStatus;
+  moderation: ModerationStatus;
+  moderationReason: string | null;
+  moderatedAt: string | null;
+  moderatedBy: string | null;
+  sellerBlocked: boolean;
+  sellerBlockReason: string | null;
+  /** Hidden by the platform: the offer itself or its whole seller is blocked. */
+  blocked: boolean;
+  blockedBy: 'offer' | 'seller' | null;
+  updatedAt: string;
+}
+
+export interface AdminModerationSeller {
+  organizationId: string;
+  name: string;
+  city: string;
+  verification: string;
+  /** Offers that are not archived. */
+  offerCount: number;
+  publishedCount: number;
+  /** Offers blocked individually (independent of the seller block). */
+  blockedOfferCount: number;
+  blocked: boolean;
+  blockReason: string | null;
+  blockChangedAt: string | null;
+  blockChangedBy: string | null;
+}
+
+export interface AdminModerationQuery {
+  sellerId?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  status?: OfferStatus | null;
+  blocked?: boolean | null;
+  search?: string | null;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BulkModerationResult {
+  requested: number;
+  /** Offers actually changed; already blocked/unblocked ones stay as they are. */
+  changed: number;
+  offers: AdminModerationOffer[];
+}
+
+export interface SellerModerationResult {
+  seller: AdminModerationSeller;
+  changed: boolean;
 }
 
 export interface CreateOfferRequest {

@@ -32,7 +32,7 @@ import { UI } from '../../shared/ui';
             <th scope="col">{{ 'team.since' | t }}</th>
             @if (hasPos()) {
               <th scope="col">{{ 'team.posRights.column' | t }}</th>
-              <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+              <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
             }
           </tr>
         </thead>
@@ -65,7 +65,7 @@ import { UI } from '../../shared/ui';
                     {{ (pin?.lockedUntil ? 'team.pin.locked' : pin?.hasPin ? 'team.pin.set' : 'team.pin.none') | t }}
                   </span>
                 </td>
-                <td class="text-end whitespace-nowrap">
+                <td class="hn-actions">
                   @if (configurable(s.role)) {
                     <button hnButton type="button" (click)="openRights(s)" [attr.aria-label]="'team.posRights.editFor' | t: { name: s.displayName }" data-testid="team-pos-edit">{{ 'team.posRights.edit' | t }}</button>
                   }

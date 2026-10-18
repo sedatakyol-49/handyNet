@@ -81,6 +81,12 @@ import {
   MarketplaceFacets,
   OfferDetail,
   ProductImage,
+  AdminModerationOffer,
+  AdminModerationQuery,
+  AdminModerationSeller,
+  BulkModerationResult,
+  OwnModeration,
+  SellerModerationResult,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -231,6 +237,56 @@ export class OffersApi {
 
   update(id: string, body: UpdateOfferRequest): Observable<OwnOffer> {
     return this.http.put<OwnOffer>(`${this.url}/${id}`, body);
+  }
+
+  /** Whether the platform blocks the current organization as a seller (all offers hidden). */
+  moderation(): Observable<OwnModeration> {
+    return this.http.get<OwnModeration>(`${this.url}/moderation`);
+  }
+}
+
+/**
+ * Platform moderation of marketplace offers (no X-Organization-Id): hide single offers, a selection or all offers of a
+ * seller. Independent of the seller's own offer status; every action is audited with the optional reason.
+ */
+@Injectable({ providedIn: 'root' })
+export class AdminModerationApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/admin/marketplace`;
+
+  offers(q: AdminModerationQuery): Observable<Paged<AdminModerationOffer>> {
+    return this.http.get<Paged<AdminModerationOffer>>(`${this.url}/offers`, { params: queryParams(q) });
+  }
+
+  sellers(search?: string | null): Observable<AdminModerationSeller[]> {
+    return this.http.get<AdminModerationSeller[]>(`${this.url}/sellers`, { params: queryParams({ search }) });
+  }
+
+  blockOffer(id: string, reason: string | null): Observable<AdminModerationOffer> {
+    return this.http.post<AdminModerationOffer>(`${this.url}/offers/${id}/block`, { reason });
+  }
+
+  unblockOffer(id: string, reason: string | null): Observable<AdminModerationOffer> {
+    return this.http.post<AdminModerationOffer>(`${this.url}/offers/${id}/unblock`, { reason });
+  }
+
+  /** All or nothing: 404 `moderation.offer_not_found` if any id is unknown. At most 500 ids. */
+  blockOffers(offerIds: string[], reason: string | null): Observable<BulkModerationResult> {
+    return this.http.post<BulkModerationResult>(`${this.url}/offers/block`, { offerIds, reason });
+  }
+
+  unblockOffers(offerIds: string[], reason: string | null): Observable<BulkModerationResult> {
+    return this.http.post<BulkModerationResult>(`${this.url}/offers/unblock`, { offerIds, reason });
+  }
+
+  /** Hides all offers of the seller, including offers created while the block lasts. */
+  blockSeller(organizationId: string, reason: string | null): Observable<SellerModerationResult> {
+    return this.http.post<SellerModerationResult>(`${this.url}/sellers/${organizationId}/block`, { reason });
+  }
+
+  unblockSeller(organizationId: string, reason: string | null): Observable<SellerModerationResult> {
+    return this.http.post<SellerModerationResult>(`${this.url}/sellers/${organizationId}/unblock`, { reason });
   }
 }
 

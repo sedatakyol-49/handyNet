@@ -89,7 +89,11 @@ export class CartPage {
       // Network errors / 5xx: the order may or may not exist → keep the key so a retry is idempotent.
       if (problem.status >= 400 && problem.status < 500) this.cart.resetCheckoutKey(sellerId);
       let message: string | null = null;
-      if (problem.code && REFRESH_CODES.includes(problem.code)) {
+      if (problem.code === 'offer.blocked') {
+        // Removed from the marketplace by the platform: the listing is gone, so the line is marked unavailable.
+        await this.refreshGroup(group);
+        message = this.i18n.t('moderation.cart.blocked');
+      } else if (problem.code && REFRESH_CODES.includes(problem.code)) {
         await this.refreshGroup(group);
         message = this.i18n.t(`cart.conflict.${problem.code.replace('order.', '')}`);
       } else if (problem.status === 0 || problem.status >= 500) {

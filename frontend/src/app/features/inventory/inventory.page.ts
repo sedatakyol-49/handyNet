@@ -30,6 +30,8 @@ export class InventoryPage {
   protected readonly warehouseId = signal('');
   protected readonly stockPage = signal(1);
   protected readonly movementPage = signal(1);
+  /** Row last worked on (adjusted or its movements opened); highlighted as the selected row. */
+  protected readonly activeRow = signal<string | null>(null);
   protected readonly movementProduct = signal<{ id: string; label: string } | null>(null);
   protected readonly pageSize = 50;
 
@@ -71,7 +73,21 @@ export class InventoryPage {
     this.stockPage.set(1);
   }
 
+  /** Tabs keyboard pattern: arrow keys / Home / End move between the two tabs. */
+  protected onTabKey(event: KeyboardEvent): void {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 'stock' : event.key === 'End' ? 'movements' : this.tab() === 'stock' ? 'movements' : 'stock';
+    this.tab.set(next);
+    (event.currentTarget as HTMLElement).ownerDocument.getElementById(next === 'stock' ? 'tab-stock' : 'tab-movements')?.focus();
+  }
+
+  protected rowKey(row: StockRow): string {
+    return row.warehouseId + ':' + row.productId;
+  }
+
   protected showMovements(row: StockRow): void {
+    this.activeRow.set(this.rowKey(row));
     this.movementProduct.set({ id: row.productId, label: `${row.brand} ${row.productName}` });
     this.movementPage.set(1);
     this.tab.set('movements');
@@ -83,6 +99,7 @@ export class InventoryPage {
   }
 
   protected openAdjust(row: StockRow): void {
+    this.activeRow.set(this.rowKey(row));
     this.adjustment = { delta: 0, reason: '' };
     this.adjustProblem.set(null);
     this.adjusting.set(row);

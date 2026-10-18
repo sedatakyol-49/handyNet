@@ -134,8 +134,8 @@
       @for (c of chips(); track c.kind + ':' + c.value) {
         <li class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white py-0.5 ps-2.5 pe-1 text-xs">
           {{ chipLabel(c) }}
-          <button type="button" class="rounded-full px-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            (click)="removeChip(c)" [attr.aria-label]="'marketplace.filters.remove' | t: { filter: chipLabel(c) }" data-testid="chip-remove">✕</button>
+          <button type="button" class="inline-grid size-6 place-items-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-900 active:bg-slate-300"
+            (click)="removeChip(c)" [attr.aria-label]="'marketplace.filters.remove' | t: { filter: chipLabel(c) }" [title]="'marketplace.filters.remove' | t: { filter: chipLabel(c) }" data-testid="chip-remove">✕</button>
         </li>
       }
     </ul>
@@ -163,14 +163,14 @@
         <th scope="col" class="num">{{ 'marketplace.available' | t }}</th>
         <th scope="col" class="num">{{ 'marketplace.delivery' | t }}</th>
         <th scope="col" class="num">{{ 'marketplace.moq' | t }}</th>
-        <th scope="col"><span class="sr-only">{{ 'marketplace.addToCart' | t }}</span></th>
+        <th scope="col" class="hn-actions"><span class="sr-only">{{ 'marketplace.addToCart' | t }}</span></th>
       </tr>
     </thead>
     <tbody>
       @for (l of results.value()?.items ?? []; track l.offerId) {
         <tr
-          class="cursor-pointer focus-visible:bg-accent-50"
           tabindex="0"
+          [class.hn-row-selected]="offerId() === l.offerId"
           (click)="onRowClick($event, l)"
           (keydown)="onRowKeydown($event, l)"
           [attr.data-offer]="l.offerId"
@@ -183,8 +183,8 @@
               <span class="block size-10 rounded border border-dashed border-slate-200 bg-slate-50" aria-hidden="true"></span>
             }
           </td>
-          <td class="min-w-56">
-            <button type="button" class="text-start font-medium hover:underline" (click)="openOffer(l)" data-testid="offer-open">
+          <td class="min-w-48">
+            <button type="button" class="text-start font-medium hover:text-accent-800 hover:underline" (click)="openOffer(l)" data-testid="offer-open">
               {{ l.brand }} {{ l.productName }}
             </button>
             <span class="block text-xs text-slate-500">
@@ -196,14 +196,14 @@
           </td>
           <td class="whitespace-nowrap">{{ l.quality | tEnum: 'quality' }}</td>
           <td class="whitespace-nowrap">{{ l.condition | tEnum: 'condition' }}</td>
-          <td class="whitespace-nowrap">
+          <td class="min-w-32 max-w-48">
             {{ l.sellerName }}<span class="block text-xs text-slate-500">{{ l.sellerCity }}</span>
           </td>
           <td class="num font-semibold">{{ l.priceMinor | money: l.currency }}</td>
           <td class="num" [class.text-red-700]="l.available < l.minOrderQuantity">{{ l.available }}</td>
           <td class="num">{{ 'marketplace.days' | t: { days: l.deliveryDays } }}</td>
           <td class="num">{{ l.minOrderQuantity }}</td>
-          <td class="cursor-default whitespace-nowrap" data-row-ignore (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+          <td class="hn-actions cursor-default text-start" data-row-ignore (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
             @if (isOwn(l)) {
               <span class="text-xs text-slate-500">{{ 'marketplace.ownOffer' | t }}</span>
             } @else if (canOrder(l)) {

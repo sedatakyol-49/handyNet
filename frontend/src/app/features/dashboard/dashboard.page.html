@@ -61,7 +61,7 @@
           <ul class="mb-4 grid gap-2 sm:grid-cols-3">
             @for (c of counters(); track c.labelKey) {
               <li>
-                <a [routerLink]="c.link" [queryParams]="c.queryParams" class="block rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                <a [routerLink]="c.link" [queryParams]="c.queryParams" class="block rounded-md border border-slate-200 px-3 py-2 hover:border-slate-300 hover:bg-slate-100">
                   <span class="block text-xs text-slate-500">{{ c.labelKey | t }}</span>
                   <span class="text-lg font-semibold tabular-nums">{{ c.value ?? '–' }}</span>
                 </a>
@@ -72,7 +72,7 @@
         <ul class="grid gap-2 sm:grid-cols-2">
           @for (link of quickLinks(); track link.path) {
             <li>
-              <a [routerLink]="link.path" class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50">
+              <a [routerLink]="link.path" class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:border-slate-300 hover:bg-slate-100">
                 <span class="font-medium">{{ link.labelKey | t }}</span>
                 <span aria-hidden="true" class="text-slate-400 rtl:rotate-180">→</span>
               </a>

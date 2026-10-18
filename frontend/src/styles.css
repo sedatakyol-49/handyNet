@@ -7,6 +7,7 @@
   --color-accent-600: #1d4ed8;
   --color-accent-700: #1e40af;
   --color-accent-800: #1e3a8a;
+  --color-accent-900: #172554;
 }
 
 @layer base {
@@ -23,14 +24,37 @@
   h1, h2, h3 {
     @apply font-semibold tracking-tight text-slate-900;
   }
+  /*
+   * Tailwind v4's preflight resets buttons to the default arrow cursor. Everything the user can activate shows the
+   * hand cursor again; disabled controls show "not-allowed".
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input:is([type="checkbox"], [type="radio"], [type="file"]):not(:disabled),
+  label:has(> input:is([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @layer components {
   /* Form controls (applied by hnInput / hnSelect host classes) */
   .hn-control {
     @apply block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-xs placeholder:text-slate-400;
-    @apply focus:border-accent-600 focus:outline-2 focus:outline-offset-0 focus:outline-accent-600/30;
+    @apply enabled:hover:border-slate-400;
+    @apply focus:border-accent-600 focus:outline-2 focus:outline-offset-0 focus:outline-accent-600/30 focus:hover:border-accent-600;
     @apply disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  /* Buttons styled as controls (multi-select trigger) get the same hover/open feedback as a select. */
+  button.hn-control {
+    @apply hover:bg-slate-50 aria-expanded:border-accent-600;
   }
   .hn-control[aria-invalid="true"] {
     @apply border-red-500 focus:border-red-600 focus:outline-red-600/30;
@@ -39,18 +63,98 @@
     @apply size-4 rounded border-slate-300 text-accent-600 accent-accent-600;
   }
 
+  /*
+   * Icon-only buttons (close ✕, remove, more): a square hit area with a visible hover/pressed background. Always give
+   * them an aria-label and a title (tooltip).
+   */
+  .hn-icon-btn {
+    @apply inline-grid size-8 shrink-0 place-items-center rounded-md text-slate-500;
+    @apply hover:bg-slate-200/70 hover:text-slate-900 active:bg-slate-300/70;
+    @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent;
+  }
+
+  /* Segmented tabs (role="tablist" > role="tab" with aria-selected). */
+  .hn-tabs {
+    @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-md border border-slate-300 bg-white p-0.5 text-sm;
+  }
+  .hn-tab {
+    @apply rounded px-3 py-1 whitespace-nowrap text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200;
+    @apply focus-visible:outline-offset-0;
+    &[aria-selected="true"] {
+      @apply bg-slate-900 font-medium text-white hover:bg-slate-900 hover:text-white;
+    }
+  }
+
   /* Dense data table */
   .hn-table {
     @apply w-full border-collapse text-sm;
   }
   .hn-table thead th {
-    @apply sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-slate-600;
+    @apply sticky top-0 z-[2] border-b border-slate-200 bg-slate-50 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-slate-600;
   }
   .hn-table tbody td {
     @apply border-b border-slate-100 px-3 py-1.5 align-middle;
   }
+  /* Every row shows where the pointer is; rows that open something (click/Enter) are tinted and get the hand. */
   .hn-table tbody tr:hover {
-    @apply bg-slate-50;
+    @apply bg-slate-100;
+  }
+  .hn-table tbody tr:is([tabindex], .hn-row-link) {
+    @apply cursor-pointer;
+  }
+  .hn-table tbody tr:is([tabindex], .hn-row-link):hover {
+    @apply bg-accent-50;
+  }
+  .hn-table tbody tr:focus-visible {
+    @apply bg-accent-50 outline-2 -outline-offset-2 outline-accent-600;
+  }
+  /* Selected / current row: tint plus a bar on the start edge. */
+  .hn-table tbody tr:is(.hn-row-selected, [aria-selected="true"]) {
+    @apply bg-accent-50;
+  }
+  .hn-table tbody tr:is(.hn-row-selected, [aria-selected="true"]) > :first-child {
+    box-shadow: inset 3px 0 0 var(--color-accent-600);
+  }
+  [dir="rtl"] .hn-table tbody tr:is(.hn-row-selected, [aria-selected="true"]) > :first-child {
+    box-shadow: inset -3px 0 0 var(--color-accent-600);
+  }
+  /* Rows without hover feedback (e.g. the empty state or a nested form). */
+  .hn-table tbody tr:is(.hn-row-static, :has(hn-empty-state, hn-skeleton-rows)):hover {
+    @apply bg-transparent;
+  }
+  /*
+   * Action column: from tablet width on it stays visible at the end edge when a wide table scrolls horizontally, so
+   * row buttons are never cut off (on phones it scrolls with the row, the product column needs the room). Its
+   * background follows the row state.
+   */
+  .hn-table :is(td, th).hn-actions {
+    @apply text-end whitespace-nowrap;
+  }
+  @media (width >= 48rem) {
+    .hn-table :is(td, th).hn-actions {
+      @apply sticky end-0 z-[1];
+    }
+    .hn-table thead th.hn-actions {
+      @apply z-[3];
+    }
+    .hn-table tbody td.hn-actions {
+      @apply bg-white;
+      box-shadow: -1px 0 0 var(--color-slate-200);
+    }
+    [dir="rtl"] .hn-table tbody td.hn-actions {
+      box-shadow: 1px 0 0 var(--color-slate-200);
+    }
+    .hn-table tbody tr:hover > td.hn-actions {
+      @apply bg-slate-100;
+    }
+    .hn-table tbody tr:is([tabindex], .hn-row-link):hover > td.hn-actions,
+    .hn-table tbody tr:focus-visible > td.hn-actions,
+    .hn-table tbody tr:is(.hn-row-selected, [aria-selected="true"]) > td.hn-actions {
+      @apply bg-accent-50;
+    }
+  }
+  .hn-table .hn-actions-inner {
+    @apply inline-flex items-center justify-end gap-1;
   }
   .hn-table tfoot th,
   .hn-table tfoot td {
@@ -64,6 +168,15 @@
   }
   .hn-table thead th.num {
     @apply text-end;
+  }
+
+  /* Side navigation: clear hover, current page tinted with a bar on the start edge. */
+  .hn-nav-link {
+    @apply flex items-center justify-between rounded-md border-s-[3px] border-transparent py-1.5 ps-[5px] pe-2 text-sm text-slate-700;
+    @apply hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200;
+  }
+  .hn-nav-link.hn-nav-active {
+    @apply border-accent-600 bg-accent-50 font-semibold text-accent-800 hover:bg-accent-100;
   }
 
   .hn-card {
@@ -301,6 +414,7 @@
   --color-accent-600: var(--pos-accent);
   --color-accent-700: var(--pos-accent);
   --color-accent-800: var(--pos-pay-hover);
+  --color-accent-900: var(--pos-accent-text);
   --color-slate-50: #f7f9fa;
   --color-slate-100: #eef2f3;
   --color-slate-200: #dde3e6;

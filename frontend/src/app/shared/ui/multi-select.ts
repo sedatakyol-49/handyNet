@@ -34,7 +34,7 @@ export interface MultiSelectOption {
       (click)="toggle()"
     >
       <span class="truncate" [class.text-slate-500]="selected().length === 0">{{ summary() }}</span>
-      <span aria-hidden="true" class="text-xs text-slate-500">▾</span>
+      <span aria-hidden="true" class="text-xs text-slate-500" [class.rotate-180]="open()">▾</span>
     </button>
     @if (open()) {
       <div
@@ -59,7 +59,7 @@ export interface MultiSelectOption {
           </div>
         }
         @for (o of visible(); track o.value) {
-          <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+          <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-100 has-checked:bg-accent-50 has-checked:hover:bg-accent-100 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-accent-600">
             <input type="checkbox" class="hn-checkbox" [checked]="isSelected(o.value)" (change)="setValue(o.value, $any($event.target).checked)" />
             <span class="min-w-0 flex-1 break-words">
               {{ o.label }}
@@ -76,7 +76,7 @@ export interface MultiSelectOption {
         }
         @if (selected().length > 0) {
           <div class="border-t border-slate-100 p-1">
-            <button type="button" class="rounded px-2 py-1 text-xs text-slate-700 underline hover:text-slate-900" (click)="clear()">
+            <button type="button" class="rounded px-2 py-1 text-xs text-accent-700 underline hover:bg-accent-50 hover:text-accent-800" (click)="clear()">
               {{ 'common.clearSelection' | t }}
             </button>
           </div>
