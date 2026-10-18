@@ -20,6 +20,7 @@ using HandyNet.Modules.Tenancy;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel.Tenancy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -70,6 +71,12 @@ builder.Services
     .AddAnkaufModule(builder.Configuration, builder.Environment)
     .AddPosModule(builder.Configuration, builder.Environment)
     .AddInvoicingModule(builder.Configuration);
+
+// Data Protection encrypts secrets at rest (fiscal credentials, simulated TSE keys). The key ring must be persisted and
+// shared by all instances in production (DataProtection:KeysPath, e.g. a Docker volume); see docs/operations.md.
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("HandyNet");
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
 // POS fallback price from the own marketplace offer: composed here because POS must not depend on Marketplace.
 builder.Services.Replace(ServiceDescriptor.Scoped<HandyNet.Modules.Pos.Contracts.IOfferPriceSource, HandyNet.Api.Composition.PosOfferPriceSource>());

@@ -469,6 +469,20 @@
       "moderation.too_many_offers": "Слишком много предложений для одного действия.",
       "moderation.reason_too_long": "Причина слишком длинная.",
       "moderation.tenant_header": "Модерация вызывается без контекста компании.",
+      "pos.fiscal_disabled_in_production": "Без TSE касса не может использоваться в реальной работе.",
+      "pos.fiscal_simulated_not_allowed": "Тестовая TSE не допускается в реальной работе.",
+      "pos.fiscal_configuration_incomplete": "TSE настроена не полностью (нет ID TSS и учётных данных).",
+      "pos.export_range": "Выберите корректный период (от ≤ до, не более 366 дней).",
+      "pos.fiscal_algorithm": "Этот алгоритм подписи не поддерживается.",
+      "pos.fiscal_client_id": "Недопустимый ID клиента (1–64 символа, без ; и ^; только для касс).",
+      "pos.fiscal_credential_reference": "Недопустимая ссылка на учётные данные.",
+      "pos.fiscal_environment": "Среда fiskaly — Sandbox или Production.",
+      "pos.fiscal_failure_rate": "Доля ошибок должна быть от 0 до 100 %.",
+      "pos.fiscal_latency": "Задержка должна быть от 0 до 30000 мс.",
+      "pos.fiscal_mode_required": "Для компании нужен фискальный режим.",
+      "pos.fiscal_register_scope": "TSS, учётные данные и алгоритм задаются для компании, а не для кассы.",
+      "pos.fiskaly_conflict": "fiskaly сообщил о конфликте. Повторите попытку.",
+      "pos.outage_ended": "Сбой TSE уже завершён.",
       "pos.pin_invalid": "Неверный PIN.",
       "pos.pin_locked": "Слишком много неверных PIN — PIN заблокирован на 15 минут. Владелец может задать новый.",
       "pos.pin_not_set": "У этого сотрудника нет PIN кассы.",
@@ -1061,7 +1075,8 @@
       "disputes": "Рекламации",
       "ankauf": "Цены скупки",
       "invoices": "Счета за комиссию",
-      "moderation": "Модерация маркетплейса"
+      "moderation": "Модерация маркетплейса",
+      "fiscal": "Кассы и TSE"
     },
     "disputes": {
       "subtitle": "Проверка и решение рекламаций, переданных в HandyNet.",
@@ -1088,6 +1103,69 @@
       "decidedRefund": "Решение: полный возврат средств.",
       "decidedNoRefund": "Решение: без возврата средств.",
       "notEscalated": "Эта рекламация не находится (или больше не находится) на рассмотрении HandyNet."
+    },
+    "fiscal": {
+      "subtitle": "Фискальный режим (TSE) по компании и кассе, поведение тестовой TSE, статус TSE и сбои.",
+      "disclaimer": "Тестовая TSE симулирована и не сертифицирована – не для реальной работы. Адаптер fiskaly не проверен на реальном сервисе. Не проверено налоговым консультантом.",
+      "organizations": "Компании с модулем кассы",
+      "registerCount": "Касс: {count}",
+      "outageCount": "Сбоев: {count}",
+      "noOrganizations": "Компании с модулем кассы не найдены.",
+      "choose": "Выберите",
+      "effectiveMode": "Действующий режим",
+      "source": {
+        "Register": "касса",
+        "Organization": "компания",
+        "Default": "по умолчанию (конфигурация)",
+        "None": "не настроено"
+      },
+      "simulatedRefusedInProduction": "В производственной среде тестовая TSE заблокирована (только с явным разрешением для staging).",
+      "mode": "Фискальный режим",
+      "algorithm": "Алгоритм подписи",
+      "algorithmHint": "Применяется к новой тестовой TSE; затем не меняется.",
+      "latency": "Искусственная задержка (мс)",
+      "failureRate": "Доля ошибок (%)",
+      "forcedOutage": "Принудительный сбой TSE",
+      "fiskalyUnverified": "Адаптер fiskaly: не проверен на реальном сервисе. Учётные данные хранятся зашифрованными и никогда не показываются.",
+      "tssId": "ID TSS (UUID)",
+      "environment": "Среда",
+      "credentialReference": "Ссылка на учётные данные",
+      "credentialReferenceHint": "Имя в Pos:Fiskaly:Credentials в конфигурации сервера (секреты).",
+      "credentialsStored": "Зашифрованные учётные данные сохранены.",
+      "credentialsMissing": "Учётные данные не сохранены.",
+      "apiKey": "API-ключ (задать заново)",
+      "apiSecret": "API-секрет (задать заново)",
+      "clearCredentials": "Удалить сохранённые учётные данные",
+      "tseStatus": "Статус тестовой TSE",
+      "transactionCounter": "Счётчик транзакций",
+      "signatureCounter": "Счётчик подписей",
+      "publicKey": "Открытый ключ",
+      "lastSignature": "Последняя транзакция",
+      "registers": "Кассы",
+      "register": "Касса",
+      "behaviour": "Поведение",
+      "behaviourSummary": "задержка {latency} мс, ошибок {rate} %",
+      "noRegisters": "Касс пока нет.",
+      "overrideFor": "Настройка для кассы {name}",
+      "inheritHint": "Пустые поля берут настройку компании.",
+      "inherit": "Как у компании",
+      "clientIdHint": "Пусто = ID кассы. Для fiskaly – UUID клиента.",
+      "yes": "Да",
+      "no": "Нет",
+      "outages": "Сбои TSE",
+      "outageStart": "Начало",
+      "outageEnd": "Конец",
+      "reason": "Причина",
+      "ongoing": "продолжается",
+      "noOutages": "Сбоев нет.",
+      "saved": "Фискальные настройки для {name} сохранены.",
+      "validation": {
+        "modeRequired": "Выберите фискальный режим.",
+        "latency": "От 0 до 30000 мс.",
+        "failureRate": "От 0 до 100 %.",
+        "uuid": "Введите корректный UUID.",
+        "credentialsPair": "Введите API-ключ и секрет вместе."
+      }
     }
   },
   "moduleHelp": {
@@ -2385,6 +2463,26 @@
       "reportForbidden": "У вас нет права на этот отчёт.",
       "manageOnly": "Только для владельцев и менеджеров (управление кассами)."
     },
+    "tse": {
+      "blockTitle": "Данные TSE",
+      "testLabel": "Тестовая TSE – не для реальной работы",
+      "clientId": "Серийный № кассы (клиент)",
+      "algorithm": "Алгоритм подписи",
+      "outageMarker": "Сбой устройства безопасности (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "QR-код с данными TSE",
+      "serial": "Серийный номер TSE",
+      "state": {
+        "Ok": "TSE активна",
+        "Test": "Тестовая TSE",
+        "Outage": "Сбой TSE",
+        "Disabled": "Без TSE",
+        "NotConfigured": "Нет TSE",
+        "Refused": "TSE заблокирована"
+      },
+      "outageTitle": "Сбой TSE.",
+      "outageText": "Продажи продолжаются; чеки получают отметку «Sicherheitseinrichtung ausgefallen», сбой регистрируется.",
+      "outageSince": "с"
+    },
     "cashier": {
       "switch": "Сменить кассира",
       "member": "Сотрудник",
@@ -2649,5 +2747,11 @@
     "cart": {
       "blocked": "Платформа удалила предложение с маркетплейса. Пожалуйста, удалите его из корзины."
     }
+  },
+  "fiscalMode": {
+    "Disabled": "Без TSE (тестовый режим)",
+    "SimulatedTse": "Тестовая TSE (симуляция)",
+    "FiskalyCloudTse": "Облачная TSE fiskaly",
+    "None": "Не настроено"
   }
 }

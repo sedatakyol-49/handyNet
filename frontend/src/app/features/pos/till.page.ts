@@ -29,6 +29,7 @@ import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { CashCounts, countTotal, toDenominations } from './cash-count';
 import { posErrorText } from './pos-error';
+import { PosFiscalStatus } from './pos-fiscal-status';
 import { PosCashCountComponent } from './pos-cash-count';
 import { PosContext } from './pos-context';
 import { customerSummary } from './customer-form';
@@ -118,6 +119,7 @@ export class TillPage {
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
   protected readonly ctx = inject(PosContext);
+  private readonly fiscalStatus = inject(PosFiscalStatus, { optional: true });
 
   readonly registerId = input.required<string>();
 
@@ -721,6 +723,7 @@ export class TillPage {
       const receipt = await firstValueFrom(this.api.sell(body, attempt.key));
       this.lastPrices.remember(Object.fromEntries(body.lines.filter((l) => l.productId).map((l) => [l.productId!, l.unitPriceMinor])));
       this.lastReceipt.set(receipt);
+      void this.fiscalStatus?.refresh(); // a signed receipt ends a TSE outage; a failed one starts it
       this.finishOrder(order.id);
       this.screen.set('receipt');
       this.sessionQuery.reload();

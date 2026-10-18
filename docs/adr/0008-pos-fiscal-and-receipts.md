@@ -70,6 +70,10 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
 
 ### Fiscal signer (KassenSichV)
 
+> **Update 2026-10-18:** extended by [ADR-0012](0012-fiscal-layer.md) — fiscal mode per organization/register
+> (Disabled, simulated test TSE, fiskaly), outage handling, signed cash movements/closings, QR code, DSFinV-K export.
+> The text below describes the original state.
+
 - `IFiscalSigner` (start transaction → finish transaction with totals per VAT treatment and payment → `FiscalData`)
   is called inside the receipt transaction; all fiscal columns on the receipt are nullable.
 - Only a `Disabled` test signer exists. It marks receipts "TSE nicht angebunden – Testbetrieb" and produces **no

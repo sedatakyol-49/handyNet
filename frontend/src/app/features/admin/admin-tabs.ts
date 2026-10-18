@@ -31,5 +31,6 @@ export class AdminTabsComponent {
     { path: '/app/administration/marktplatz', labelKey: 'admin.tabs.moderation', exact: false },
     { path: '/app/administration/ankauf', labelKey: 'admin.tabs.ankauf', exact: false },
     { path: '/app/administration/rechnungen', labelKey: 'admin.tabs.invoices', exact: false },
+    { path: '/app/administration/kassen-tse', labelKey: 'admin.tabs.fiscal', exact: false },
   ];
 }

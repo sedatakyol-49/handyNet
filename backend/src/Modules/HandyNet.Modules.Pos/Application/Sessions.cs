@@ -229,7 +229,7 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
 }
 
 internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IUserAccounts users, IClock clock,
-    ApprovalService approvals)
+    FiscalSealer fiscal, ApprovalService approvals)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
@@ -313,6 +313,12 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
             request.ReasonCode);
         if (!movement.IsSuccess)
             return movement.Error!;
+        // KassenSichV: cash in/out is a signed "SonstigerVorgang" (TSE outage does not block it; see FiscalSealer).
+        if (await approvals.LockAsync(actor, ct) is { } movementApproval)
+            return movementApproval;
+        await fiscal.SignOtherAsync(session.RegisterId, session.Id, FiscalRecordKind.CashMovement, movement.Value.Id,
+            KassenSichV.OtherProcessData(movement.Value.Kind == CashMovementKind.Deposit ? "Einlage" : "Entnahme",
+                movement.Value.ReasonCode?.ToString(), movement.Value.AmountMinor), ct);
         db.Add(movement.Value);
         await db.SaveChangesAsync(ct);
         if (await approvals.ConsumeAsync(actor, ApprovalUse.CashMovement, null, movement.Value.Id, null, ct) is { } approvalError)
@@ -346,6 +352,10 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         var closed = session.Close(summary, count.Value.AmountMinor, request.Note, actor.UserId, clock.UtcNow, count.Value.Counts);
         if (!closed.IsSuccess)
             return closed.Error!;
+        if (await approvals.LockAsync(actor, ct) is { } closingApproval)
+            return closingApproval;
+        await fiscal.SignOtherAsync(session.RegisterId, session.Id, FiscalRecordKind.SessionClosing, session.Id,
+            KassenSichV.OtherProcessData("Kassenabschluss", $"{summary.ReceiptCount} Belege", summary.TotalGrossMinor), ct);
         try
         {
             await db.SaveChangesAsync(ct);

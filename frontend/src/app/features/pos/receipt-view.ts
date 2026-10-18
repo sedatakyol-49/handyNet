@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { ReceiptDocument } from '../../core/api/models';
 import { UI } from '../../shared/ui';
+import { hasTseBlock, shortSignature } from './fiscal.logic';
+import { QrCodeComponent } from './qr-code';
 
 /**
  * The receipt exactly as issued (the API's stored document). Marked `hn-print-area`: when printed, only this block is
@@ -8,7 +10,7 @@ import { UI } from '../../shared/ui';
  */
 @Component({
   selector: 'hn-receipt-view',
-  imports: [...UI],
+  imports: [...UI, QrCodeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -152,15 +154,47 @@ import { UI } from '../../shared/ui';
         <p class="mb-1 border-t border-dashed border-slate-400 pt-1" data-testid="receipt-note">{{ n }}</p>
       }
 
-      @if (d.fiscal.status === 'Signed') {
-        <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-2 border-t border-dashed border-slate-400 pt-1 break-all" data-testid="receipt-tse">
-          <dt>{{ 'pos.receipt.tseSerial' | t }}</dt><dd>{{ d.fiscal.tseSerialNumber }}</dd>
-          <dt>{{ 'pos.receipt.tseTransaction' | t }}</dt><dd>{{ d.fiscal.transactionNumber }}</dd>
-          <dt>{{ 'pos.receipt.tseCounter' | t }}</dt><dd>{{ d.fiscal.signatureCounter }}</dd>
-          <dt>{{ 'pos.receipt.tseStart' | t }}</dt><dd>{{ d.fiscal.startedAt | hnDate }}</dd>
-          <dt>{{ 'pos.receipt.tseEnd' | t }}</dt><dd>{{ d.fiscal.finishedAt | hnDate }}</dd>
-          <dt>{{ 'pos.receipt.tseSignature' | t }}</dt><dd>{{ d.fiscal.signature }}</dd>
-        </dl>
+      @if (tseBlock()) {
+        <section class="mt-2 border-t border-dashed border-slate-400 pt-1" [attr.aria-label]="'pos.tse.blockTitle' | t" data-testid="receipt-tse">
+          <p class="font-semibold">{{ 'pos.tse.blockTitle' | t }}</p>
+          @if (d.fiscal.isTest) {
+            <p class="my-1 border border-slate-900 px-1 text-center font-bold" data-testid="receipt-tse-test">{{ 'pos.tse.testLabel' | t }}</p>
+          }
+          <dl class="grid grid-cols-[auto_1fr] gap-x-2 break-all">
+            @if (d.fiscal.tseSerialNumber) {
+              <dt>{{ 'pos.receipt.tseSerial' | t }}</dt><dd data-testid="receipt-tse-serial">{{ d.fiscal.tseSerialNumber }}</dd>
+            }
+            @if (d.fiscal.clientId) {
+              <dt>{{ 'pos.tse.clientId' | t }}</dt><dd>{{ d.fiscal.clientId }}</dd>
+            }
+            @if (d.fiscal.transactionNumber !== null) {
+              <dt>{{ 'pos.receipt.tseTransaction' | t }}</dt><dd data-testid="receipt-tse-transaction">{{ d.fiscal.transactionNumber }}</dd>
+            }
+            @if (d.fiscal.signatureCounter !== null) {
+              <dt>{{ 'pos.receipt.tseCounter' | t }}</dt><dd data-testid="receipt-tse-counter">{{ d.fiscal.signatureCounter }}</dd>
+            }
+            @if (d.fiscal.startedAt) {
+              <dt>{{ 'pos.receipt.tseStart' | t }}</dt><dd>{{ d.fiscal.startedAt | hnDate }}</dd>
+            }
+            @if (d.fiscal.finishedAt) {
+              <dt>{{ 'pos.receipt.tseEnd' | t }}</dt><dd>{{ d.fiscal.finishedAt | hnDate }}</dd>
+            }
+            @if (d.fiscal.signatureAlgorithm) {
+              <dt>{{ 'pos.tse.algorithm' | t }}</dt><dd>{{ d.fiscal.signatureAlgorithm }}</dd>
+            }
+            @if (d.fiscal.signature) {
+              <dt>{{ 'pos.receipt.tseSignature' | t }}</dt><dd data-testid="receipt-tse-signature" [attr.title]="d.fiscal.signature">{{ signature() }}</dd>
+            }
+          </dl>
+          @if (d.fiscal.status === 'Failed') {
+            <p class="mt-1 font-bold" data-testid="receipt-tse-outage">{{ 'pos.tse.outageMarker' | t }}</p>
+          }
+          @if (d.fiscal.qrPayload) {
+            <div class="mt-2 flex justify-center">
+              <hn-qr-code [data]="d.fiscal.qrPayload" [label]="'pos.tse.qrLabel' | t" [sizePx]="144" />
+            </div>
+          }
+        </section>
       }
     </article>
   `,
@@ -172,6 +206,8 @@ export class ReceiptViewComponent {
   /** Copy number of a recorded reprint ("Kopie n"); null for the original. */
   readonly copy = input<number | null>(null);
   /** Notes printed below the totals; the fiscal notice is shown prominently at the top instead of repeated here. */
+  protected readonly tseBlock = computed(() => hasTseBlock(this.doc().fiscal));
+  protected readonly signature = computed(() => shortSignature(this.doc().fiscal.signature));
   protected readonly notes = computed(() => {
     const d = this.doc();
     return d.notes.filter((n) => n !== d.fiscal.notice);

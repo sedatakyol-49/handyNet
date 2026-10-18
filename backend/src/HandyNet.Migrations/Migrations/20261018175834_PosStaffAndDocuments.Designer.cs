@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261018175600_PosStaffAndDocuments")]
+    [Migration("20261018175834_PosStaffAndDocuments")]
     partial class PosStaffAndDocuments
     {
         /// <inheritdoc />
@@ -3313,6 +3313,233 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("customers", "pos");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("FiskalyApiKeyProtected")
+                        .HasColumnType("text")
+                        .HasColumnName("fiskaly_api_key_protected");
+
+                    b.Property<string>("FiskalyApiSecretProtected")
+                        .HasColumnType("text")
+                        .HasColumnName("fiskaly_api_secret_protected");
+
+                    b.Property<string>("FiskalyCredentialReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("fiskaly_credential_reference");
+
+                    b.Property<string>("FiskalyEnvironment")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fiskaly_environment");
+
+                    b.Property<Guid?>("FiskalyTssId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiskaly_tss_id");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("mode");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid?>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<string>("SimulatedAlgorithm")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("simulated_algorithm");
+
+                    b.Property<int?>("SimulatedFailureRatePercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("simulated_failure_rate_percent");
+
+                    b.Property<int?>("SimulatedLatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("simulated_latency_ms");
+
+                    b.Property<bool?>("SimulatedOutage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("simulated_outage");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fiscal_configurations");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_fiscal_configurations_scope");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("OrganizationId", "RegisterId"), false);
+
+                    b.ToTable("fiscal_configurations", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_fiscal_configurations_fiskaly_environment", "fiskaly_environment IS NULL OR fiskaly_environment IN ('Sandbox', 'Production')");
+
+                            t.HasCheckConstraint("ck_fiscal_configurations_org_mode", "register_id IS NOT NULL OR mode IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_fiscal_configurations_simulated", "(simulated_latency_ms IS NULL OR simulated_latency_ms BETWEEN 0 AND 30000) AND (simulated_failure_rate_percent IS NULL OR simulated_failure_rate_percent BETWEEN 0 AND 100)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalOutage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("mode");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fiscal_outages");
+
+                    b.HasIndex("RegisterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_fiscal_outages_one_open_per_register")
+                        .HasFilter("ended_at IS NULL");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_fiscal_outages_organization_id_register_id");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_fiscal_outages_organization_id_session_id");
+
+                    b.HasIndex("OrganizationId", "StartedAt")
+                        .HasDatabaseName("ix_fiscal_outages_organization_id_started_at");
+
+                    b.ToTable("fiscal_outages", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_fiscal_outages_period", "ended_at IS NULL OR ended_at >= started_at");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reference_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<long?>("SignatureCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("signature_counter");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<long?>("TransactionNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fiscal_records");
+
+                    b.HasIndex("Kind", "ReferenceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fiscal_records_kind_reference_id");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_fiscal_records_organization_id_register_id");
+
+                    b.HasIndex("OrganizationId", "SessionId")
+                        .HasDatabaseName("ix_fiscal_records_organization_id_session_id");
+
+                    b.ToTable("fiscal_records", "pos");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3499,19 +3726,63 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("document");
 
+                    b.Property<string>("FiscalClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fiscal_client_id");
+
+                    b.Property<string>("FiscalError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("fiscal_error");
+
                     b.Property<DateTimeOffset?>("FiscalFinishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fiscal_finished_at");
+
+                    b.Property<bool?>("FiscalIsTest")
+                        .HasColumnType("boolean")
+                        .HasColumnName("fiscal_is_test");
+
+                    b.Property<string>("FiscalMode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fiscal_mode");
 
                     b.Property<string>("FiscalNotice")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("fiscal_notice");
 
+                    b.Property<string>("FiscalProcessData")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("fiscal_process_data");
+
+                    b.Property<string>("FiscalProcessType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fiscal_process_type");
+
+                    b.Property<string>("FiscalPublicKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("fiscal_public_key");
+
+                    b.Property<string>("FiscalQrPayload")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("fiscal_qr_payload");
+
                     b.Property<string>("FiscalSignature")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("fiscal_signature");
+
+                    b.Property<string>("FiscalSignatureAlgorithm")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("fiscal_signature_algorithm");
 
                     b.Property<long?>("FiscalSignatureCounter")
                         .HasColumnType("bigint")
@@ -3526,6 +3797,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("fiscal_status");
+
+                    b.Property<string>("FiscalTimeFormat")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fiscal_time_format");
 
                     b.Property<long?>("FiscalTransactionNumber")
                         .HasColumnType("bigint")
@@ -3979,6 +4255,172 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_registers_auto_lock", "auto_lock_minutes BETWEEN 1 AND 240");
 
                             t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SimulatedTse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("ProtectedPrivateKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("protected_private_key");
+
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("public_key");
+
+                    b.Property<string>("SerialNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("SignatureAlgorithm")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("signature_algorithm");
+
+                    b.Property<long>("SignatureCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("signature_counter");
+
+                    b.Property<string>("TimeFormat")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("time_format");
+
+                    b.Property<long>("TransactionCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_counter");
+
+                    b.HasKey("Id")
+                        .HasName("pk_simulated_tses");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_simulated_tses_organization_id_id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_simulated_tses_organization_id");
+
+                    b.HasIndex("SerialNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_simulated_tses_serial_number");
+
+                    b.ToTable("simulated_tses", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_simulated_tses_counters", "transaction_counter >= 0 AND signature_counter >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SimulatedTseTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("ProcessData")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("process_data");
+
+                    b.Property<string>("ProcessType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("process_type");
+
+                    b.Property<string>("Signature")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("signature");
+
+                    b.Property<long?>("SignatureCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("signature_counter");
+
+                    b.Property<string>("StartSignature")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("start_signature");
+
+                    b.Property<long>("StartSignatureCounter")
+                        .HasColumnType("bigint")
+                        .HasColumnName("start_signature_counter");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("TransactionKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transaction_key");
+
+                    b.Property<Guid>("TseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_simulated_tse_transactions");
+
+                    b.HasIndex("OrganizationId", "TseId")
+                        .HasDatabaseName("ix_simulated_tse_transactions_organization_id_tse_id");
+
+                    b.HasIndex("TseId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_simulated_tse_transactions_tse_id_number");
+
+                    b.HasIndex("TseId", "TransactionKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_simulated_tse_transactions_tse_id_transaction_key");
+
+                    b.ToTable("simulated_tse_transactions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_simulated_tse_transactions_finished", "state = 'Active' OR (finished_at IS NOT NULL AND process_type IS NOT NULL AND process_data IS NOT NULL AND signature IS NOT NULL AND signature_counter > start_signature_counter)");
+
+                            t.HasCheckConstraint("ck_simulated_tse_transactions_number", "number >= 1 AND start_signature_counter >= 1");
                         });
                 });
 
@@ -4835,6 +5277,53 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_cashier_sessions_registers_organization_id_register_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalConfiguration", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_fiscal_configurations_registers_organization_id_register_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalOutage", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fiscal_outages_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_fiscal_outages_cash_sessions_organization_id_session_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalRecord", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fiscal_records_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SessionId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fiscal_records_cash_sessions_organization_id_session_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
                 {
                     b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
@@ -5001,6 +5490,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_registers_warehouses_organization_id_warehouse_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SimulatedTseTransaction", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SimulatedTse", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "TseId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_simulated_tse_transactions_simulated_tses_organization_id_t");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Shipping.Domain.Shipment", b =>

@@ -156,6 +156,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin-invoices.page').then((m) => m.AdminInvoicesPage),
       },
       {
+        path: 'administration/kassen-tse',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/admin-fiscal.page').then((m) => m.AdminFiscalPage),
+      },
+      {
         path: 'administration/reklamationen/:id',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/admin-dispute-detail.page').then((m) => m.AdminDisputeDetailPage),

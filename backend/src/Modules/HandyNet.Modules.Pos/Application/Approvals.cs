@@ -99,6 +99,21 @@ internal sealed class ApprovalService(
     }
 
     /// <summary>
+    /// Locks the presented approval (if any) in the current transaction and checks it is still usable — called before the
+    /// TSE signs, so a concurrent second use is refused before anything is signed. <see cref="ConsumeAsync"/> then uses it.
+    /// </summary>
+    public async Task<Error?> LockAsync(PosActor actor, CancellationToken ct)
+    {
+        if (actor.Approval is not { } presented)
+            return null;
+        var rows = await db.Set<PosApproval>()
+            .FromSql($"SELECT *, xmin FROM pos.approvals WHERE id = {presented.Id} AND organization_id = {OrganizationId} FOR UPDATE").ToListAsync(ct);
+        return rows.FirstOrDefault() is { } approval && approval.IsUsable(clock.UtcNow)
+            ? null
+            : Error.Conflict("pos.approval_used", "This approval was already used or has expired. Ask for a new approval.");
+    }
+
+    /// <summary>
     /// Uses the presented approval (if any) for the record written in the current transaction; the row is locked, so a
     /// concurrent second use fails and its transaction must roll back.
     /// </summary>

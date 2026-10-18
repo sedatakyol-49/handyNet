@@ -469,6 +469,20 @@
       "moderation.too_many_offers": "Tek bir işlem için çok fazla teklif.",
       "moderation.reason_too_long": "Gerekçe çok uzun.",
       "moderation.tenant_header": "Moderasyon şirket bağlamı olmadan çağrılır.",
+      "pos.fiscal_disabled_in_production": "TSE olmadan kasa gerçek işletimde kullanılamaz.",
+      "pos.fiscal_simulated_not_allowed": "Test TSE gerçek işletimde kullanılamaz.",
+      "pos.fiscal_configuration_incomplete": "TSE tam olarak ayarlanmadı (TSS kimliği ve erişim bilgileri eksik).",
+      "pos.export_range": "Geçerli bir dönem seçin (başlangıç ≤ bitiş, en fazla 366 gün).",
+      "pos.fiscal_algorithm": "Bu imza algoritması desteklenmiyor.",
+      "pos.fiscal_client_id": "İstemci kimliği geçersiz (1–64 karakter, ; ve ^ olmadan; yalnızca kasalar için).",
+      "pos.fiscal_credential_reference": "Erişim bilgisi referansı geçersiz.",
+      "pos.fiscal_environment": "fiskaly ortamı Sandbox veya Production olmalıdır.",
+      "pos.fiscal_failure_rate": "Hata oranı %0 ile %100 arasında olmalıdır.",
+      "pos.fiscal_latency": "Gecikme 0 ile 30000 ms arasında olmalıdır.",
+      "pos.fiscal_mode_required": "İşletme için bir mali mod gereklidir.",
+      "pos.fiscal_register_scope": "TSS, erişim bilgileri ve algoritma kasa başına değil, işletme için belirlenir.",
+      "pos.fiskaly_conflict": "fiskaly bir çakışma bildirdi. Lütfen tekrar deneyin.",
+      "pos.outage_ended": "TSE arızası zaten sona erdi.",
       "pos.pin_invalid": "PIN hatalı.",
       "pos.pin_locked": "Çok fazla hatalı PIN – PIN 15 dakika kilitli. Sahip yeni PIN belirleyebilir.",
       "pos.pin_not_set": "Bu çalışanın kasa PIN’i yok.",
@@ -1061,7 +1075,8 @@
       "disputes": "Şikâyetler",
       "ankauf": "Geri alım fiyatları",
       "invoices": "Komisyon faturaları",
-      "moderation": "Pazar yeri moderasyonu"
+      "moderation": "Pazar yeri moderasyonu",
+      "fiscal": "Kasalar ve TSE"
     },
     "disputes": {
       "subtitle": "HandyNet'e devredilen şikâyetleri inceleyin ve karara bağlayın.",
@@ -1088,6 +1103,69 @@
       "decidedRefund": "Karar: tam iade.",
       "decidedNoRefund": "Karar: iade yok.",
       "notEscalated": "Bu şikâyet karar için HandyNet'te değil (artık değil)."
+    },
+    "fiscal": {
+      "subtitle": "İşletme ve kasa başına mali mod (TSE), test TSE davranışı, TSE durumu ve arızalar.",
+      "disclaimer": "Test TSE simüledir ve sertifikalı değildir – gerçek işletim için değildir. fiskaly adaptörü gerçek hizmete karşı doğrulanmamıştır. Vergi danışmanınca incelenmemiştir.",
+      "organizations": "Kasa modülü olan işletmeler",
+      "registerCount": "{count} kasa",
+      "outageCount": "{count} arıza",
+      "noOrganizations": "Kasa modülü olan işletme bulunamadı.",
+      "choose": "Lütfen seçin",
+      "effectiveMode": "Geçerli mod",
+      "source": {
+        "Register": "kasa",
+        "Organization": "işletme",
+        "Default": "varsayılan (yapılandırma)",
+        "None": "ayarlanmadı"
+      },
+      "simulatedRefusedInProduction": "Üretim ortamında test TSE engellidir (yalnızca açık staging izniyle).",
+      "mode": "Mali mod",
+      "algorithm": "İmza algoritması",
+      "algorithmHint": "Yeni oluşturulan test TSE için geçerlidir; sonra değiştirilemez.",
+      "latency": "Yapay gecikme (ms)",
+      "failureRate": "Hata oranı (%)",
+      "forcedOutage": "TSE arızasını zorla",
+      "fiskalyUnverified": "fiskaly adaptörü: gerçek hizmete karşı doğrulanmadı. Erişim bilgileri şifreli saklanır ve asla gösterilmez.",
+      "tssId": "TSS kimliği (UUID)",
+      "environment": "Ortam",
+      "credentialReference": "Erişim bilgisi referansı",
+      "credentialReferenceHint": "Sunucu yapılandırmasında Pos:Fiskaly:Credentials altındaki ad (gizli bilgiler).",
+      "credentialsStored": "Şifreli erişim bilgileri kayıtlı.",
+      "credentialsMissing": "Erişim bilgisi kayıtlı değil.",
+      "apiKey": "API anahtarı (yeniden ayarla)",
+      "apiSecret": "API gizli anahtarı (yeniden ayarla)",
+      "clearCredentials": "Kayıtlı erişim bilgilerini sil",
+      "tseStatus": "Test TSE durumu",
+      "transactionCounter": "İşlem sayacı",
+      "signatureCounter": "İmza sayacı",
+      "publicKey": "Açık anahtar",
+      "lastSignature": "Son işlem",
+      "registers": "Kasalar",
+      "register": "Kasa",
+      "behaviour": "Davranış",
+      "behaviourSummary": "{latency} ms gecikme, %{rate} hata",
+      "noRegisters": "Henüz kasa yok.",
+      "overrideFor": "{name} kasası için ayar",
+      "inheritHint": "Boş alanlar işletme ayarını kullanır.",
+      "inherit": "İşletme ayarını kullan",
+      "clientIdHint": "Boş = kasa kimliği. fiskaly için bir istemci UUID’si.",
+      "yes": "Evet",
+      "no": "Hayır",
+      "outages": "TSE arızaları",
+      "outageStart": "Başlangıç",
+      "outageEnd": "Bitiş",
+      "reason": "Neden",
+      "ongoing": "devam ediyor",
+      "noOutages": "Arıza yok.",
+      "saved": "{name} için mali ayarlar kaydedildi.",
+      "validation": {
+        "modeRequired": "Lütfen bir mali mod seçin.",
+        "latency": "0 ile 30000 ms arası.",
+        "failureRate": "%0 ile %100 arası.",
+        "uuid": "Lütfen geçerli bir UUID girin.",
+        "credentialsPair": "API anahtarını ve gizli anahtarı birlikte girin."
+      }
     }
   },
   "moduleHelp": {
@@ -2385,6 +2463,26 @@
       "reportForbidden": "Bu raporu görme yetkiniz yok.",
       "manageOnly": "Yalnızca sahipler ve yöneticiler (kasa yönetimi)."
     },
+    "tse": {
+      "blockTitle": "TSE verileri",
+      "testLabel": "Test TSE – gerçek işletim için değil",
+      "clientId": "Kasa seri no. (istemci)",
+      "algorithm": "İmza algoritması",
+      "outageMarker": "Güvenlik cihazı arızalı (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "TSE verilerini içeren QR kod",
+      "serial": "TSE seri numarası",
+      "state": {
+        "Ok": "TSE etkin",
+        "Test": "Deneme TSE",
+        "Outage": "TSE arızalı",
+        "Disabled": "TSE yok",
+        "NotConfigured": "TSE yok",
+        "Refused": "TSE engelli"
+      },
+      "outageTitle": "TSE arızalı.",
+      "outageText": "Satışlar devam eder; fişlere \"Sicherheitseinrichtung ausgefallen\" notu eklenir ve arıza kaydedilir.",
+      "outageSince": "şu tarihten beri:"
+    },
     "cashier": {
       "switch": "Kasiyer değiştir",
       "member": "Çalışan",
@@ -2649,5 +2747,11 @@
     "cart": {
       "blocked": "Bir teklif platform tarafından pazar yerinden kaldırıldı. Lütfen sepetten çıkarın."
     }
+  },
+  "fiscalMode": {
+    "Disabled": "TSE yok (test işletimi)",
+    "SimulatedTse": "Test TSE (simüle)",
+    "FiskalyCloudTse": "fiskaly bulut TSE",
+    "None": "Ayarlanmadı"
   }
 }
