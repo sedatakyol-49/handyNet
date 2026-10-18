@@ -32,7 +32,7 @@ import { UI } from '../../shared/ui';
             <th scope="col">{{ 'team.since' | t }}</th>
             @if (hasPos()) {
               <th scope="col">{{ 'team.posRights.column' | t }}</th>
-              <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+              <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
             }
           </tr>
         </thead>
@@ -61,7 +61,7 @@ import { UI } from '../../shared/ui';
                     <span class="mt-0.5 block text-slate-600">{{ 'team.posRights.maxDiscountShort' | t: { percent: s.maxDiscountPercent ?? 100 } }}</span>
                   }
                 </td>
-                <td class="text-end">
+                <td class="hn-actions">
                   @if (configurable(s.role)) {
                     <button hnButton type="button" (click)="openRights(s)" [attr.aria-label]="'team.posRights.editFor' | t: { name: s.displayName }" data-testid="team-pos-edit">{{ 'team.posRights.edit' | t }}</button>
                   }

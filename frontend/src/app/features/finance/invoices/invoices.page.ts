@@ -39,7 +39,7 @@ import { formatBillingMonth, formatDateOnly } from './invoice.logic';
             <th scope="col" class="num">{{ 'invoices.net' | t }}</th>
             <th scope="col" class="num">{{ 'invoices.vat' | t }}</th>
             <th scope="col" class="num">{{ 'invoices.gross' | t }}</th>
-            <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+            <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -62,7 +62,7 @@ import { formatBillingMonth, formatDateOnly } from './invoice.logic';
               <td class="num"><bdi dir="ltr">{{ i.totalNetMinor | money: i.currency }}</bdi></td>
               <td class="num"><bdi dir="ltr">{{ i.totalVatMinor | money: i.currency }}</bdi></td>
               <td class="num font-medium"><bdi dir="ltr">{{ i.totalGrossMinor | money: i.currency }}</bdi></td>
-              <td class="text-end whitespace-nowrap">
+              <td class="hn-actions">
                 <button hnButton size="sm" type="button" [loading]="pdf.busyId() === i.id" [disabled]="!!pdf.busyId()" (click)="pdf.download(i)"
                   [attr.aria-label]="'invoices.downloadPdfLabel' | t: { number: i.number }" data-testid="invoice-pdf">
                   {{ 'invoices.pdf' | t }}
