@@ -375,7 +375,17 @@
       "image.limit_reached": "Ein Artikel kann höchstens 8 Bilder haben.",
       "image.not_found": "Das Bild wurde nicht gefunden.",
       "image.order_mismatch": "Die Bilder wurden zwischenzeitlich geändert. Bitte laden Sie die Ansicht neu.",
-      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut."
+      "image.concurrent": "Die Bilder dieses Artikels wurden gleichzeitig geändert. Bitte versuchen Sie es erneut.",
+      "pos.pin_invalid": "Die PIN ist falsch.",
+      "pos.pin_locked": "Zu viele falsche PINs – die PIN ist für 15 Minuten gesperrt. Der Inhaber kann eine neue PIN setzen.",
+      "pos.pin_not_set": "Für diesen Mitarbeiter ist keine Kassen-PIN gesetzt.",
+      "pos.pin_format": "Die PIN muss aus 4 bis 6 Ziffern bestehen.",
+      "pos.pin_too_simple": "Diese PIN ist zu leicht zu erraten (gleiche Ziffern oder Folge wie 1234).",
+      "pos.password_invalid": "Das Passwort ist nicht korrekt.",
+      "pos.cashier_invalid": "Die Kassierer-Anmeldung ist beendet (gesperrt, abgelaufen oder inaktiv). Bitte PIN erneut eingeben.",
+      "pos.cashier_register_mismatch": "Der Kassierer ist an einer anderen Kasse angemeldet. Bitte an dieser Kasse anmelden.",
+      "pos.cashier_not_found": "Dieser Mitarbeiter kann nicht kassieren.",
+      "pos.auto_lock_minutes": "Die automatische Sperre muss zwischen 1 und 240 Minuten liegen (0 = aus)."
     }
   },
   "dashboard": {
@@ -907,6 +917,21 @@
         "cashMovement": "Bargeld in die Kasse einlegen oder entnehmen.",
         "closeSession": "Tagesabschluss und Sitzungsbericht."
       }
+    },
+    "pin": {
+      "locked": "PIN gesperrt",
+      "set": "Kassen-PIN gesetzt",
+      "none": "Keine Kassen-PIN",
+      "edit": "PIN",
+      "editFor": "Kassen-PIN für {name}",
+      "title": "Kassen-PIN: {name}",
+      "text": "Mit der PIN wechselt der Mitarbeiter an einer gemeinsam genutzten Kasse auf sich (Belege tragen seinen Namen, seine Rechte gelten); Inhaber und Manager geben damit Aktionen frei. Eine neue PIN hebt eine Sperre auf.",
+      "pin": "Neue PIN",
+      "hint": "4–6 Ziffern, keine Folgen wie 1234 oder 0000.",
+      "clear": "PIN entfernen",
+      "invalid": "Bitte 4 bis 6 Ziffern eingeben.",
+      "saved": "Kassen-PIN für {name} gespeichert.",
+      "cleared": "Kassen-PIN von {name} entfernt."
     }
   },
   "admin": {
@@ -1851,7 +1876,12 @@
       "renameTitle": "Kasse umbenennen",
       "toggleTitle": "Status der Kasse ändern",
       "deactivateText": "Kasse „{name}“ deaktivieren? An einer deaktivierten Kasse kann nicht verkauft werden. Eine offene Sitzung muss vorher abgeschlossen werden.",
-      "activateText": "Kasse „{name}“ wieder aktivieren?"
+      "activateText": "Kasse „{name}“ wieder aktivieren?",
+      "settings": "Einstellungen",
+      "settingsTitle": "Kasse bearbeiten",
+      "autoLock": "Automatisch sperren nach (Minuten)",
+      "autoLockHint": "0 = aus. Nach so vielen Minuten ohne Eingabe braucht der Kassierer seine PIN erneut (höchstens 240).",
+      "autoLockInvalid": "Bitte 0 bis 240 Minuten eingeben."
     },
     "till": {
       "title": "Kasse {name}",
@@ -2246,6 +2276,34 @@
       "closeForbidden": "Den Kassenabschluss darf nur ein Mitarbeiter mit dem Recht „Kasse abschließen“ durchführen.",
       "reportForbidden": "Für diesen Bericht fehlt Ihnen das Recht.",
       "manageOnly": "Nur für Inhaber und Manager (Kasse verwalten)."
+    },
+    "cashier": {
+      "switch": "Kassierer wechseln",
+      "member": "Mitarbeiter",
+      "locked": "Gesperrt (zu viele Fehlversuche)",
+      "digits": "{count} Ziffern eingegeben",
+      "pinPad": "PIN-Eingabe",
+      "device": "Gerät angemeldet als {name}",
+      "lock": "Kasse sperren",
+      "lockedTitle": "Kasse gesperrt",
+      "lockedHint": "Zum Weiterarbeiten Mitarbeiter wählen und PIN eingeben.",
+      "signIn": "Anmelden",
+      "nobody": "Noch niemand hat eine Kassen-PIN. Der Inhaber kann PINs im Team festlegen, jeder Mitarbeiter unter „Konto & Sicherheit“.",
+      "signedIn": "Kasse arbeitet jetzt als {name}.",
+      "wrongPin": "PIN falsch. Noch {count} Versuche bis zur Sperre."
+    },
+    "pinSettings": {
+      "title": "Kassen-PIN",
+      "text": "Damit melden Sie sich an einer gemeinsam genutzten Kasse an („Kassierer wechseln“) und geben als Inhaber/Manager Aktionen frei.",
+      "locked": "Ihre PIN ist nach zu vielen Fehlversuchen gesperrt. Setzen Sie eine neue PIN.",
+      "isSet": "Sie haben eine Kassen-PIN.",
+      "notSet": "Sie haben noch keine Kassen-PIN.",
+      "pin": "Neue PIN",
+      "confirm": "PIN wiederholen",
+      "mismatch": "Die beiden PINs stimmen nicht überein.",
+      "passwordRequired": "Bitte zur Bestätigung Ihr Passwort eingeben.",
+      "saved": "Kassen-PIN gespeichert.",
+      "cleared": "Kassen-PIN entfernt."
     }
   },
   "invoiceKind": {

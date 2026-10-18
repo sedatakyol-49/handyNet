@@ -21,6 +21,7 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
 import { PosCustomer, PosLookup, PosPaymentMethod, PosPrice, PosProduct, Receipt } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
+import { PosCashierStore } from './pos-cashier.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { formatMoney } from '../../core/format/money';
@@ -112,6 +113,7 @@ type Screen = 'products' | 'payment' | 'receipt';
 export class TillPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
+  protected readonly cashiers = inject(PosCashierStore);
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
@@ -125,7 +127,7 @@ export class TillPage {
   protected readonly itemCount = orderItemCount;
   protected readonly hasInventory = computed(() => this.store.hasModule('Inventory'));
   /** Per-cashier rights (price override, discount limit, …) of the selected membership. */
-  protected readonly rights = computed(() => posRights(this.store.membership()));
+  protected readonly rights = computed(() => posRights(this.cashiers.membership()));
   protected readonly canDiscount = computed(() => canGiveDiscount(this.rights()));
   protected readonly noteMax = POS_LIMITS.lineNoteLength;
   protected readonly customerSummary = customerSummary;

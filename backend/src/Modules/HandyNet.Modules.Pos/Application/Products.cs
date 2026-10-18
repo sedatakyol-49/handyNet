@@ -86,7 +86,7 @@ internal sealed class PriceResolver(HandyNetDbContext db, ITenantContext tenant,
     }
 }
 
-internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IProductCatalog catalog, PriceResolver prices,
+internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IProductCatalog catalog, PriceResolver prices,
     IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
@@ -177,14 +177,14 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         var existing = await db.Set<PosPrice>().FirstOrDefaultAsync(p => p.OrganizationId == OrganizationId && p.ProductId == productId, ct);
         if (existing is null)
         {
-            var created = PosPrice.Create(OrganizationId, productId, request.PriceMinor, currentUser.UserId, clock.UtcNow);
+            var created = PosPrice.Create(OrganizationId, productId, request.PriceMinor, actor.UserId, clock.UtcNow);
             if (!created.IsSuccess)
                 return created.Error!;
             db.Add(created.Value);
         }
         else
         {
-            var changed = existing.Change(request.PriceMinor, currentUser.UserId, clock.UtcNow);
+            var changed = existing.Change(request.PriceMinor, actor.UserId, clock.UtcNow);
             if (!changed.IsSuccess)
                 return changed.Error!;
         }

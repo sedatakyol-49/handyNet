@@ -120,6 +120,15 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = builder.Configuration.GetValue("RateLimits:AccountEmailsPerHour", 10),
             Window = TimeSpan.FromHours(1),
         }));
+    // POS PIN entry (cashier switch, manager approval, own PIN with password): per signed-in device user and minute; the
+    // PIN itself also locks after 5 wrong entries (CashierPin).
+    options.AddPolicy(PosModule.PinRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:PosPinPerMinute", 20),
+            Window = TimeSpan.FromMinutes(1),
+        }));
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy

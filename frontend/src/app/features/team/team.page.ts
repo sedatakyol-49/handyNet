@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
-import { OrganizationApi } from '../../core/api/handynet-api';
-import { POS_CONFIGURABLE_PERMISSIONS, PosConfigurablePermission, StaffMember, StaffRole } from '../../core/api/models';
+import { OrganizationApi, PosApi } from '../../core/api/handynet-api';
+import { POS_CONFIGURABLE_PERMISSIONS, PosConfigurablePermission, PosPinStatus, StaffMember, StaffRole } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { PosRightsForm, effectivePosRights, posRightsConfigurable, posRightsKey, rightsFormFromStaff, rightsRequestFromForm } from '../pos/pos-rights';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -60,11 +60,16 @@ import { UI } from '../../shared/ui';
                     </span>
                     <span class="mt-0.5 block text-slate-600">{{ 'team.posRights.maxDiscountShort' | t: { percent: s.maxDiscountPercent ?? 100 } }}</span>
                   }
+                  @let pin = pinOf(s.userId);
+                  <span class="mt-0.5 block" [class]="pin?.lockedUntil ? 'font-semibold text-red-700' : 'text-slate-600'" data-testid="team-pin-status">
+                    {{ (pin?.lockedUntil ? 'team.pin.locked' : pin?.hasPin ? 'team.pin.set' : 'team.pin.none') | t }}
+                  </span>
                 </td>
-                <td class="text-end">
+                <td class="text-end whitespace-nowrap">
                   @if (configurable(s.role)) {
                     <button hnButton type="button" (click)="openRights(s)" [attr.aria-label]="'team.posRights.editFor' | t: { name: s.displayName }" data-testid="team-pos-edit">{{ 'team.posRights.edit' | t }}</button>
                   }
+                  <button hnButton type="button" class="ms-1" (click)="openPin(s)" [attr.aria-label]="'team.pin.editFor' | t: { name: s.displayName }" data-testid="team-pin-edit">{{ 'team.pin.edit' | t }}</button>
                 </td>
               }
             </tr>
@@ -104,6 +109,26 @@ import { UI } from '../../shared/ui';
           <div class="flex justify-end gap-2">
             <button hnButton type="button" (click)="rightsFor.set(null)">{{ 'common.cancel' | t }}</button>
             <button hnButton variant="primary" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="team-pos-save">{{ 'common.save' | t }}</button>
+          </div>
+        </form>
+      }
+    </hn-dialog>
+
+    <hn-dialog [open]="!!pinFor()" [title]="'team.pin.title' | t: { name: pinFor()?.displayName ?? '' }" (closed)="pinFor.set(null)">
+      @if (pinFor(); as member) {
+        <form class="space-y-4" (submit)="$event.preventDefault(); savePin(member, pinInput())" novalidate data-testid="team-pin-form">
+          <p class="text-sm text-slate-600">{{ 'team.pin.text' | t }}</p>
+          <hn-field [label]="'team.pin.pin' | t" for="team-pin" [hint]="'team.pin.hint' | t" [errors]="pinError()">
+            <input hnInput id="team-pin" name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" class="w-40 tracking-widest"
+              [value]="pinInput()" (input)="pinInput.set($any($event.target).value); pinError.set(null)" [attr.aria-invalid]="!!pinError()"
+              aria-describedby="team-pin-hint" data-testid="team-pin-input" />
+          </hn-field>
+          <div class="flex flex-wrap justify-end gap-2">
+            @if (pinOf(member.userId)?.hasPin) {
+              <button hnButton variant="ghost" type="button" class="me-auto" [disabled]="busy()" (click)="savePin(member, null)" data-testid="team-pin-clear">{{ 'team.pin.clear' | t }}</button>
+            }
+            <button hnButton type="button" (click)="pinFor.set(null)">{{ 'common.cancel' | t }}</button>
+            <button hnButton variant="primary" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="team-pin-save">{{ 'common.save' | t }}</button>
           </div>
         </form>
       }
@@ -152,6 +177,41 @@ export class TeamPage {
   protected readonly configurable = posRightsConfigurable;
   protected readonly effective = effectivePosRights;
   protected readonly key = posRightsKey;
+
+  // ---- POS PIN (cashier switching / approvals on a shared device)
+  private readonly pos = inject(PosApi);
+  protected readonly pins = createQuery(() => this.hasPos(), (pos) => (pos ? this.pos.pins() : of([])));
+  protected readonly pinFor = signal<StaffMember | null>(null);
+  protected readonly pinInput = signal('');
+  protected readonly pinError = signal<string | null>(null);
+
+  protected pinOf(userId: string): PosPinStatus | undefined {
+    return this.pins.value()?.find((p) => p.userId === userId);
+  }
+
+  protected openPin(s: StaffMember): void {
+    this.pinInput.set('');
+    this.pinError.set(null);
+    this.pinFor.set(s);
+  }
+
+  protected async savePin(member: StaffMember, pin: string | null): Promise<void> {
+    if (pin !== null && !/^[0-9]{4,6}$/.test(pin)) {
+      this.pinError.set(this.i18n.t('team.pin.invalid'));
+      return;
+    }
+    this.busy.set(true);
+    try {
+      await firstValueFrom(this.pos.setPin(member.userId, pin));
+      this.toast.success(this.i18n.t(pin === null ? 'team.pin.cleared' : 'team.pin.saved', { name: member.displayName }));
+      this.pinFor.set(null);
+      this.pins.reload();
+    } catch (e) {
+      this.pinError.set(describeProblem(this.i18n, toApiProblem(e)));
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   protected openRights(s: StaffMember): void {
     this.rightsForm.set(rightsFormFromStaff(s));

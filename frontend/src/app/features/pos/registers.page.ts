@@ -15,7 +15,16 @@ import { POS_LIMITS } from './pos.logic';
 
 type Dialog = { kind: 'rename' | 'toggle'; register: PosRegister } | null;
 
-/** Kasse: register selection; register management (create, rename, (de)activate) with `pos.manage`. */
+/** Auto-lock minutes from the register settings: empty = 0 (off), 0–240; null when invalid. */
+export function autoLockInput(value: string): number | null {
+  const v = value.trim();
+  if (!v) return 0;
+  if (!/^[0-9]{1,3}$/.test(v)) return null;
+  const n = Number(v);
+  return n <= 240 ? n : null;
+}
+
+/** Kasse: register selection; register management (create, settings incl. auto-lock, (de)activate) with `pos.manage`. */
 @Component({
   selector: 'hn-pos-registers-page',
   host: { class: 'pos-page block' },
@@ -103,7 +112,7 @@ type Dialog = { kind: 'rename' | 'toggle'; register: PosRegister } | null;
               </div>
               @if (canManage()) {
                 <div class="mt-3 flex flex-wrap gap-1 border-t border-pos-line pt-2">
-                  <button type="button" class="min-h-11 rounded-[10px] px-3 text-sm font-semibold text-pos-muted hover:bg-pos-key hover:text-pos-ink" (click)="openRename(r)" data-testid="pos-rename">{{ 'pos.registers.rename' | t }}</button>
+                  <button type="button" class="min-h-11 rounded-[10px] px-3 text-sm font-semibold text-pos-muted hover:bg-pos-key hover:text-pos-ink" (click)="openRename(r)" data-testid="pos-rename">{{ 'pos.registers.settings' | t }}</button>
                   <button type="button" class="min-h-11 rounded-[10px] px-3 text-sm font-semibold text-pos-muted hover:bg-pos-key hover:text-pos-ink" (click)="openToggle(r)" data-testid="pos-toggle">
                     {{ (r.isActive ? 'pos.registers.deactivate' : 'pos.registers.activate') | t }}
                   </button>
@@ -151,13 +160,17 @@ type Dialog = { kind: 'rename' | 'toggle'; register: PosRegister } | null;
       </ul>
     }
 
-    <hn-dialog [title]="(dialog()?.kind === 'rename' ? 'pos.registers.renameTitle' : 'pos.registers.toggleTitle') | t" [open]="!!dialog()" (closed)="closeDialog()">
+    <hn-dialog [title]="(dialog()?.kind === 'rename' ? 'pos.registers.settingsTitle' : 'pos.registers.toggleTitle') | t" [open]="!!dialog()" (closed)="closeDialog()">
       @if (dialog(); as d) {
         <hn-banner class="mb-3" [text]="dialogError()" />
         @if (d.kind === 'rename') {
           <form (ngSubmit)="rename(d.register)" novalidate>
             <hn-field [label]="'common.name' | t" for="pos-rename-name" [required]="true">
               <input hnInput id="pos-rename-name" name="rename" autocomplete="off" [maxlength]="maxName" [(ngModel)]="renameValue" data-testid="pos-rename-name" />
+            </hn-field>
+            <hn-field class="mt-3 block" [label]="'pos.registers.autoLock' | t" for="pos-auto-lock" [hint]="'pos.registers.autoLockHint' | t">
+              <input hnInput id="pos-auto-lock" name="autoLock" inputmode="numeric" autocomplete="off" class="w-28 text-end" [(ngModel)]="autoLockValue"
+                aria-describedby="pos-auto-lock-hint" data-testid="pos-auto-lock" />
             </hn-field>
             <div class="mt-4 flex justify-end gap-2">
               <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
@@ -209,6 +222,7 @@ export class PosRegistersPage {
   protected newName = '';
   protected newWarehouseId = '';
   protected renameValue = '';
+  protected autoLockValue = '0';
   protected readonly busy = signal(false);
   protected readonly nameError = signal<string | null>(null);
   protected readonly createError = signal<string | null>(null);
@@ -266,6 +280,7 @@ export class PosRegistersPage {
 
   protected openRename(r: PosRegister): void {
     this.renameValue = r.name;
+    this.autoLockValue = String(r.autoLockMinutes ?? 0);
     this.dialogError.set(null);
     this.dialog.set({ kind: 'rename', register: r });
   }
@@ -280,14 +295,19 @@ export class PosRegistersPage {
   }
 
   protected rename(r: PosRegister): Promise<void> {
-    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive });
+    const minutes = autoLockInput(this.autoLockValue);
+    if (minutes === null) {
+      this.dialogError.set(this.i18n.t('pos.registers.autoLockInvalid'));
+      return Promise.resolve();
+    }
+    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive, autoLockMinutes: minutes });
   }
 
   protected toggle(r: PosRegister): Promise<void> {
     return this.update(r, { name: r.name, isActive: !r.isActive });
   }
 
-  private async update(r: PosRegister, body: { name: string; isActive: boolean }): Promise<void> {
+  private async update(r: PosRegister, body: { name: string; isActive: boolean; autoLockMinutes?: number }): Promise<void> {
     if (!body.name) return;
     this.busy.set(true);
     this.dialogError.set(null);

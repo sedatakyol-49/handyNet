@@ -942,6 +942,8 @@ export interface PosRegister {
   nextReceiptNumber: number;
   openSessionId: string | null;
   createdAt: string;
+  /** Shared device: lock the till after this many idle minutes (null = off). */
+  autoLockMinutes?: number | null;
 }
 
 export interface CashMovement {
@@ -1443,4 +1445,38 @@ export interface IssueRunResult {
   /** Created and already existing documents of the run, ordered by number. */
   documents: InvoiceSummary[];
   failures: IssueFailure[];
+}
+
+// ---- POS cashier switching (PIN) -------------------------------------------------------------------------------------
+export interface PosPinStatus {
+  userId: string;
+  hasPin: boolean;
+  lockedUntil: string | null;
+  updatedAt: string | null;
+}
+
+/** A member who can be switched to at the till (has a PIN). */
+export interface PosCashierOption {
+  userId: string;
+  displayName: string;
+  role: string;
+  locked: boolean;
+}
+
+/** The cashier the till acts as (effective POS rights of that member). */
+export interface PosCashier {
+  sessionId: string;
+  registerId: string;
+  userId: string;
+  displayName: string | null;
+  role: string;
+  permissions: string[];
+  maxDiscountPercent: number;
+  expiresAt: string;
+  autoLockMinutes: number | null;
+}
+
+export interface PosCashierSignIn {
+  token: string;
+  cashier: PosCashier;
 }

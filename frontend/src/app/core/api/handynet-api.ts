@@ -16,6 +16,10 @@ import {
   PosLookup,
   PosPrice,
   PosProduct,
+  PosCashier,
+  PosCashierOption,
+  PosCashierSignIn,
+  PosPinStatus,
   PosRegister,
   PosRightsRequest,
   Receipt,
@@ -651,7 +655,7 @@ export class PosApi {
     return this.http.post<PosRegister>(`${this.url}/registers`, body);
   }
 
-  updateRegister(id: string, body: { name: string; isActive: boolean }): Observable<PosRegister> {
+  updateRegister(id: string, body: { name: string; isActive: boolean; autoLockMinutes?: number | null }): Observable<PosRegister> {
     return this.http.put<PosRegister>(`${this.url}/registers/${id}`, body);
   }
 
@@ -763,6 +767,43 @@ export class PosApi {
 
   storno(id: string, body: { reason: string; registerId?: string | null }): Observable<Receipt> {
     return this.http.post<Receipt>(`${this.url}/sales/${id}/storno`, body);
+  }
+
+  // ---- PINs and cashier switching (shared device)
+  myPin(): Observable<PosPinStatus> {
+    return this.http.get<PosPinStatus>(`${this.url}/me/pin`);
+  }
+
+  /** Own PIN (4–6 digits; null clears it); needs the account password. */
+  setMyPin(pin: string | null, currentPassword: string): Observable<PosPinStatus> {
+    return this.http.put<PosPinStatus>(`${this.url}/me/pin`, { pin, currentPassword });
+  }
+
+  /** `organization.manage`: PIN status of every member. */
+  pins(): Observable<PosPinStatus[]> {
+    return this.http.get<PosPinStatus[]>(`${this.url}/pins`);
+  }
+
+  /** `organization.manage`: set or clear (null) a member's PIN; also lifts a lockout. */
+  setPin(userId: string, pin: string | null): Observable<PosPinStatus> {
+    return this.http.put<PosPinStatus>(`${this.url}/cashiers/${userId}/pin`, { pin });
+  }
+
+  cashiers(): Observable<PosCashierOption[]> {
+    return this.http.get<PosCashierOption[]>(`${this.url}/cashiers`);
+  }
+
+  /** Switch the till to a cashier with their PIN; the token goes into the X-Pos-Cashier header (posCashierInterceptor). */
+  signInCashier(registerId: string, userId: string, pin: string): Observable<PosCashierSignIn> {
+    return this.http.post<PosCashierSignIn>(`${this.url}/registers/${registerId}/cashier`, { userId, pin });
+  }
+
+  currentCashier(): Observable<PosCashier> {
+    return this.http.get<PosCashier>(`${this.url}/cashier`);
+  }
+
+  lockCashier(): Observable<void> {
+    return this.http.post<void>(`${this.url}/cashier/lock`, {});
   }
 
   returnItems(id: string, body: ReturnRequest, idempotencyKey: string): Observable<Receipt> {

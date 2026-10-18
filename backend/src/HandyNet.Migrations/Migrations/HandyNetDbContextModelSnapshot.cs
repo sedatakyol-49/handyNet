@@ -3032,6 +3032,133 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierPin", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_attempts");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
+
+                    b.Property<string>("PinHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("pin_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganizationId", "UserId")
+                        .HasName("pk_cashier_pins");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_cashier_pins_user_id");
+
+                    b.ToTable("cashier_pins", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cashier_pins_attempts", "failed_attempts BETWEEN 0 AND 5");
+
+                            t.HasCheckConstraint("ck_cashier_pins_hash", "pin_hash IS NULL OR pin_hash LIKE 'pbkdf2-sha256$%'");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cashier_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_user_id");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("EndedReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("ended_reason");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.HasKey("Id")
+                        .HasName("pk_cashier_sessions");
+
+                    b.HasIndex("CashierUserId")
+                        .HasDatabaseName("ix_cashier_sessions_cashier_user_id");
+
+                    b.HasIndex("DeviceUserId")
+                        .HasDatabaseName("ix_cashier_sessions_device_user_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cashier_sessions_token_hash");
+
+                    b.HasIndex("OrganizationId", "RegisterId", "DeviceUserId")
+                        .HasDatabaseName("ix_cashier_sessions_organization_id_register_id_device_user_id")
+                        .HasFilter("ended_at IS NULL");
+
+                    b.ToTable("cashier_sessions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_cashier_sessions_end", "(ended_at IS NULL) = (ended_reason IS NULL)");
+
+                            t.HasCheckConstraint("ck_cashier_sessions_times", "expires_at > created_at");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3533,6 +3660,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int?>("AutoLockMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("auto_lock_minutes");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -3580,6 +3711,8 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("registers", "pos", t =>
                         {
+                            t.HasCheckConstraint("ck_registers_auto_lock", "auto_lock_minutes BETWEEN 1 AND 240");
+
                             t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
                         });
                 });
@@ -4400,6 +4533,41 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_cash_sessions_registers_organization_id_register_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierPin", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_pins_users_user_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.CashierSession", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CashierUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_users_cashier_user_id");
+
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_users_device_user_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashier_sessions_registers_organization_id_register_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>

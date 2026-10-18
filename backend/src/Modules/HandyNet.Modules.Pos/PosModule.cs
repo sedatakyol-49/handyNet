@@ -27,6 +27,9 @@ public static class PosModule
         services.AddOptions<PosOptions>().Bind(configuration.GetSection(PosOptions.Section))
             .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalSignerKind.Disabled,
                 "The Disabled fiscal signer (no TSE, test operation) must not be used in production.")
+            .Validate(o => o.CashierSessionHours is >= 1 and <= 24, "Pos:CashierSessionHours must be between 1 and 24.")
+            .Validate(o => o.ApprovalSeconds is >= 10 and <= 900, "Pos:ApprovalSeconds must be between 10 and 900.")
+            .Validate(o => o.PublicReceiptLinkDays is >= 1 and <= 3650, "Pos:PublicReceiptLinkDays must be between 1 and 3650.")
             .ValidateOnStart();
         services.AddSingleton<IModuleModel, PosModel>();
         services.AddScoped<FiscalSignerProvider>();
@@ -37,6 +40,8 @@ public static class PosModule
         services.AddScoped<ProductService>();
         services.AddScoped<CustomerService>();
         services.AddScoped<ReportService>();
+        services.AddScoped<PosActor>();
+        services.AddScoped<CashierService>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<SaleService>(includeInternalTypes: true);
@@ -45,9 +50,9 @@ public static class PosModule
 
     public static IEndpointRouteBuilder MapPosEndpoints(this IEndpointRouteBuilder app)
     {
-        var pos = app.MapGroup("/api/pos").WithTags("POS").RequireModule(PlatformModule.Pos);
-        var sell = pos.MapGroup("").RequirePermission(Permissions.PosSell);
-        var manage = pos.MapGroup("").RequirePermission(Permissions.PosManage);
+        var pos = app.MapGroup("/api/pos").WithTags("POS").RequireModule(PlatformModule.Pos).ResolvePosActor();
+        var sell = pos.MapGroup("").RequirePosPermission(Permissions.PosSell);
+        var manage = pos.MapGroup("").RequirePosPermission(Permissions.PosManage);
 
         // ---- registers ----------------------------------------------------------------------------------------------
         sell.MapGet("/registers", async (RegisterService service, CancellationToken ct) => Results.Ok(await service.ListAsync(ct)));
@@ -83,14 +88,14 @@ public static class PosModule
                 SessionService service, CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct)
             ?? (await service.AddMovementAsync(id, request, ct)).ToHttp(m => Results.Created($"/api/pos/sessions/{id}", m)))
-            .RequirePermission(Permissions.PosCashMovement);
+            .RequirePosPermission(Permissions.PosCashMovement);
 
         sell.MapGet("/cash-movement-reasons", () => Results.Ok(SessionService.Reasons()));
 
         sell.MapPost("/sessions/{id:guid}/close", async (Guid id, CloseSessionRequest request, IValidator<CloseSessionRequest> validator,
                 SessionService service, CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.CloseAsync(id, request, ct)).ToHttp(Results.Ok))
-            .RequirePermission(Permissions.PosCloseSession);
+            .RequirePosPermission(Permissions.PosCloseSession);
 
         // ---- products and prices ------------------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/products", async (Guid id, string? search, string? category, bool? includeOutOfStock, int? page,
@@ -163,12 +168,53 @@ public static class PosModule
                            ? Results.Ok(r.Receipt)
                            : Results.Created($"/api/pos/sales/{r.Receipt.Id}", r.Receipt));
             })
-            .RequirePermission(Permissions.PosRefund);
+            .RequirePosPermission(Permissions.PosRefund);
 
         sell.MapGet("/lookup", async (string? code, Guid? registerId, SaleService service, CancellationToken ct) =>
             (await service.LookupAsync(code, registerId, ct)).ToHttp(Results.Ok));
 
+        MapCashierEndpoints(pos, sell);
         return app;
+    }
+
+    /// <summary>Rate limit for PIN entry (sign-in, approvals, setting the own PIN with the password): per user and minute.</summary>
+    public const string PinRateLimitPolicy = "pos-pin";
+
+    // ---- PINs and cashier switching on a shared device (ADR-0008 "Staff: PIN, cashier switching, approvals") ----------------
+    private static void MapCashierEndpoints(RouteGroupBuilder pos, RouteGroupBuilder sell)
+    {
+        sell.MapGet("/me/pin", async (CashierService service, CancellationToken ct) => Results.Ok(await service.GetOwnPinAsync(ct)));
+
+        sell.MapPut("/me/pin", async (SetOwnPinRequest request, IValidator<SetOwnPinRequest> validator, CashierService service, CancellationToken ct) =>
+                await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SetOwnPinAsync(request, ct)).ToHttp(Results.Ok))
+            .WithMetadata(new IgnoreCashierTokenMetadata())
+            .RequireRateLimiting(PinRateLimitPolicy);
+
+        pos.MapGet("/pins", async (CashierService service, CancellationToken ct) => Results.Ok(await service.ListPinsAsync(ct)))
+            .RequirePermission(Permissions.OrganizationManage).WithMetadata(new IgnoreCashierTokenMetadata());
+
+        pos.MapPut("/cashiers/{userId:guid}/pin", async (Guid userId, SetPinRequest request, IValidator<SetPinRequest> validator, CashierService service,
+                CancellationToken ct) =>
+                await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SetPinForAsync(userId, request, ct)).ToHttp(Results.Ok))
+            .RequirePermission(Permissions.OrganizationManage).WithMetadata(new IgnoreCashierTokenMetadata());
+
+        sell.MapGet("/cashiers", async (CashierService service, CancellationToken ct) => Results.Ok(await service.ListCashiersAsync(ct)));
+
+        sell.MapPost("/registers/{id:guid}/cashier", async (Guid id, CashierSignInRequest request, IValidator<CashierSignInRequest> validator,
+                CashierService service, CancellationToken ct) =>
+                await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SignInAsync(id, request, ct)).ToHttp(Results.Ok))
+            .WithMetadata(new IgnoreCashierTokenMetadata())
+            .RequireRateLimiting(PinRateLimitPolicy);
+
+        sell.MapGet("/cashier", async (PosActor actor, CashierService service, CancellationToken ct) =>
+            (await service.CurrentAsync(actor, ct)).ToHttp(Results.Ok));
+
+        sell.MapPost("/cashier/lock", async (HttpRequest http, CashierService service, CancellationToken ct) =>
+            {
+                await service.LockAsync(http.Headers[PosActor.CashierHeader].ToString().Trim(), ct);
+                return Results.NoContent();
+            })
+            .WithMetadata(new IgnoreCashierTokenMetadata());
     }
 
     private static IResult? InvalidKey(string? key) =>

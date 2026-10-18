@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
 import { CashMovementKind, CashMovementReason, CashSession } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
+import { PosCashierStore } from './pos-cashier.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
@@ -208,6 +209,7 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
 export class PosSessionPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
+  protected readonly cashiers = inject(PosCashierStore);
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly subnav = viewChild(PosSubnavComponent);
@@ -217,7 +219,7 @@ export class PosSessionPage {
   protected readonly kinds: CashMovementKind[] = ['Deposit', 'Withdrawal'];
   protected readonly maxMovementReason = POS_LIMITS.movementReasonLength;
   protected readonly maxNote = POS_LIMITS.closingNoteLength;
-  protected readonly rights = computed(() => posRights(this.store.membership()));
+  protected readonly rights = computed(() => posRights(this.cashiers.membership()));
   protected readonly canReport = computed(() => canSeeSessionReport(this.rights()));
 
   protected readonly query = createQuery(

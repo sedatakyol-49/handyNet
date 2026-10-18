@@ -37,4 +37,10 @@ public interface IUserAccounts
     /// commits it together with the email it queues. Null when the user does not exist or is inactive.
     /// </summary>
     Task<IssuedAccountToken?> IssuePasswordResetTokenAsync(Guid userId, CancellationToken ct);
+
+    /// <summary>
+    /// Checks the password of an active user before a security-relevant change (e.g. setting the own POS PIN). Does not
+    /// count towards the login lockout; callers must rate-limit.
+    /// </summary>
+    Task<bool> VerifyPasswordAsync(Guid userId, string password, CancellationToken ct);
 }

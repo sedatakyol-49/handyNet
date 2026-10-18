@@ -375,7 +375,17 @@
       "image.limit_reached": "A product can have at most 8 images.",
       "image.not_found": "Image not found.",
       "image.order_mismatch": "The images were changed in the meantime. Please reload the view.",
-      "image.concurrent": "The images of this product were changed concurrently. Please try again."
+      "image.concurrent": "The images of this product were changed concurrently. Please try again.",
+      "pos.pin_invalid": "The PIN is wrong.",
+      "pos.pin_locked": "Too many wrong PINs – the PIN is locked for 15 minutes. The owner can set a new PIN.",
+      "pos.pin_not_set": "This member has no POS PIN.",
+      "pos.pin_format": "The PIN must have 4 to 6 digits.",
+      "pos.pin_too_simple": "This PIN is too easy to guess (repeated digits or a sequence like 1234).",
+      "pos.password_invalid": "The password is not correct.",
+      "pos.cashier_invalid": "The cashier sign-in has ended (locked, expired or idle). Please enter the PIN again.",
+      "pos.cashier_register_mismatch": "The cashier is signed in on another register. Please sign in on this register.",
+      "pos.cashier_not_found": "This member cannot work as cashier.",
+      "pos.auto_lock_minutes": "The auto-lock must be between 1 and 240 minutes (0 = off)."
     }
   },
   "dashboard": {
@@ -907,6 +917,21 @@
         "cashMovement": "Put cash into or take cash out of the drawer.",
         "closeSession": "End-of-day closing and session report."
       }
+    },
+    "pin": {
+      "locked": "PIN locked",
+      "set": "POS PIN set",
+      "none": "No POS PIN",
+      "edit": "PIN",
+      "editFor": "POS PIN for {name}",
+      "title": "POS PIN: {name}",
+      "text": "With the PIN a member switches a shared till to themselves (receipts carry their name, their rights apply); owners and managers also approve actions with it. A new PIN lifts a lockout.",
+      "pin": "New PIN",
+      "hint": "4–6 digits, no sequences like 1234 or 0000.",
+      "clear": "Remove PIN",
+      "invalid": "Please enter 4 to 6 digits.",
+      "saved": "POS PIN for {name} saved.",
+      "cleared": "POS PIN of {name} removed."
     }
   },
   "admin": {
@@ -1851,7 +1876,12 @@
       "renameTitle": "Rename till",
       "toggleTitle": "Change till status",
       "deactivateText": "Deactivate till “{name}”? A deactivated till cannot sell. An open session must be closed first.",
-      "activateText": "Reactivate till “{name}”?"
+      "activateText": "Reactivate till “{name}”?",
+      "settings": "Settings",
+      "settingsTitle": "Edit register",
+      "autoLock": "Lock automatically after (minutes)",
+      "autoLockHint": "0 = off. After this many idle minutes the cashier needs their PIN again (at most 240).",
+      "autoLockInvalid": "Please enter 0 to 240 minutes."
     },
     "till": {
       "title": "Till {name}",
@@ -2246,6 +2276,34 @@
       "closeForbidden": "Only staff with the right “Close register” may close the session.",
       "reportForbidden": "You do not have the right to see this report.",
       "manageOnly": "Owners and managers only (manage registers)."
+    },
+    "cashier": {
+      "switch": "Switch cashier",
+      "member": "Staff member",
+      "locked": "Locked (too many wrong PINs)",
+      "digits": "{count} digits entered",
+      "pinPad": "PIN pad",
+      "device": "Device signed in as {name}",
+      "lock": "Lock till",
+      "lockedTitle": "Till locked",
+      "lockedHint": "Choose your name and enter your PIN to continue.",
+      "signIn": "Sign in",
+      "nobody": "Nobody has a POS PIN yet. The owner can set PINs on the Team page, every member under “Account & security”.",
+      "signedIn": "The till now acts as {name}.",
+      "wrongPin": "Wrong PIN. {count} attempts left before the lock."
+    },
+    "pinSettings": {
+      "title": "POS PIN",
+      "text": "Use it to sign in on a shared till (“Switch cashier”) and, as owner/manager, to approve actions.",
+      "locked": "Your PIN is locked after too many wrong entries. Set a new PIN.",
+      "isSet": "You have a POS PIN.",
+      "notSet": "You have no POS PIN yet.",
+      "pin": "New PIN",
+      "confirm": "Repeat PIN",
+      "mismatch": "The two PINs do not match.",
+      "passwordRequired": "Please enter your password to confirm.",
+      "saved": "POS PIN saved.",
+      "cleared": "POS PIN removed."
     }
   },
   "invoiceKind": {

@@ -191,7 +191,6 @@ internal sealed class FiscalSignerProvider(IOptions<PosOptions> options)
 internal sealed class SaleService(
     HandyNetDbContext db,
     ITenantContext tenant,
-    ICurrentUser currentUser,
     IInventory inventory,
     IProductCatalog catalog,
     IOrganizationDirectory organizations,
@@ -199,7 +198,8 @@ internal sealed class SaleService(
     FiscalSignerProvider signers,
     PriceResolver prices,
     IClock clock,
-    ILogger<SaleService> logger)
+    ILogger<SaleService> logger,
+    PosActor actor)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -221,6 +221,8 @@ internal sealed class SaleService(
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RegisterId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        if (actor.CheckRegister(register.Id) is { } otherRegister)
+            return otherRegister;
         DocumentCustomer? customer = null;
         if (request.CustomerId is { } customerId)
         {
@@ -288,7 +290,7 @@ internal sealed class SaleService(
                 margin ? s.Unit!.PurchasePriceMinor : null, s.Request.Note);
         }).ToList();
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, currentUser.UserId, clock.UtcNow,
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash, customer);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList());
         if (!receipt.IsSuccess)
@@ -340,7 +342,7 @@ internal sealed class SaleService(
             return issuing.Error!;
         var (register, number, sessionId) = issuing.Value;
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, currentUser.UserId, clock.UtcNow);
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow);
         var storno = Receipt.CreateStorno(header, original, hasReturns, request.Reason);
         if (!storno.IsSuccess)
             return storno.Error!;
@@ -373,7 +375,7 @@ internal sealed class SaleService(
             return issuing.Error!;
         var (register, number, sessionId) = issuing.Value;
 
-        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, currentUser.UserId, clock.UtcNow,
+        var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash);
         var returned = Receipt.CreateReturn(header, original, request.Lines.ToDictionary(l => l.LineNumber, l => l.Quantity), alreadyReturned,
             request.RefundMethod, request.Reason);
@@ -461,7 +463,7 @@ internal sealed class SaleService(
             return Error.NotFound("pos.receipt_not_found", "Receipt not found.");
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"reprint:" + receiptId}, 0))", ct);
         var previous = await db.Set<ReceiptReprint>().CountAsync(r => r.ReceiptId == receiptId, ct);
-        var reprint = ReceiptReprint.Record(receipt, previous, currentUser.UserId, clock.UtcNow);
+        var reprint = ReceiptReprint.Record(receipt, previous, actor.UserId, clock.UtcNow);
         if (!reprint.IsSuccess)
             return reprint.Error!;
         db.Add(reprint.Value);
@@ -515,8 +517,8 @@ internal sealed class SaleService(
 
     // ---- internals ------------------------------------------------------------------------------------------------------
 
-    private CashierRights Rights() => new(tenant.Permissions.Contains(Permissions.PosPriceOverride), tenant.Permissions.Contains(Permissions.PosDiscount),
-        tenant.MaxDiscountPercent);
+    private CashierRights Rights() => new(actor.Has(Permissions.PosPriceOverride), actor.Has(Permissions.PosDiscount),
+        actor.MaxDiscountPercent);
 
     private static Error FiscalMissing() =>
         Error.Conflict("pos.fiscal_signer_missing", "No fiscal signer (TSE) is configured. POS sales are not possible.");
@@ -530,6 +532,8 @@ internal sealed class SaleService(
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == registerId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        if (actor.CheckRegister(register.Id) is { } otherRegister)
+            return otherRegister;
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
             return Error.Conflict("pos.register_inactive", "The register is deactivated.");
         // Refunds may pay out cash: exclusive lock so the drawer check below cannot race with withdrawals.

@@ -375,7 +375,17 @@
       "image.limit_reached": "Un artículo puede tener como máximo 8 imágenes.",
       "image.not_found": "No se encontró la imagen.",
       "image.order_mismatch": "Las imágenes cambiaron mientras tanto. Vuelva a cargar la vista.",
-      "image.concurrent": "Las imágenes de este artículo se modificaron a la vez. Inténtelo de nuevo."
+      "image.concurrent": "Las imágenes de este artículo se modificaron a la vez. Inténtelo de nuevo.",
+      "pos.pin_invalid": "El PIN es incorrecto.",
+      "pos.pin_locked": "Demasiados PIN erróneos: bloqueado 15 minutos. El propietario puede definir uno nuevo.",
+      "pos.pin_not_set": "Este empleado no tiene PIN de caja.",
+      "pos.pin_format": "El PIN debe tener de 4 a 6 dígitos.",
+      "pos.pin_too_simple": "Este PIN es demasiado fácil (dígitos repetidos o secuencia como 1234).",
+      "pos.password_invalid": "La contraseña no es correcta.",
+      "pos.cashier_invalid": "La sesión del cajero ha terminado (bloqueada, caducada o inactiva). Introduzca el PIN de nuevo.",
+      "pos.cashier_register_mismatch": "El cajero está conectado en otra caja. Entre en esta caja.",
+      "pos.cashier_not_found": "Este empleado no puede trabajar como cajero.",
+      "pos.auto_lock_minutes": "El bloqueo automático debe estar entre 1 y 240 minutos (0 = desactivado)."
     }
   },
   "dashboard": {
@@ -907,6 +917,21 @@
         "cashMovement": "Meter o sacar efectivo de la caja.",
         "closeSession": "Cierre diario e informe de sesión."
       }
+    },
+    "pin": {
+      "locked": "PIN bloqueado",
+      "set": "PIN de caja definido",
+      "none": "Sin PIN de caja",
+      "edit": "PIN",
+      "editFor": "PIN de caja de {name}",
+      "title": "PIN de caja: {name}",
+      "text": "Con el PIN un empleado cambia una caja compartida a su nombre (los tiques llevan su nombre y valen sus permisos); propietarios y gerentes autorizan acciones con él. Un PIN nuevo levanta el bloqueo.",
+      "pin": "PIN nuevo",
+      "hint": "4–6 dígitos, sin secuencias como 1234 o 0000.",
+      "clear": "Quitar PIN",
+      "invalid": "Introduzca de 4 a 6 dígitos.",
+      "saved": "PIN de caja de {name} guardado.",
+      "cleared": "PIN de caja de {name} eliminado."
     }
   },
   "admin": {
@@ -1851,7 +1876,12 @@
       "renameTitle": "Cambiar nombre de la caja",
       "toggleTitle": "Cambiar estado de la caja",
       "deactivateText": "¿Desactivar la caja «{name}»? En una caja desactivada no se puede vender. Antes debe cerrarse una sesión abierta.",
-      "activateText": "¿Volver a activar la caja «{name}»?"
+      "activateText": "¿Volver a activar la caja «{name}»?",
+      "settings": "Ajustes",
+      "settingsTitle": "Editar caja",
+      "autoLock": "Bloquear automáticamente tras (minutos)",
+      "autoLockHint": "0 = desactivado. Tras estos minutos sin uso el cajero necesita su PIN de nuevo (máx. 240).",
+      "autoLockInvalid": "Introduzca de 0 a 240 minutos."
     },
     "till": {
       "title": "Caja {name}",
@@ -2246,6 +2276,34 @@
       "closeForbidden": "Solo el personal con el permiso «Cerrar caja» puede cerrar la sesión.",
       "reportForbidden": "No tiene permiso para ver este informe.",
       "manageOnly": "Solo titulares y gerentes (gestionar cajas)."
+    },
+    "cashier": {
+      "switch": "Cambiar cajero",
+      "member": "Empleado",
+      "locked": "Bloqueado (demasiados intentos fallidos)",
+      "digits": "{count} dígitos introducidos",
+      "pinPad": "Teclado PIN",
+      "device": "Dispositivo conectado como {name}",
+      "lock": "Bloquear caja",
+      "lockedTitle": "Caja bloqueada",
+      "lockedHint": "Elija su nombre e introduzca su PIN para continuar.",
+      "signIn": "Entrar",
+      "nobody": "Nadie tiene aún un PIN de caja. El propietario puede fijarlos en Equipo y cada empleado en «Cuenta y seguridad».",
+      "signedIn": "La caja actúa ahora como {name}.",
+      "wrongPin": "PIN incorrecto. Quedan {count} intentos antes del bloqueo."
+    },
+    "pinSettings": {
+      "title": "PIN de caja",
+      "text": "Sirve para entrar en una caja compartida («Cambiar cajero») y, como propietario/gerente, para autorizar acciones.",
+      "locked": "Su PIN está bloqueado tras demasiados intentos. Defina un PIN nuevo.",
+      "isSet": "Tiene un PIN de caja.",
+      "notSet": "Aún no tiene PIN de caja.",
+      "pin": "PIN nuevo",
+      "confirm": "Repetir PIN",
+      "mismatch": "Los dos PIN no coinciden.",
+      "passwordRequired": "Introduzca su contraseña para confirmar.",
+      "saved": "PIN de caja guardado.",
+      "cleared": "PIN de caja eliminado."
     }
   },
   "invoiceKind": {

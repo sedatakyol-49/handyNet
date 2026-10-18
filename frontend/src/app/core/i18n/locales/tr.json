@@ -375,7 +375,17 @@
       "image.limit_reached": "Bir ürünün en fazla 8 görseli olabilir.",
       "image.not_found": "Görsel bulunamadı.",
       "image.order_mismatch": "Görseller bu sırada değiştirildi. Lütfen görünümü yeniden yükleyin.",
-      "image.concurrent": "Bu ürünün görselleri aynı anda değiştirildi. Lütfen tekrar deneyin."
+      "image.concurrent": "Bu ürünün görselleri aynı anda değiştirildi. Lütfen tekrar deneyin.",
+      "pos.pin_invalid": "PIN hatalı.",
+      "pos.pin_locked": "Çok fazla hatalı PIN – PIN 15 dakika kilitli. Sahip yeni PIN belirleyebilir.",
+      "pos.pin_not_set": "Bu çalışanın kasa PIN’i yok.",
+      "pos.pin_format": "PIN 4 ile 6 rakamdan oluşmalı.",
+      "pos.pin_too_simple": "Bu PIN tahmin edilmesi çok kolay (aynı rakamlar veya 1234 gibi dizi).",
+      "pos.password_invalid": "Şifre doğru değil.",
+      "pos.cashier_invalid": "Kasiyer oturumu sona erdi (kilitli, süresi doldu veya işlem yok). Lütfen PIN’i yeniden girin.",
+      "pos.cashier_register_mismatch": "Kasiyer başka bir kasada oturum açmış. Lütfen bu kasada giriş yapın.",
+      "pos.cashier_not_found": "Bu çalışan kasiyer olarak çalışamaz.",
+      "pos.auto_lock_minutes": "Otomatik kilit 1 ile 240 dakika arasında olmalı (0 = kapalı)."
     }
   },
   "dashboard": {
@@ -907,6 +917,21 @@
         "cashMovement": "Kasaya nakit koy veya kasadan nakit al.",
         "closeSession": "Gün sonu kapanışı ve oturum raporu."
       }
+    },
+    "pin": {
+      "locked": "PIN kilitli",
+      "set": "Kasa PIN’i var",
+      "none": "Kasa PIN’i yok",
+      "edit": "PIN",
+      "editFor": "{name} için kasa PIN’i",
+      "title": "Kasa PIN’i: {name}",
+      "text": "PIN ile çalışan ortak kasayı kendi adına geçirir (fişlerde adı yazar, yetkileri geçerlidir); sahip ve yöneticiler işlemleri bununla onaylar. Yeni PIN kilidi kaldırır.",
+      "pin": "Yeni PIN",
+      "hint": "4–6 rakam, 1234 veya 0000 gibi diziler olmaz.",
+      "clear": "PIN’i kaldır",
+      "invalid": "Lütfen 4 ile 6 rakam girin.",
+      "saved": "{name} için kasa PIN’i kaydedildi.",
+      "cleared": "{name} kasa PIN’i kaldırıldı."
     }
   },
   "admin": {
@@ -1851,7 +1876,12 @@
       "renameTitle": "Kasayı yeniden adlandır",
       "toggleTitle": "Kasa durumunu değiştir",
       "deactivateText": "“{name}” kasası devre dışı bırakılsın mı? Devre dışı bir kasada satış yapılamaz. Açık bir oturum önce kapatılmalıdır.",
-      "activateText": "“{name}” kasası yeniden etkinleştirilsin mi?"
+      "activateText": "“{name}” kasası yeniden etkinleştirilsin mi?",
+      "settings": "Ayarlar",
+      "settingsTitle": "Kasayı düzenle",
+      "autoLock": "Otomatik kilit (dakika)",
+      "autoLockHint": "0 = kapalı. Bu kadar dakika işlem olmazsa kasiyerin yeniden PIN girmesi gerekir (en fazla 240).",
+      "autoLockInvalid": "Lütfen 0 ile 240 dakika girin."
     },
     "till": {
       "title": "Kasa {name}",
@@ -2246,6 +2276,34 @@
       "closeForbidden": "Oturumu yalnızca “Kasayı kapat” yetkisi olan personel kapatabilir.",
       "reportForbidden": "Bu raporu görme yetkiniz yok.",
       "manageOnly": "Yalnızca sahipler ve yöneticiler (kasa yönetimi)."
+    },
+    "cashier": {
+      "switch": "Kasiyer değiştir",
+      "member": "Çalışan",
+      "locked": "Kilitli (çok fazla hatalı deneme)",
+      "digits": "{count} rakam girildi",
+      "pinPad": "PIN tuş takımı",
+      "device": "Cihaz {name} olarak oturum açtı",
+      "lock": "Kasayı kilitle",
+      "lockedTitle": "Kasa kilitli",
+      "lockedHint": "Devam etmek için adınızı seçip PIN girin.",
+      "signIn": "Giriş yap",
+      "nobody": "Henüz kimsenin kasa PIN’i yok. Sahip PIN’leri Ekip sayfasında, her çalışan „Hesap ve güvenlik“ altında belirleyebilir.",
+      "signedIn": "Kasa artık {name} olarak çalışıyor.",
+      "wrongPin": "PIN hatalı. Kilitlenmeye {count} deneme kaldı."
+    },
+    "pinSettings": {
+      "title": "Kasa PIN’i",
+      "text": "Ortak kasada oturum açmak („Kasiyer değiştir“) ve sahip/yönetici olarak işlemleri onaylamak için kullanılır.",
+      "locked": "PIN’iniz çok fazla hatalı denemeden sonra kilitlendi. Yeni bir PIN belirleyin.",
+      "isSet": "Bir kasa PIN’iniz var.",
+      "notSet": "Henüz kasa PIN’iniz yok.",
+      "pin": "Yeni PIN",
+      "confirm": "PIN’i tekrarlayın",
+      "mismatch": "İki PIN eşleşmiyor.",
+      "passwordRequired": "Onaylamak için lütfen şifrenizi girin.",
+      "saved": "Kasa PIN’i kaydedildi.",
+      "cleared": "Kasa PIN’i kaldırıldı."
     }
   },
   "invoiceKind": {

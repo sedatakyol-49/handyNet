@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { of } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
 import { SessionStore } from '../../core/auth/session.store';
+import { PosCashierStore } from './pos-cashier.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
@@ -159,13 +160,14 @@ const MAX_RANGE_DAYS = 366;
 export class PosReportPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
+  protected readonly cashiers = inject(PosCashierStore);
   private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   private readonly ctx = inject(PosContext);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly sessionId = computed(() => this.params().get('sitzung'));
-  protected readonly rights = computed(() => posRights(this.store.membership()));
+  protected readonly rights = computed(() => posRights(this.cashiers.membership()));
   protected readonly allowed = computed(() => (this.sessionId() ? canSeeSessionReport(this.rights()) : this.rights().manage));
 
   // Date-range form (pos.manage); defaults to today.

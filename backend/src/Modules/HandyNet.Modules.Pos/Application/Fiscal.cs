@@ -19,6 +19,15 @@ public sealed class PosOptions
 
     /// <summary>Not set = POS sales are refused (no signer configured). A real adapter (e.g. fiskaly) is not implemented yet.</summary>
     public FiscalSignerKind? FiscalSigner { get; set; }
+
+    /// <summary>Longest lifetime of a cashier sign-in by PIN on a shared device (hours, 1–24; default 12).</summary>
+    public int CashierSessionHours { get; set; } = 12;
+
+    /// <summary>Validity of a manager approval given by PIN (seconds; default 120). It is used once.</summary>
+    public int ApprovalSeconds { get; set; } = 120;
+
+    /// <summary>Validity of a public (QR) receipt link in days (default 90).</summary>
+    public int PublicReceiptLinkDays { get; set; } = 90;
 }
 
 public sealed record FiscalTransactionRequest(Guid OrganizationId, Guid RegisterId, ReceiptKind Kind, long ReceiptNumber);

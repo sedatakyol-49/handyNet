@@ -1,4 +1,5 @@
 using HandyNet.Modules.Catalog.Domain;
+using HandyNet.Modules.Identity.Domain;
 using HandyNet.Modules.Inventory.Domain;
 using HandyNet.Modules.Pos.Domain;
 using HandyNet.Persistence;
@@ -14,7 +15,11 @@ public sealed class PosModel : IModuleModel
     {
         modelBuilder.Entity<Register>(b =>
         {
-            b.ToTable("registers", Schema, t => t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1"));
+            b.ToTable("registers", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+                t.HasCheckConstraint("ck_registers_auto_lock", $"auto_lock_minutes BETWEEN 1 AND {Register.MaxAutoLockMinutes}");
+            });
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(Register.MaxNameLength).IsRequired();
             b.Property(x => x.Version).IsRowVersion();
@@ -165,6 +170,39 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Version).IsRowVersion();
             b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
             b.HasIndex(x => new { x.OrganizationId, x.Name });
+        });
+
+        modelBuilder.Entity<CashierPin>(b =>
+        {
+            b.ToTable("cashier_pins", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_cashier_pins_attempts", $"failed_attempts BETWEEN 0 AND {CashierPin.MaxFailedAttempts}");
+                t.HasCheckConstraint("ck_cashier_pins_hash", "pin_hash IS NULL OR pin_hash LIKE 'pbkdf2-sha256$%'");
+            });
+            b.HasKey(x => new { x.OrganizationId, x.UserId });
+            b.Property(x => x.PinHash).HasMaxLength(200);
+            b.Property(x => x.Version).IsRowVersion();
+            b.Ignore(x => x.HasPin);
+            b.Ignore(x => x.RemainingAttempts);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashierSession>(b =>
+        {
+            b.ToTable("cashier_sessions", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_cashier_sessions_times", "expires_at > created_at");
+                t.HasCheckConstraint("ck_cashier_sessions_end", "(ended_at IS NULL) = (ended_reason IS NULL)");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.EndedReason).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.RegisterId, x.DeviceUserId }).HasFilter("ended_at IS NULL");
+            b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.CashierUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.DeviceUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ReceiptReprint>(b =>

@@ -546,6 +546,10 @@ export function posProblemMessage(code: string | null, error: unknown): { key: s
     return { key: 'pos.errors.priceOverrideForbidden', params: { line: lineNumber, price: typeof expected === 'number' ? formatMoney(expected) : '–' } };
   }
   if (code === 'pos.discount_forbidden') return { key: 'pos.errors.discountForbidden', params: { line: lineNumber } };
+  if (code === 'pos.pin_invalid') {
+    const remaining = problemDetail(error, 'remainingAttempts');
+    if (typeof remaining === 'number') return { key: 'pos.cashier.wrongPin', params: { count: remaining } };
+  }
   if (code === 'pos.discount_limit_exceeded') {
     const max = problemDetail(error, 'maxDiscountPercent');
     return { key: 'pos.errors.discountLimitExceeded', params: { line: lineNumber, percent: typeof max === 'number' ? max : '?' } };

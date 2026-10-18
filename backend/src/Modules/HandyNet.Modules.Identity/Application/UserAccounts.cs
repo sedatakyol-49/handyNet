@@ -74,4 +74,12 @@ internal sealed class UserAccounts(
         return await AccountTokenIssuer.IssueAsync(db, user, AccountTokenPurpose.PasswordReset,
             tokenOptions.Value.PasswordReset(), clock.UtcNow, ct);
     }
+
+    public async Task<bool> VerifyPasswordAsync(Guid userId, string password, CancellationToken ct)
+    {
+        var user = await db.Set<User>().AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null || !user.IsActive || string.IsNullOrEmpty(password))
+            return false;
+        return hasher.VerifyHashedPassword(user, user.PasswordHash, password) != PasswordVerificationResult.Failed;
+    }
 }

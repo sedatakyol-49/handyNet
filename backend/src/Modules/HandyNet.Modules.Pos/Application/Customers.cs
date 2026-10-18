@@ -51,7 +51,7 @@ internal sealed class CustomerValidator : AbstractValidator<CustomerRequest>
     }
 }
 
-internal sealed class CustomerService(HandyNetDbContext db, ITenantContext tenant, ICurrentUser currentUser, IClock clock)
+internal sealed class CustomerService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
@@ -78,7 +78,7 @@ internal sealed class CustomerService(HandyNetDbContext db, ITenantContext tenan
 
     public async Task<Result<CustomerDto>> CreateAsync(CustomerRequest request, CancellationToken ct)
     {
-        var customer = Customer.Create(OrganizationId, request.ToDetails(), currentUser.UserId, clock.UtcNow);
+        var customer = Customer.Create(OrganizationId, request.ToDetails(), actor.UserId, clock.UtcNow);
         if (!customer.IsSuccess)
             return customer.Error!;
         db.Add(customer.Value);

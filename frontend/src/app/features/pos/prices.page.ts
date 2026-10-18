@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
 import { PosProduct } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
+import { PosCashierStore } from './pos-cashier.store';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { PosPriceDialogComponent, PriceTarget } from './pos-price-dialog';
@@ -67,6 +68,7 @@ import { PosSubnavComponent } from './pos-subnav';
 export class PosPricesPage {
   private readonly api = inject(PosApi);
   private readonly store = inject(SessionStore);
+  protected readonly cashiers = inject(PosCashierStore);
   readonly registerId = input.required<string>();
 
   protected readonly pageSize = 50;
@@ -74,7 +76,7 @@ export class PosPricesPage {
   protected readonly search = signal('');
   private readonly appliedSearch = signal('');
   protected readonly target = signal<PriceTarget | null>(null);
-  protected readonly canManage = computed(() => posRights(this.store.membership()).manage);
+  protected readonly canManage = computed(() => posRights(this.cashiers.membership()).manage);
 
   protected readonly products = createQuery(
     () => ({ id: this.registerId(), search: this.appliedSearch(), page: this.page(), ok: this.canManage() }),
