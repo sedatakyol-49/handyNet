@@ -168,6 +168,40 @@ public class PosPinTests
         Assert.Equal("***@x.de", HandyNet.Modules.Pos.Application.EReceiptService.Mask("a@x.de"));
     }
 
+    private static Receipt MixedSale()
+    {
+        var header = new ReceiptHeader(Org, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 7, User, Now);
+        return Receipt.CreateSale(header,
+        [
+            new SaleLineInput(Guid.NewGuid(), Guid.NewGuid(), "350000000000001", "iPhone 12", 1, 250_00, 0, TaxTreatment.Margin25a, 100_00),
+            new SaleLineInput(Guid.NewGuid(), null, null, "Kabel", 2, 5_95, 0, TaxTreatment.Standard19, null),
+        ], [new PaymentInput(PaymentMethod.Card, 261_90)]).Value;
+    }
+
+    [Fact]
+    public void Invoice_needs_customer_address_and_seller_vat_id_and_shows_25a_without_vat()
+    {
+        Assert.Equal("pos.invoice_customer_address", InvoiceCustomer.Create("Erika", null, " ", "10405", "Berlin", null, null).Error?.Code);
+        Assert.Equal("pos.invoice_customer_country", InvoiceCustomer.Create("Erika", null, "Weg 1", "10405", "Berlin", "Deutschland", null).Error?.Code);
+        var customer = InvoiceCustomer.Create(" Erika ", null, "Weg 1", "10405", "Berlin", null, "de 123").Value;
+        Assert.Equal(("Erika", "DE", "DE123"), (customer.Name, customer.CountryCode, customer.VatId));
+
+        var seller = new SellerInfo("Shop", "Shop GmbH", "Hauptstr. 1", "10115", "Berlin", "DE", "DE111");
+        var date = new DateOnly(2026, 10, 18);
+        Assert.Equal("pos.invoice_seller_vat_id_missing",
+            PosInvoice.Issue(MixedSale(), false, seller with { VatId = null }, customer, "Kasse", 2026, 1, date, date, User, Now).Error?.Code);
+        Assert.Equal("pos.invoice_receipt_refunded", PosInvoice.Issue(MixedSale(), true, seller, customer, "Kasse", 2026, 1, date, date, User, Now).Error?.Code);
+
+        var invoice = PosInvoice.Issue(MixedSale(), false, seller, customer, "Kasse", 2026, 42, date, date, User, Now).Value;
+        Assert.Equal("RE-2026-000042", invoice.Number);
+        Assert.Equal(250_00, invoice.Document.MarginGrossMinor);
+        Assert.Equal(1_90, invoice.TotalVatMinor); // 11.90 − round(11.90 / 1.19) = 1.90; §25a VAT is not shown
+        Assert.Equal(261_90, invoice.TotalGrossMinor);
+        Assert.Equal(invoice.TotalGrossMinor, invoice.TotalNetMinor + invoice.TotalVatMinor);
+        Assert.Contains(PosInvoice.MarginNote, invoice.Document.Notes);
+        Assert.Equal(["§25a", "A"], invoice.Document.Lines.Select(l => l.TaxLabel));
+    }
+
     [Fact]
     public void Register_auto_lock_is_off_or_between_1_and_240_minutes()
     {

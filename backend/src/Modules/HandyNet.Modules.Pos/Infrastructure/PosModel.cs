@@ -254,6 +254,31 @@ public sealed class PosModel : IModuleModel
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<PosInvoice>(b =>
+        {
+            b.ToTable("invoices", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_invoices_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 "
+                    + "AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0')");
+                t.HasCheckConstraint("ck_invoices_totals", "total_gross_minor > 0 AND total_vat_minor >= 0 AND total_net_minor + total_vat_minor = total_gross_minor");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Number).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Customer).HasJsonConversion().IsRequired();
+            b.Property(x => x.Document).HasJsonConversion().IsRequired();
+            b.HasIndex(x => x.ReceiptId).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Year, x.SequenceNumber }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Number }).IsUnique();
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PosInvoiceSequence>(b =>
+        {
+            b.ToTable("invoice_sequences", Schema, t => t.HasCheckConstraint("ck_invoice_sequences_next", "next_number >= 2"));
+            b.HasKey(x => new { x.OrganizationId, x.Year });
+        });
+
         modelBuilder.Entity<ReceiptLink>(b =>
         {
             b.ToTable("receipt_links", Schema, t => t.HasCheckConstraint("ck_receipt_links_expiry", "expires_at > created_at"));

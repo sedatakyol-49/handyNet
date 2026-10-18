@@ -30,12 +30,13 @@ import {
 import { PosSubnavComponent } from './pos-subnav';
 import { ReceiptViewComponent } from './receipt-view';
 import { PosEReceiptComponent } from './pos-ereceipt';
+import { PosInvoiceComponent } from './pos-invoice';
 
 /** One receipt as issued (printable) with Storno (`pos.manage`) and Return (select lines/quantities). */
 @Component({
   selector: 'hn-pos-receipt-detail-page',
   host: { class: 'pos-page block' },
-  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, PosEReceiptComponent, ...UI],
+  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, PosEReceiptComponent, PosInvoiceComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (receipt(); as r) {
@@ -58,6 +59,9 @@ import { PosEReceiptComponent } from './pos-ereceipt';
 
         <div class="hn-no-print min-w-0 space-y-4">
           <hn-pos-ereceipt [receipt]="r" />
+          @if (r.kind === 'Sale') {
+            <hn-pos-invoice [receipt]="r" />
+          }
           <section class="pos-card p-4 text-sm" aria-labelledby="pos-detail-info">
             <h2 id="pos-detail-info" class="mb-2 text-sm">{{ 'pos.detail.info' | t }}</h2>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">

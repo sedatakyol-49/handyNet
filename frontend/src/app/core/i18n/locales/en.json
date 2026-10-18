@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "The email address is invalid.",
       "pos.receipt_email_limit": "This receipt has already been emailed 5 times.",
       "pos.receipt_email_missing": "Please enter an email address – the receipt has no customer with an email.",
-      "pos.receipt_link_not_found": "This receipt link is invalid or has expired."
+      "pos.receipt_link_not_found": "This receipt link is invalid or has expired.",
+      "pos.invoice_not_a_sale": "Invoices exist for sale receipts only.",
+      "pos.invoice_receipt_refunded": "The receipt was cancelled or items were returned – no invoice can be issued for it.",
+      "pos.invoice_seller_vat_id_missing": "An invoice (§14 UStG) needs your company’s VAT ID. Please add it to the company profile.",
+      "pos.invoice_customer_required": "The invoice needs the customer’s name and address.",
+      "pos.invoice_customer_address": "The customer’s name and full address (street, postal code, city) are missing or too long.",
+      "pos.invoice_customer_country": "The country must be a two-letter ISO code (e.g. DE).",
+      "pos.invoice_customer_vat_id": "The customer’s VAT ID is too long.",
+      "pos.invoice_totals": "The receipt totals do not add up; the invoice cannot be issued.",
+      "pos.invoice_number": "Invoice numbers start at 1.",
+      "pos.invoice_not_found": "Invoice not found."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "Receipt not available",
       "publicMissing": "This link is invalid or has expired. Please contact the shop.",
       "publicCancelled": "This receipt has been cancelled."
+    },
+    "invoice": {
+      "title": "Invoice",
+      "pdf": "Download PDF",
+      "none": "No invoice has been issued for this receipt yet.",
+      "create": "Create invoice",
+      "issue": "Issue invoice",
+      "issued": "Invoice {number} has been issued.",
+      "hint": "The invoice is issued once with a consecutive number and cannot be changed afterwards.",
+      "required": "Required for the invoice",
+      "fields": {
+        "name": "Name",
+        "company": "Company",
+        "street": "Street and number",
+        "postalCode": "Postal code",
+        "city": "City",
+        "countryCode": "Country (ISO, e.g. DE)",
+        "vatId": "VAT ID (optional)"
+      }
     }
   },
   "invoiceKind": {

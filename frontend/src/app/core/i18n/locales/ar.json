@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "البريد الإلكتروني غير صالح.",
       "pos.receipt_email_limit": "تم إرسال هذا الإيصال بالبريد 5 مرات بالفعل.",
       "pos.receipt_email_missing": "يرجى إدخال بريد إلكتروني – لا يوجد عميل ببريد في الإيصال.",
-      "pos.receipt_link_not_found": "رابط الإيصال غير صالح أو منتهٍ."
+      "pos.receipt_link_not_found": "رابط الإيصال غير صالح أو منتهٍ.",
+      "pos.invoice_not_a_sale": "تصدر الفواتير لإيصالات البيع فقط.",
+      "pos.invoice_receipt_refunded": "تم إلغاء الإيصال أو إرجاع أصناف – لا يمكن إصدار فاتورة.",
+      "pos.invoice_seller_vat_id_missing": "تتطلب الفاتورة (§14 UStG) الرقم الضريبي لشركتك. أضفه إلى ملف الشركة.",
+      "pos.invoice_customer_required": "تتطلب الفاتورة اسم العميل وعنوانه.",
+      "pos.invoice_customer_address": "اسم العميل وعنوانه الكامل مفقودان أو طويلان جدًا.",
+      "pos.invoice_customer_country": "يجب أن تكون الدولة رمز ISO من حرفين (مثل DE).",
+      "pos.invoice_customer_vat_id": "الرقم الضريبي للعميل طويل جدًا.",
+      "pos.invoice_totals": "مجاميع الإيصال غير متطابقة؛ لا يمكن إصدار الفاتورة.",
+      "pos.invoice_number": "تبدأ أرقام الفواتير من 1.",
+      "pos.invoice_not_found": "لم يتم العثور على الفاتورة."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "الإيصال غير متاح",
       "publicMissing": "هذا الرابط غير صالح أو منتهٍ. يرجى التواصل مع المتجر.",
       "publicCancelled": "تم إلغاء هذا الإيصال."
+    },
+    "invoice": {
+      "title": "الفاتورة",
+      "pdf": "تنزيل PDF",
+      "none": "لم تصدر فاتورة لهذا الإيصال بعد.",
+      "create": "إنشاء فاتورة",
+      "issue": "إصدار الفاتورة",
+      "issued": "تم إصدار الفاتورة {number}.",
+      "hint": "تصدر الفاتورة مرة واحدة برقم تسلسلي ولا يمكن تعديلها بعد ذلك.",
+      "required": "مطلوب للفاتورة",
+      "fields": {
+        "name": "الاسم",
+        "company": "الشركة",
+        "street": "الشارع والرقم",
+        "postalCode": "الرمز البريدي",
+        "city": "المدينة",
+        "countryCode": "الدولة (ISO، مثل DE)",
+        "vatId": "الرقم الضريبي (اختياري)"
+      }
     }
   },
   "invoiceKind": {

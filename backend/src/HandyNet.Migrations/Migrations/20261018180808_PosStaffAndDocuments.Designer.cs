@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261018175834_PosStaffAndDocuments")]
+    [Migration("20261018180808_PosStaffAndDocuments")]
     partial class PosStaffAndDocuments
     {
         /// <inheritdoc />
@@ -3651,6 +3651,118 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Customer")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("customer");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document");
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issue_date");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("issued_by");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoices1");
+
+                    b.HasIndex("ReceiptId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_receipt_id");
+
+                    b.HasIndex("OrganizationId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_organization_id_number");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_invoices_organization_id_receipt_id");
+
+                    b.HasIndex("OrganizationId", "Year", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_organization_id_year_sequence_number");
+
+                    b.ToTable("invoices", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoices_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0')");
+
+                            t.HasCheckConstraint("ck_invoices_totals", "total_gross_minor > 0 AND total_vat_minor >= 0 AND total_net_minor + total_vat_minor = total_gross_minor");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoiceSequence", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<long>("NextNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_number");
+
+                    b.HasKey("OrganizationId", "Year")
+                        .HasName("pk_invoice_sequences");
+
+                    b.ToTable("invoice_sequences", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_invoice_sequences_next", "next_number >= 2");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -5360,6 +5472,17 @@ namespace HandyNet.Migrations.Migrations
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_approvals_cash_sessions_organization_id_session_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosInvoice", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoices_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosPrice", b =>

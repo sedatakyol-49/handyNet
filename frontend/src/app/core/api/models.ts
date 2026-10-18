@@ -1628,3 +1628,32 @@ export interface PosPublicReceipt {
   cancelled: boolean;
   expiresAt: string;
 }
+
+// ---- POS invoices (Rechnung for a sale) -----------------------------------------------------------------------------
+export interface PosInvoiceCustomerInput {
+  name: string;
+  company?: string | null;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode?: string | null;
+  vatId?: string | null;
+}
+
+export interface PosInvoice {
+  id: string;
+  receiptId: string;
+  number: string;
+  issueDate: string;
+  issuedAt: string;
+  issuedBy: string;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  totalGrossMinor: number;
+  document: {
+    customer: { name: string; company: string | null; street: string; postalCode: string; city: string; countryCode: string; vatId: string | null };
+    marginGrossMinor: number;
+    vat: { rateBasisPoints: number; netMinor: number; vatMinor: number; grossMinor: number }[];
+  };
+  pdfUrl: string;
+}

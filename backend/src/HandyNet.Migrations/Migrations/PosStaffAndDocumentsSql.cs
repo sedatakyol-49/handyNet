@@ -81,6 +81,74 @@ internal static class PosStaffAndDocumentsSql
                     FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
                 """);
 
+        // ---- Invoices for POS sales: immutable (GoBD), gapless numbers per organization and year (DB-enforced) ------------
+        // 1. A counter starts at 1 (row inserted with next_number = 2) and only ever moves by +1.
+        // 2. At commit, the number taken from a counter must have its invoice (deferred constraint trigger): no gaps.
+        // 3. An invoice carries exactly the number just allocated (the counter row stays locked until commit).
+        m.Sql("""
+            GRANT SELECT, INSERT ON pos.invoices TO handynet_app;
+            REVOKE UPDATE, DELETE, TRUNCATE ON pos.invoices FROM handynet_app;
+            GRANT SELECT, INSERT, UPDATE ON pos.invoice_sequences TO handynet_app;
+            REVOKE DELETE, TRUNCATE ON pos.invoice_sequences FROM handynet_app;
+            ALTER TABLE pos.invoices ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY tenant_isolation ON pos.invoices
+                USING (organization_id = infra.current_org()) WITH CHECK (organization_id = infra.current_org());
+            ALTER TABLE pos.invoice_sequences ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY tenant_isolation ON pos.invoice_sequences
+                USING (organization_id = infra.current_org()) WITH CHECK (organization_id = infra.current_org());
+
+            CREATE TRIGGER invoices_immutable BEFORE UPDATE OR DELETE ON pos.invoices
+                FOR EACH ROW EXECUTE FUNCTION pos.forbid_change();
+            CREATE TRIGGER invoices_no_truncate BEFORE TRUNCATE ON pos.invoices
+                FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
+            CREATE TRIGGER invoice_sequences_no_delete BEFORE DELETE ON pos.invoice_sequences
+                FOR EACH ROW EXECUTE FUNCTION pos.forbid_change();
+            CREATE TRIGGER invoice_sequences_no_truncate BEFORE TRUNCATE ON pos.invoice_sequences
+                FOR EACH STATEMENT EXECUTE FUNCTION pos.forbid_change();
+
+            CREATE FUNCTION pos.guard_invoice_sequence() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN
+                IF TG_OP = 'INSERT' AND NEW.next_number <> 2 THEN
+                    RAISE EXCEPTION 'invoice numbers start at 1' USING ERRCODE = '23514';
+                END IF;
+                IF TG_OP = 'UPDATE' AND (NEW.next_number <> OLD.next_number + 1 OR NEW.organization_id <> OLD.organization_id OR NEW.year <> OLD.year) THEN
+                    RAISE EXCEPTION 'invoice numbers advance by one (% -> %)', OLD.next_number, NEW.next_number USING ERRCODE = '23514';
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER invoice_sequences_guard BEFORE INSERT OR UPDATE ON pos.invoice_sequences
+                FOR EACH ROW EXECUTE FUNCTION pos.guard_invoice_sequence();
+
+            CREATE FUNCTION pos.check_invoice_number_used() RETURNS trigger
+                LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pos.invoices i
+                               WHERE i.organization_id = NEW.organization_id AND i.year = NEW.year AND i.sequence_number = NEW.next_number - 1) THEN
+                    RAISE EXCEPTION 'invoice number % of % was allocated but not used (gap)', NEW.next_number - 1, NEW.year USING ERRCODE = '23514';
+                END IF;
+                RETURN NULL;
+            END $$;
+            CREATE CONSTRAINT TRIGGER invoice_sequences_used AFTER INSERT OR UPDATE ON pos.invoice_sequences
+                DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION pos.check_invoice_number_used();
+
+            CREATE FUNCTION pos.check_invoice() RETURNS trigger
+                LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pos.invoice_sequences s
+                               WHERE s.organization_id = NEW.organization_id AND s.year = NEW.year AND s.next_number = NEW.sequence_number + 1) THEN
+                    RAISE EXCEPTION 'invoice number % was not just allocated', NEW.number USING ERRCODE = '23514';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pos.receipts r
+                               WHERE r.id = NEW.receipt_id AND r.organization_id = NEW.organization_id AND r.kind = 'Sale'
+                                 AND r.total_gross_minor = NEW.total_gross_minor) THEN
+                    RAISE EXCEPTION 'an invoice must match a sale receipt of the organization' USING ERRCODE = '23514';
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER invoices_check BEFORE INSERT ON pos.invoices
+                FOR EACH ROW EXECUTE FUNCTION pos.check_invoice();
+            """);
+
         // Public, anonymous receipt view (QR): the only cross-tenant read path, by the SHA-256 of an unguessable token. Returns
         // exactly one unexpired receipt document (the caller removes the customer block), nothing else.
         m.Sql("""
@@ -111,6 +179,12 @@ internal static class PosStaffAndDocumentsSql
             DROP TRIGGER IF EXISTS approvals_no_truncate ON pos.approvals;
             DROP FUNCTION IF EXISTS pos.guard_approval();
             DROP FUNCTION IF EXISTS pos.public_receipt(text);
+            DROP TRIGGER IF EXISTS invoices_check ON pos.invoices;
+            DROP TRIGGER IF EXISTS invoice_sequences_used ON pos.invoice_sequences;
+            DROP TRIGGER IF EXISTS invoice_sequences_guard ON pos.invoice_sequences;
+            DROP FUNCTION IF EXISTS pos.check_invoice();
+            DROP FUNCTION IF EXISTS pos.check_invoice_number_used();
+            DROP FUNCTION IF EXISTS pos.guard_invoice_sequence();
             """);
     }
 }

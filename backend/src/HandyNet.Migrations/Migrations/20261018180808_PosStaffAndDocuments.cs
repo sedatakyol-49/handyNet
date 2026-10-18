@@ -165,6 +165,55 @@ namespace HandyNet.Migrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "invoice_sequences",
+                schema: "pos",
+                columns: table => new
+                {
+                    organization_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    year = table.Column<int>(type: "integer", nullable: false),
+                    next_number = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_invoice_sequences", x => new { x.organization_id, x.year });
+                    table.CheckConstraint("ck_invoice_sequences_next", "next_number >= 2");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "invoices",
+                schema: "pos",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    organization_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    receipt_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    number = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    year = table.Column<int>(type: "integer", nullable: false),
+                    sequence_number = table.Column<long>(type: "bigint", nullable: false),
+                    issue_date = table.Column<DateOnly>(type: "date", nullable: false),
+                    issued_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    issued_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    customer = table.Column<string>(type: "jsonb", nullable: false),
+                    document = table.Column<string>(type: "jsonb", nullable: false),
+                    total_net_minor = table.Column<long>(type: "bigint", nullable: false),
+                    total_vat_minor = table.Column<long>(type: "bigint", nullable: false),
+                    total_gross_minor = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_invoices1", x => x.id);
+                    table.CheckConstraint("ck_invoices_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0')");
+                    table.CheckConstraint("ck_invoices_totals", "total_gross_minor > 0 AND total_vat_minor >= 0 AND total_net_minor + total_vat_minor = total_gross_minor");
+                    table.ForeignKey(
+                        name: "fk_invoices_receipts_organization_id_receipt_id",
+                        columns: x => new { x.organization_id, x.receipt_id },
+                        principalSchema: "pos",
+                        principalTable: "receipts",
+                        principalColumns: new[] { "organization_id", "id" },
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "receipt_emails",
                 schema: "pos",
                 columns: table => new
@@ -305,6 +354,33 @@ namespace HandyNet.Migrations.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_invoices_organization_id_number",
+                schema: "pos",
+                table: "invoices",
+                columns: new[] { "organization_id", "number" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_invoices_organization_id_receipt_id",
+                schema: "pos",
+                table: "invoices",
+                columns: new[] { "organization_id", "receipt_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_invoices_organization_id_year_sequence_number",
+                schema: "pos",
+                table: "invoices",
+                columns: new[] { "organization_id", "year", "sequence_number" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_invoices_receipt_id",
+                schema: "pos",
+                table: "invoices",
+                column: "receipt_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_receipt_emails_organization_id_receipt_id",
                 schema: "pos",
                 table: "receipt_emails",
@@ -341,6 +417,14 @@ namespace HandyNet.Migrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "cashier_sessions",
+                schema: "pos");
+
+            migrationBuilder.DropTable(
+                name: "invoice_sequences",
+                schema: "pos");
+
+            migrationBuilder.DropTable(
+                name: "invoices",
                 schema: "pos");
 
             migrationBuilder.DropTable(

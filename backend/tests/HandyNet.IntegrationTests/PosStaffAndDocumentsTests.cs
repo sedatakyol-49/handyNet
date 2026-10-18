@@ -553,6 +553,162 @@ public sealed class PosStaffAndDocumentsTests(HandyNetFixture fixture)
     private static string OpaqueTokenLike() => Convert.ToBase64String(Guid.NewGuid().ToByteArray().Concat(Guid.NewGuid().ToByteArray()).ToArray())
         .TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
+    // ---- 5. invoices for POS sales ----------------------------------------------------------------------------------------
+
+    private async Task<(Guid ProductId, string Imei)> StockDeviceAsync(ApiClient shop)
+    {
+        var imei = NewImei();
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var organizationId = shop.OrganizationId!.Value;
+        scope.ServiceProvider.GetRequiredService<HandyNet.SharedKernel.Tenancy.TenantContext>().SetSystemActor(organizationId);
+        var catalog = scope.ServiceProvider.GetRequiredService<HandyNet.Modules.Catalog.Contracts.IProductCatalog>();
+        var inventory = scope.ServiceProvider.GetRequiredService<HandyNet.Modules.Inventory.Contracts.IInventory>();
+        var product = await catalog.FindOrStageDeviceAsync("TestPhone", "Modell " + Scenario.UniqueSuffix(), "128 GB", organizationId, CancellationToken.None);
+        var warehouseId = await inventory.GetOrStageDefaultWarehouseAsync(CancellationToken.None);
+        var unit = await inventory.StageReceiveUnitAsync(warehouseId, product.Value.Id, imei, 100_00, HandyNet.Modules.Inventory.Domain.TaxScheme.Margin25a,
+            "test:direct", CancellationToken.None);
+        Assert.True(unit.IsSuccess, unit.Error?.Message);
+        await scope.ServiceProvider.GetRequiredService<HandyNetDbContext>().SaveChangesAsync();
+        return (product.Value.Id, imei);
+    }
+
+    private static string NewImei()
+    {
+        var body = "35" + Random.Shared.NextInt64(0, 1_000_000_000_000).ToString("D12");
+        var sum = 0;
+        for (var i = 0; i < 14; i++)
+        {
+            var d = body[i] - '0';
+            if (i % 2 == 1)
+            {
+                d *= 2;
+                if (d > 9) d -= 9;
+            }
+            sum += d;
+        }
+        return body + (10 - sum % 10) % 10;
+    }
+
+    private async Task SetVatIdAsync(ApiClient shop) =>
+        await AsOwnerAsync<int>($"UPDATE tenancy.organizations SET vat_id = 'DE{Random.Shared.Next(100_000_000, 999_999_999)}' "
+                                + $"WHERE id = '{shop.OrganizationId}' RETURNING 1");
+
+    [Fact]
+    public async Task Invoice_for_a_sale_has_the_14_UStG_fields_a_gapless_number_and_is_issued_once()
+    {
+        var (shop, register, receipt, _) = await SaleWithCustomerAsync();
+        var year = DateTime.UtcNow.Year;
+
+        // Without a VAT id of the seller: refused, and no number is used up.
+        Assert.Equal("pos.invoice_seller_vat_id_missing", (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { })).Code);
+        await SetVatIdAsync(shop);
+        Assert.Equal(HttpStatusCode.NoContent, (await shop.GetAsync($"/api/pos/sales/{Id(receipt)}/invoice")).Status);
+
+        var invoice = (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { })).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal($"RE-{year}-000001", invoice["number"]!.GetValue<string>());
+        Assert.Equal("Erika Mustermann", invoice["document"]!["customer"]!["name"]!.GetValue<string>());
+        Assert.Equal(29_99, invoice["totalGrossMinor"]!.GetValue<long>());
+        Assert.Equal(4_79, invoice["totalVatMinor"]!.GetValue<long>()); // 29.99 − round(29.99 / 1.19) = 4.79
+        // Issued once: again returns the same invoice (200).
+        var again = (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { })).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(Id(invoice), Id(again));
+        Assert.Equal(Id(invoice), Id((await shop.GetAsync($"/api/pos/sales/{Id(receipt)}/invoice")).Expect(HttpStatusCode.OK).Json));
+
+        var pdf = await shop.GetFileAsync(invoice["pdfUrl"]!.GetValue<string>());
+        Assert.Equal(HttpStatusCode.OK, pdf.Status);
+        Assert.Equal("application/pdf", pdf.MediaType);
+        var text = PdfText.All(pdf.Body);
+        foreach (var expected in new[] { "Rechnung", $"RE-{year}-000001", "Rechnungsdatum", "Leistungsdatum", "Erika Mustermann", "Lindenweg 3", "10405 Berlin",
+                     "USt-IdNr.:", "Umsatzsteuer 19 %", "4,79 €", "29,99 €" })
+            Assert.Contains(expected, text);
+
+        // An entered customer (here: a business) for a sale without customer; the next number follows without a gap.
+        var product = await StockProductAsync(shop, 2, "Hülle");
+        var second = (await shop.PostAsync("/api/pos/sales", Sale(register, product, 10_00), Key())).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal("pos.invoice_customer_required", (await shop.PostAsync($"/api/pos/sales/{Id(second)}/invoice", new { })).Code);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await shop.PostAsync($"/api/pos/sales/{Id(second)}/invoice",
+            new { customer = new { name = "Firma", street = "", postalCode = "1", city = "X" } })).Status);
+        var business = (await shop.PostAsync($"/api/pos/sales/{Id(second)}/invoice", new
+        {
+            customer = new { name = "Max Muster", company = "Muster GmbH", street = "Gewerbering 9", postalCode = "20095", city = "Hamburg", vatId = "DE 123456789" },
+        })).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal($"RE-{year}-000002", business["number"]!.GetValue<string>());
+        Assert.Equal("DE123456789", business["document"]!["customer"]!["vatId"]!.GetValue<string>());
+
+        // Another organization sees neither the invoice nor its PDF.
+        var foreign = await PosShopAsync();
+        Assert.Equal(HttpStatusCode.NotFound, (await foreign.GetFileAsync(invoice["pdfUrl"]!.GetValue<string>())).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await foreign.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { })).Status);
+    }
+
+    [Fact]
+    public async Task Invoice_shows_25a_lines_without_VAT_and_refunded_receipts_get_none()
+    {
+        var shop = await PosShopAsync();
+        await SetVatIdAsync(shop);
+        var register = await RegisterAsync(shop);
+        await OpenSessionAsync(shop, register);
+        var (_, imei) = await StockDeviceAsync(shop);
+        var accessory = await StockProductAsync(shop, 3, "Kabel");
+        var receipt = (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            lines = new object[]
+            {
+                new { imei, quantity = 1, unitPriceMinor = 250_00, discountMinor = 0 },
+                new { productId = accessory, quantity = 1, unitPriceMinor = 11_90, discountMinor = 0 },
+            },
+            payments = new[] { new { method = "Card", amountMinor = 261_90 } },
+        }, Key())).Expect(HttpStatusCode.Created).Json;
+        var customer = new { name = "Erika Mustermann", street = "Lindenweg 3", postalCode = "10405", city = "Berlin" };
+        var invoice = (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { customer })).Expect(HttpStatusCode.Created).Json;
+        var doc = invoice["document"]!;
+        Assert.Equal(250_00, doc["marginGrossMinor"]!.GetValue<long>());
+        Assert.Equal(1_90, invoice["totalVatMinor"]!.GetValue<long>()); // only the regularly taxed cable
+        Assert.Single(doc["vat"]!.AsArray());
+        Assert.Contains(doc["notes"]!.AsArray(), n => n!.GetValue<string>().Contains("Gebrauchtgegenstände/Sonderregelung"));
+        var text = PdfText.All((await shop.GetFileAsync(invoice["pdfUrl"]!.GetValue<string>())).Body);
+        Assert.Contains("Differenzbesteuert (§25a)", text);
+        Assert.Contains("Gebrauchtgegenstände/Sonderregelung", text);
+
+        // A cancelled receipt cannot be invoiced.
+        var product = await StockProductAsync(shop, 2, "Folie");
+        var cancelled = (await shop.PostAsync("/api/pos/sales", Sale(register, product, 5_00), Key())).Expect(HttpStatusCode.Created).Json;
+        (await shop.PostAsync($"/api/pos/sales/{Id(cancelled)}/storno", new { reason = "Fehlbon" })).Expect(HttpStatusCode.Created);
+        Assert.Equal("pos.invoice_receipt_refunded", (await shop.PostAsync($"/api/pos/sales/{Id(cancelled)}/invoice", new { customer })).Code);
+    }
+
+    [Fact]
+    public async Task Invoices_are_immutable_and_the_series_cannot_have_gaps()
+    {
+        var (shop, _, receipt, _) = await SaleWithCustomerAsync();
+        await SetVatIdAsync(shop);
+        var invoice = (await shop.PostAsync($"/api/pos/sales/{Id(receipt)}/invoice", new { })).Expect(HttpStatusCode.Created).Json;
+
+        var update = await Assert.ThrowsAsync<PostgresException>(() =>
+            AsOwnerAsync<int>($"UPDATE pos.invoices SET number = 'RE-2000-000009' WHERE id = '{Id(invoice)}' RETURNING 1"));
+        Assert.Equal("42501", update.SqlState);
+        var delete = await Assert.ThrowsAsync<PostgresException>(() => AsOwnerAsync<int>($"DELETE FROM pos.invoices WHERE id = '{Id(invoice)}' RETURNING 1"));
+        Assert.Equal("42501", delete.SqlState);
+
+        // Taking a number without writing its invoice fails at commit (no gaps), as does skipping a number.
+        var year = DateTime.UtcNow.Year;
+        var gap = await Assert.ThrowsAsync<PostgresException>(() => AsOwnerAsync<int>($"""
+            UPDATE pos.invoice_sequences SET next_number = next_number + 1 WHERE organization_id = '{shop.OrganizationId}' AND year = {year} RETURNING 1
+            """));
+        Assert.Equal("23514", gap.SqlState);
+        var skip = await Assert.ThrowsAsync<PostgresException>(() => AsOwnerAsync<int>($"""
+            UPDATE pos.invoice_sequences SET next_number = next_number + 2 WHERE organization_id = '{shop.OrganizationId}' AND year = {year} RETURNING 1
+            """));
+        Assert.Equal("23514", skip.SqlState);
+
+        // The app role sees only its own organization's invoices.
+        await using var app = new NpgsqlConnection(fixture.AppConnectionString);
+        await app.OpenAsync();
+        await using var read = new NpgsqlCommand("SELECT count(*) FROM pos.invoices", app);
+        Assert.Equal(0L, (long)(await read.ExecuteScalarAsync())!);
+    }
+
     // ---- 1. product images on POS tiles ------------------------------------------------------------------------------------
 
     [Fact]

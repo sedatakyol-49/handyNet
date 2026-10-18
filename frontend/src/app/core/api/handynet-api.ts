@@ -20,6 +20,8 @@ import {
   PosCashier,
   PosCashierOption,
   PosCashierSignIn,
+  PosInvoice,
+  PosInvoiceCustomerInput,
   PosPinStatus,
   PosPublicReceipt,
   PosReceiptEmail,
@@ -864,6 +866,21 @@ export class PosApi {
 
   lockCashier(): Observable<void> {
     return this.http.post<void>(`${this.url}/cashier/lock`, {});
+  }
+
+  // ---- invoices for POS sales (Rechnung)
+  /** The receipt's invoice, or null (204) when none was issued yet. */
+  receiptInvoice(receiptId: string): Observable<PosInvoice | null> {
+    return this.http.get<PosInvoice | null>(`${this.url}/sales/${receiptId}/invoice`);
+  }
+
+  /** Issues the invoice (201) or returns the existing one (200). Customer null = the receipt's customer. */
+  createInvoice(receiptId: string, customer: PosInvoiceCustomerInput | null): Observable<PosInvoice> {
+    return this.http.post<PosInvoice>(`${this.url}/sales/${receiptId}/invoice`, { customer });
+  }
+
+  invoicePdf(invoiceId: string): Observable<Blob> {
+    return this.http.get(`${this.url}/invoices/${invoiceId}/pdf`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
   }
 
   // ---- e-receipts

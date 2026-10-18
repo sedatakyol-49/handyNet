@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "نشانی ایمیل نامعتبر است.",
       "pos.receipt_email_limit": "این رسید تاکنون ۵ بار ایمیل شده است.",
       "pos.receipt_email_missing": "لطفاً ایمیل وارد کنید – رسید مشتری دارای ایمیل ندارد.",
-      "pos.receipt_link_not_found": "پیوند رسید نامعتبر یا منقضی است."
+      "pos.receipt_link_not_found": "پیوند رسید نامعتبر یا منقضی است.",
+      "pos.invoice_not_a_sale": "فاکتور فقط برای رسید فروش صادر می‌شود.",
+      "pos.invoice_receipt_refunded": "رسید ابطال شده یا کالایی مرجوع شده است – فاکتور صادر نمی‌شود.",
+      "pos.invoice_seller_vat_id_missing": "برای فاکتور (§14 UStG) شناسه مالیاتی شرکت شما لازم است. آن را به نمایه شرکت اضافه کنید.",
+      "pos.invoice_customer_required": "فاکتور به نام و نشانی مشتری نیاز دارد.",
+      "pos.invoice_customer_address": "نام و نشانی کامل مشتری وارد نشده یا بیش از حد طولانی است.",
+      "pos.invoice_customer_country": "کشور باید کد دوحرفی ISO باشد (مثلاً DE).",
+      "pos.invoice_customer_vat_id": "شناسه مالیاتی مشتری بیش از حد طولانی است.",
+      "pos.invoice_totals": "جمع‌های رسید با هم نمی‌خوانند؛ فاکتور صادر نمی‌شود.",
+      "pos.invoice_number": "شماره فاکتورها از ۱ شروع می‌شود.",
+      "pos.invoice_not_found": "فاکتور یافت نشد."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "رسید در دسترس نیست",
       "publicMissing": "این پیوند نامعتبر یا منقضی است. لطفاً با فروشگاه تماس بگیرید.",
       "publicCancelled": "این رسید ابطال شده است."
+    },
+    "invoice": {
+      "title": "فاکتور",
+      "pdf": "دانلود PDF",
+      "none": "هنوز برای این رسید فاکتوری صادر نشده است.",
+      "create": "ایجاد فاکتور",
+      "issue": "صدور فاکتور",
+      "issued": "فاکتور {number} صادر شد.",
+      "hint": "فاکتور یک بار با شماره پیاپی صادر می‌شود و بعداً قابل تغییر نیست.",
+      "required": "برای فاکتور الزامی است",
+      "fields": {
+        "name": "نام",
+        "company": "شرکت",
+        "street": "خیابان و پلاک",
+        "postalCode": "کد پستی",
+        "city": "شهر",
+        "countryCode": "کشور (ISO، مثلاً DE)",
+        "vatId": "شناسه مالیاتی (اختیاری)"
+      }
     }
   },
   "invoiceKind": {

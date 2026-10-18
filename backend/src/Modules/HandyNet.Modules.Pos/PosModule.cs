@@ -70,6 +70,7 @@ public static class PosModule
         services.AddScoped<CashierService>();
         services.AddScoped<ApprovalService>();
         services.AddScoped<EReceiptService>();
+        services.AddScoped<PosInvoiceService>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<SaleService>(includeInternalTypes: true);
@@ -288,6 +289,20 @@ public static class PosModule
 
         sell.MapPost("/sales/{id:guid}/public-link", async (Guid id, EReceiptService service, CancellationToken ct) =>
             (await service.CreateLinkAsync(id, ct)).ToHttp(r => Results.Created(r.Path, r)));
+
+        // Invoice (Rechnung, §14 UStG) for a sale receipt: issued once, then returned (200) on repeat.
+        sell.MapPost("/sales/{id:guid}/invoice", async (Guid id, CreateInvoiceRequest request, IValidator<CreateInvoiceRequest> validator,
+                PosInvoiceService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.IssueAsync(id, request, ct)).ToHttp(r => r.Existing
+                ? Results.Ok(r.Invoice)
+                : Results.Created(r.Invoice.PdfUrl, r.Invoice)));
+
+        sell.MapGet("/sales/{id:guid}/invoice", async (Guid id, PosInvoiceService service, CancellationToken ct) =>
+            await service.ForReceiptAsync(id, ct) is { } invoice ? Results.Ok(invoice) : Results.NoContent());
+
+        sell.MapGet("/invoices/{id:guid}/pdf", async (Guid id, PosInvoiceService service, CancellationToken ct) =>
+            (await service.PdfAsync(id, ct)).ToHttp(f => Results.File(f.Content, "application/pdf", f.FileName)));
 
         app.MapGet("/api/public/receipts/{token}", async (string token, EReceiptService service, CancellationToken ct) =>
                 (await service.GetPublicAsync(token, ct)).ToHttp(Results.Ok))

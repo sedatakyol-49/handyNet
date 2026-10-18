@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "Неверный адрес эл. почты.",
       "pos.receipt_email_limit": "Этот чек уже отправлен по почте 5 раз.",
       "pos.receipt_email_missing": "Введите адрес — у чека нет клиента с эл. почтой.",
-      "pos.receipt_link_not_found": "Ссылка на чек недействительна или истекла."
+      "pos.receipt_link_not_found": "Ссылка на чек недействительна или истекла.",
+      "pos.invoice_not_a_sale": "Счета выставляются только по чекам продажи.",
+      "pos.invoice_receipt_refunded": "Чек аннулирован или был возврат — счёт выставить нельзя.",
+      "pos.invoice_seller_vat_id_missing": "Для счёта (§14 UStG) нужен номер НДС вашей компании. Добавьте его в профиль.",
+      "pos.invoice_customer_required": "Для счёта нужны имя и адрес клиента.",
+      "pos.invoice_customer_address": "Имя и полный адрес клиента отсутствуют или слишком длинные.",
+      "pos.invoice_customer_country": "Страна — двухбуквенный код ISO (напр. DE).",
+      "pos.invoice_customer_vat_id": "Номер НДС клиента слишком длинный.",
+      "pos.invoice_totals": "Суммы чека не сходятся; счёт выставить нельзя.",
+      "pos.invoice_number": "Номера счетов начинаются с 1.",
+      "pos.invoice_not_found": "Счёт не найден."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "Чек недоступен",
       "publicMissing": "Ссылка недействительна или истекла. Обратитесь в магазин.",
       "publicCancelled": "Этот чек аннулирован."
+    },
+    "invoice": {
+      "title": "Счёт",
+      "pdf": "Скачать PDF",
+      "none": "Счёт по этому чеку ещё не выставлен.",
+      "create": "Выставить счёт",
+      "issue": "Выставить счёт",
+      "issued": "Счёт {number} выставлен.",
+      "hint": "Счёт выставляется один раз со сквозным номером и потом не изменяется.",
+      "required": "Обязательно для счёта",
+      "fields": {
+        "name": "Имя",
+        "company": "Компания",
+        "street": "Улица и дом",
+        "postalCode": "Индекс",
+        "city": "Город",
+        "countryCode": "Страна (ISO, напр. DE)",
+        "vatId": "Номер НДС (необязательно)"
+      }
     }
   },
   "invoiceKind": {

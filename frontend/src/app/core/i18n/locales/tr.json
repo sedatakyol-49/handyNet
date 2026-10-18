@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "E-posta adresi geçersiz.",
       "pos.receipt_email_limit": "Bu fiş zaten 5 kez e-postayla gönderildi.",
       "pos.receipt_email_missing": "Lütfen e-posta girin – fişte e-postası olan müşteri yok.",
-      "pos.receipt_link_not_found": "Bu fiş bağlantısı geçersiz veya süresi dolmuş."
+      "pos.receipt_link_not_found": "Bu fiş bağlantısı geçersiz veya süresi dolmuş.",
+      "pos.invoice_not_a_sale": "Fatura yalnızca satış fişleri için düzenlenir.",
+      "pos.invoice_receipt_refunded": "Fiş iptal edildi veya ürün iade edildi – fatura düzenlenemez.",
+      "pos.invoice_seller_vat_id_missing": "Fatura (§14 UStG) için şirketinizin KDV numarası gerekir. Lütfen şirket profiline ekleyin.",
+      "pos.invoice_customer_required": "Fatura için müşterinin adı ve adresi gerekir.",
+      "pos.invoice_customer_address": "Müşterinin adı ve tam adresi eksik veya çok uzun.",
+      "pos.invoice_customer_country": "Ülke iki harfli ISO kodu olmalı (ör. DE).",
+      "pos.invoice_customer_vat_id": "Müşterinin KDV numarası çok uzun.",
+      "pos.invoice_totals": "Fiş toplamları tutmuyor; fatura düzenlenemez.",
+      "pos.invoice_number": "Fatura numaraları 1’den başlar.",
+      "pos.invoice_not_found": "Fatura bulunamadı."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "Fiş mevcut değil",
       "publicMissing": "Bu bağlantı geçersiz veya süresi dolmuş. Lütfen mağazaya başvurun.",
       "publicCancelled": "Bu fiş iptal edildi."
+    },
+    "invoice": {
+      "title": "Fatura",
+      "pdf": "PDF indir",
+      "none": "Bu fiş için henüz fatura oluşturulmadı.",
+      "create": "Fatura oluştur",
+      "issue": "Faturayı düzenle",
+      "issued": "{number} numaralı fatura düzenlendi.",
+      "hint": "Fatura bir kez ardışık numarayla düzenlenir ve sonra değiştirilemez.",
+      "required": "Fatura için zorunlu",
+      "fields": {
+        "name": "Ad",
+        "company": "Firma",
+        "street": "Sokak ve numara",
+        "postalCode": "Posta kodu",
+        "city": "Şehir",
+        "countryCode": "Ülke (ISO, ör. DE)",
+        "vatId": "KDV no. (isteğe bağlı)"
+      }
     }
   },
   "invoiceKind": {

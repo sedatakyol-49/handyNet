@@ -505,7 +505,17 @@
       "pos.receipt_email_invalid": "El correo no es válido.",
       "pos.receipt_email_limit": "Este tique ya se envió 5 veces por correo.",
       "pos.receipt_email_missing": "Introduzca un correo: el tique no tiene cliente con correo.",
-      "pos.receipt_link_not_found": "Este enlace de tique no es válido o ha caducado."
+      "pos.receipt_link_not_found": "Este enlace de tique no es válido o ha caducado.",
+      "pos.invoice_not_a_sale": "Solo se emiten facturas de tiques de venta.",
+      "pos.invoice_receipt_refunded": "El tique se anuló o hubo devoluciones; no se puede facturar.",
+      "pos.invoice_seller_vat_id_missing": "Una factura (§14 UStG) requiere el NIF-IVA de su empresa. Añádalo al perfil.",
+      "pos.invoice_customer_required": "La factura requiere nombre y dirección del cliente.",
+      "pos.invoice_customer_address": "Falta el nombre o la dirección completa del cliente, o son demasiado largos.",
+      "pos.invoice_customer_country": "El país debe ser un código ISO de dos letras (p. ej. DE).",
+      "pos.invoice_customer_vat_id": "El NIF-IVA del cliente es demasiado largo.",
+      "pos.invoice_totals": "Los totales del tique no cuadran; no se puede emitir la factura.",
+      "pos.invoice_number": "Los números de factura empiezan en 1.",
+      "pos.invoice_not_found": "Factura no encontrada."
     }
   },
   "dashboard": {
@@ -2543,6 +2553,25 @@
       "publicMissingTitle": "Tique no disponible",
       "publicMissing": "Este enlace no es válido o ha caducado. Contacte con la tienda.",
       "publicCancelled": "Este tique ha sido anulado."
+    },
+    "invoice": {
+      "title": "Factura",
+      "pdf": "Descargar PDF",
+      "none": "Aún no se ha emitido factura para este tique.",
+      "create": "Crear factura",
+      "issue": "Emitir factura",
+      "issued": "Factura {number} emitida.",
+      "hint": "La factura se emite una vez con número correlativo y no se puede modificar después.",
+      "required": "Obligatorio para la factura",
+      "fields": {
+        "name": "Nombre",
+        "company": "Empresa",
+        "street": "Calle y número",
+        "postalCode": "Código postal",
+        "city": "Ciudad",
+        "countryCode": "País (ISO, p. ej. DE)",
+        "vatId": "NIF-IVA (opcional)"
+      }
     }
   },
   "invoiceKind": {
