@@ -131,6 +131,8 @@ public sealed class PosInvoice : IAuditable
             notes.Add(MarginNote);
         notes.Add($"Der Betrag wurde an der Kasse bezahlt (Kassenbeleg Nr. {receipt.Number}, {registerName}).");
         var payments = receipt.Payments.Select(p => $"{(p.Method == PaymentMethod.Cash ? "Bar" : "Karte")}: {Euro(p.AmountMinor)}").ToList();
+        if (receipt.RoundingMinor != 0)
+            payments.Add($"Rundung Barzahlung (0,05 €): {Euro(receipt.RoundingMinor)}");
 
         var document = new PosInvoiceDocument("Rechnung", number, issueDate, supplyDate, seller, customer, registerName, receipt.Number, lines, vat, margin,
             shownNet, shownVat, total, payments, notes);

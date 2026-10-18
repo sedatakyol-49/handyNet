@@ -1034,6 +1034,8 @@ export interface PosRegister {
   createdAt: string;
   /** Shared device: lock the till after this many idle minutes (null = off). */
   autoLockMinutes?: number | null;
+  /** Round cash totals to 0.05 € on this register. */
+  cashRounding?: boolean;
 }
 
 export interface CashMovement {
@@ -1100,6 +1102,8 @@ export interface SessionSummary {
   expectedCashMinor: number;
   firstReceiptNumber: number | null;
   lastReceiptNumber: number | null;
+  /** Sum of cash rounding of the session (0.05 € registers). */
+  roundingMinor?: number;
 }
 
 export interface CashSession {
@@ -1411,6 +1415,8 @@ export interface ReceiptDocument {
   notes: string[];
   fiscal: ReceiptFiscal;
   customer?: ReceiptCustomer | null;
+  /** Cash rounding to 0.05 € (payments = total + rounding); 0/absent without rounding. */
+  roundingMinor?: number;
 }
 
 export interface Receipt {
@@ -1441,6 +1447,7 @@ export interface Receipt {
   lastReprintedAt?: string | null;
   /** Manager approval used for this receipt (who approved), if any. */
   approval?: PosApprovalInfo | null;
+  roundingMinor?: number;
 }
 
 export interface ReceiptSummary {

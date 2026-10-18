@@ -218,7 +218,7 @@ export class TillPage {
   protected readonly selectedPaymentId = signal<string | null>(null);
   protected readonly selectedPayment = computed(() => this.payments().find((p) => p.id === this.selectedPaymentId()) ?? null);
   private payFresh = true;
-  protected readonly settlement = computed(() => settlePayments(this.totals().totalMinor, this.payments()));
+  protected readonly settlement = computed(() => settlePayments(this.totals().totalMinor, this.payments(), this.register.value()?.cashRounding ?? false));
   /** Next banknotes for the amount the cash line has to cover. */
   protected readonly cashQuick = computed(() => {
     const cashLine = this.payments().find((p) => p.method === 'Cash');

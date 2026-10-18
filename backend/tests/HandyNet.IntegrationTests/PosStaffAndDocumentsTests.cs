@@ -709,6 +709,73 @@ public sealed class PosStaffAndDocumentsTests(HandyNetFixture fixture)
         Assert.Equal(0L, (long)(await read.ExecuteScalarAsync())!);
     }
 
+    // ---- 6. cash rounding ------------------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Cash_rounding_register_rounds_cash_to_five_cents_on_receipt_and_z_report()
+    {
+        var shop = await PosShopAsync();
+        var register = await RegisterAsync(shop);
+        var product = await StockProductAsync(shop, 10, "Adapter");
+        (await shop.PutAsync($"/api/pos/registers/{register}", new { name = "Kasse 1", isActive = true, cashRounding = true })).Expect(HttpStatusCode.OK);
+        Assert.True((await shop.GetAsync($"/api/pos/registers/{register}")).Json["cashRounding"]!.GetValue<bool>());
+        // Omitting the field keeps the setting.
+        (await shop.PutAsync($"/api/pos/registers/{register}", new { name = "Kasse 1", isActive = true })).Expect(HttpStatusCode.OK);
+        Assert.True((await shop.GetAsync($"/api/pos/registers/{register}")).Json["cashRounding"]!.GetValue<bool>());
+        var session = await OpenSessionAsync(shop, register, 50_00);
+
+        // 12.33 € in cash: 12.35 € due, 20.00 € tendered → 7.65 € change, rounding +0.02 €.
+        Assert.Equal("pos.payment_insufficient", (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 12_33, discountMinor = 0 } },
+            payments = new[] { new { method = "Cash", amountMinor = 12_33 } },
+        }, Key())).Code);
+        var cash = (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 12_33, discountMinor = 0 } },
+            payments = new[] { new { method = "Cash", amountMinor = 20_00 } },
+        }, Key())).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal((12_33L, 2L, 7_65L), (cash["totalGrossMinor"]!.GetValue<long>(), cash["roundingMinor"]!.GetValue<long>(), cash["changeMinor"]!.GetValue<long>()));
+        Assert.Equal(12_35, cash["payments"]!.AsArray().Single()!["amountMinor"]!.GetValue<long>());
+        Assert.Equal(2, cash["document"]!["roundingMinor"]!.GetValue<long>());
+
+        // Card payments are exact; 12.32 € in cash rounds down.
+        var card = (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 12_33, discountMinor = 0 } },
+            payments = new[] { new { method = "Card", amountMinor = 12_33 } },
+        }, Key())).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal(0, card["roundingMinor"]!.GetValue<long>());
+        var down = (await shop.PostAsync("/api/pos/sales", new
+        {
+            registerId = register,
+            lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 12_32, discountMinor = 0 } },
+            payments = new[] { new { method = "Cash", amountMinor = 12_30 } },
+        }, Key())).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal(-2, down["roundingMinor"]!.GetValue<long>());
+
+        // Storno mirrors the rounding (and the cash paid).
+        var storno = (await shop.PostAsync($"/api/pos/sales/{Id(cash)}/storno", new { reason = "Fehlbon" })).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal(-2, storno["roundingMinor"]!.GetValue<long>());
+
+        // Z-report: rounding total; expected cash = 50.00 + 12.35 + 12.30 − 12.35 = 62.30.
+        var closed = (await shop.PostAsync($"/api/pos/sessions/{session}/close", new { countedCashMinor = 62_30 })).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(-2, closed["summary"]!["roundingMinor"]!.GetValue<long>());
+        Assert.Equal(62_30, closed["expectedCashMinor"]!.GetValue<long>());
+        Assert.Equal(0, closed["differenceMinor"]!.GetValue<long>());
+
+        // The database keeps the rounding within ±2 cents.
+        var ck = await Assert.ThrowsAsync<PostgresException>(() => AsOwnerAsync<int>($"""
+            SET session_replication_role = replica;
+            UPDATE pos.receipts SET rounding_minor = 3 WHERE id = '{Id(down)}';
+            SELECT 1;
+            """));
+        Assert.Equal("23514", ck.SqlState); // CHECK holds even with triggers off (session-local setting, own connection)
+    }
+
     // ---- 1. product images on POS tiles ------------------------------------------------------------------------------------
 
     [Fact]

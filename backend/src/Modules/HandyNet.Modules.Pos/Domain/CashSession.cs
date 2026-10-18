@@ -40,7 +40,8 @@ public sealed record SessionSummary(
     long WithdrawalsMinor,
     long ExpectedCashMinor,
     long? FirstReceiptNumber,
-    long? LastReceiptNumber);
+    long? LastReceiptNumber,
+    long RoundingMinor = 0);
 
 public static class SessionCalculator
 {
@@ -80,7 +81,8 @@ public static class SessionCalculator
             withdrawals,
             checked(openingCashMinor + cash + deposits - withdrawals),
             receipts.Count == 0 ? null : receipts.Min(r => r.Number),
-            receipts.Count == 0 ? null : receipts.Max(r => r.Number));
+            receipts.Count == 0 ? null : receipts.Max(r => r.Number),
+            receipts.Sum(r => r.RoundingMinor));
     }
 }
 

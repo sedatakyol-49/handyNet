@@ -70,7 +70,8 @@ public sealed class ReceiptEmail : Entity, IAuditable
         d.TotalGrossMinor,
         d.Payments.Select(p => new EReceiptPayment(p.Method, p.AmountMinor, p.TenderedMinor)).ToList(),
         d.ChangeMinor,
-        d.Notes);
+        d.Notes,
+        d.RoundingMinor);
 }
 
 /// <summary>

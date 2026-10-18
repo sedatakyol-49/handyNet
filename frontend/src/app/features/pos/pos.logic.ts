@@ -313,6 +313,14 @@ export interface Settlement {
   changeMinor: number;
   payments: SalePayment[];
   error: SettleError;
+  /** Cash rounding to 0.05 € (rounding registers): amount due = total + rounding. */
+  roundingMinor?: number;
+}
+
+/** Rounds cents to the nearest 0.05 € like the API's CashRounding (1–2 cents down, 3–4 cents up). */
+export function roundCash(minor: number): number {
+  const r = minor % 5;
+  return r <= 2 ? minor - r : minor + (5 - r);
 }
 
 /**
@@ -324,16 +332,20 @@ export function settle(totalMinor: number, cashInput: string, cardInput: string)
 }
 
 /** `settle()` on cents (null = invalid input). */
-export function settleMinor(totalMinor: number, cash: number | null, card: number | null): Settlement {
+export function settleMinor(totalMinor: number, cash: number | null, card: number | null, cashRounding = false): Settlement {
   const base: Settlement = { cashMinor: cash ?? 0, cardMinor: card ?? 0, paidMinor: 0, remainingMinor: totalMinor, changeMinor: 0, payments: [], error: null };
   if (totalMinor <= 0) return { ...base, error: 'emptyCart' };
   if (cash === null || card === null) return { ...base, error: 'invalidAmount' };
   const paid = cash + card;
+  // Rounding registers: the part paid in cash (total − card) is due rounded to 0.05 €.
+  const roundedDue = cashRounding && cash > 0 && card <= totalMinor ? roundCash(totalMinor - card) : 0;
+  const target = roundedDue > 0 ? card + roundedDue : totalMinor;
   const result: Settlement = {
     ...base,
     paidMinor: paid,
-    remainingMinor: Math.max(totalMinor - paid, 0),
-    changeMinor: Math.max(paid - totalMinor, 0),
+    remainingMinor: Math.max(target - paid, 0),
+    changeMinor: Math.max(paid - target, 0),
+    roundingMinor: target - totalMinor,
     payments: [
       ...(cash > 0 ? [{ method: 'Cash' as PosPaymentMethod, amountMinor: cash }] : []),
       ...(card > 0 ? [{ method: 'Card' as PosPaymentMethod, amountMinor: card }] : []),
@@ -341,7 +353,7 @@ export function settleMinor(totalMinor: number, cash: number | null, card: numbe
   };
   if (paid === 0) return { ...result, error: 'noPayment' };
   if (card > totalMinor) return { ...result, changeMinor: 0, error: 'cardExceedsTotal' };
-  if (paid < totalMinor) return { ...result, error: 'insufficient' };
+  if (paid < target) return { ...result, error: 'insufficient' };
   if (cash > 0 && cash - result.changeMinor <= 0) return { ...result, changeMinor: 0, error: 'cashNotNeeded' };
   return result;
 }
@@ -721,7 +733,7 @@ function paymentMinor(p: PaymentLine): number | null {
 }
 
 /** Sums the payment lines per method and applies the API's rules (see `settle`). */
-export function settlePayments(totalMinor: number, lines: readonly PaymentLine[]): PaymentLinesSettlement {
+export function settlePayments(totalMinor: number, lines: readonly PaymentLine[], cashRounding = false): PaymentLinesSettlement {
   let cash = 0;
   let card = 0;
   const invalid: string[] = [];
@@ -731,7 +743,7 @@ export function settlePayments(totalMinor: number, lines: readonly PaymentLine[]
     else if (p.method === 'Cash') cash += minor;
     else card += minor;
   }
-  const result = settleMinor(totalMinor, cash, card);
+  const result = settleMinor(totalMinor, cash, card, cashRounding);
   if (invalid.length && result.error !== 'emptyCart') return { ...result, invalidIds: invalid, error: 'invalidAmount' };
   return { ...result, invalidIds: invalid };
 }

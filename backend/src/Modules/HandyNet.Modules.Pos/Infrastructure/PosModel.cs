@@ -71,6 +71,7 @@ public sealed class PosModel : IModuleModel
             b.ToTable("receipts", Schema, t =>
             {
                 t.HasCheckConstraint("ck_receipts_number", "number >= 1");
+                t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
                 t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                 t.HasCheckConstraint("ck_receipts_kind",
                     "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) "

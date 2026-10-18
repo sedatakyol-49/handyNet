@@ -27,6 +27,11 @@ public sealed class Register : IAuditable
 
     public const int MaxAutoLockMinutes = 240;
 
+    /// <summary>Round cash totals to 0.05 € on this register (Rappenrundung); card payments stay exact.</summary>
+    public bool CashRounding { get; private set; }
+
+    public void SetCashRounding(bool on) => CashRounding = on;
+
     /// <summary>Sets the auto-lock; 0 or null turns it off.</summary>
     public Result SetAutoLock(int? minutes)
     {

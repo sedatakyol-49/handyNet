@@ -2572,6 +2572,12 @@
         "countryCode": "Country (ISO, e.g. DE)",
         "vatId": "VAT ID (optional)"
       }
+    },
+    "rounding": {
+      "label": "Rounding",
+      "zTotal": "Cash rounding differences",
+      "setting": "Round cash amounts to €0.05",
+      "settingHint": "Only the part paid in cash is rounded (1–2 cents down, 3–4 cents up); card payments, lines and VAT stay exact. The rounding is shown on the receipt and Z report."
     }
   },
   "invoiceKind": {

@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261018180808_PosStaffAndDocuments")]
+    [Migration("20261018181542_PosStaffAndDocuments")]
     partial class PosStaffAndDocuments
     {
         /// <inheritdoc />
@@ -3962,6 +3962,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnName("request_hash")
                         .IsFixedLength();
 
+                    b.Property<long>("RoundingMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("rounding_minor");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -4029,6 +4033,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_receipts_kind", "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_receipts_number", "number >= 1");
+
+                            t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
 
                             t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                         });
@@ -4316,6 +4322,10 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<int?>("AutoLockMinutes")
                         .HasColumnType("integer")
                         .HasColumnName("auto_lock_minutes");
+
+                    b.Property<bool>("CashRounding")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cash_rounding");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")

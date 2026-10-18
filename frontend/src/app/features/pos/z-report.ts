@@ -94,6 +94,10 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
         <dd class="text-end tabular-nums">{{ z.openingCashMinor | money }}</dd>
         <dt>{{ 'pos.z.cashPayments' | t }}</dt>
         <dd class="text-end tabular-nums">{{ z.cashPaymentsMinor | signedMoney }}</dd>
+        @if (z.roundingMinor) {
+          <dt>{{ 'pos.rounding.zTotal' | t }}</dt>
+          <dd class="text-end tabular-nums" data-testid="z-rounding">{{ z.roundingMinor | signedMoney }}</dd>
+        }
         <dt>{{ 'pos.z.deposits' | t }}</dt>
         <dd class="text-end tabular-nums">{{ z.depositsMinor | signedMoney }}</dd>
         <dt>{{ 'pos.z.withdrawals' | t }}</dt>

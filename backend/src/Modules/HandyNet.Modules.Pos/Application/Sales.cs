@@ -97,7 +97,8 @@ public sealed record ReceiptDto(
     DocumentCustomer? Customer,
     int ReprintCount,
     DateTimeOffset? LastReprintedAt,
-    ApprovalInfoDto? Approval = null);
+    ApprovalInfoDto? Approval = null,
+    long RoundingMinor = 0);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -284,7 +285,8 @@ internal sealed class SaleService(
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash, customer);
-        var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList());
+        var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
+            register.CashRounding);
         if (!receipt.IsSuccess)
             return receipt.Error!;
 
@@ -372,7 +374,7 @@ internal sealed class SaleService(
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash);
         var returned = Receipt.CreateReturn(header, original, request.Lines.ToDictionary(l => l.LineNumber, l => l.Quantity), alreadyReturned,
-            request.RefundMethod, request.Reason);
+            request.RefundMethod, request.Reason, register.CashRounding);
         if (!returned.IsSuccess)
             return returned.Error!;
 
@@ -684,6 +686,6 @@ internal sealed class SaleService(
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
-            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id));
+            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor);
     }
 }

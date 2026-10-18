@@ -19,6 +19,22 @@ namespace HandyNet.Migrations.Migrations
                 type: "integer",
                 nullable: true);
 
+            migrationBuilder.AddColumn<bool>(
+                name: "cash_rounding",
+                schema: "pos",
+                table: "registers",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.AddColumn<long>(
+                name: "rounding_minor",
+                schema: "pos",
+                table: "receipts",
+                type: "bigint",
+                nullable: false,
+                defaultValue: 0L);
+
             migrationBuilder.AddColumn<string>(
                 name: "html_body",
                 schema: "notifications",
@@ -269,6 +285,12 @@ namespace HandyNet.Migrations.Migrations
                 table: "registers",
                 sql: "auto_lock_minutes BETWEEN 1 AND 240");
 
+            migrationBuilder.AddCheckConstraint(
+                name: "ck_receipts_rounding",
+                schema: "pos",
+                table: "receipts",
+                sql: "rounding_minor BETWEEN -2 AND 2");
+
             migrationBuilder.CreateIndex(
                 name: "ix_approvals_approver_user_id",
                 schema: "pos",
@@ -440,10 +462,25 @@ namespace HandyNet.Migrations.Migrations
                 schema: "pos",
                 table: "registers");
 
+            migrationBuilder.DropCheckConstraint(
+                name: "ck_receipts_rounding",
+                schema: "pos",
+                table: "receipts");
+
             migrationBuilder.DropColumn(
                 name: "auto_lock_minutes",
                 schema: "pos",
                 table: "registers");
+
+            migrationBuilder.DropColumn(
+                name: "cash_rounding",
+                schema: "pos",
+                table: "registers");
+
+            migrationBuilder.DropColumn(
+                name: "rounding_minor",
+                schema: "pos",
+                table: "receipts");
 
             migrationBuilder.DropColumn(
                 name: "html_body",

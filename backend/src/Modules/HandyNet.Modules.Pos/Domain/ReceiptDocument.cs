@@ -68,7 +68,8 @@ public sealed record ReceiptDocument(
     long ChangeMinor,
     IReadOnlyList<string> Notes,
     DocumentFiscal Fiscal,
-    DocumentCustomer? Customer = null)
+    DocumentCustomer? Customer = null,
+    long RoundingMinor = 0)
 {
     public const string StandardLabel = "A";
     public const string MarginLabel = "§25a";
@@ -111,6 +112,7 @@ public sealed record ReceiptDocument(
             new DocumentFiscal(fiscal.Status.ToString(), fiscal.Notice, fiscal.TseSerialNumber, fiscal.TransactionNumber, fiscal.SignatureCounter,
                 fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt, fiscal.Mode, fiscal.IsTest, fiscal.ClientId, fiscal.SignatureAlgorithm,
                 fiscal.TimeFormat, fiscal.PublicKey, fiscal.ProcessType, fiscal.ProcessData, fiscal.QrPayload),
-            receipt.Customer);
+            receipt.Customer,
+            receipt.RoundingMinor);
     }
 }

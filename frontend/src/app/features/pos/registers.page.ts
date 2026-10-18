@@ -172,6 +172,13 @@ export function autoLockInput(value: string): number | null {
               <input hnInput id="pos-auto-lock" name="autoLock" inputmode="numeric" autocomplete="off" class="w-28 text-end" [(ngModel)]="autoLockValue"
                 aria-describedby="pos-auto-lock-hint" data-testid="pos-auto-lock" />
             </hn-field>
+            <label class="mt-3 flex min-h-11 items-start gap-2 text-sm">
+              <input type="checkbox" class="hn-checkbox mt-1" name="cashRounding" [(ngModel)]="cashRoundingValue" data-testid="pos-cash-rounding" />
+              <span>
+                <span class="font-medium">{{ 'pos.rounding.setting' | t }}</span>
+                <span class="block text-xs text-slate-500">{{ 'pos.rounding.settingHint' | t }}</span>
+              </span>
+            </label>
             <div class="mt-4 flex justify-end gap-2">
               <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
               <button hnButton class="min-h-11" variant="primary" type="submit" [loading]="busy()" [disabled]="busy() || !renameValue.trim()" data-testid="pos-rename-save">{{ 'common.save' | t }}</button>
@@ -223,6 +230,7 @@ export class PosRegistersPage {
   protected newWarehouseId = '';
   protected renameValue = '';
   protected autoLockValue = '0';
+  protected cashRoundingValue = false;
   protected readonly busy = signal(false);
   protected readonly nameError = signal<string | null>(null);
   protected readonly createError = signal<string | null>(null);
@@ -281,6 +289,7 @@ export class PosRegistersPage {
   protected openRename(r: PosRegister): void {
     this.renameValue = r.name;
     this.autoLockValue = String(r.autoLockMinutes ?? 0);
+    this.cashRoundingValue = !!r.cashRounding;
     this.dialogError.set(null);
     this.dialog.set({ kind: 'rename', register: r });
   }
@@ -300,14 +309,14 @@ export class PosRegistersPage {
       this.dialogError.set(this.i18n.t('pos.registers.autoLockInvalid'));
       return Promise.resolve();
     }
-    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive, autoLockMinutes: minutes });
+    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive, autoLockMinutes: minutes, cashRounding: this.cashRoundingValue });
   }
 
   protected toggle(r: PosRegister): Promise<void> {
     return this.update(r, { name: r.name, isActive: !r.isActive });
   }
 
-  private async update(r: PosRegister, body: { name: string; isActive: boolean; autoLockMinutes?: number }): Promise<void> {
+  private async update(r: PosRegister, body: { name: string; isActive: boolean; autoLockMinutes?: number; cashRounding?: boolean }): Promise<void> {
     if (!body.name) return;
     this.busy.set(true);
     this.dialogError.set(null);

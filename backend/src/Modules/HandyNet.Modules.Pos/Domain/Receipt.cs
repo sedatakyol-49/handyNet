@@ -140,6 +140,12 @@ public sealed class Receipt
     /// <summary>All VAT owed, including §25a margin VAT (which is not printed on the receipt).</summary>
     public long TotalVatMinor { get; private set; }
     public long ChangeMinor { get; private set; }
+
+    /// <summary>
+    /// Cash rounding (Rappenrundung) on registers that round cash totals to 0.05 €: payments = total + rounding. Signed
+    /// cents between −2 and +2; 0 without rounding. Lines and VAT are never rounded.
+    /// </summary>
+    public long RoundingMinor { get; private set; }
     public string? Reason { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
@@ -171,7 +177,9 @@ public sealed class Receipt
 
     public bool IsSealed => FiscalStatus is not null && Document is not null;
 
-    public static Result<Receipt> CreateSale(ReceiptHeader header, IReadOnlyList<SaleLineInput> lines, IReadOnlyList<PaymentInput> payments)
+    /// <param name="cashRounding">The register rounds cash amounts to 0.05 € (see <see cref="CashRounding"/>).</param>
+    public static Result<Receipt> CreateSale(ReceiptHeader header, IReadOnlyList<SaleLineInput> lines, IReadOnlyList<PaymentInput> payments,
+        bool cashRounding = false)
     {
         if (lines.Count == 0)
             return Error.Validation("pos.empty_sale", "A sale needs at least one line.");
@@ -195,7 +203,7 @@ public sealed class Receipt
         if (receipt.TotalGrossMinor <= 0)
             return Error.Validation("pos.total_not_positive", "The receipt total must be positive.");
 
-        var settled = receipt.SettleSale(payments);
+        var settled = receipt.SettleSale(payments, cashRounding);
         return settled.IsSuccess ? receipt : settled.Error!;
     }
 
@@ -218,6 +226,7 @@ public sealed class Receipt
         receipt.SumLines();
         foreach (var payment in original.Payments)
             receipt._payments.Add(new ReceiptPayment(receipt, payment.Method, -payment.AmountMinor, null));
+        receipt.RoundingMinor = -original.RoundingMinor;
         return receipt;
     }
 
@@ -226,7 +235,7 @@ public sealed class Receipt
     /// number returned by earlier receipts; more than was sold can never come back. Refunded with one payment method.
     /// </summary>
     public static Result<Receipt> CreateReturn(ReceiptHeader header, Receipt original, IReadOnlyDictionary<int, int> quantities,
-        IReadOnlyDictionary<int, int> alreadyReturned, PaymentMethod refundMethod, string reason)
+        IReadOnlyDictionary<int, int> alreadyReturned, PaymentMethod refundMethod, string reason, bool cashRounding = false)
     {
         if (original.Kind != ReceiptKind.Sale)
             return Error.Conflict("pos.not_a_sale", "Only items of sale receipts can be returned.");
@@ -260,7 +269,13 @@ public sealed class Receipt
 
         receipt.SumLines();
         if (receipt.TotalGrossMinor < 0)
-            receipt._payments.Add(new ReceiptPayment(receipt, refundMethod, receipt.TotalGrossMinor, null));
+        {
+            // A cash refund on a rounding register pays out the amount rounded to 0.05 €.
+            var refund = cashRounding && refundMethod == PaymentMethod.Cash ? -CashRounding.Round(-receipt.TotalGrossMinor) : receipt.TotalGrossMinor;
+            if (refund != 0)
+                receipt._payments.Add(new ReceiptPayment(receipt, refundMethod, refund, null));
+            receipt.RoundingMinor = refund - receipt.TotalGrossMinor;
+        }
         return receipt;
     }
 
@@ -334,7 +349,7 @@ public sealed class Receipt
     /// Card payments may not exceed the total; cash may (the difference is change). Stored payments are the amounts
     /// applied to the receipt; for cash also the amount tendered.
     /// </summary>
-    private Result SettleSale(IReadOnlyList<PaymentInput> payments)
+    private Result SettleSale(IReadOnlyList<PaymentInput> payments, bool cashRounding)
     {
         if (payments.Any(p => p.AmountMinor <= 0))
             return Error.Validation("pos.payment_amount", "Payment amounts must be positive.");
@@ -343,12 +358,17 @@ public sealed class Receipt
         if (card > TotalGrossMinor)
             return Error.Validation("pos.card_exceeds_total", "A card payment cannot exceed the receipt total.");
         var paid = checked(cash + card);
-        if (paid < TotalGrossMinor)
+        // Cash rounding: the part paid in cash (total − card) is rounded to 0.05 €; card amounts are exact.
+        var target = TotalGrossMinor;
+        if (cashRounding && cash > 0 && CashRounding.Round(TotalGrossMinor - card) is > 0 and var roundedDue)
+            target = card + roundedDue;
+        if (paid < target)
             return Error.Validation("pos.payment_insufficient",
-                    $"Payments ({paid / 100m:0.00} €) do not cover the total ({TotalGrossMinor / 100m:0.00} €).")
-                .WithDetails(new Dictionary<string, object?> { ["totalGrossMinor"] = TotalGrossMinor, ["paidMinor"] = paid });
+                    $"Payments ({paid / 100m:0.00} €) do not cover the total ({target / 100m:0.00} €).")
+                .WithDetails(new Dictionary<string, object?> { ["totalGrossMinor"] = TotalGrossMinor, ["paidMinor"] = paid, ["amountDueMinor"] = target });
 
-        var change = paid - TotalGrossMinor;
+        RoundingMinor = target - TotalGrossMinor;
+        var change = paid - target;
         var cashApplied = cash - change;
         if (cash > 0 && cashApplied <= 0)
             return Error.Validation("pos.cash_not_needed", "The card payment already covers the total; no cash is needed.");
@@ -496,4 +516,19 @@ public sealed class ReceiptPayment
 
     /// <summary>Cash handed over by the customer (sales only).</summary>
     public long? TenderedMinor { get; private set; }
+}
+
+/// <summary>Cash rounding to 0.05 € (Rappenrundung): remainders of 1–2 cents go down, 3–4 cents go up.</summary>
+public static class CashRounding
+{
+    public const long Step = 5;
+
+    /// <summary>Rounds a non-negative cent amount to the nearest 5 cents.</summary>
+    public static long Round(long amountMinor)
+    {
+        if (amountMinor < 0)
+            throw new ArgumentOutOfRangeException(nameof(amountMinor));
+        var remainder = amountMinor % Step;
+        return remainder <= 2 ? amountMinor - remainder : amountMinor + (Step - remainder);
+    }
 }

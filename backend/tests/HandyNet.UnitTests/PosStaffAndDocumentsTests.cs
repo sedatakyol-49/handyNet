@@ -202,6 +202,57 @@ public class PosPinTests
         Assert.Equal(["§25a", "A"], invoice.Document.Lines.Select(l => l.TaxLabel));
     }
 
+    [Theory]
+    [InlineData(12_30, 12_30)]
+    [InlineData(12_31, 12_30)]
+    [InlineData(12_32, 12_30)]
+    [InlineData(12_33, 12_35)]
+    [InlineData(12_34, 12_35)]
+    [InlineData(12_35, 12_35)]
+    [InlineData(12_38, 12_40)]
+    [InlineData(2, 0)]
+    [InlineData(0, 0)]
+    public void Cash_rounding_goes_to_the_nearest_five_cents(long amount, long rounded) => Assert.Equal(rounded, CashRounding.Round(amount));
+
+    private static Receipt Sale(long price, bool rounding, params PaymentInput[] payments) =>
+        Receipt.CreateSale(new ReceiptHeader(Org, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, User, Now),
+            [new SaleLineInput(Guid.NewGuid(), null, null, "Kabel", 1, price, 0, TaxTreatment.Standard19, null)], payments, rounding).Value;
+
+    [Fact]
+    public void Rounding_registers_round_only_the_cash_part_and_keep_lines_and_vat_exact()
+    {
+        var cash = Sale(12_33, true, new PaymentInput(PaymentMethod.Cash, 20_00));
+        Assert.Equal((12_33L, 2L, 7_65L), (cash.TotalGrossMinor, cash.RoundingMinor, cash.ChangeMinor));
+        Assert.Equal(12_35, cash.Payments.Single().AmountMinor);
+        Assert.Equal(cash.TotalGrossMinor + cash.RoundingMinor, cash.Payments.Sum(p => p.AmountMinor));
+        Assert.Equal(1_97, cash.TotalVatMinor); // VAT on the exact 12.33
+
+        var down = Sale(12_32, true, new PaymentInput(PaymentMethod.Cash, 12_30));
+        Assert.Equal((-2L, 0L, 12_30L), (down.RoundingMinor, down.ChangeMinor, down.Payments.Single().AmountMinor));
+        Assert.Equal("pos.payment_insufficient",
+            Receipt.CreateSale(new ReceiptHeader(Org, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, User, Now),
+                [new SaleLineInput(Guid.NewGuid(), null, null, "Kabel", 1, 12_33, 0, TaxTreatment.Standard19, null)],
+                [new PaymentInput(PaymentMethod.Cash, 12_33)], true).Error?.Code); // 12.35 are due in cash
+
+        var split = Sale(12_33, true, new PaymentInput(PaymentMethod.Card, 10_00), new PaymentInput(PaymentMethod.Cash, 5_00));
+        Assert.Equal((2L, 2_65L), (split.RoundingMinor, split.ChangeMinor)); // cash part 2.33 → 2.35
+        var card = Sale(12_33, true, new PaymentInput(PaymentMethod.Card, 12_33));
+        Assert.Equal(0, card.RoundingMinor);
+        var off = Sale(12_33, false, new PaymentInput(PaymentMethod.Cash, 20_00));
+        Assert.Equal((0L, 7_67L), (off.RoundingMinor, off.ChangeMinor));
+
+        // Storno mirrors payments and rounding; a cash return on a rounding register rounds the payout.
+        var header = new ReceiptHeader(Org, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 2, User, Now);
+        var storno = Receipt.CreateStorno(header, cash, hasReturns: false, "Fehlbon").Value;
+        Assert.Equal((-12_33L, -2L, -12_35L), (storno.TotalGrossMinor, storno.RoundingMinor, storno.Payments.Single().AmountMinor));
+        var back = Receipt.CreateReturn(header, cash, new Dictionary<int, int> { [1] = 1 }, new Dictionary<int, int>(), PaymentMethod.Cash, "Defekt", true).Value;
+        Assert.Equal((-12_35L, -2L), (back.Payments.Single().AmountMinor, back.RoundingMinor));
+
+        var summary = SessionCalculator.Summarize(100_00, [cash, down, storno], []);
+        Assert.Equal(-2, summary.RoundingMinor);
+        Assert.Equal(100_00 + 12_35 + 12_30 - 12_35, summary.ExpectedCashMinor);
+    }
+
     [Fact]
     public void Register_auto_lock_is_off_or_between_1_and_240_minutes()
     {

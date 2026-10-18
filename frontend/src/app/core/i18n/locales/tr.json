@@ -2572,6 +2572,12 @@
         "countryCode": "Ülke (ISO, ör. DE)",
         "vatId": "KDV no. (isteğe bağlı)"
       }
+    },
+    "rounding": {
+      "label": "Yuvarlama",
+      "zTotal": "Nakit yuvarlama farkları",
+      "setting": "Nakit tutarları 0,05 €’ya yuvarla",
+      "settingHint": "Yalnızca nakit ödenen kısım yuvarlanır (1–2 sent aşağı, 3–4 sent yukarı); kart ödemeleri, kalemler ve KDV aynı kalır. Yuvarlama fişte ve Z raporunda görünür."
     }
   },
   "invoiceKind": {

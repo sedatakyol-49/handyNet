@@ -2572,6 +2572,12 @@
         "countryCode": "País (ISO, p. ej. DE)",
         "vatId": "NIF-IVA (opcional)"
       }
+    },
+    "rounding": {
+      "label": "Redondeo",
+      "zTotal": "Diferencias de redondeo (efectivo)",
+      "setting": "Redondear importes en efectivo a 0,05 €",
+      "settingHint": "Solo se redondea la parte en efectivo (1–2 céntimos abajo, 3–4 arriba); tarjeta, líneas e IVA quedan exactos. El redondeo aparece en el tique y el informe Z."
     }
   },
   "invoiceKind": {

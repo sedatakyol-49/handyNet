@@ -2572,6 +2572,12 @@
         "countryCode": "Land (ISO, z. B. DE)",
         "vatId": "USt-IdNr. (optional)"
       }
+    },
+    "rounding": {
+      "label": "Rundung",
+      "zTotal": "Rundungsdifferenzen (Bargeld)",
+      "setting": "Barbeträge auf 0,05 € runden",
+      "settingHint": "Nur der bar bezahlte Teil wird gerundet (1–2 Cent ab, 3–4 Cent auf); Kartenzahlungen, Positionen und Umsatzsteuer bleiben exakt. Die Rundung steht auf Beleg und Z-Bericht."
     }
   },
   "invoiceKind": {
