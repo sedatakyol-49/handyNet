@@ -51,6 +51,7 @@
     "disputeParty.Platform"
   ],
   "es": [
+    "admin.fiscal.no",
     "moderation.sellerState.Visible",
     "moderation.offerState.Visible",
     "orders.lines",

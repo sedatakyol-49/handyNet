@@ -26,16 +26,28 @@ public enum PaymentMethod
 }
 
 /// <summary>Stored as text.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<FiscalStatus>))]
 public enum FiscalStatus
 {
     /// <summary>No technical security device (TSE) is connected: test operation, no signature exists.</summary>
     NotConnected,
 
-    /// <summary>Signed by a TSE (no real adapter exists yet).</summary>
+    /// <summary>Signed by a TSE (the simulated test TSE or the fiskaly adapter; see <see cref="FiscalData.IsTest"/>).</summary>
     Signed,
+
+    /// <summary>
+    /// The TSE failed (outage, "Sicherheitseinrichtung ausgefallen"): the receipt was issued without a signature, carries the
+    /// outage notice, and the outage is recorded (<c>pos.fiscal_outages</c>).
+    /// </summary>
+    Failed,
 }
 
-/// <summary>Result of the fiscal signer for one receipt. Every field but the status may be null; nothing is ever invented.</summary>
+/// <summary>
+/// Result of the fiscal signer for one receipt or other signed event. Every field but the status may be null; nothing is
+/// ever invented. Mode: the <see cref="Domain.FiscalMode"/> that produced it (as text); IsTest: produced by the simulated
+/// test TSE (never valid for real operation); ClientId: the Kassen-Seriennummer of the QR code; ProcessType/ProcessData:
+/// what the TSE signed; QrPayload: the DSFinV-K QR code content; Error: why the TSE failed (outage).
+/// </summary>
 public sealed record FiscalData(
     FiscalStatus Status,
     string? Notice,
@@ -44,7 +56,17 @@ public sealed record FiscalData(
     long? SignatureCounter,
     string? Signature,
     DateTimeOffset? StartedAt,
-    DateTimeOffset? FinishedAt);
+    DateTimeOffset? FinishedAt,
+    string? Mode = null,
+    bool IsTest = false,
+    string? ClientId = null,
+    string? ProcessType = null,
+    string? ProcessData = null,
+    string? SignatureAlgorithm = null,
+    string? TimeFormat = null,
+    string? PublicKey = null,
+    string? QrPayload = null,
+    string? Error = null);
 
 public sealed record SaleLineInput(
     Guid ProductId,
@@ -130,6 +152,16 @@ public sealed class Receipt
     public string? FiscalSignature { get; private set; }
     public DateTimeOffset? FiscalStartedAt { get; private set; }
     public DateTimeOffset? FiscalFinishedAt { get; private set; }
+    public string? FiscalMode { get; private set; }
+    public bool? FiscalIsTest { get; private set; }
+    public string? FiscalClientId { get; private set; }
+    public string? FiscalProcessType { get; private set; }
+    public string? FiscalProcessData { get; private set; }
+    public string? FiscalSignatureAlgorithm { get; private set; }
+    public string? FiscalTimeFormat { get; private set; }
+    public string? FiscalPublicKey { get; private set; }
+    public string? FiscalQrPayload { get; private set; }
+    public string? FiscalError { get; private set; }
 
     /// <summary>Printable receipt as issued (seller, lines, VAT breakdown, payments, fiscal data).</summary>
     public ReceiptDocument? Document { get; private set; }
@@ -245,13 +277,24 @@ public sealed class Receipt
         FiscalSignature = fiscal.Signature;
         FiscalStartedAt = fiscal.StartedAt;
         FiscalFinishedAt = fiscal.FinishedAt;
+        FiscalMode = fiscal.Mode;
+        FiscalIsTest = fiscal.Mode is null ? null : fiscal.IsTest;
+        FiscalClientId = fiscal.ClientId;
+        FiscalProcessType = fiscal.ProcessType;
+        FiscalProcessData = fiscal.ProcessData;
+        FiscalSignatureAlgorithm = fiscal.SignatureAlgorithm;
+        FiscalTimeFormat = fiscal.TimeFormat;
+        FiscalPublicKey = fiscal.PublicKey;
+        FiscalQrPayload = fiscal.QrPayload;
+        FiscalError = fiscal.Error;
         Document = document;
         return Result.Success();
     }
 
     public FiscalData? Fiscal => FiscalStatus is { } status
         ? new FiscalData(status, FiscalNotice, FiscalTseSerialNumber, FiscalTransactionNumber, FiscalSignatureCounter, FiscalSignature,
-            FiscalStartedAt, FiscalFinishedAt)
+            FiscalStartedAt, FiscalFinishedAt, FiscalMode, FiscalIsTest ?? false, FiscalClientId, FiscalProcessType, FiscalProcessData,
+            FiscalSignatureAlgorithm, FiscalTimeFormat, FiscalPublicKey, FiscalQrPayload, FiscalError)
         : null;
 
     private static Receipt New(ReceiptHeader h, ReceiptKind kind, Guid? referenced, string? reason) => new()

@@ -1,7 +1,9 @@
 using FluentValidation;
 using HandyNet.Modules.Pos.Application;
 using HandyNet.Modules.Pos.Contracts;
+using HandyNet.Modules.Pos.Domain;
 using HandyNet.Modules.Pos.Infrastructure;
+using Microsoft.AspNetCore.DataProtection;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
 using HandyNet.SharedKernel.Tenancy;
@@ -23,13 +25,37 @@ public static class PosModule
 
     public static IServiceCollection AddPosModule(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        // Like the Simulated carrier/payment provider: the test signer (no TSE) is refused at startup in Production.
+        // Like the Simulated carrier/payment provider: the test signers are refused at startup in Production (the simulated
+        // TSE only with the explicit staging flag). Per-organization configurations are checked again at sale time.
         services.AddOptions<PosOptions>().Bind(configuration.GetSection(PosOptions.Section))
-            .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalSignerKind.Disabled,
+            .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalMode.Disabled,
                 "The Disabled fiscal signer (no TSE, test operation) must not be used in production.")
+            .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalMode.SimulatedTse || o.Fiscal.AllowSimulatedTseInProduction,
+                "The SimulatedTse fiscal signer (test TSE) must not be used in production unless Pos:Fiscal:AllowSimulatedTseInProduction is set (staging only).")
+            .Validate(o => o.FiscalSigner != FiscalMode.FiskalyCloudTse,
+                "Pos:FiscalSigner cannot be FiskalyCloudTse: fiskaly is configured per organization by the platform admin (TSS id and credentials).")
+            .Validate(o => o.Fiscal.MaxAttempts is >= 1 and <= 10 && o.Fiscal.RetryDelayMs is >= 0 and <= 10_000,
+                "Pos:Fiscal:MaxAttempts must be 1–10 and RetryDelayMs 0–10000.")
+            .Validate(o => Uri.TryCreate(o.Fiskaly.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && o.Fiskaly.TimeoutSeconds is >= 1 and <= 120,
+                "Pos:Fiskaly:BaseUrl must be an https URL and TimeoutSeconds 1–120.")
             .ValidateOnStart();
         services.AddSingleton<IModuleModel, PosModel>();
+        services.AddDataProtection();
+        services.AddSingleton<IFiscalSecretProtector, FiscalSecretProtector>();
+        services.TryAddSingleton<ISimulatedTseFaults, RandomSimulatedTseFaults>();
+        services.AddScoped<ISimulatedTseStore, SqlSimulatedTseStore>();
+        services.AddSingleton<FiskalyTokenCache>();
+        services.AddHttpClient<FiskalyApiClient>((sp, http) =>
+        {
+            var fiskaly = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PosOptions>>().Value.Fiskaly;
+            http.BaseAddress = new Uri(fiskaly.BaseUrl.TrimEnd('/') + "/");
+            http.Timeout = TimeSpan.FromSeconds(fiskaly.TimeoutSeconds);
+        });
         services.AddScoped<FiscalSignerProvider>();
+        services.AddScoped<FiscalSealer>();
+        services.AddScoped<FiscalStatusService>();
+        services.AddScoped<FiscalAdministration>();
+        services.AddScoped<DsfinvkExportService>();
         services.AddScoped<RegisterService>();
         services.AddScoped<SessionService>();
         services.AddScoped<SaleService>();
@@ -167,6 +193,29 @@ public static class PosModule
 
         sell.MapGet("/lookup", async (string? code, Guid? registerId, SaleService service, CancellationToken ct) =>
             (await service.LookupAsync(code, registerId, ct)).ToHttp(Results.Ok));
+
+        // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
+        sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
+            (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
+
+        manage.MapGet("/exports/dsfinvk", async (Guid registerId, DateOnly? from, DateOnly? to, DsfinvkExportService service, CancellationToken ct) =>
+            (await service.ExportAsync(registerId, from, to, ct)).ToHttp(f => Results.File(f.Content, "application/zip", f.FileName)));
+
+        var admin = app.MapGroup("/api/admin/pos/fiscal").WithTags("POS fiscal administration").RequirePlatformAdmin();
+
+        admin.MapGet("/", async (string? search, FiscalAdministration service, CancellationToken ct) => Results.Ok(await service.ListAsync(search, ct)));
+
+        admin.MapGet("/{organizationId:guid}", async (Guid organizationId, FiscalAdministration service, CancellationToken ct) =>
+            (await service.GetAsync(organizationId, ct)).ToHttp(Results.Ok));
+
+        admin.MapPut("/{organizationId:guid}", async (Guid organizationId, FiscalConfigRequest request, IValidator<FiscalConfigRequest> validator,
+                FiscalAdministration service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SetOrganizationAsync(organizationId, request, ct)).ToHttp(Results.Ok));
+
+        admin.MapPut("/{organizationId:guid}/registers/{registerId:guid}", async (Guid organizationId, Guid registerId, FiscalConfigRequest request,
+                IValidator<FiscalConfigRequest> validator, FiscalAdministration service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.SetRegisterAsync(organizationId, registerId, request, ct)).ToHttp(Results.Ok));
 
         return app;
     }

@@ -112,6 +112,12 @@ are out of scope for phone shops unless requested.
 - ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).
+  🟡 Fiscal layer (ADR-0012, 2026-10-18): ✅ fiscal mode per organization/register set by the platform admin
+  ("Kassen & TSE"), ✅ simulated test TSE (ECDSA, counters, idempotent retries, latency/failure/outage injection,
+  "Test-TSE – nicht für den Echtbetrieb"), ✅ outage path ("Sicherheitseinrichtung ausgefallen", outages recorded),
+  ✅ signed cash movements/closings, ✅ TSE block + QR code on receipts, TSE state in the till top bar,
+  ✅ basic DSFinV-K export (not certified), 🟡 fiskaly SIGN DE v2 adapter (fake-HTTP tests only, not verified against
+  fiskaly). Not reviewed by a tax adviser.
 - 🟡 **H. Design**: design spec and screens at least on par with Odoo POS (visual reference review before build),
   light/dark, RTL, large touch targets, Playwright visual checks. ✅ Screens built and reviewed from screenshots (desktop, tablet, phone, dark, RTL). Open: ⬜ automated visual regression checks.
 
@@ -124,8 +130,9 @@ Dependencies: Phase 2 payments + invoicing.
   method and VAT treatment), sales of products (EAN) and IMEI units, cash/card with change, line discounts, 19 % VAT and
   §25a margin VAT, Storno and partial returns as new negative receipts, stock back incl. IMEI units, immutable receipts
   (GoBD), idempotent sales/returns, EAN/IMEI lookup, fiscal signer abstraction with a test signer that is refused in
-  Production. ✅ POS touch UI (registers, till, receipts, sessions, Z-report). Open: ⬜ real fiskaly TSE adapter (sandbox first) incl. TSE outage handling,
-  ⬜ DSFinV-K export, ⬜ receipt printing (ESC/POS/PDF) and e-receipts, ⬜ card terminal integration (ZVT/OPI),
+  Production. ✅ POS touch UI (registers, till, receipts, sessions, Z-report). ✅ Fiscal layer (ADR-0012): simulated test
+  TSE, TSE outage handling, QR code, basic DSFinV-K export (not certified). Open: 🟡 fiskaly TSE adapter — implemented
+  against the SIGN DE v2 shape, ⬜ verified in the fiskaly sandbox, ⬜ certified DSFinV-K (validator, missing files), ⬜ receipt printing (ESC/POS/PDF) and e-receipts, ⬜ card terminal integration (ZVT/OPI),
   ⬜ till registration with the tax office, ⬜ reduced VAT rate/vouchers, ⬜ external compliance review. No fake
   signatures, no compliance claimed.
 - ✅ Pricing & Ankauf (ADR-0007): monthly XLSX list, approval rules, immutable price versions (current list only), versioned condition policy with overrides and deductions, dealer quotes with preserved versions. Open: device intake + inspection to final price, §25a documentation, stock entry with IMEI, individual offers, frontend.

@@ -60,7 +60,7 @@ flowchart TD
 | Module | Schema | Owns | Public contract |
 |---|---|---|---|
 | Identity | `identity` | users, password hashing, lockout, JWT access tokens, rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested` |
-| Tenancy | `tenancy` | organizations, verification, memberships/roles (incl. per-cashier POS rights on staff memberships), module activation, tenant resolution | `IOrganizationDirectory` |
+| Tenancy | `tenancy` | organizations, verification, memberships/roles (incl. per-cashier POS rights on staff memberships), module activation, tenant resolution | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module) |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules, lookup, canonical product images (upload by creating org or platform admin, SkiaSharp re-encoding, public immutable serving — ADR-0011) | `IProductCatalog`, `ProductMatcher` |
 | Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule), sell/return staging for POS | `IInventory` |
 | Marketplace | `marketplace` | supplier offers, B2B listing view (with model data + images), filters, facets, offer detail with other sellers; read-only for products (no product creation); platform moderation (offer and seller blocks, separate from the seller's status, audited; `/api/admin/marketplace`) | `IOfferReservations` (incl. `GetBlockedAsync` → `offer.blocked`), `IOfferSync`, `IOwnOfferPrices` |
@@ -71,7 +71,7 @@ flowchart TD
 | Invoicing | `invoicing` | monthly commission invoices to sellers, corrections (Rechnungskorrektur) for later refunds, gapless platform-wide numbers per series and year (DB-enforced), immutable documents, German PDF, monthly job + admin issuing (ADR-0009) | – (top-level; uses `ICommissionStatements`, `IOrganizationDirectory`) |
 | Disputes | `disputes` | buyer complaints within the inspection window, message thread, seller refund / buyer withdrawal / escalation, platform decision | – (top-level; uses `IOrderFulfilment`) |
 | Ankauf | `ankauf` | monthly buyback price lists (XLSX), approval rules, immutable price versions, versioned condition policy, dealer quotes, device intake (IMEI stock with §25a purchase price), Ankaufbeleg (PDF), seller-data retention job (anonymization, ADR-0009) | – (top-level; uses `IProductCatalog`, `IInventory`, `IOrganizationDirectory`) |
-| POS | `pos` | registers (gapless receipt numbers), cash sessions + daily closing (Z-report, denomination counts), immutable receipts with Storno/returns, line notes and customer snapshot, reprints, §25a margin VAT, POS prices, customer master, product grid read model (`pos.sellable_stock` view), sales reports, fiscal signer abstraction (test signer only, ADR-0008) | port `IOfferPriceSource` (fallback price; the host composes it from Marketplace `IOwnOfferPrices`, since POS must not depend on Marketplace) – top-level; uses `IInventory`, `IProductCatalog`, `IOrganizationDirectory` |
+| POS | `pos` | registers (gapless receipt numbers), cash sessions + daily closing (Z-report, denomination counts), immutable receipts with Storno/returns, line notes and customer snapshot, reprints, §25a margin VAT, POS prices, customer master, product grid read model (`pos.sellable_stock` view), sales reports, fiscal layer (ADR-0012: mode per organization/register, simulated test TSE, fiskaly adapter, outages, DSFinV-K export) | port `IOfferPriceSource` (fallback price; the host composes it from Marketplace `IOwnOfferPrices`, since POS must not depend on Marketplace) – top-level; uses `IInventory`, `IProductCatalog`, `IOrganizationDirectory` |
 | Ledger | `ledger` | immutable double-entry journal; single write path `ledger.post_entry`; tenant-visible own accounts | `ILedger` |
 | Notifications | `notifications` | email queue fed by outbox events (order placed/status changed, organization verified, email verification, password reset — de/en), SMTP delivery with retry, account email bodies redacted after delivery | – (consumes events only) |
 | Persistence | `infra` | DbContext, RLS session interceptor, audit log, outbox | `IModuleModel` |
@@ -81,7 +81,7 @@ flowchart TD
 | Planned module | Depends on |
 |---|---|
 | Repairs | Catalog, Inventory (parts consumption), Ordering (parts orders), Shipping |
-| Fiscal adapter (fiskaly TSE) + DSFinV-K export | POS (`IFiscalSigner`) |
+| Certified fiscal operation (fiskaly verified in the sandbox, full DSFinV-K) | POS (`IFiscalSigner`, ADR-0012) |
 | Accounting exports (XRechnung/ZUGFeRD e-invoices, DATEV) | Invoicing, Payments, POS |
 | Returns & Warranty (return shipments, restocking, partial refunds) | Disputes, Shipping, Inventory, Payments |
 | B2C Marketplace | Catalog, Marketplace (separate B2C visibility), Payments |

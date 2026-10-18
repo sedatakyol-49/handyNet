@@ -178,16 +178,6 @@ internal sealed class ReturnValidator : AbstractValidator<ReturnRequest>
     }
 }
 
-/// <summary>Resolves the configured fiscal signer; null when none is configured (sales are then refused).</summary>
-internal sealed class FiscalSignerProvider(IOptions<PosOptions> options)
-{
-    public IFiscalSigner? Current => options.Value.FiscalSigner switch
-    {
-        FiscalSignerKind.Disabled => new DisabledFiscalSigner(),
-        _ => null,
-    };
-}
-
 internal sealed class SaleService(
     HandyNetDbContext db,
     ITenantContext tenant,
@@ -196,7 +186,7 @@ internal sealed class SaleService(
     IProductCatalog catalog,
     IOrganizationDirectory organizations,
     IUserAccounts users,
-    FiscalSignerProvider signers,
+    FiscalSealer fiscal,
     PriceResolver prices,
     IClock clock,
     ILogger<SaleService> logger)
@@ -215,8 +205,8 @@ internal sealed class SaleService(
         var requestHash = HashRequest(request);
         if (await ReplayAsync(idempotencyKey, requestHash, ct) is { } replay)
             return replay;
-        if (signers.Current is not { } signer)
-            return FiscalMissing();
+        if (await fiscal.CheckAsync(request.RegisterId, ct) is { } fiscalRefused)
+            return fiscalRefused;
 
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RegisterId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
@@ -294,7 +284,7 @@ internal sealed class SaleService(
         if (!receipt.IsSuccess)
             return receipt.Error!;
 
-        var sealedResult = await SealAsync(signer, receipt.Value, register.Name, null, ct);
+        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct);
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -322,8 +312,8 @@ internal sealed class SaleService(
     /// <summary>Cancels a whole sale with a new negative receipt; payments are mirrored and the stock (and IMEI units) goes back.</summary>
     public async Task<Result<ReceiptDto>> StornoAsync(Guid receiptId, StornoRequest request, CancellationToken ct)
     {
-        if (signers.Current is not { } signer)
-            return FiscalMissing();
+        if (await fiscal.CheckAsync(request.RegisterId, ct) is { } fiscalRefused)
+            return fiscalRefused;
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await LockOriginalAsync(receiptId, ct);
@@ -345,7 +335,7 @@ internal sealed class SaleService(
         if (!storno.IsSuccess)
             return storno.Error!;
 
-        return await CompleteRefundAsync(tx, signer, storno.Value, original, register, ct);
+        return await CompleteRefundAsync(tx, storno.Value, original, register, ct);
     }
 
     /// <summary>Returns selected quantities of a sale's lines with a new negative receipt; refunded by the given method.</summary>
@@ -354,8 +344,8 @@ internal sealed class SaleService(
         var requestHash = HashReturn(receiptId, request);
         if (await ReplayAsync(idempotencyKey, requestHash, ct) is { } replay)
             return replay;
-        if (signers.Current is not { } signer)
-            return FiscalMissing();
+        if (await fiscal.CheckAsync(request.RegisterId, ct) is { } fiscalRefused)
+            return fiscalRefused;
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await LockOriginalAsync(receiptId, ct);
@@ -380,7 +370,7 @@ internal sealed class SaleService(
         if (!returned.IsSuccess)
             return returned.Error!;
 
-        var completed = await CompleteRefundAsync(tx, signer, returned.Value, original, register, ct);
+        var completed = await CompleteRefundAsync(tx, returned.Value, original, register, ct);
         return completed.IsSuccess ? new SaleResult(completed.Value, Replayed: false) : completed.Error!;
     }
 
@@ -518,9 +508,6 @@ internal sealed class SaleService(
     private CashierRights Rights() => new(tenant.Permissions.Contains(Permissions.PosPriceOverride), tenant.Permissions.Contains(Permissions.PosDiscount),
         tenant.MaxDiscountPercent);
 
-    private static Error FiscalMissing() =>
-        Error.Conflict("pos.fiscal_signer_missing", "No fiscal signer (TSE) is configured. POS sales are not possible.");
-
     /// <summary>Serializes storno/returns of the same original receipt (the receipt rows themselves can never be locked or updated).</summary>
     private Task LockOriginalAsync(Guid receiptId, CancellationToken ct) =>
         db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({receiptId.ToString()}, 0))", ct);
@@ -538,7 +525,7 @@ internal sealed class SaleService(
         return (register, number, sessionId);
     }
 
-    private async Task<Result<ReceiptDto>> CompleteRefundAsync(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx, IFiscalSigner signer,
+    private async Task<Result<ReceiptDto>> CompleteRefundAsync(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx,
         Receipt refund, Receipt original, Register register, CancellationToken ct)
     {
         var cashOut = -refund.Payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.AmountMinor);
@@ -562,7 +549,7 @@ internal sealed class SaleService(
                 return restocked.Error!;
         }
 
-        var sealedResult = await SealAsync(signer, refund, register.Name, original.Number, ct);
+        var sealedResult = await SealAsync(refund, register.Name, original.Number, ct);
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -592,22 +579,18 @@ internal sealed class SaleService(
         return await ToDtoAsync(refund, ct);
     }
 
-    private async Task<Result> SealAsync(IFiscalSigner signer, Receipt receipt, string registerName, long? referencedNumber, CancellationToken ct)
+    /// <summary>Fiscal signature (or the TSE outage marker, see <see cref="FiscalSealer"/>) and the printable document.</summary>
+    private async Task<Result> SealAsync(Receipt receipt, string registerName, long? referencedNumber, CancellationToken ct)
     {
-        var started = await signer.StartTransactionAsync(new FiscalTransactionRequest(OrganizationId, receipt.RegisterId, receipt.Kind, receipt.Number), ct);
-        if (!started.IsSuccess)
-            return started.Error!;
-        var summary = SessionCalculator.Summarize(0, [receipt], []);
-        var fiscal = await signer.FinishTransactionAsync(started.Value,
-            new FiscalReceiptData(receipt.Kind, receipt.Number, receipt.TotalGrossMinor, summary.ByTaxTreatment, summary.ByPaymentMethod), ct);
-        if (!fiscal.IsSuccess)
-            return fiscal.Error!;
+        var signed = await fiscal.SignReceiptAsync(receipt, ct);
+        if (!signed.IsSuccess)
+            return signed.Error!;
 
         var seller = await organizations.GetLegalDetailsAsync(OrganizationId, ct)
                      ?? throw new InvalidOperationException("Organization of the current tenant not found.");
         var document = ReceiptDocument.For(receipt, new SellerInfo(seller.Name, seller.LegalName, seller.Street, seller.PostalCode, seller.City,
-            seller.CountryCode, seller.VatId), registerName, referencedNumber, fiscal.Value);
-        return receipt.Seal(fiscal.Value, document);
+            seller.CountryCode, seller.VatId), registerName, referencedNumber, signed.Value);
+        return receipt.Seal(signed.Value, document);
     }
 
     private Task<Receipt?> LoadAsync(Guid id, CancellationToken ct) =>

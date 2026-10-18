@@ -468,7 +468,21 @@
       "moderation.no_offers": "Seleccione al menos una oferta.",
       "moderation.too_many_offers": "Demasiadas ofertas para una sola acción.",
       "moderation.reason_too_long": "El motivo es demasiado largo.",
-      "moderation.tenant_header": "La moderación se invoca sin contexto de empresa."
+      "moderation.tenant_header": "La moderación se invoca sin contexto de empresa.",
+      "pos.fiscal_disabled_in_production": "Sin TSE la caja no puede usarse en operación real.",
+      "pos.fiscal_simulated_not_allowed": "La TSE de prueba no está permitida en operación real.",
+      "pos.fiscal_configuration_incomplete": "La TSE no está configurada por completo (faltan ID de TSS y credenciales).",
+      "pos.export_range": "Elija un periodo válido (desde ≤ hasta, como máximo 366 días).",
+      "pos.fiscal_algorithm": "Este algoritmo de firma no es compatible.",
+      "pos.fiscal_client_id": "El ID de cliente no es válido (1–64 caracteres, sin ; ni ^; solo para cajas).",
+      "pos.fiscal_credential_reference": "La referencia de credenciales no es válida.",
+      "pos.fiscal_environment": "El entorno de fiskaly es Sandbox o Production.",
+      "pos.fiscal_failure_rate": "La tasa de fallos debe estar entre 0 y 100 %.",
+      "pos.fiscal_latency": "El retardo debe estar entre 0 y 30000 ms.",
+      "pos.fiscal_mode_required": "La empresa necesita un modo fiscal.",
+      "pos.fiscal_register_scope": "TSS, credenciales y algoritmo se definen para la empresa, no por caja.",
+      "pos.fiskaly_conflict": "fiskaly informó de un conflicto. Inténtelo de nuevo.",
+      "pos.outage_ended": "El fallo de la TSE ya ha terminado."
     }
   },
   "dashboard": {
@@ -1027,7 +1041,8 @@
       "disputes": "Reclamaciones",
       "ankauf": "Precios de recompra",
       "invoices": "Facturas de comisión",
-      "moderation": "Moderación del marketplace"
+      "moderation": "Moderación del marketplace",
+      "fiscal": "Cajas y TSE"
     },
     "disputes": {
       "subtitle": "Revisar y resolver las reclamaciones remitidas a HandyNet.",
@@ -1054,6 +1069,69 @@
       "decidedRefund": "Resuelto: reembolso íntegro.",
       "decidedNoRefund": "Resuelto: sin reembolso.",
       "notEscalated": "Esta reclamación no está (o ya no está) pendiente de decisión por HandyNet."
+    },
+    "fiscal": {
+      "subtitle": "Modo fiscal (TSE) por empresa y caja, comportamiento de la TSE de prueba, estado de la TSE y fallos.",
+      "disclaimer": "La TSE de prueba es simulada y no está certificada: no apta para uso real. El adaptador de fiskaly no se ha verificado con el servicio real. No revisado por un asesor fiscal.",
+      "organizations": "Empresas con módulo de caja",
+      "registerCount": "{count} cajas",
+      "outageCount": "{count} fallo(s)",
+      "noOrganizations": "No se encontraron empresas con módulo de caja.",
+      "choose": "Seleccione",
+      "effectiveMode": "Modo efectivo",
+      "source": {
+        "Register": "caja",
+        "Organization": "empresa",
+        "Default": "predeterminado (configuración)",
+        "None": "sin configurar"
+      },
+      "simulatedRefusedInProduction": "En el entorno de producción la TSE de prueba está bloqueada (solo con autorización explícita de staging).",
+      "mode": "Modo fiscal",
+      "algorithm": "Algoritmo de firma",
+      "algorithmHint": "Se aplica a una TSE de prueba nueva; después no se puede cambiar.",
+      "latency": "Retardo artificial (ms)",
+      "failureRate": "Tasa de fallos (%)",
+      "forcedOutage": "Forzar fallo de la TSE",
+      "fiskalyUnverified": "Adaptador de fiskaly: no verificado con el servicio real. Las credenciales se guardan cifradas y nunca se muestran.",
+      "tssId": "ID de TSS (UUID)",
+      "environment": "Entorno",
+      "credentialReference": "Referencia de credenciales",
+      "credentialReferenceHint": "Nombre bajo Pos:Fiskaly:Credentials en la configuración del servidor (secretos).",
+      "credentialsStored": "Hay credenciales cifradas guardadas.",
+      "credentialsMissing": "No hay credenciales guardadas.",
+      "apiKey": "Clave API (nueva)",
+      "apiSecret": "Secreto API (nuevo)",
+      "clearCredentials": "Eliminar las credenciales guardadas",
+      "tseStatus": "Estado de la TSE de prueba",
+      "transactionCounter": "Contador de transacciones",
+      "signatureCounter": "Contador de firmas",
+      "publicKey": "Clave pública",
+      "lastSignature": "Última transacción",
+      "registers": "Cajas",
+      "register": "Caja",
+      "behaviour": "Comportamiento",
+      "behaviourSummary": "{latency} ms de retardo, {rate} % de fallos",
+      "noRegisters": "Aún no hay cajas.",
+      "overrideFor": "Ajuste para la caja {name}",
+      "inheritHint": "Los campos vacíos usan el ajuste de la empresa.",
+      "inherit": "Usar ajuste de la empresa",
+      "clientIdHint": "Vacío = ID de la caja. Para fiskaly, un UUID de cliente.",
+      "yes": "Sí",
+      "no": "No",
+      "outages": "Fallos de la TSE",
+      "outageStart": "Inicio",
+      "outageEnd": "Fin",
+      "reason": "Motivo",
+      "ongoing": "en curso",
+      "noOutages": "Sin fallos.",
+      "saved": "Ajustes fiscales de {name} guardados.",
+      "validation": {
+        "modeRequired": "Seleccione un modo fiscal.",
+        "latency": "De 0 a 30000 ms.",
+        "failureRate": "De 0 a 100 %.",
+        "uuid": "Introduzca un UUID válido.",
+        "credentialsPair": "Introduzca la clave y el secreto API juntos."
+      }
     }
   },
   "moduleHelp": {
@@ -2345,6 +2423,26 @@
       "closeForbidden": "Solo el personal con el permiso «Cerrar caja» puede cerrar la sesión.",
       "reportForbidden": "No tiene permiso para ver este informe.",
       "manageOnly": "Solo titulares y gerentes (gestionar cajas)."
+    },
+    "tse": {
+      "blockTitle": "Datos de la TSE",
+      "testLabel": "TSE de prueba – no apta para uso real",
+      "clientId": "N.º de serie de caja (cliente)",
+      "algorithm": "Algoritmo de firma",
+      "outageMarker": "Fallo del dispositivo de seguridad (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "Código QR con los datos de la TSE",
+      "serial": "Número de serie de la TSE",
+      "state": {
+        "Ok": "TSE activa",
+        "Test": "TSE de prueba",
+        "Outage": "Fallo de la TSE",
+        "Disabled": "Sin TSE",
+        "NotConfigured": "Sin TSE",
+        "Refused": "TSE bloqueada"
+      },
+      "outageTitle": "Fallo de la TSE.",
+      "outageText": "Las ventas continúan; los tiques llevan la nota «Sicherheitseinrichtung ausgefallen» y el fallo queda registrado.",
+      "outageSince": "desde"
     }
   },
   "invoiceKind": {
@@ -2568,5 +2666,11 @@
     "cart": {
       "blocked": "La plataforma ha retirado una oferta del marketplace. Elimínela del carrito."
     }
+  },
+  "fiscalMode": {
+    "Disabled": "Sin TSE (modo de prueba)",
+    "SimulatedTse": "TSE de prueba (simulada)",
+    "FiskalyCloudTse": "TSE en la nube de fiskaly",
+    "None": "Sin configurar"
   }
 }

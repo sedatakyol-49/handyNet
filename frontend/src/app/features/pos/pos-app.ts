@@ -8,6 +8,7 @@ import { I18nService, Lang } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PosContext, PosTheme } from './pos-context';
 import { canSeeSessionReport, posRights } from './pos-rights';
+import { PosFiscalStatus, PosTseBannerComponent, PosTsePillComponent } from './pos-fiscal-status';
 
 /**
  * Standalone, full-screen POS app (route `/kasse`, outside the back-office shell): a minimal top bar with register,
@@ -16,8 +17,8 @@ import { canSeeSessionReport, posRights } from './pos-rights';
  */
 @Component({
   selector: 'hn-pos-app',
-  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, TranslatePipe],
-  providers: [PosContext],
+  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, TranslatePipe, PosTsePillComponent, PosTseBannerComponent],
+  providers: [PosContext, PosFiscalStatus],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'hn-pos fixed inset-0 flex flex-col bg-pos-surface text-pos-ink',
@@ -59,6 +60,9 @@ import { canSeeSessionReport, posRights } from './pos-rights';
       }
 
       <div class="ms-auto flex items-center gap-1 sm:gap-3.5">
+        @if (ctx.registerId()) {
+          <hn-pos-tse-pill />
+        }
         <span class="flex items-center gap-1.5 text-xs" [class]="ctx.online() ? 'text-pos-muted' : 'font-semibold text-pos-danger'" role="status" data-testid="pos-online">
           <span class="inline-block size-2 rounded-full" [class]="ctx.online() ? 'bg-pos-ok' : 'bg-pos-danger'" aria-hidden="true"></span>
           <span class="lg:not-sr-only" [class.sr-only]="ctx.online()">{{ (ctx.online() ? 'pos.app.online' : 'pos.app.offline') | t }}</span>
@@ -130,6 +134,7 @@ import { canSeeSessionReport, posRights } from './pos-rights';
         </div>
       </div>
     </header>
+    <hn-pos-tse-banner />
 
     <main id="pos-main" class="min-h-0 flex-1 overflow-auto" tabindex="-1">
       <router-outlet />

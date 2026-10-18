@@ -468,7 +468,21 @@
       "moderation.no_offers": "Please select at least one offer.",
       "moderation.too_many_offers": "Too many offers for one action.",
       "moderation.reason_too_long": "The reason is too long.",
-      "moderation.tenant_header": "Moderation is called without an organization context."
+      "moderation.tenant_header": "Moderation is called without an organization context.",
+      "pos.fiscal_disabled_in_production": "Without a TSE the till cannot be used in real operation.",
+      "pos.fiscal_simulated_not_allowed": "The test TSE is not allowed in real operation.",
+      "pos.fiscal_configuration_incomplete": "The TSE is not fully set up (TSS id and credentials are missing).",
+      "pos.export_range": "Choose a valid period (from ≤ to, at most 366 days).",
+      "pos.fiscal_algorithm": "This signature algorithm is not supported.",
+      "pos.fiscal_client_id": "The client id is invalid (1–64 characters, no ; or ^; registers only).",
+      "pos.fiscal_credential_reference": "The credential reference is invalid.",
+      "pos.fiscal_environment": "The fiskaly environment is Sandbox or Production.",
+      "pos.fiscal_failure_rate": "The failure rate must be between 0 and 100 %.",
+      "pos.fiscal_latency": "The latency must be between 0 and 30000 ms.",
+      "pos.fiscal_mode_required": "The organization needs a fiscal mode.",
+      "pos.fiscal_register_scope": "TSS, credentials and algorithm are set for the organization, not per register.",
+      "pos.fiskaly_conflict": "fiskaly reported a conflict. Please try again.",
+      "pos.outage_ended": "The TSE outage has already ended."
     }
   },
   "dashboard": {
@@ -1027,7 +1041,8 @@
       "disputes": "Complaints",
       "ankauf": "Buyback prices",
       "invoices": "Commission invoices",
-      "moderation": "Marketplace moderation"
+      "moderation": "Marketplace moderation",
+      "fiscal": "Tills & TSE"
     },
     "disputes": {
       "subtitle": "Review and decide complaints handed over to HandyNet.",
@@ -1054,6 +1069,69 @@
       "decidedRefund": "Decided: full refund.",
       "decidedNoRefund": "Decided: no refund.",
       "notEscalated": "This complaint is not (or no longer) awaiting a decision by HandyNet."
+    },
+    "fiscal": {
+      "subtitle": "Fiscal mode (TSE) per organization and register, test TSE behaviour, TSE status and outages.",
+      "disclaimer": "The test TSE is simulated and not certified – not for real operation. The fiskaly adapter is not verified against the real service. Not reviewed by a tax adviser.",
+      "organizations": "Organizations with the POS module",
+      "registerCount": "{count} registers",
+      "outageCount": "{count} outage(s)",
+      "noOrganizations": "No organizations with the POS module found.",
+      "choose": "Please choose",
+      "effectiveMode": "Effective mode",
+      "source": {
+        "Register": "register",
+        "Organization": "organization",
+        "Default": "default (configuration)",
+        "None": "not set up"
+      },
+      "simulatedRefusedInProduction": "The test TSE is blocked in the production environment (only with an explicit staging flag).",
+      "mode": "Fiscal mode",
+      "algorithm": "Signature algorithm",
+      "algorithmHint": "Applies to a newly created test TSE; fixed afterwards.",
+      "latency": "Artificial latency (ms)",
+      "failureRate": "Failure rate (%)",
+      "forcedOutage": "Force TSE outage",
+      "fiskalyUnverified": "fiskaly adapter: not verified against the real service. Credentials are stored encrypted and never shown.",
+      "tssId": "TSS id (UUID)",
+      "environment": "Environment",
+      "credentialReference": "Credential reference",
+      "credentialReferenceHint": "Name under Pos:Fiskaly:Credentials in the server configuration (secrets).",
+      "credentialsStored": "Encrypted credentials are stored.",
+      "credentialsMissing": "No credentials stored.",
+      "apiKey": "API key (set new)",
+      "apiSecret": "API secret (set new)",
+      "clearCredentials": "Delete stored credentials",
+      "tseStatus": "Test TSE status",
+      "transactionCounter": "Transaction counter",
+      "signatureCounter": "Signature counter",
+      "publicKey": "Public key",
+      "lastSignature": "Last transaction",
+      "registers": "Registers",
+      "register": "Register",
+      "behaviour": "Behaviour",
+      "behaviourSummary": "{latency} ms latency, {rate} % failures",
+      "noRegisters": "No registers yet.",
+      "overrideFor": "Setting for register {name}",
+      "inheritHint": "Empty fields use the organization setting.",
+      "inherit": "Use organization setting",
+      "clientIdHint": "Empty = register id. For fiskaly a client UUID.",
+      "yes": "Yes",
+      "no": "No",
+      "outages": "TSE outages",
+      "outageStart": "Start",
+      "outageEnd": "End",
+      "reason": "Reason",
+      "ongoing": "ongoing",
+      "noOutages": "No outages.",
+      "saved": "Fiscal settings for {name} saved.",
+      "validation": {
+        "modeRequired": "Please choose a fiscal mode.",
+        "latency": "0 to 30000 ms.",
+        "failureRate": "0 to 100 %.",
+        "uuid": "Please enter a valid UUID.",
+        "credentialsPair": "Enter API key and secret together."
+      }
     }
   },
   "moduleHelp": {
@@ -2345,6 +2423,26 @@
       "closeForbidden": "Only staff with the right “Close register” may close the session.",
       "reportForbidden": "You do not have the right to see this report.",
       "manageOnly": "Owners and managers only (manage registers)."
+    },
+    "tse": {
+      "blockTitle": "TSE data",
+      "testLabel": "Test TSE – not for real operation",
+      "clientId": "Till serial no. (client)",
+      "algorithm": "Signature algorithm",
+      "outageMarker": "Security device failed (Sicherheitseinrichtung ausgefallen)",
+      "qrLabel": "QR code with the TSE data",
+      "serial": "TSE serial number",
+      "state": {
+        "Ok": "TSE active",
+        "Test": "Test TSE",
+        "Outage": "TSE outage",
+        "Disabled": "No TSE",
+        "NotConfigured": "No TSE",
+        "Refused": "TSE blocked"
+      },
+      "outageTitle": "TSE outage.",
+      "outageText": "Sales continue; receipts carry the note \"Sicherheitseinrichtung ausgefallen\" and the outage is recorded.",
+      "outageSince": "since"
     }
   },
   "invoiceKind": {
@@ -2568,5 +2666,11 @@
     "cart": {
       "blocked": "An offer has been removed from the marketplace by the platform. Please remove it from the cart."
     }
+  },
+  "fiscalMode": {
+    "Disabled": "No TSE (test operation)",
+    "SimulatedTse": "Test TSE (simulated)",
+    "FiskalyCloudTse": "fiskaly cloud TSE",
+    "None": "Not set up"
   }
 }

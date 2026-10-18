@@ -1352,6 +1352,18 @@ export interface ReceiptFiscal {
   signature: string | null;
   startedAt: string | null;
   finishedAt: string | null;
+  /** Fiscal layer (ADR-0012); absent on receipts issued before it. "Failed" status = TSE outage. */
+  mode?: string | null;
+  /** Signed by the simulated test TSE or a fiskaly sandbox — never valid for real operation. */
+  isTest?: boolean;
+  clientId?: string | null;
+  signatureAlgorithm?: string | null;
+  timeFormat?: string | null;
+  publicKey?: string | null;
+  processType?: string | null;
+  processData?: string | null;
+  /** DSFinV-K QR code content (V0;…). */
+  qrPayload?: string | null;
 }
 
 export interface ReceiptSeller {

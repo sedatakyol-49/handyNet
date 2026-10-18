@@ -36,7 +36,16 @@ public sealed record DocumentFiscal(
     long? SignatureCounter,
     string? Signature,
     DateTimeOffset? StartedAt,
-    DateTimeOffset? FinishedAt);
+    DateTimeOffset? FinishedAt,
+    string? Mode = null,
+    bool IsTest = false,
+    string? ClientId = null,
+    string? SignatureAlgorithm = null,
+    string? TimeFormat = null,
+    string? PublicKey = null,
+    string? ProcessType = null,
+    string? ProcessData = null,
+    string? QrPayload = null);
 
 /// <summary>
 /// The printable receipt exactly as issued, stored with the receipt (jsonb) so a reprint always shows the original —
@@ -83,6 +92,10 @@ public sealed record ReceiptDocument(
             notes.Add(MarginSchemeNote);
         if (fiscal.Status == FiscalStatus.NotConnected)
             notes.Add(fiscal.Notice ?? NotConnectedNotice);
+        if (fiscal.Status == FiscalStatus.Failed)
+            notes.Add(KassenSichV.OutageNotice);
+        if (fiscal.IsTest)
+            notes.Add(KassenSichV.TestTseNotice);
 
         var title = receipt.Kind switch
         {
@@ -96,7 +109,8 @@ public sealed record ReceiptDocument(
             receipt.Payments.Select(p => new DocumentPayment(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
             receipt.ChangeMinor, notes,
             new DocumentFiscal(fiscal.Status.ToString(), fiscal.Notice, fiscal.TseSerialNumber, fiscal.TransactionNumber, fiscal.SignatureCounter,
-                fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt),
+                fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt, fiscal.Mode, fiscal.IsTest, fiscal.ClientId, fiscal.SignatureAlgorithm,
+                fiscal.TimeFormat, fiscal.PublicKey, fiscal.ProcessType, fiscal.ProcessData, fiscal.QrPayload),
             receipt.Customer);
     }
 }
