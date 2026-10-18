@@ -91,20 +91,20 @@ are out of scope for phone shops unless requested.
   Backend ✅ (ADR-0008 "Odoo-parity extensions"): product grid endpoint (own stock of the register's warehouse, paged,
   search, category filter + category list, serialized flag, available quantity, till price from own POS price → own
   offer net + 19 % → none, `imageUrl` placeholder), POS price maintenance, line notes on immutable receipts, price
-  override enforced. ✅ Frontend wired (grid with prices, notes, price dialog, parked tickets, split payment, receipt screen). Open: ⬜ product images on tiles (Catalog images exist; POS `imageUrl` not yet filled), ⬜ e-mail receipt.
+  override enforced. ✅ Frontend wired (grid with prices, notes, price dialog, parked tickets, split payment, receipt screen). ✅ Product images on tiles (primary catalog thumbnail via `IProductCatalog`), ✅ e-receipt by email (Notifications outbox, text + HTML) and QR link to a public read-only receipt (2026-10-18, ADR-0008 "Staff, approvals, e-receipts, invoices, cash rounding").
 - 🟡 **C. Staff**: cashier switching with PIN on a shared device, per-cashier permissions (discount limit, price
   change, refund, cash in/out, closing), manager approval PIN. Backend ✅ per-cashier permissions on staff memberships
   (`pos.price_override`, `pos.discount` + max %, `pos.refund`, `pos.cash_movement`, `pos.close_session`; owners/managers
-  always all), enforced by the API. Open: ⬜ PIN switching, ⬜ manager approval PIN; ✅ UI (rights gating at the till, Team page editor).
+  always all), enforced by the API. ✅ UI (rights gating at the till, Team page editor). ✅ PIN switching (2026-10-18): hashed 4–6 digit PINs (own with password, owner on the Team page), lockout after 5 wrong PINs, rate limit, cashier sessions bound to organization/register/device login (`X-Pos-Cashier`), receipts record the actual cashier, per-cashier rights apply, register auto-lock after idle minutes. ✅ Manager approval PIN: single-use approval (`X-Pos-Approval`) for price override, discount, refund, cash movement, closing; recorded on receipt/movement/closing and audited.
 - 🟡 **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
   loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding. Backend ✅ customer master
   (RLS, `[PersonalData]` kept out of the audit log), optional customer on a sale, printed snapshot on the receipt,
-  per-organization POS price. Open: ⬜ pricelists/customer prices, ⬜ loyalty/coupons/gift cards, ⬜ cash rounding,
+  per-organization POS price. Open: ⬜ pricelists/customer prices, ⬜ loyalty/coupons/gift cards, ✅ cash rounding to 0,05 € per register (receipt, Z-report; 2026-10-18),
   ⬜ customer retention/anonymization job; ✅ UI (customer picker, create/edit, on receipt).
 - 🟡 **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
   e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order. Backend ✅ history filters
   (number, dates, amount, cashier, customer, payment method, kind), refunds from an order (existing returns), recorded
-  reprints with copy number. Open: ⬜ invoice for a POS sale, ⬜ e-receipt, ⬜ ship-later, ⬜ quotations; ✅ UI (filter bar, reprint "Kopie n").
+  reprints with copy number. ✅ invoice for a POS sale (§14 UStG fields, gapless `RE-YYYY-nnnnnn` per organization, immutable, §25a without VAT + note, PDF; 2026-10-18), ✅ e-receipt. Open: ⬜ invoice correction for later returns, ⬜ ship-later, ⬜ quotations; ✅ UI (filter bar, reprint "Kopie n").
 - 🟡 **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
   differences, session report, all-orders analytics, product/cashier/payment reports. Backend ✅ denominations at
   opening/closing (stored, total = opening/counted cash), predefined + free-text reasons, closing difference, sales
