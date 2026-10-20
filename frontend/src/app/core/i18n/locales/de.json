@@ -76,7 +76,7 @@
   "auth": {
     "email": "E-Mail-Adresse",
     "password": "Passwort",
-    "footer": "HandyNet · B2B-Plattform für Mobilfunk-Großhandel, Handel und Reparatur",
+    "footer": "SEHA · B2B-Plattform für Mobilfunk-Großhandel, Handel und Reparatur",
     "login": {
       "title": "Anmelden",
       "subtitle": "Melden Sie sich mit Ihrem Geschäftskonto an.",
@@ -91,11 +91,11 @@
     },
     "register": {
       "title": "Unternehmen registrieren",
-      "subtitle": "HandyNet steht ausschließlich Gewerbetreibenden offen. Nach der Registrierung prüfen wir Ihre Angaben.",
+      "subtitle": "SEHA steht ausschließlich Gewerbetreibenden offen. Nach der Registrierung prüfen wir Ihre Angaben.",
       "company": "Unternehmen",
       "account": "Ihr Benutzerkonto",
       "name": "Firmenname",
-      "nameHint": "Wie Ihr Unternehmen auf HandyNet angezeigt wird.",
+      "nameHint": "Wie Ihr Unternehmen auf SEHA angezeigt wird.",
       "legalName": "Rechtlicher Name",
       "legalNameHint": "Inkl. Rechtsform, z. B. „Mustermann Mobile GmbH“.",
       "vatId": "USt-IdNr.",
@@ -107,7 +107,7 @@
       "businessTypes": "Geschäftsart",
       "displayName": "Ihr Name",
       "passwordHint": "Mindestens 10 Zeichen, Buchstaben sowie mindestens eine Ziffer oder ein Sonderzeichen.",
-      "verificationNote": "Module werden nach erfolgreicher Prüfung durch HandyNet freigeschaltet.",
+      "verificationNote": "Module werden nach erfolgreicher Prüfung durch SEHA freigeschaltet.",
       "submit": "Registrierung absenden",
       "haveAccount": "Bereits registriert?",
       "loginLink": "Zur Anmeldung"
@@ -145,7 +145,7 @@
       "title": "E-Mail-Adresse bestätigen",
       "checking": "Ihr Bestätigungslink wird geprüft …",
       "success": "Vielen Dank – Ihre E-Mail-Adresse ist bestätigt.",
-      "continue": "Weiter zu HandyNet",
+      "continue": "Weiter zu SEHA",
       "loginToResend": "Melden Sie sich an, um einen neuen Bestätigungslink anzufordern."
     }
   },
@@ -222,7 +222,7 @@
       "tenant.missing": "Bitte wählen Sie ein Unternehmen aus.",
       "membership.exists": "Diese Person ist bereits Mitglied Ihres Unternehmens.",
       "staff.password_required": "Für ein neues Benutzerkonto ist ein Startpasswort erforderlich.",
-      "staff.invitation_required": "Für diese E-Mail-Adresse besteht bereits ein HandyNet-Konto. Bestehende Konten können nur per Einladung beitreten (noch nicht verfügbar).",
+      "staff.invitation_required": "Für diese E-Mail-Adresse besteht bereits ein SEHA-Konto. Bestehende Konten können nur per Einladung beitreten (noch nicht verfügbar).",
       "staff.max_discount": "Der maximale Rabatt muss zwischen 0 und 100 % liegen.",
       "staff.not_found": "Mitarbeiter nicht gefunden.",
       "staff.pos_permission_unknown": "Unbekanntes Kassenrecht.",
@@ -269,7 +269,7 @@
       "shipment.parcel_invalid": "Gewicht und Maße müssen größer als 0 sein.",
       "shipment.tracking_taken": "Diese Sendungsnummer wird bereits für eine andere Sendung verwendet.",
       "shipment.invalid_status": "Diese Aktion ist im aktuellen Sendungsstatus nicht möglich. Bitte laden Sie die Seite neu.",
-      "shipment.no_label": "Für diese Sendung gibt es kein Etikett (außerhalb von HandyNet gebucht).",
+      "shipment.no_label": "Für diese Sendung gibt es kein Etikett (außerhalb von SEHA gebucht).",
       "shipment.not_found": "Die Sendung wurde nicht gefunden.",
       "order.invalid_transition": "Diese Aktion ist im aktuellen Bestellstatus nicht möglich. Bitte laden Sie die Seite neu.",
       "order.inspection_running": "Die Prüffrist des Käufers läuft noch.",
@@ -290,12 +290,12 @@
       "dispute.exists": "Zu dieser Bestellung gibt es bereits eine offene Reklamation.",
       "dispute.closed": "Diese Reklamation ist bereits abgeschlossen.",
       "dispute.not_found": "Die Reklamation wurde nicht gefunden.",
-      "dispute.not_open": "Nur offene Reklamationen können an HandyNet übergeben werden.",
-      "dispute.not_escalated": "HandyNet entscheidet nur über übergebene Reklamationen.",
+      "dispute.not_open": "Nur offene Reklamationen können an SEHA übergeben werden.",
+      "dispute.not_escalated": "SEHA entscheidet nur über übergebene Reklamationen.",
       "dispute.not_seller": "Nur der Verkäufer kann eine Erstattung gewähren.",
       "dispute.not_buyer": "Nur der Käufer kann die Reklamation zurückziehen.",
-      "dispute.seller_cannot_deny": "Verkäufer können eine Erstattung gewähren oder den Fall an HandyNet übergeben, die Reklamation aber nicht ablehnen.",
-      "dispute.buyer_cannot_refund": "Käufer können die Reklamation zurückziehen; Erstattungen gewährt der Verkäufer oder HandyNet.",
+      "dispute.seller_cannot_deny": "Verkäufer können eine Erstattung gewähren oder den Fall an SEHA übergeben, die Reklamation aber nicht ablehnen.",
+      "dispute.buyer_cannot_refund": "Käufer können die Reklamation zurückziehen; Erstattungen gewährt der Verkäufer oder SEHA.",
       "dispute.description": "Bitte beschreiben Sie das Problem (höchstens 4000 Zeichen).",
       "dispute.message": "Nachrichten müssen 1 bis 4000 Zeichen lang sein.",
       "dispute.resolution": "Eine kurze Begründung ist erforderlich (höchstens 4000 Zeichen).",
@@ -319,8 +319,8 @@
       "ankauf.policy_conditions": "Für jeden Zustand ist ein Zu- oder Abschlag erforderlich.",
       "ankauf.policy_range": "Mindestens ein Wert liegt außerhalb des zulässigen Bereichs.",
       "ankauf.policy_backdated": "Eine Preisregel kann nicht rückwirkend gelten.",
-      "ankauf.no_valid_price": "Für dieses Modell gibt es aktuell keinen gültigen Ankaufspreis. Ein Preis kann nicht garantiert werden – bitte fragen Sie bei HandyNet ein individuelles Angebot an.",
-      "ankauf.no_policy": "Derzeit ist keine Preisregel aktiv. Bitte wenden Sie sich an HandyNet.",
+      "ankauf.no_valid_price": "Für dieses Modell gibt es aktuell keinen gültigen Ankaufspreis. Ein Preis kann nicht garantiert werden – bitte fragen Sie bei SEHA ein individuelles Angebot an.",
+      "ankauf.no_policy": "Derzeit ist keine Preisregel aktiv. Bitte wenden Sie sich an SEHA.",
       "ankauf.consumer_price": "Der Endkundenpreis darf höchstens zwei Nachkommastellen haben.",
       "ankauf.quote_not_found": "Das Angebot wurde nicht gefunden.",
       "ankauf.quote_expired": "Das Angebot ist abgelaufen. Bitte ein neues Angebot mit aktuellen Preisen erstellen.",
@@ -525,7 +525,7 @@
     "businessTypes": "Geschäftsart",
     "modules": "Module",
     "noModules": "Keine Module freigeschaltet",
-    "noModulesHint": "Für Ihr Unternehmen sind noch keine Module freigeschaltet. Bitte wenden Sie sich an HandyNet.",
+    "noModulesHint": "Für Ihr Unternehmen sind noch keine Module freigeschaltet. Bitte wenden Sie sich an SEHA.",
     "quickLinks": "Schnellzugriff",
     "refreshStatus": "Status aktualisieren",
     "salesToConfirm": "Verkauf: zu bestätigen",
@@ -537,11 +537,11 @@
     },
     "rejected": {
       "title": "Registrierung abgelehnt",
-      "text": "Die Prüfung Ihres Unternehmens wurde abgelehnt. Bitte kontaktieren Sie den HandyNet-Support."
+      "text": "Die Prüfung Ihres Unternehmens wurde abgelehnt. Bitte kontaktieren Sie den SEHA-Support."
     },
     "suspended": {
       "title": "Unternehmen gesperrt",
-      "text": "Ihr Unternehmen ist derzeit gesperrt. Bitte kontaktieren Sie den HandyNet-Support."
+      "text": "Ihr Unternehmen ist derzeit gesperrt. Bitte kontaktieren Sie den SEHA-Support."
     },
     "noOrganization": {
       "title": "Kein Unternehmen zugeordnet",
@@ -696,7 +696,7 @@
     "deliveredAt": "Zugestellt am",
     "inspectionEndsAt": "Prüffrist bis",
     "completedAt": "Abgeschlossen am",
-    "shipWithoutShipmentHint": "Ohne Sendung über HandyNet als versendet markieren (kein Etikett, keine Sendungsverfolgung)."
+    "shipWithoutShipmentHint": "Ohne Sendung über SEHA als versendet markieren (kein Etikett, keine Sendungsverfolgung)."
   },
   "offers": {
     "title": "Angebote",
@@ -1093,14 +1093,14 @@
       "fiscal": "Kassen & TSE"
     },
     "disputes": {
-      "subtitle": "An HandyNet übergebene Reklamationen prüfen und entscheiden.",
+      "subtitle": "An SEHA übergebene Reklamationen prüfen und entscheiden.",
       "idsHint": "Für Reklamationen liegen hier keine Unternehmensnamen vor; IDs sind gekürzt (vollständige ID per Tooltip und in der Detailansicht).",
       "escalatedAt": "Übergeben am",
       "order": "Bestellung (ID)",
       "open": "Prüfen",
       "openLabel": "Reklamation zu Bestellung {order} prüfen",
       "empty": "Keine offenen Fälle",
-      "emptyText": "Es liegen keine an HandyNet übergebenen Reklamationen vor.",
+      "emptyText": "Es liegen keine an SEHA übergebenen Reklamationen vor.",
       "detailTitle": "Reklamation {id}",
       "detailSubtitle": "Verlauf prüfen und verbindlich entscheiden.",
       "decision": "Entscheidung",
@@ -1116,7 +1116,7 @@
       "confirmNoRefund": "Die Reklamation wird ohne Erstattung geschlossen, die Bestellung abgeschlossen und der Verkäufer ausgezahlt. Dies kann nicht rückgängig gemacht werden.",
       "decidedRefund": "Entschieden: volle Erstattung.",
       "decidedNoRefund": "Entschieden: keine Erstattung.",
-      "notEscalated": "Diese Reklamation liegt nicht (mehr) bei HandyNet zur Entscheidung."
+      "notEscalated": "Diese Reklamation liegt nicht (mehr) bei SEHA zur Entscheidung."
     },
     "fiscal": {
       "subtitle": "Fiskalmodus (TSE) je Unternehmen und Kasse, Verhalten der Test-TSE, TSE-Status und Ausfälle.",
@@ -1298,7 +1298,7 @@
     "Delivered": "Zugestellt"
   },
   "carrier": {
-    "Manual": "Manuell (außerhalb HandyNet gebucht)",
+    "Manual": "Manuell (außerhalb SEHA gebucht)",
     "Simulated": "Simulation (Testetikett)",
     "Dhl": "DHL",
     "Dpd": "DPD",
@@ -1330,7 +1330,7 @@
     "cancel": "Stornieren",
     "sync": "Sendungsverfolgung aktualisieren",
     "simulationNote": "Simulation – kein gültiges Versandetikett. Nur für Tests, es wird nichts versendet.",
-    "manualTrackingNote": "Außerhalb von HandyNet gebucht: keine automatische Sendungsverfolgung. Die Zustellung bestätigt der Käufer.",
+    "manualTrackingNote": "Außerhalb von SEHA gebucht: keine automatische Sendungsverfolgung. Die Zustellung bestätigt der Käufer.",
     "created": "Sendung angelegt. Das Paket gilt erst nach der Übergabe als versendet.",
     "handedOver": "Übergabe bestätigt – die Bestellung ist versendet.",
     "cancelled": "Sendung storniert.",
@@ -1341,13 +1341,13 @@
       "handover": "Bestätigen Sie nur, wenn das Paket bereits an den Versanddienstleister übergeben wurde. Die Bestellung wird als versendet markiert und der Bestand ausgebucht. Danach kann die Sendung nicht mehr storniert werden.",
       "cancelShipment": "Die Sendung und ihr Etikett werden storniert. Anschließend können Sie eine neue Sendung anlegen.",
       "confirmDelivery": "Bestätigen Sie, dass die Ware bei Ihnen eingegangen ist. Ab jetzt läuft eine Prüffrist von 48 Stunden.",
-      "accept": "Mit der Annahme bestätigen Sie, dass die Ware in Ordnung ist. Die Bestellung wird abgeschlossen; spätere Reklamationen über HandyNet sind dann nicht mehr möglich."
+      "accept": "Mit der Annahme bestätigen Sie, dass die Ware in Ordnung ist. Die Bestellung wird abgeschlossen; spätere Reklamationen über SEHA sind dann nicht mehr möglich."
     },
     "form": {
       "title": "Sendung anlegen",
       "intro": "Buchen Sie ein Paket für diese Bestellung. Der Warenwert entspricht dem Bruttobetrag der Bestellung.",
       "chooseCarrier": "– bitte wählen –",
-      "manualHint": "Sie haben das Paket außerhalb von HandyNet gebucht und tragen die Sendungsnummer ein. Es wird kein Etikett erzeugt.",
+      "manualHint": "Sie haben das Paket außerhalb von SEHA gebucht und tragen die Sendungsnummer ein. Es wird kein Etikett erzeugt.",
       "simulatedHint": "Erzeugt ein deutlich gekennzeichnetes Testetikett und simulierte Sendungsverfolgung. Es wird nichts versendet.",
       "declaredValueHint": "Wird automatisch aus der Bestellung übernommen.",
       "weightKg": "Gewicht (kg)",
@@ -1485,7 +1485,7 @@
   },
   "disputeStatus": {
     "Open": "Offen",
-    "Escalated": "Bei HandyNet",
+    "Escalated": "Bei SEHA",
     "Refunded": "Erstattet",
     "ClosedWithoutRefund": "Ohne Erstattung geschlossen"
   },
@@ -1501,7 +1501,7 @@
     "reason": "Grund",
     "description": "Beschreibung",
     "openedAt": "Gemeldet am",
-    "escalatedAt": "An HandyNet übergeben am",
+    "escalatedAt": "An SEHA übergeben am",
     "resolvedAt": "Abgeschlossen am",
     "resolvedBy": "Entschieden von",
     "resolution": "Begründung",
@@ -1512,21 +1512,21 @@
     "send": "Nachricht senden",
     "refund": "Erstattung gewähren",
     "withdraw": "Reklamation zurückziehen",
-    "escalate": "An HandyNet übergeben",
+    "escalate": "An SEHA übergeben",
     "refundText": "Begründung für die Erstattung",
     "withdrawText": "Begründung für die Rücknahme",
-    "escalateText": "Nachricht an HandyNet",
+    "escalateText": "Nachricht an SEHA",
     "textRequiredHint": "Pflichtfeld. Der Text wird im Verlauf für beide Seiten angezeigt.",
     "textOptionalHint": "Optional. Der Text wird im Verlauf für beide Seiten angezeigt.",
     "confirmText": {
       "refund": "Der Käufer erhält den vollen Bestellbetrag zurück. Eine Online-Zahlung wird automatisch erstattet, die Bestellung wird als „Erstattet“ geschlossen und Sie erhalten keine Auszahlung. Dies kann nicht rückgängig gemacht werden.",
       "withdraw": "Die Reklamation wird ohne Erstattung geschlossen. Die Bestellung wird abgeschlossen und der Verkäufer erhält die Auszahlung. Dies kann nicht rückgängig gemacht werden.",
-      "escalate": "HandyNet prüft den Fall und entscheidet verbindlich über eine Erstattung. Bis zur Entscheidung bleiben Abschluss und Auszahlung ausgesetzt. Nachrichten sind weiterhin möglich."
+      "escalate": "SEHA prüft den Fall und entscheidet verbindlich über eine Erstattung. Bis zur Entscheidung bleiben Abschluss und Auszahlung ausgesetzt. Nachrichten sind weiterhin möglich."
     },
     "explain": {
-      "openBuyer": "Der Verkäufer wurde informiert. Klären Sie das Problem über den Verlauf. Kommen Sie zu keiner Einigung, können Sie den Fall an HandyNet übergeben.",
-      "openSeller": "Der Käufer hat ein Problem gemeldet. Abschluss und Auszahlung sind ausgesetzt, bis die Reklamation geklärt ist. Sie können eine Erstattung gewähren oder den Fall an HandyNet übergeben.",
-      "escalated": "Der Fall liegt bei HandyNet. Die Plattform entscheidet über eine Erstattung; die Entscheidung erscheint im Verlauf.",
+      "openBuyer": "Der Verkäufer wurde informiert. Klären Sie das Problem über den Verlauf. Kommen Sie zu keiner Einigung, können Sie den Fall an SEHA übergeben.",
+      "openSeller": "Der Käufer hat ein Problem gemeldet. Abschluss und Auszahlung sind ausgesetzt, bis die Reklamation geklärt ist. Sie können eine Erstattung gewähren oder den Fall an SEHA übergeben.",
+      "escalated": "Der Fall liegt bei SEHA. Die Plattform entscheidet über eine Erstattung; die Entscheidung erscheint im Verlauf.",
       "refunded": "Reklamation mit voller Erstattung abgeschlossen (entschieden von: {by}).",
       "closedWithoutRefund": "Reklamation ohne Erstattung abgeschlossen (entschieden von: {by}). Die Bestellung ist abgeschlossen."
     },
@@ -1546,7 +1546,7 @@
     "reported": "Reklamation zu Bestellung {number} wurde gemeldet.",
     "refunded": "Erstattung für Bestellung {number} gewährt.",
     "withdrawn": "Reklamation zu Bestellung {number} wurde zurückgezogen.",
-    "escalated": "Der Fall wurde an HandyNet übergeben."
+    "escalated": "Der Fall wurde an SEHA übergeben."
   },
   "priceListStatus": {
     "Review": "In Prüfung",
@@ -1747,7 +1747,7 @@
   },
   "ankauf": {
     "title": "Ankauf",
-    "subtitle": "Vorläufige Ankaufsangebote für gebrauchte Geräte auf Basis der aktuellen HandyNet-Preisliste.",
+    "subtitle": "Vorläufige Ankaufsangebote für gebrauchte Geräte auf Basis der aktuellen SEHA-Preisliste.",
     "formTitle": "Gerät bewerten",
     "noPermission": "Zum Erstellen von Angeboten fehlt Ihnen die Berechtigung „Bestellungen aufgeben“.",
     "model": "Modell",
@@ -1868,7 +1868,7 @@
       "warehouse": "Lager",
       "warehouseHint": "Ohne Auswahl wird das Standardlager verwendet.",
       "defaultWarehouse": "Standardlager",
-      "noInventoryModule": "Das Modul „Lager“ ist für Ihr Unternehmen nicht aktiv: Lagerauswahl und Bestandsansicht sind nicht verfügbar. Bitte wenden Sie sich an HandyNet.",
+      "noInventoryModule": "Das Modul „Lager“ ist für Ihr Unternehmen nicht aktiv: Lagerauswahl und Bestandsansicht sind nicht verfügbar. Bitte wenden Sie sich an SEHA.",
       "complete": "Bezahlen und einlagern …",
       "confirmTitle": "Ankauf abschließen",
       "confirmText": "Bitte prüfen Sie die Angaben. Der Ankauf kann danach nicht mehr geändert werden.",
@@ -2586,7 +2586,7 @@
   },
   "invoices": {
     "title": "Provisionsrechnungen",
-    "subtitle": "Rechnungen von HandyNet über die Vermittlungsprovision für online bezahlte Verkäufe, monatlich nach Monatsende.",
+    "subtitle": "Rechnungen von SEHA über die Vermittlungsprovision für online bezahlte Verkäufe, monatlich nach Monatsende.",
     "hint": "Rechnungsnummern HN-JJJJ-nnnnnn, Rechnungskorrekturen HN-RK-JJJJ-nnnnnn. Ausgestellte Dokumente werden nie geändert: Wird eine bereits abgerechnete Zahlung erstattet, gleicht eine Rechnungskorrektur im Monat der Erstattung die Position aus.",
     "backToFinance": "Zu den Finanzen",
     "back": "Zurück zu den Rechnungen",
@@ -2617,7 +2617,7 @@
       "taxNumber": "Steuernummer",
       "vatRate": "USt-Satz",
       "correctsInvoice": "Korrigierte Rechnung",
-      "serviceText": "Vermittlungsprovision für online bezahlte Bestellungen über HandyNet, je Bestellung eine Position.",
+      "serviceText": "Vermittlungsprovision für online bezahlte Bestellungen über SEHA, je Bestellung eine Position.",
       "correctionNote": "Diese Rechnungskorrektur storniert die folgenden Positionen der Rechnung {number}, weil die Zahlungen erstattet wurden.",
       "withheldNote": "Die Provision wurde bereits bei der Auszahlung einbehalten; es ist keine Zahlung fällig.",
       "placeholder": "MUSTER: Die Absenderdaten sind noch Platzhalter. Dieses Dokument ist keine gültige Rechnung.",

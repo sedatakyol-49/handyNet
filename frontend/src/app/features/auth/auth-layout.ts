@@ -22,8 +22,8 @@ import { I18nService, Lang } from '../../core/i18n/i18n.service';
         <div class="hn-auth-grid absolute inset-0 -z-10"></div>
 
         <div class="flex items-center gap-2.5 px-10 pt-9 text-lg font-semibold tracking-tight">
-          <span class="grid size-9 place-items-center rounded-xl bg-white/10 text-sm font-bold ring-1 ring-white/20 backdrop-blur">HN</span>
-          HandyNet
+          <span class="grid size-9 place-items-center rounded-xl bg-white/10 text-sm font-bold ring-1 ring-white/20 backdrop-blur">SH</span>
+          SEHA
         </div>
 
         <div class="flex flex-1 flex-col justify-center px-10 xl:px-14">
@@ -103,8 +103,8 @@ import { I18nService, Lang } from '../../core/i18n/i18n.service';
       <div class="hn-auth-content relative flex min-w-0 flex-1 flex-col">
         <header class="flex items-center justify-between px-4 py-3 sm:px-8 sm:py-5">
           <span class="flex items-center gap-2 font-semibold" [class]="wide() ? 'xl:invisible' : 'lg:invisible'">
-            <span class="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-600 to-cyan-500 text-xs font-bold text-white shadow-sm" aria-hidden="true">HN</span>
-            HandyNet
+            <span class="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-600 to-cyan-500 text-xs font-bold text-white shadow-sm" aria-hidden="true">SH</span>
+            SEHA
           </span>
           <label class="sr-only" for="auth-lang">{{ i18n.t('shell.language') }}</label>
           <select id="auth-lang" class="hn-control w-auto py-1" [value]="i18n.lang()" (change)="use($any($event.target).value)">

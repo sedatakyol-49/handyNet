@@ -76,7 +76,7 @@
   "auth": {
     "email": "Correo electrónico",
     "password": "Contraseña",
-    "footer": "HandyNet · Plataforma B2B para el comercio mayorista, minorista y la reparación de telefonía móvil",
+    "footer": "SEHA · Plataforma B2B para el comercio mayorista, minorista y la reparación de telefonía móvil",
     "login": {
       "title": "Iniciar sesión",
       "subtitle": "Inicie sesión con su cuenta de empresa.",
@@ -91,11 +91,11 @@
     },
     "register": {
       "title": "Registrar empresa",
-      "subtitle": "HandyNet está abierto exclusivamente a profesionales y empresas. Tras el registro verificaremos sus datos.",
+      "subtitle": "SEHA está abierto exclusivamente a profesionales y empresas. Tras el registro verificaremos sus datos.",
       "company": "Empresa",
       "account": "Su cuenta de usuario",
       "name": "Nombre comercial",
-      "nameHint": "Cómo se mostrará su empresa en HandyNet.",
+      "nameHint": "Cómo se mostrará su empresa en SEHA.",
       "legalName": "Razón social",
       "legalNameHint": "Incluida la forma jurídica, p. ej. «Mustermann Mobile GmbH».",
       "vatId": "NIF-IVA (USt-IdNr.)",
@@ -107,7 +107,7 @@
       "businessTypes": "Tipo de actividad",
       "displayName": "Su nombre",
       "passwordHint": "Mínimo 10 caracteres, letras y al menos un número o un carácter especial.",
-      "verificationNote": "Los módulos se activan cuando HandyNet ha verificado su empresa correctamente.",
+      "verificationNote": "Los módulos se activan cuando SEHA ha verificado su empresa correctamente.",
       "submit": "Enviar registro",
       "haveAccount": "¿Ya está registrado?",
       "loginLink": "Ir al inicio de sesión"
@@ -145,7 +145,7 @@
       "title": "Confirmar dirección de correo electrónico",
       "checking": "Comprobando su enlace de confirmación …",
       "success": "Gracias: su dirección de correo electrónico está confirmada.",
-      "continue": "Continuar a HandyNet",
+      "continue": "Continuar a SEHA",
       "loginToResend": "Inicie sesión para solicitar un nuevo enlace de confirmación."
     }
   },
@@ -222,7 +222,7 @@
       "tenant.missing": "Seleccione una empresa.",
       "membership.exists": "Esta persona ya es miembro de su empresa.",
       "staff.password_required": "Para una cuenta de usuario nueva se requiere una contraseña inicial.",
-      "staff.invitation_required": "Ya existe una cuenta de HandyNet con este correo electrónico. Las cuentas existentes solo pueden unirse mediante invitación (aún no disponible).",
+      "staff.invitation_required": "Ya existe una cuenta de SEHA con este correo electrónico. Las cuentas existentes solo pueden unirse mediante invitación (aún no disponible).",
       "staff.max_discount": "El descuento máximo debe estar entre el 0 y el 100 %.",
       "staff.not_found": "Empleado no encontrado.",
       "staff.pos_permission_unknown": "Permiso de caja desconocido.",
@@ -269,7 +269,7 @@
       "shipment.parcel_invalid": "El peso y las dimensiones deben ser mayores que 0.",
       "shipment.tracking_taken": "Este número de seguimiento ya se utiliza en otro envío.",
       "shipment.invalid_status": "Esta acción no es posible en el estado actual del envío. Vuelva a cargar la página.",
-      "shipment.no_label": "Este envío no tiene etiqueta (contratado fuera de HandyNet).",
+      "shipment.no_label": "Este envío no tiene etiqueta (contratado fuera de SEHA).",
       "shipment.not_found": "No se ha encontrado el envío.",
       "order.invalid_transition": "Esta acción no es posible en el estado actual del pedido. Vuelva a cargar la página.",
       "order.inspection_running": "El plazo de revisión del comprador aún no ha finalizado.",
@@ -290,12 +290,12 @@
       "dispute.exists": "Ya existe una reclamación abierta para este pedido.",
       "dispute.closed": "Esta reclamación ya está cerrada.",
       "dispute.not_found": "No se ha encontrado la reclamación.",
-      "dispute.not_open": "Solo las reclamaciones abiertas pueden remitirse a HandyNet.",
-      "dispute.not_escalated": "HandyNet solo decide sobre reclamaciones que se le han remitido.",
+      "dispute.not_open": "Solo las reclamaciones abiertas pueden remitirse a SEHA.",
+      "dispute.not_escalated": "SEHA solo decide sobre reclamaciones que se le han remitido.",
       "dispute.not_seller": "Solo el vendedor puede conceder un reembolso.",
       "dispute.not_buyer": "Solo el comprador puede retirar la reclamación.",
-      "dispute.seller_cannot_deny": "Los vendedores pueden conceder un reembolso o remitir el caso a HandyNet, pero no pueden rechazar la reclamación.",
-      "dispute.buyer_cannot_refund": "Los compradores pueden retirar la reclamación; los reembolsos los concede el vendedor o HandyNet.",
+      "dispute.seller_cannot_deny": "Los vendedores pueden conceder un reembolso o remitir el caso a SEHA, pero no pueden rechazar la reclamación.",
+      "dispute.buyer_cannot_refund": "Los compradores pueden retirar la reclamación; los reembolsos los concede el vendedor o SEHA.",
       "dispute.description": "Describa el problema (máximo 4000 caracteres).",
       "dispute.message": "Los mensajes deben tener entre 1 y 4000 caracteres.",
       "dispute.resolution": "Se requiere una breve justificación (máximo 4000 caracteres).",
@@ -319,8 +319,8 @@
       "ankauf.policy_conditions": "Cada estado requiere un recargo o descuento.",
       "ankauf.policy_range": "Al menos un valor está fuera del rango permitido.",
       "ankauf.policy_backdated": "Una regla de precios no puede aplicarse con carácter retroactivo.",
-      "ankauf.no_valid_price": "Actualmente no hay ningún precio de recompra válido para este modelo. No se puede garantizar un precio; solicite a HandyNet una oferta individual.",
-      "ankauf.no_policy": "Actualmente no hay ninguna regla de precios activa. Póngase en contacto con HandyNet.",
+      "ankauf.no_valid_price": "Actualmente no hay ningún precio de recompra válido para este modelo. No se puede garantizar un precio; solicite a SEHA una oferta individual.",
+      "ankauf.no_policy": "Actualmente no hay ninguna regla de precios activa. Póngase en contacto con SEHA.",
       "ankauf.consumer_price": "El precio al cliente final puede tener como máximo dos decimales.",
       "ankauf.quote_not_found": "No se ha encontrado la oferta.",
       "ankauf.quote_expired": "La oferta ha caducado. Cree una nueva oferta con precios actuales.",
@@ -525,7 +525,7 @@
     "businessTypes": "Tipo de actividad",
     "modules": "Módulos",
     "noModules": "Ningún módulo activado",
-    "noModulesHint": "Aún no hay módulos activados para su empresa. Póngase en contacto con HandyNet.",
+    "noModulesHint": "Aún no hay módulos activados para su empresa. Póngase en contacto con SEHA.",
     "quickLinks": "Acceso rápido",
     "refreshStatus": "Actualizar estado",
     "salesToConfirm": "Ventas: por confirmar",
@@ -537,11 +537,11 @@
     },
     "rejected": {
       "title": "Registro rechazado",
-      "text": "La verificación de su empresa ha sido rechazada. Póngase en contacto con el soporte de HandyNet."
+      "text": "La verificación de su empresa ha sido rechazada. Póngase en contacto con el soporte de SEHA."
     },
     "suspended": {
       "title": "Empresa bloqueada",
-      "text": "Su empresa está bloqueada actualmente. Póngase en contacto con el soporte de HandyNet."
+      "text": "Su empresa está bloqueada actualmente. Póngase en contacto con el soporte de SEHA."
     },
     "noOrganization": {
       "title": "Ninguna empresa asignada",
@@ -696,7 +696,7 @@
     "deliveredAt": "Fecha de entrega",
     "inspectionEndsAt": "Plazo de revisión hasta",
     "completedAt": "Fecha de cierre",
-    "shipWithoutShipmentHint": "Marcar como enviado sin envío a través de HandyNet (sin etiqueta ni seguimiento)."
+    "shipWithoutShipmentHint": "Marcar como enviado sin envío a través de SEHA (sin etiqueta ni seguimiento)."
   },
   "offers": {
     "title": "Ofertas",
@@ -1093,14 +1093,14 @@
       "fiscal": "Cajas y TSE"
     },
     "disputes": {
-      "subtitle": "Revisar y resolver las reclamaciones remitidas a HandyNet.",
+      "subtitle": "Revisar y resolver las reclamaciones remitidas a SEHA.",
       "idsHint": "Aquí no se dispone de nombres de empresa para las reclamaciones; los ID están abreviados (ID completo en la información emergente y en la vista de detalle).",
       "escalatedAt": "Remitida el",
       "order": "Pedido (ID)",
       "open": "Revisar",
       "openLabel": "Revisar la reclamación del pedido {order}",
       "empty": "No hay casos abiertos",
-      "emptyText": "No hay reclamaciones remitidas a HandyNet.",
+      "emptyText": "No hay reclamaciones remitidas a SEHA.",
       "detailTitle": "Reclamación {id}",
       "detailSubtitle": "Revisar el historial y resolver de forma vinculante.",
       "decision": "Decisión",
@@ -1116,7 +1116,7 @@
       "confirmNoRefund": "La reclamación se cierra sin reembolso, el pedido se completa y se liquida el importe al vendedor. Esta acción no se puede deshacer.",
       "decidedRefund": "Resuelto: reembolso íntegro.",
       "decidedNoRefund": "Resuelto: sin reembolso.",
-      "notEscalated": "Esta reclamación no está (o ya no está) pendiente de decisión por HandyNet."
+      "notEscalated": "Esta reclamación no está (o ya no está) pendiente de decisión por SEHA."
     },
     "fiscal": {
       "subtitle": "Modo fiscal (TSE) por empresa y caja, comportamiento de la TSE de prueba, estado de la TSE y fallos.",
@@ -1298,7 +1298,7 @@
     "Delivered": "Entregado"
   },
   "carrier": {
-    "Manual": "Manual (contratado fuera de HandyNet)",
+    "Manual": "Manual (contratado fuera de SEHA)",
     "Simulated": "Simulación (etiqueta de prueba)",
     "Dhl": "DHL",
     "Dpd": "DPD",
@@ -1330,7 +1330,7 @@
     "cancel": "Cancelar",
     "sync": "Actualizar seguimiento",
     "simulationNote": "Simulación: no es una etiqueta de envío válida. Solo para pruebas, no se envía nada.",
-    "manualTrackingNote": "Contratado fuera de HandyNet: sin seguimiento automático. La entrega la confirma el comprador.",
+    "manualTrackingNote": "Contratado fuera de SEHA: sin seguimiento automático. La entrega la confirma el comprador.",
     "created": "Envío creado. El paquete solo se considera enviado tras la entrega al transportista.",
     "handedOver": "Entrega confirmada: el pedido está enviado.",
     "cancelled": "Envío cancelado.",
@@ -1341,13 +1341,13 @@
       "handover": "Confirme solo si el paquete ya se ha entregado al transportista. El pedido se marcará como enviado y se dará de baja el stock. Después ya no se podrá cancelar el envío.",
       "cancelShipment": "Se cancelarán el envío y su etiqueta. A continuación podrá crear un nuevo envío.",
       "confirmDelivery": "Confirme que ha recibido la mercancía. A partir de ahora corre un plazo de revisión de 48 horas.",
-      "accept": "Al aceptar, confirma que la mercancía es conforme. El pedido se completará; después ya no será posible presentar reclamaciones a través de HandyNet."
+      "accept": "Al aceptar, confirma que la mercancía es conforme. El pedido se completará; después ya no será posible presentar reclamaciones a través de SEHA."
     },
     "form": {
       "title": "Crear envío",
       "intro": "Contrate un paquete para este pedido. El valor de la mercancía corresponde al importe bruto del pedido.",
       "chooseCarrier": "– seleccione –",
-      "manualHint": "Ha contratado el paquete fuera de HandyNet e introduce el número de seguimiento. No se genera ninguna etiqueta.",
+      "manualHint": "Ha contratado el paquete fuera de SEHA e introduce el número de seguimiento. No se genera ninguna etiqueta.",
       "simulatedHint": "Genera una etiqueta de prueba claramente identificada y un seguimiento simulado. No se envía nada.",
       "declaredValueHint": "Se toma automáticamente del pedido.",
       "weightKg": "Peso (kg)",
@@ -1485,7 +1485,7 @@
   },
   "disputeStatus": {
     "Open": "Abierta",
-    "Escalated": "En HandyNet",
+    "Escalated": "En SEHA",
     "Refunded": "Reembolsada",
     "ClosedWithoutRefund": "Cerrada sin reembolso"
   },
@@ -1501,7 +1501,7 @@
     "reason": "Motivo",
     "description": "Descripción",
     "openedAt": "Comunicada el",
-    "escalatedAt": "Remitida a HandyNet el",
+    "escalatedAt": "Remitida a SEHA el",
     "resolvedAt": "Cerrada el",
     "resolvedBy": "Resuelta por",
     "resolution": "Justificación",
@@ -1512,21 +1512,21 @@
     "send": "Enviar mensaje",
     "refund": "Conceder reembolso",
     "withdraw": "Retirar reclamación",
-    "escalate": "Remitir a HandyNet",
+    "escalate": "Remitir a SEHA",
     "refundText": "Justificación del reembolso",
     "withdrawText": "Justificación de la retirada",
-    "escalateText": "Mensaje para HandyNet",
+    "escalateText": "Mensaje para SEHA",
     "textRequiredHint": "Campo obligatorio. El texto se muestra a ambas partes en el historial.",
     "textOptionalHint": "Opcional. El texto se muestra a ambas partes en el historial.",
     "confirmText": {
       "refund": "El comprador recibe el importe íntegro del pedido. Un pago en línea se reembolsa automáticamente, el pedido se cierra como «Reembolsado» y usted no recibe ninguna liquidación. Esta acción no se puede deshacer.",
       "withdraw": "La reclamación se cierra sin reembolso. El pedido se completa y el vendedor recibe la liquidación. Esta acción no se puede deshacer.",
-      "escalate": "HandyNet revisa el caso y decide de forma vinculante sobre un reembolso. Hasta la decisión, el cierre y la liquidación quedan en suspenso. Se pueden seguir enviando mensajes."
+      "escalate": "SEHA revisa el caso y decide de forma vinculante sobre un reembolso. Hasta la decisión, el cierre y la liquidación quedan en suspenso. Se pueden seguir enviando mensajes."
     },
     "explain": {
-      "openBuyer": "Se ha informado al vendedor. Aclare el problema a través del historial. Si no llegan a un acuerdo, puede remitir el caso a HandyNet.",
-      "openSeller": "El comprador ha comunicado un problema. El cierre y la liquidación quedan en suspenso hasta que se resuelva la reclamación. Puede conceder un reembolso o remitir el caso a HandyNet.",
-      "escalated": "El caso está en manos de HandyNet. La plataforma decide sobre un reembolso; la decisión aparecerá en el historial.",
+      "openBuyer": "Se ha informado al vendedor. Aclare el problema a través del historial. Si no llegan a un acuerdo, puede remitir el caso a SEHA.",
+      "openSeller": "El comprador ha comunicado un problema. El cierre y la liquidación quedan en suspenso hasta que se resuelva la reclamación. Puede conceder un reembolso o remitir el caso a SEHA.",
+      "escalated": "El caso está en manos de SEHA. La plataforma decide sobre un reembolso; la decisión aparecerá en el historial.",
       "refunded": "Reclamación cerrada con reembolso íntegro (resuelta por: {by}).",
       "closedWithoutRefund": "Reclamación cerrada sin reembolso (resuelta por: {by}). El pedido está completado."
     },
@@ -1546,7 +1546,7 @@
     "reported": "Se ha presentado la reclamación del pedido {number}.",
     "refunded": "Reembolso concedido para el pedido {number}.",
     "withdrawn": "Se ha retirado la reclamación del pedido {number}.",
-    "escalated": "El caso se ha remitido a HandyNet."
+    "escalated": "El caso se ha remitido a SEHA."
   },
   "priceListStatus": {
     "Review": "En revisión",
@@ -1747,7 +1747,7 @@
   },
   "ankauf": {
     "title": "Recompra",
-    "subtitle": "Ofertas de recompra provisionales para dispositivos usados, basadas en la lista de precios actual de HandyNet.",
+    "subtitle": "Ofertas de recompra provisionales para dispositivos usados, basadas en la lista de precios actual de SEHA.",
     "formTitle": "Valorar dispositivo",
     "noPermission": "Para crear ofertas necesita el permiso «Realizar pedidos».",
     "model": "Modelo",
@@ -1868,7 +1868,7 @@
       "warehouse": "Almacén",
       "warehouseHint": "Si no se selecciona, se utiliza el almacén predeterminado.",
       "defaultWarehouse": "Almacén predeterminado",
-      "noInventoryModule": "El módulo «Almacén» no está activo para su empresa: la selección de almacén y la vista de stock no están disponibles. Póngase en contacto con HandyNet.",
+      "noInventoryModule": "El módulo «Almacén» no está activo para su empresa: la selección de almacén y la vista de stock no están disponibles. Póngase en contacto con SEHA.",
       "complete": "Pagar y dar de alta …",
       "confirmTitle": "Cerrar recompra",
       "confirmText": "Revise los datos. Después ya no se podrá modificar la recompra.",
@@ -2586,7 +2586,7 @@
   },
   "invoices": {
     "title": "Facturas de comisión",
-    "subtitle": "Facturas de HandyNet por la comisión de intermediación de las ventas pagadas en línea, emitidas mensualmente al terminar el mes.",
+    "subtitle": "Facturas de SEHA por la comisión de intermediación de las ventas pagadas en línea, emitidas mensualmente al terminar el mes.",
     "hint": "Números de factura HN-AAAA-nnnnnn, rectificativas HN-RK-AAAA-nnnnnn. Los documentos emitidos nunca se modifican: si se reembolsa un pago ya facturado, una factura rectificativa en el mes del reembolso compensa la línea.",
     "backToFinance": "Volver a finanzas",
     "back": "Volver a las facturas",
@@ -2617,7 +2617,7 @@
       "taxNumber": "Número fiscal",
       "vatRate": "Tipo de IVA",
       "correctsInvoice": "Factura rectificada",
-      "serviceText": "Comisión de intermediación por pedidos pagados en línea a través de HandyNet, una línea por pedido.",
+      "serviceText": "Comisión de intermediación por pedidos pagados en línea a través de SEHA, una línea por pedido.",
       "correctionNote": "Esta factura rectificativa anula las siguientes líneas de la factura {number} porque los pagos se reembolsaron.",
       "withheldNote": "La comisión ya se retuvo en el pago; no hay ningún importe pendiente.",
       "placeholder": "MUESTRA: los datos del emisor siguen siendo marcadores de posición. Este documento no es una factura válida.",

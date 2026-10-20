@@ -205,7 +205,7 @@ internal sealed class OrganizationService(
         // exist (roadmap), staff accounts can only be created new.
         if (await users.FindByEmailAsync(request.Email, ct) is not null)
             return Error.Conflict("staff.invitation_required",
-                "This email address already has a HandyNet account. Existing accounts can only join through an invitation (not yet available).");
+                "This email address already has a SEHA account. Existing accounts can only join through an invitation (not yet available).");
         if (string.IsNullOrEmpty(request.Password))
             return Error.Validation("staff.password_required", "A new staff account needs an initial password.");
 

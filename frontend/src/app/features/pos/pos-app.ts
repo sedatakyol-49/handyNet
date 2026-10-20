@@ -38,7 +38,7 @@ import { ToastService } from '../../core/ui-state/toast.service';
     </a>
     <header class="hn-no-print flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-pos-line bg-pos-panel px-2 sm:gap-x-3.5 sm:px-3.5" data-testid="pos-topbar">
       <a routerLink="/kasse" class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-0.5 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
-        <span class="grid size-[30px] place-items-center rounded-lg bg-pos-accent text-xs font-extrabold text-pos-accent-ink" aria-hidden="true">HN</span>
+        <span class="grid size-[30px] place-items-center rounded-lg bg-pos-accent text-xs font-extrabold text-pos-accent-ink" aria-hidden="true">SH</span>
         @if (!ctx.registerId()) {
           <span class="text-sm">{{ 'pos.app.title' | t }}</span>
         }

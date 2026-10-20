@@ -140,7 +140,7 @@ public sealed class SimplePdf
             $"<< /Type /Pages /Kids [{kids}] /Count {_pages.Count} >>",
             "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
             "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-            Title is null ? "<< /Producer (HandyNet) >>" : $"<< /Producer (HandyNet) /Title {Utf16Hex(Title)} >>",
+            Title is null ? "<< /Producer (SEHA) >>" : $"<< /Producer (SEHA) /Title {Utf16Hex(Title)} >>",
         };
 
         for (var i = 0; i < _pages.Count; i++)

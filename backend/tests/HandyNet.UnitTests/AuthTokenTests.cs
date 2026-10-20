@@ -228,12 +228,12 @@ public class AccountEmailTests
     public void Reset_email_in_german_and_english()
     {
         var de = EmailTemplates.PasswordReset("Anna", "L", TimeSpan.FromHours(1), "de");
-        Assert.Equal("HandyNet-Passwort zurücksetzen", de.Subject);
+        Assert.Equal("SEHA-Passwort zurücksetzen", de.Subject);
         Assert.Contains("1 Stunde gültig", de.Body);
         Assert.Contains("auf allen Geräten abgemeldet", de.Body);
 
         var en = EmailTemplates.PasswordReset("Anna", "L", TimeSpan.FromMinutes(30), "en");
-        Assert.Equal("Reset your HandyNet password", en.Subject);
+        Assert.Equal("Reset your SEHA password", en.Subject);
         Assert.Contains("valid for 30 minutes", en.Body);
     }
 

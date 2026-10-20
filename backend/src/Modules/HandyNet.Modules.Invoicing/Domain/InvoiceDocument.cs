@@ -55,7 +55,7 @@ public static class InvoiceDocument
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    public const string ServiceText = "Vermittlungsprovision für über den HandyNet-B2B-Marktplatz online bezahlte Bestellungen";
+    public const string ServiceText = "Vermittlungsprovision für über den SEHA-B2B-Marktplatz online bezahlte Bestellungen";
 
     public static InvoiceDocumentContent Build(Invoice invoice, TimeZoneInfo zone)
     {

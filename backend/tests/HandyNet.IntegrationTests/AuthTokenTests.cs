@@ -256,7 +256,7 @@ public sealed partial class AuthTokenTests(HandyNetFixture fixture)
             .Expect(HttpStatusCode.Forbidden).Code);
 
         (await anonymous.PostAsync("/api/auth/password-reset/request", new { email = account.Email.ToUpperInvariant() })).Expect(HttpStatusCode.Accepted);
-        var email = await AwaitEmailAsync(account.Email, s => s == "HandyNet-Passwort zurücksetzen");
+        var email = await AwaitEmailAsync(account.Email, s => s == "SEHA-Passwort zurücksetzen");
         Assert.Contains("/passwort-zuruecksetzen#token=", email.Body);
         Assert.Contains("1 Stunde gültig", email.Body);
 
@@ -328,7 +328,7 @@ public sealed partial class AuthTokenTests(HandyNetFixture fixture)
         Assert.Null(unknown.Body);
         Assert.Null(throttled.Body);
 
-        var english = await AwaitEmailAsync(account.Email, s => s == "Reset your HandyNet password");
+        var english = await AwaitEmailAsync(account.Email, s => s == "Reset your SEHA password");
         Assert.Contains("valid for 1 hour", english.Body);
 
         // Let the workers settle, then: one email for the known account (cooldown held), none for the unknown address.

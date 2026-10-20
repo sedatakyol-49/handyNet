@@ -77,7 +77,7 @@ internal sealed class DsfinvkExportService(
                 sessionReceipts.FirstOrDefault()?.Id.ToString() ?? "", sessionReceipts.LastOrDefault()?.Id.ToString() ?? "", seller.LegalName, seller.Street,
                 seller.PostalCode, seller.City, Country(seller.CountryCode), "", seller.VatId ?? "", Money(cash + card), Money(cash)]);
             tables["location"].Add([.. Key(), seller.Name, seller.Street, seller.PostalCode, seller.City, Country(seller.CountryCode), seller.VatId ?? ""]);
-            tables["cashregister"].Add([.. Key(), "HandyNet", "HandyNet POS", kasse, "HandyNet", typeof(DsfinvkExportService).Assembly.GetName().Version?.ToString() ?? "",
+            tables["cashregister"].Add([.. Key(), "SEHA", "SEHA Kasse", kasse, "SEHA", typeof(DsfinvkExportService).Assembly.GetName().Version?.ToString() ?? "",
                 "EUR", 0]);
             tables["vat"].Add([.. Key(), 1, "19.00", "Regelsteuersatz"]);
 
@@ -169,7 +169,7 @@ internal sealed class DsfinvkExportService(
 
     private static string Readme(string registerName, (DateOnly From, DateOnly To) range, bool test) =>
         $"""
-        DSFinV-K-Export (Basisumfang) – HandyNet POS
+        DSFinV-K-Export (Basisumfang) – SEHA Kasse
         Kasse: {registerName}
         Zeitraum (Geschäftstage der Kassenabschlüsse): {range.From:dd.MM.yyyy} – {range.To:dd.MM.yyyy}
 
@@ -350,7 +350,7 @@ internal static class DsfinvkTables
         sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n");
         sb.Append("<!DOCTYPE DataSet SYSTEM \"gdpdu-01-09-2004.dtd\">\r\n");
         sb.Append("<DataSet>\r\n  <Version>1.0</Version>\r\n");
-        sb.Append($"  <DataSupplier>\r\n    <Name>{E(supplier)}</Name>\r\n    <Location>HandyNet POS</Location>\r\n");
+        sb.Append($"  <DataSupplier>\r\n    <Name>{E(supplier)}</Name>\r\n    <Location>SEHA Kasse</Location>\r\n");
         sb.Append($"    <Comment>DSFinV-K {DsfinvkExportService.TaxonomyVersion} (Basisumfang) – nicht zertifiziert, nicht steuerlich geprüft</Comment>\r\n  </DataSupplier>\r\n");
         sb.Append("  <Media>\r\n    <Name>DSFinV-K</Name>\r\n");
         foreach (var table in tables)

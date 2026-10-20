@@ -76,7 +76,7 @@
   "auth": {
     "email": "E-posta adresi",
     "password": "Şifre",
-    "footer": "HandyNet · Mobil cihaz toptan ticareti, perakende ve tamir için B2B platformu",
+    "footer": "SEHA · Mobil cihaz toptan ticareti, perakende ve tamir için B2B platformu",
     "login": {
       "title": "Giriş yap",
       "subtitle": "İşletme hesabınızla giriş yapın.",
@@ -91,11 +91,11 @@
     },
     "register": {
       "title": "Şirketinizi kaydedin",
-      "subtitle": "HandyNet yalnızca ticari işletmelere açıktır. Kayıttan sonra bilgilerinizi inceliyoruz.",
+      "subtitle": "SEHA yalnızca ticari işletmelere açıktır. Kayıttan sonra bilgilerinizi inceliyoruz.",
       "company": "Şirket",
       "account": "Kullanıcı hesabınız",
       "name": "Şirket adı",
-      "nameHint": "Şirketinizin HandyNet'te görüntülenecek adı.",
+      "nameHint": "Şirketinizin SEHA'da görüntülenecek adı.",
       "legalName": "Resmî unvan",
       "legalNameHint": "Şirket türü dahil, ör. “Mustermann Mobile GmbH”.",
       "vatId": "KDV kimlik no. (USt-IdNr.)",
@@ -107,7 +107,7 @@
       "businessTypes": "Faaliyet türü",
       "displayName": "Adınız",
       "passwordHint": "En az 10 karakter; harflerin yanı sıra en az bir rakam veya özel karakter.",
-      "verificationNote": "Modüller, HandyNet tarafından yapılan inceleme başarıyla tamamlandıktan sonra etkinleştirilir.",
+      "verificationNote": "Modüller, SEHA tarafından yapılan inceleme başarıyla tamamlandıktan sonra etkinleştirilir.",
       "submit": "Kaydı gönder",
       "haveAccount": "Zaten kayıtlı mısınız?",
       "loginLink": "Giriş sayfasına git"
@@ -145,7 +145,7 @@
       "title": "E-posta adresini doğrula",
       "checking": "Doğrulama bağlantınız kontrol ediliyor …",
       "success": "Teşekkürler – e-posta adresiniz doğrulandı.",
-      "continue": "HandyNet’e devam et",
+      "continue": "SEHA'ya devam et",
       "loginToResend": "Yeni bir doğrulama bağlantısı istemek için giriş yapın."
     }
   },
@@ -222,7 +222,7 @@
       "tenant.missing": "Lütfen bir şirket seçin.",
       "membership.exists": "Bu kişi zaten şirketinizin üyesi.",
       "staff.password_required": "Yeni bir kullanıcı hesabı için başlangıç şifresi gereklidir.",
-      "staff.invitation_required": "Bu e-posta adresi için zaten bir HandyNet hesabı mevcut. Mevcut hesaplar yalnızca davetle katılabilir (henüz kullanılamıyor).",
+      "staff.invitation_required": "Bu e-posta adresi için zaten bir SEHA hesabı mevcut. Mevcut hesaplar yalnızca davetle katılabilir (henüz kullanılamıyor).",
       "staff.max_discount": "Azami indirim %0 ile %100 arasında olmalıdır.",
       "staff.not_found": "Çalışan bulunamadı.",
       "staff.pos_permission_unknown": "Bilinmeyen kasa yetkisi.",
@@ -269,7 +269,7 @@
       "shipment.parcel_invalid": "Ağırlık ve ölçüler 0'dan büyük olmalıdır.",
       "shipment.tracking_taken": "Bu takip numarası başka bir gönderi için zaten kullanılıyor.",
       "shipment.invalid_status": "Bu işlem mevcut gönderi durumunda yapılamaz. Lütfen sayfayı yeniden yükleyin.",
-      "shipment.no_label": "Bu gönderi için etiket yok (HandyNet dışında oluşturulmuş).",
+      "shipment.no_label": "Bu gönderi için etiket yok (SEHA dışında oluşturulmuş).",
       "shipment.not_found": "Gönderi bulunamadı.",
       "order.invalid_transition": "Bu işlem mevcut sipariş durumunda yapılamaz. Lütfen sayfayı yeniden yükleyin.",
       "order.inspection_running": "Alıcının inceleme süresi henüz dolmadı.",
@@ -290,12 +290,12 @@
       "dispute.exists": "Bu sipariş için zaten açık bir şikâyet var.",
       "dispute.closed": "Bu şikâyet zaten kapatıldı.",
       "dispute.not_found": "Şikâyet bulunamadı.",
-      "dispute.not_open": "Yalnızca açık şikâyetler HandyNet'e devredilebilir.",
-      "dispute.not_escalated": "HandyNet yalnızca kendisine devredilen şikâyetler hakkında karar verir.",
+      "dispute.not_open": "Yalnızca açık şikâyetler SEHA'ya devredilebilir.",
+      "dispute.not_escalated": "SEHA yalnızca kendisine devredilen şikâyetler hakkında karar verir.",
       "dispute.not_seller": "Yalnızca satıcı iade onaylayabilir.",
       "dispute.not_buyer": "Şikâyeti yalnızca alıcı geri çekebilir.",
-      "dispute.seller_cannot_deny": "Satıcılar iade onaylayabilir veya vakayı HandyNet'e devredebilir, ancak şikâyeti reddedemez.",
-      "dispute.buyer_cannot_refund": "Alıcılar şikâyeti geri çekebilir; iadeyi satıcı veya HandyNet onaylar.",
+      "dispute.seller_cannot_deny": "Satıcılar iade onaylayabilir veya vakayı SEHA'ya devredebilir, ancak şikâyeti reddedemez.",
+      "dispute.buyer_cannot_refund": "Alıcılar şikâyeti geri çekebilir; iadeyi satıcı veya SEHA onaylar.",
       "dispute.description": "Lütfen sorunu açıklayın (en fazla 4000 karakter).",
       "dispute.message": "Mesajlar 1 ile 4000 karakter arasında olmalıdır.",
       "dispute.resolution": "Kısa bir gerekçe gereklidir (en fazla 4000 karakter).",
@@ -319,8 +319,8 @@
       "ankauf.policy_conditions": "Her durum için bir artış veya indirim gereklidir.",
       "ankauf.policy_range": "En az bir değer izin verilen aralığın dışında.",
       "ankauf.policy_backdated": "Bir fiyat kuralı geriye dönük olarak geçerli olamaz.",
-      "ankauf.no_valid_price": "Bu model için şu anda geçerli bir geri alım fiyatı yok. Fiyat garanti edilemez – lütfen HandyNet'ten size özel bir teklif isteyin.",
-      "ankauf.no_policy": "Şu anda etkin bir fiyat kuralı yok. Lütfen HandyNet ile iletişime geçin.",
+      "ankauf.no_valid_price": "Bu model için şu anda geçerli bir geri alım fiyatı yok. Fiyat garanti edilemez – lütfen SEHA'dan size özel bir teklif isteyin.",
+      "ankauf.no_policy": "Şu anda etkin bir fiyat kuralı yok. Lütfen SEHA ile iletişime geçin.",
       "ankauf.consumer_price": "Son müşteri fiyatı en fazla iki ondalık basamak içerebilir.",
       "ankauf.quote_not_found": "Teklif bulunamadı.",
       "ankauf.quote_expired": "Teklifin süresi doldu. Lütfen güncel fiyatlarla yeni bir teklif oluşturun.",
@@ -525,7 +525,7 @@
     "businessTypes": "Faaliyet türü",
     "modules": "Modüller",
     "noModules": "Etkin modül yok",
-    "noModulesHint": "Şirketiniz için henüz modül etkinleştirilmedi. Lütfen HandyNet ile iletişime geçin.",
+    "noModulesHint": "Şirketiniz için henüz modül etkinleştirilmedi. Lütfen SEHA ile iletişime geçin.",
     "quickLinks": "Hızlı erişim",
     "refreshStatus": "Durumu yenile",
     "salesToConfirm": "Satış: onaylanacak",
@@ -537,11 +537,11 @@
     },
     "rejected": {
       "title": "Kayıt reddedildi",
-      "text": "Şirketinizin incelemesi olumsuz sonuçlandı. Lütfen HandyNet destek ekibiyle iletişime geçin."
+      "text": "Şirketinizin incelemesi olumsuz sonuçlandı. Lütfen SEHA destek ekibiyle iletişime geçin."
     },
     "suspended": {
       "title": "Şirket askıya alındı",
-      "text": "Şirketiniz şu anda askıya alınmış durumda. Lütfen HandyNet destek ekibiyle iletişime geçin."
+      "text": "Şirketiniz şu anda askıya alınmış durumda. Lütfen SEHA destek ekibiyle iletişime geçin."
     },
     "noOrganization": {
       "title": "Atanmış şirket yok",
@@ -696,7 +696,7 @@
     "deliveredAt": "Teslim tarihi",
     "inspectionEndsAt": "İnceleme süresi sonu",
     "completedAt": "Tamamlanma tarihi",
-    "shipWithoutShipmentHint": "HandyNet üzerinden gönderi oluşturmadan gönderildi olarak işaretle (etiket ve kargo takibi yok)."
+    "shipWithoutShipmentHint": "SEHA üzerinden gönderi oluşturmadan gönderildi olarak işaretle (etiket ve kargo takibi yok)."
   },
   "offers": {
     "title": "Teklifler",
@@ -1093,14 +1093,14 @@
       "fiscal": "Kasalar ve TSE"
     },
     "disputes": {
-      "subtitle": "HandyNet'e devredilen şikâyetleri inceleyin ve karara bağlayın.",
+      "subtitle": "SEHA'ya devredilen şikâyetleri inceleyin ve karara bağlayın.",
       "idsHint": "Şikâyetler için burada şirket adları bulunmaz; kimlikler kısaltılmıştır (tam kimlik araç ipucunda ve ayrıntı görünümünde).",
       "escalatedAt": "Devir tarihi",
       "order": "Sipariş (kimlik)",
       "open": "İncele",
       "openLabel": "{order} siparişine ait şikâyeti incele",
       "empty": "Açık vaka yok",
-      "emptyText": "HandyNet'e devredilmiş şikâyet bulunmuyor.",
+      "emptyText": "SEHA'ya devredilmiş şikâyet bulunmuyor.",
       "detailTitle": "Şikâyet {id}",
       "detailSubtitle": "Yazışmaları inceleyin ve bağlayıcı karar verin.",
       "decision": "Karar",
@@ -1116,7 +1116,7 @@
       "confirmNoRefund": "Şikâyet iadesiz kapatılır, sipariş tamamlanır ve satıcıya hak ediş ödemesi yapılır. Bu işlem geri alınamaz.",
       "decidedRefund": "Karar: tam iade.",
       "decidedNoRefund": "Karar: iade yok.",
-      "notEscalated": "Bu şikâyet karar için HandyNet'te değil (artık değil)."
+      "notEscalated": "Bu şikâyet karar için SEHA'da değil (artık değil)."
     },
     "fiscal": {
       "subtitle": "İşletme ve kasa başına mali mod (TSE), test TSE davranışı, TSE durumu ve arızalar.",
@@ -1298,7 +1298,7 @@
     "Delivered": "Teslim edildi"
   },
   "carrier": {
-    "Manual": "Manuel (HandyNet dışında oluşturuldu)",
+    "Manual": "Manuel (SEHA dışında oluşturuldu)",
     "Simulated": "Simülasyon (test etiketi)",
     "Dhl": "DHL",
     "Dpd": "DPD",
@@ -1330,7 +1330,7 @@
     "cancel": "İptal et",
     "sync": "Kargo takibini güncelle",
     "simulationNote": "Simülasyon – geçerli bir kargo etiketi değildir. Yalnızca test içindir, hiçbir şey gönderilmez.",
-    "manualTrackingNote": "HandyNet dışında oluşturuldu: otomatik kargo takibi yok. Teslimatı alıcı onaylar.",
+    "manualTrackingNote": "SEHA dışında oluşturuldu: otomatik kargo takibi yok. Teslimatı alıcı onaylar.",
     "created": "Gönderi oluşturuldu. Paket ancak kargoya teslim edildikten sonra gönderilmiş sayılır.",
     "handedOver": "Teslim onaylandı – sipariş gönderildi.",
     "cancelled": "Gönderi iptal edildi.",
@@ -1341,13 +1341,13 @@
       "handover": "Yalnızca paket kargo firmasına zaten teslim edildiyse onaylayın. Sipariş gönderildi olarak işaretlenir ve stoktan düşülür. Bundan sonra gönderi iptal edilemez.",
       "cancelShipment": "Gönderi ve etiketi iptal edilir. Ardından yeni bir gönderi oluşturabilirsiniz.",
       "confirmDelivery": "Malın elinize ulaştığını onaylayın. Bu andan itibaren 48 saatlik inceleme süresi başlar.",
-      "accept": "Kabul ederek malın sorunsuz olduğunu onaylarsınız. Sipariş tamamlanır; sonrasında HandyNet üzerinden şikâyet açılamaz."
+      "accept": "Kabul ederek malın sorunsuz olduğunu onaylarsınız. Sipariş tamamlanır; sonrasında SEHA üzerinden şikâyet açılamaz."
     },
     "form": {
       "title": "Gönderi oluştur",
       "intro": "Bu sipariş için bir paket gönderisi oluşturun. Mal değeri, siparişin brüt tutarına eşittir.",
       "chooseCarrier": "– lütfen seçin –",
-      "manualHint": "Paketi HandyNet dışında oluşturdunuz ve takip numarasını giriyorsunuz. Etiket oluşturulmaz.",
+      "manualHint": "Paketi SEHA dışında oluşturdunuz ve takip numarasını giriyorsunuz. Etiket oluşturulmaz.",
       "simulatedHint": "Açıkça işaretlenmiş bir test etiketi ve simüle edilmiş kargo takibi oluşturur. Hiçbir şey gönderilmez.",
       "declaredValueHint": "Siparişten otomatik olarak alınır.",
       "weightKg": "Ağırlık (kg)",
@@ -1485,7 +1485,7 @@
   },
   "disputeStatus": {
     "Open": "Açık",
-    "Escalated": "HandyNet'te",
+    "Escalated": "SEHA'da",
     "Refunded": "İade edildi",
     "ClosedWithoutRefund": "İadesiz kapatıldı"
   },
@@ -1501,7 +1501,7 @@
     "reason": "Neden",
     "description": "Açıklama",
     "openedAt": "Bildirim tarihi",
-    "escalatedAt": "HandyNet'e devir tarihi",
+    "escalatedAt": "SEHA'ya devir tarihi",
     "resolvedAt": "Kapanış tarihi",
     "resolvedBy": "Karar veren",
     "resolution": "Gerekçe",
@@ -1512,21 +1512,21 @@
     "send": "Mesaj gönder",
     "refund": "İadeyi onayla",
     "withdraw": "Şikâyeti geri çek",
-    "escalate": "HandyNet'e devret",
+    "escalate": "SEHA'ya devret",
     "refundText": "İade gerekçesi",
     "withdrawText": "Geri çekme gerekçesi",
-    "escalateText": "HandyNet'e mesaj",
+    "escalateText": "SEHA'ya mesaj",
     "textRequiredHint": "Zorunlu alan. Metin yazışmalarda her iki tarafa da gösterilir.",
     "textOptionalHint": "İsteğe bağlı. Metin yazışmalarda her iki tarafa da gösterilir.",
     "confirmText": {
       "refund": "Alıcı sipariş tutarının tamamını geri alır. Çevrim içi ödeme otomatik olarak iade edilir, sipariş “İade edildi” olarak kapatılır ve size hak ediş ödemesi yapılmaz. Bu işlem geri alınamaz.",
       "withdraw": "Şikâyet iadesiz kapatılır. Sipariş tamamlanır ve satıcıya hak ediş ödemesi yapılır. Bu işlem geri alınamaz.",
-      "escalate": "HandyNet vakayı inceler ve iade hakkında bağlayıcı karar verir. Karar verilene kadar tamamlama ve hak ediş ödemesi bekletilir. Mesajlaşma devam edebilir."
+      "escalate": "SEHA vakayı inceler ve iade hakkında bağlayıcı karar verir. Karar verilene kadar tamamlama ve hak ediş ödemesi bekletilir. Mesajlaşma devam edebilir."
     },
     "explain": {
-      "openBuyer": "Satıcı bilgilendirildi. Sorunu yazışmalar üzerinden çözün. Anlaşmaya varamazsanız vakayı HandyNet'e devredebilirsiniz.",
-      "openSeller": "Alıcı bir sorun bildirdi. Şikâyet çözülene kadar tamamlama ve hak ediş ödemesi bekletilir. İade onaylayabilir veya vakayı HandyNet'e devredebilirsiniz.",
-      "escalated": "Vaka HandyNet'te. Platform iade hakkında karar verir; karar yazışmalarda görünür.",
+      "openBuyer": "Satıcı bilgilendirildi. Sorunu yazışmalar üzerinden çözün. Anlaşmaya varamazsanız vakayı SEHA'ya devredebilirsiniz.",
+      "openSeller": "Alıcı bir sorun bildirdi. Şikâyet çözülene kadar tamamlama ve hak ediş ödemesi bekletilir. İade onaylayabilir veya vakayı SEHA'ya devredebilirsiniz.",
+      "escalated": "Vaka SEHA'da. Platform iade hakkında karar verir; karar yazışmalarda görünür.",
       "refunded": "Şikâyet tam iade ile kapatıldı (karar veren: {by}).",
       "closedWithoutRefund": "Şikâyet iadesiz kapatıldı (karar veren: {by}). Sipariş tamamlandı."
     },
@@ -1546,7 +1546,7 @@
     "reported": "{number} numaralı sipariş için şikâyet bildirildi.",
     "refunded": "{number} numaralı sipariş için iade onaylandı.",
     "withdrawn": "{number} numaralı sipariş için şikâyet geri çekildi.",
-    "escalated": "Vaka HandyNet'e devredildi."
+    "escalated": "Vaka SEHA'ya devredildi."
   },
   "priceListStatus": {
     "Review": "İncelemede",
@@ -1747,7 +1747,7 @@
   },
   "ankauf": {
     "title": "Geri alım",
-    "subtitle": "Güncel HandyNet fiyat listesine dayalı, ikinci el cihazlar için ön geri alım teklifleri.",
+    "subtitle": "Güncel SEHA fiyat listesine dayalı, ikinci el cihazlar için ön geri alım teklifleri.",
     "formTitle": "Cihazı değerlendir",
     "noPermission": "Teklif oluşturmak için “Sipariş verme” yetkiniz yok.",
     "model": "Model",
@@ -1868,7 +1868,7 @@
       "warehouse": "Depo",
       "warehouseHint": "Seçim yapılmazsa varsayılan depo kullanılır.",
       "defaultWarehouse": "Varsayılan depo",
-      "noInventoryModule": "“Depo” modülü şirketiniz için etkin değil: depo seçimi ve stok görünümü kullanılamaz. Lütfen HandyNet ile iletişime geçin.",
+      "noInventoryModule": "“Depo” modülü şirketiniz için etkin değil: depo seçimi ve stok görünümü kullanılamaz. Lütfen SEHA ile iletişime geçin.",
       "complete": "Öde ve stoka al …",
       "confirmTitle": "Geri alımı tamamla",
       "confirmText": "Lütfen bilgileri kontrol edin. Geri alım bundan sonra değiştirilemez.",
@@ -2586,7 +2586,7 @@
   },
   "invoices": {
     "title": "Komisyon faturaları",
-    "subtitle": "Online ödenen satışlardaki aracılık komisyonu için HandyNet faturaları; her ay, ay bittikten sonra düzenlenir.",
+    "subtitle": "Online ödenen satışlardaki aracılık komisyonu için SEHA faturaları; her ay, ay bittikten sonra düzenlenir.",
     "hint": "Fatura numaraları HN-YYYY-nnnnnn, düzeltmeler HN-RK-YYYY-nnnnnn. Düzenlenen belgeler asla değiştirilmez: faturalanmış bir ödeme iade edilirse, iadenin yapıldığı ayda bir fatura düzeltmesi kalemi dengeler.",
     "backToFinance": "Finansa dön",
     "back": "Faturalara dön",
@@ -2617,7 +2617,7 @@
       "taxNumber": "Vergi numarası",
       "vatRate": "KDV oranı",
       "correctsInvoice": "Düzeltilen fatura",
-      "serviceText": "HandyNet üzerinden online ödenen siparişler için aracılık komisyonu, her sipariş için bir kalem.",
+      "serviceText": "SEHA üzerinden online ödenen siparişler için aracılık komisyonu, her sipariş için bir kalem.",
       "correctionNote": "Bu fatura düzeltmesi, ödemeler iade edildiği için {number} faturasının aşağıdaki kalemlerini iptal eder.",
       "withheldNote": "Komisyon ödeme sırasında zaten kesildi; ödenmesi gereken bir tutar yok.",
       "placeholder": "ÖRNEK: Düzenleyen bilgileri hâlâ yer tutucu. Bu belge geçerli bir fatura değildir.",

@@ -3,7 +3,7 @@ import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, hasAdmin, log
 
 /**
  * Disputes (Reklamationen) through the UI. Delivery is prepared via the API (place → confirm → ship → confirm receipt).
- * 1. Buyer reports a problem → seller writes a message and hands the case to HandyNet → the platform admin decides
+ * 1. Buyer reports a problem → seller writes a message and hands the case to SEHA → the platform admin decides
  *    "keine Erstattung" in the administration → the order is Completed.
  * 2. Buyer reports a problem → seller grants a refund → the order is Refunded ("Erstattet").
  * 3. Paid online: the payout is on hold while disputed; after the refund the payment is refunded by a background job.
@@ -90,7 +90,7 @@ test.describe.serial('disputes', () => {
     await logout(page);
   });
 
-  test('seller sees the complaint, writes a message and hands it over to HandyNet', async ({ page }) => {
+  test('seller sees the complaint, writes a message and hands it over to SEHA', async ({ page }) => {
     await login(page, supplier.email, PASSWORD);
     // Dashboard counter of open complaints (Disputed sales) of this new company.
     await page.goto('/app/uebersicht');
@@ -123,10 +123,10 @@ test.describe.serial('disputes', () => {
     // Escalate (optional text) through the confirmation dialog.
     await card.getByTestId('dispute-escalate').click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByTestId('dispute-dialog-text')).toContainText('HandyNet prüft den Fall');
-    await dialog.getByLabel('Nachricht an HandyNet').fill('Wir bitten um Entscheidung durch HandyNet.');
+    await expect(dialog.getByTestId('dispute-dialog-text')).toContainText('SEHA prüft den Fall');
+    await dialog.getByLabel('Nachricht an SEHA').fill('Wir bitten um Entscheidung durch SEHA.');
     await dialog.getByTestId('dispute-confirm').click();
-    await expect(card.getByTestId('dispute-status')).toHaveText('Bei HandyNet');
+    await expect(card.getByTestId('dispute-status')).toHaveText('Bei SEHA');
     await expect(card.getByTestId('dispute-escalate')).toHaveCount(0);
     await expect(card.getByTestId('dispute-message')).toHaveCount(3);
     await expect(page.getByTestId('order-status')).toHaveText('In Reklamation');
@@ -144,7 +144,7 @@ test.describe.serial('disputes', () => {
     await expect(row).toContainText('Ware beschädigt');
     await row.getByTestId('admin-dispute-open').click();
 
-    await expect(page.getByTestId('admin-dispute-status')).toHaveText('Bei HandyNet');
+    await expect(page.getByTestId('admin-dispute-status')).toHaveText('Bei SEHA');
     const thread = page.getByTestId('dispute-thread');
     await expect(thread.getByTestId('dispute-message')).toHaveCount(3);
     await expect(thread).toContainText('aufgeblähtem Gehäuse');

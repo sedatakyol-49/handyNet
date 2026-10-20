@@ -23,7 +23,7 @@ public static class EmailTemplates
 
         {link}
 
-        Ihr HandyNet-Team
+        Ihr SEHA-Team
         """);
 
     public static RenderedEmail OrderStatusForCounterparty(string status, string otherPartyName, string? reason, string link)
@@ -45,7 +45,7 @@ public static class EmailTemplates
             {reasonLine}
             Details: {link}
 
-            Ihr HandyNet-Team
+            Ihr SEHA-Team
             """);
     }
 
@@ -72,60 +72,60 @@ public static class EmailTemplates
                 $"""
                 Hello {displayName},
 
-                please confirm your email address for your HandyNet account by opening this link:
+                please confirm your email address for your SEHA account by opening this link:
 
                 {link}
 
                 The link is valid for {Duration(validFor, english: true)} and can be used once.
-                If you did not create a HandyNet account, you can ignore this email.
+                If you did not create a SEHA account, you can ignore this email.
 
-                Your HandyNet team
+                Your SEHA team
                 """)
             : new RenderedEmail(
                 "Bitte bestätigen Sie Ihre E-Mail-Adresse",
                 $"""
                 Guten Tag {displayName},
 
-                bitte bestätigen Sie die E-Mail-Adresse Ihres HandyNet-Kontos über diesen Link:
+                bitte bestätigen Sie die E-Mail-Adresse Ihres SEHA-Kontos über diesen Link:
 
                 {link}
 
                 Der Link ist {Duration(validFor, english: false)} gültig und kann einmal verwendet werden.
-                Falls Sie kein HandyNet-Konto angelegt haben, können Sie diese E-Mail ignorieren.
+                Falls Sie kein SEHA-Konto angelegt haben, können Sie diese E-Mail ignorieren.
 
-                Ihr HandyNet-Team
+                Ihr SEHA-Team
                 """);
 
     /// <param name="language">"en" for English; anything else renders German.</param>
     public static RenderedEmail PasswordReset(string displayName, string link, TimeSpan validFor, string language) =>
         language == "en"
             ? new RenderedEmail(
-                "Reset your HandyNet password",
+                "Reset your SEHA password",
                 $"""
                 Hello {displayName},
 
-                we received a request to reset the password of your HandyNet account. To choose a new password, open this link:
+                we received a request to reset the password of your SEHA account. To choose a new password, open this link:
 
                 {link}
 
                 The link is valid for {Duration(validFor, english: true)} and can be used once. Setting a new password signs you out on all devices.
                 If you did not request this, you can ignore this email — your password stays unchanged.
 
-                Your HandyNet team
+                Your SEHA team
                 """)
             : new RenderedEmail(
-                "HandyNet-Passwort zurücksetzen",
+                "SEHA-Passwort zurücksetzen",
                 $"""
                 Guten Tag {displayName},
 
-                wir haben eine Anfrage erhalten, das Passwort Ihres HandyNet-Kontos zurückzusetzen. Über diesen Link vergeben Sie ein neues Passwort:
+                wir haben eine Anfrage erhalten, das Passwort Ihres SEHA-Kontos zurückzusetzen. Über diesen Link vergeben Sie ein neues Passwort:
 
                 {link}
 
                 Der Link ist {Duration(validFor, english: false)} gültig und kann einmal verwendet werden. Mit dem neuen Passwort werden Sie auf allen Geräten abgemeldet.
                 Falls Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren – Ihr Passwort bleibt unverändert.
 
-                Ihr HandyNet-Team
+                Ihr SEHA-Team
                 """);
 
     public static RenderedEmail OrganizationVerified(string organizationName, string link) => new(
@@ -133,11 +133,11 @@ public static class EmailTemplates
         $"""
         Guten Tag,
 
-        Ihr Unternehmen {organizationName} wurde geprüft und auf HandyNet freigeschaltet.
+        Ihr Unternehmen {organizationName} wurde geprüft und auf SEHA freigeschaltet.
         Die für Sie aktivierten Module finden Sie nach der Anmeldung:
 
         {link}
 
-        Ihr HandyNet-Team
+        Ihr SEHA-Team
         """);
 }

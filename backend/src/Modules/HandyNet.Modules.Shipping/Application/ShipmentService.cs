@@ -136,7 +136,7 @@ internal sealed class ShipmentService(
         if (label is null)
             return Error.NotFound("shipment.not_found", "Shipment not found.");
         return label.LabelPdf is null
-            ? Error.NotFound("shipment.no_label", "This shipment has no label (booked outside HandyNet).")
+            ? Error.NotFound("shipment.no_label", "This shipment has no label (booked outside SEHA).")
             : label.LabelPdf;
     }
 

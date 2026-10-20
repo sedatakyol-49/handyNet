@@ -17,7 +17,7 @@ public sealed class NotificationOptions
     public string PublicBaseUrl { get; set; } = "http://localhost:4200";
 
     public string FromAddress { get; set; } = "no-reply@handynet.local";
-    public string FromName { get; set; } = "HandyNet";
+    public string FromName { get; set; } = "SEHA";
 
     public SmtpOptions Smtp { get; set; } = new();
 }

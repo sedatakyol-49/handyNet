@@ -76,7 +76,7 @@
   "auth": {
     "email": "Email address",
     "password": "Password",
-    "footer": "HandyNet · B2B platform for mobile wholesale, retail and repair",
+    "footer": "SEHA · B2B platform for mobile wholesale, retail and repair",
     "login": {
       "title": "Sign in",
       "subtitle": "Sign in with your business account.",
@@ -91,11 +91,11 @@
     },
     "register": {
       "title": "Register your company",
-      "subtitle": "HandyNet is for businesses only. We verify your details after registration.",
+      "subtitle": "SEHA is for businesses only. We verify your details after registration.",
       "company": "Company",
       "account": "Your user account",
       "name": "Company name",
-      "nameHint": "How your company is shown on HandyNet.",
+      "nameHint": "How your company is shown on SEHA.",
       "legalName": "Legal name",
       "legalNameHint": "Including legal form, e.g. “Mustermann Mobile GmbH”.",
       "vatId": "VAT ID",
@@ -107,7 +107,7 @@
       "businessTypes": "Business type",
       "displayName": "Your name",
       "passwordHint": "At least 10 characters, letters plus at least one digit or symbol.",
-      "verificationNote": "Modules are enabled after HandyNet has verified your company.",
+      "verificationNote": "Modules are enabled after SEHA has verified your company.",
       "submit": "Submit registration",
       "haveAccount": "Already registered?",
       "loginLink": "Sign in"
@@ -145,7 +145,7 @@
       "title": "Confirm email address",
       "checking": "Checking your confirmation link …",
       "success": "Thank you – your email address is confirmed.",
-      "continue": "Continue to HandyNet",
+      "continue": "Continue to SEHA",
       "loginToResend": "Sign in to request a new confirmation link."
     }
   },
@@ -222,7 +222,7 @@
       "tenant.missing": "Please select a company.",
       "membership.exists": "This person is already a member of your company.",
       "staff.password_required": "A new user account needs an initial password.",
-      "staff.invitation_required": "This email address already has a HandyNet account. Existing accounts can only join by invitation (not yet available).",
+      "staff.invitation_required": "This email address already has a SEHA account. Existing accounts can only join by invitation (not yet available).",
       "staff.max_discount": "The maximum discount must be between 0 and 100 %.",
       "staff.not_found": "Staff member not found.",
       "staff.pos_permission_unknown": "Unknown POS right.",
@@ -269,7 +269,7 @@
       "shipment.parcel_invalid": "Weight and dimensions must be greater than 0.",
       "shipment.tracking_taken": "This tracking number is already used by another shipment.",
       "shipment.invalid_status": "This action is not possible in the current shipment status. Please reload the page.",
-      "shipment.no_label": "This shipment has no label (booked outside HandyNet).",
+      "shipment.no_label": "This shipment has no label (booked outside SEHA).",
       "shipment.not_found": "The shipment was not found.",
       "order.invalid_transition": "This action is not possible in the current order status. Please reload the page.",
       "order.inspection_running": "The buyer's inspection period is still running.",
@@ -290,12 +290,12 @@
       "dispute.exists": "There is already an open complaint for this order.",
       "dispute.closed": "This complaint is already closed.",
       "dispute.not_found": "The complaint was not found.",
-      "dispute.not_open": "Only open complaints can be handed over to HandyNet.",
-      "dispute.not_escalated": "HandyNet only decides complaints that were handed over.",
+      "dispute.not_open": "Only open complaints can be handed over to SEHA.",
+      "dispute.not_escalated": "SEHA only decides complaints that were handed over.",
       "dispute.not_seller": "Only the seller can grant a refund.",
       "dispute.not_buyer": "Only the buyer can withdraw the complaint.",
-      "dispute.seller_cannot_deny": "Sellers can grant a refund or hand the case over to HandyNet, but cannot reject the complaint.",
-      "dispute.buyer_cannot_refund": "Buyers can withdraw the complaint; refunds are granted by the seller or HandyNet.",
+      "dispute.seller_cannot_deny": "Sellers can grant a refund or hand the case over to SEHA, but cannot reject the complaint.",
+      "dispute.buyer_cannot_refund": "Buyers can withdraw the complaint; refunds are granted by the seller or SEHA.",
       "dispute.description": "Please describe the problem (at most 4000 characters).",
       "dispute.message": "Messages must have 1 to 4000 characters.",
       "dispute.resolution": "A short explanation is required (at most 4000 characters).",
@@ -319,8 +319,8 @@
       "ankauf.policy_conditions": "Every condition needs an adjustment.",
       "ankauf.policy_range": "At least one value is outside the allowed range.",
       "ankauf.policy_backdated": "A pricing policy cannot take effect in the past.",
-      "ankauf.no_valid_price": "There is no current buyback price for this model. No price can be guaranteed – please ask HandyNet for an individual offer.",
-      "ankauf.no_policy": "No pricing policy is active. Please contact HandyNet.",
+      "ankauf.no_valid_price": "There is no current buyback price for this model. No price can be guaranteed – please ask SEHA for an individual offer.",
+      "ankauf.no_policy": "No pricing policy is active. Please contact SEHA.",
       "ankauf.consumer_price": "The consumer price may have at most two decimal places.",
       "ankauf.quote_not_found": "The quote was not found.",
       "ankauf.quote_expired": "The quote has expired. Please create a new quote with current prices.",
@@ -525,7 +525,7 @@
     "businessTypes": "Business type",
     "modules": "Modules",
     "noModules": "No modules enabled",
-    "noModulesHint": "No modules are enabled for your company yet. Please contact HandyNet.",
+    "noModulesHint": "No modules are enabled for your company yet. Please contact SEHA.",
     "quickLinks": "Quick access",
     "refreshStatus": "Refresh status",
     "salesToConfirm": "Sales: to confirm",
@@ -537,11 +537,11 @@
     },
     "rejected": {
       "title": "Registration rejected",
-      "text": "The verification of your company was rejected. Please contact HandyNet support."
+      "text": "The verification of your company was rejected. Please contact SEHA support."
     },
     "suspended": {
       "title": "Company suspended",
-      "text": "Your company is currently suspended. Please contact HandyNet support."
+      "text": "Your company is currently suspended. Please contact SEHA support."
     },
     "noOrganization": {
       "title": "No company assigned",
@@ -696,7 +696,7 @@
     "deliveredAt": "Delivered on",
     "inspectionEndsAt": "Inspection until",
     "completedAt": "Completed on",
-    "shipWithoutShipmentHint": "Mark as shipped without a HandyNet shipment (no label, no tracking)."
+    "shipWithoutShipmentHint": "Mark as shipped without a SEHA shipment (no label, no tracking)."
   },
   "offers": {
     "title": "Offers",
@@ -1093,14 +1093,14 @@
       "fiscal": "Tills & TSE"
     },
     "disputes": {
-      "subtitle": "Review and decide complaints handed over to HandyNet.",
+      "subtitle": "Review and decide complaints handed over to SEHA.",
       "idsHint": "No company names are available here for complaints; IDs are shortened (full ID in the tooltip and on the detail page).",
       "escalatedAt": "Handed over on",
       "order": "Order (ID)",
       "open": "Review",
       "openLabel": "Review complaint for order {order}",
       "empty": "No open cases",
-      "emptyText": "There are no complaints handed over to HandyNet.",
+      "emptyText": "There are no complaints handed over to SEHA.",
       "detailTitle": "Complaint {id}",
       "detailSubtitle": "Review the conversation and make a binding decision.",
       "decision": "Decision",
@@ -1116,7 +1116,7 @@
       "confirmNoRefund": "The complaint is closed without refund, the order is completed and the seller is paid out. This cannot be undone.",
       "decidedRefund": "Decided: full refund.",
       "decidedNoRefund": "Decided: no refund.",
-      "notEscalated": "This complaint is not (or no longer) awaiting a decision by HandyNet."
+      "notEscalated": "This complaint is not (or no longer) awaiting a decision by SEHA."
     },
     "fiscal": {
       "subtitle": "Fiscal mode (TSE) per organization and register, test TSE behaviour, TSE status and outages.",
@@ -1298,7 +1298,7 @@
     "Delivered": "Delivered"
   },
   "carrier": {
-    "Manual": "Manual (booked outside HandyNet)",
+    "Manual": "Manual (booked outside SEHA)",
     "Simulated": "Simulation (test label)",
     "Dhl": "DHL",
     "Dpd": "DPD",
@@ -1330,7 +1330,7 @@
     "cancel": "Cancel",
     "sync": "Refresh tracking",
     "simulationNote": "Simulation – not a valid shipping label. For testing only, nothing is shipped.",
-    "manualTrackingNote": "Booked outside HandyNet: no automatic tracking. The buyer confirms delivery.",
+    "manualTrackingNote": "Booked outside SEHA: no automatic tracking. The buyer confirms delivery.",
     "created": "Shipment created. The parcel only counts as shipped after the handover.",
     "handedOver": "Handover confirmed – the order is shipped.",
     "cancelled": "Shipment cancelled.",
@@ -1341,13 +1341,13 @@
       "handover": "Only confirm if the parcel has already been handed to the carrier. The order will be marked as shipped and the stock booked out. The shipment cannot be cancelled afterwards.",
       "cancelShipment": "The shipment and its label will be cancelled. You can then create a new shipment.",
       "confirmDelivery": "Confirm that the goods have arrived. A 48-hour inspection period starts now.",
-      "accept": "By accepting you confirm that the goods are in order. The order will be completed; later complaints via HandyNet are no longer possible."
+      "accept": "By accepting you confirm that the goods are in order. The order will be completed; later complaints via SEHA are no longer possible."
     },
     "form": {
       "title": "Create shipment",
       "intro": "Book a parcel for this order. The goods value equals the gross amount of the order.",
       "chooseCarrier": "– please choose –",
-      "manualHint": "You booked the parcel outside HandyNet and enter its tracking number. No label is generated.",
+      "manualHint": "You booked the parcel outside SEHA and enter its tracking number. No label is generated.",
       "simulatedHint": "Generates a clearly marked test label and simulated tracking. Nothing is shipped.",
       "declaredValueHint": "Taken from the order automatically.",
       "weightKg": "Weight (kg)",
@@ -1485,7 +1485,7 @@
   },
   "disputeStatus": {
     "Open": "Open",
-    "Escalated": "With HandyNet",
+    "Escalated": "With SEHA",
     "Refunded": "Refunded",
     "ClosedWithoutRefund": "Closed without refund"
   },
@@ -1501,7 +1501,7 @@
     "reason": "Reason",
     "description": "Description",
     "openedAt": "Reported on",
-    "escalatedAt": "Handed to HandyNet on",
+    "escalatedAt": "Handed to SEHA on",
     "resolvedAt": "Closed on",
     "resolvedBy": "Decided by",
     "resolution": "Explanation",
@@ -1512,21 +1512,21 @@
     "send": "Send message",
     "refund": "Grant refund",
     "withdraw": "Withdraw complaint",
-    "escalate": "Hand over to HandyNet",
+    "escalate": "Hand over to SEHA",
     "refundText": "Reason for the refund",
     "withdrawText": "Reason for withdrawing",
-    "escalateText": "Message to HandyNet",
+    "escalateText": "Message to SEHA",
     "textRequiredHint": "Required. The text is shown to both parties in the conversation.",
     "textOptionalHint": "Optional. The text is shown to both parties in the conversation.",
     "confirmText": {
       "refund": "The buyer gets the full order amount back. An online payment is refunded automatically, the order is closed as \"Refunded\" and you receive no payout. This cannot be undone.",
       "withdraw": "The complaint is closed without a refund. The order is completed and the seller is paid out. This cannot be undone.",
-      "escalate": "HandyNet reviews the case and makes a binding decision on a refund. Completion and payout stay on hold until then. You can still send messages."
+      "escalate": "SEHA reviews the case and makes a binding decision on a refund. Completion and payout stay on hold until then. You can still send messages."
     },
     "explain": {
-      "openBuyer": "The seller has been notified. Settle the problem in the conversation. If you cannot agree, you can hand the case over to HandyNet.",
-      "openSeller": "The buyer reported a problem. Completion and payout are on hold until the complaint is resolved. You can grant a refund or hand the case over to HandyNet.",
-      "escalated": "The case is with HandyNet. The platform decides on a refund; the decision appears in the conversation.",
+      "openBuyer": "The seller has been notified. Settle the problem in the conversation. If you cannot agree, you can hand the case over to SEHA.",
+      "openSeller": "The buyer reported a problem. Completion and payout are on hold until the complaint is resolved. You can grant a refund or hand the case over to SEHA.",
+      "escalated": "The case is with SEHA. The platform decides on a refund; the decision appears in the conversation.",
       "refunded": "Complaint closed with a full refund (decided by: {by}).",
       "closedWithoutRefund": "Complaint closed without refund (decided by: {by}). The order is completed."
     },
@@ -1546,7 +1546,7 @@
     "reported": "Complaint for order {number} has been reported.",
     "refunded": "Refund granted for order {number}.",
     "withdrawn": "Complaint for order {number} has been withdrawn.",
-    "escalated": "The case has been handed over to HandyNet."
+    "escalated": "The case has been handed over to SEHA."
   },
   "priceListStatus": {
     "Review": "In review",
@@ -1747,7 +1747,7 @@
   },
   "ankauf": {
     "title": "Buyback",
-    "subtitle": "Preliminary buyback offers for used devices based on the current HandyNet price list.",
+    "subtitle": "Preliminary buyback offers for used devices based on the current SEHA price list.",
     "formTitle": "Assess device",
     "noPermission": "You need the \"place orders\" permission to create offers.",
     "model": "Model",
@@ -1868,7 +1868,7 @@
       "warehouse": "Warehouse",
       "warehouseHint": "Without a selection the default warehouse is used.",
       "defaultWarehouse": "Default warehouse",
-      "noInventoryModule": "The \"Inventory\" module is not enabled for your company: warehouse selection and stock view are not available. Please contact HandyNet.",
+      "noInventoryModule": "The \"Inventory\" module is not enabled for your company: warehouse selection and stock view are not available. Please contact SEHA.",
       "complete": "Pay and stock …",
       "confirmTitle": "Complete purchase",
       "confirmText": "Please check the details. The purchase cannot be changed afterwards.",
@@ -2586,7 +2586,7 @@
   },
   "invoices": {
     "title": "Commission invoices",
-    "subtitle": "Invoices from HandyNet for the brokerage commission on online-paid sales, issued monthly after the month has ended.",
+    "subtitle": "Invoices from SEHA for the brokerage commission on online-paid sales, issued monthly after the month has ended.",
     "hint": "Invoice numbers HN-YYYY-nnnnnn, corrections HN-RK-YYYY-nnnnnn. Issued documents are never changed: if an already invoiced payment is refunded, an invoice correction in the month of the refund offsets the line.",
     "backToFinance": "Back to finances",
     "back": "Back to invoices",
@@ -2617,7 +2617,7 @@
       "taxNumber": "Tax number",
       "vatRate": "VAT rate",
       "correctsInvoice": "Corrected invoice",
-      "serviceText": "Brokerage commission for orders paid online via HandyNet, one line per order.",
+      "serviceText": "Brokerage commission for orders paid online via SEHA, one line per order.",
       "correctionNote": "This invoice correction reverses the following lines of invoice {number} because the payments were refunded.",
       "withheldNote": "The commission was already withheld from the payout; no payment is due.",
       "placeholder": "SAMPLE: the issuer data are still placeholders. This document is not a valid invoice.",
