@@ -3,12 +3,15 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { StorageService } from '../../core/storage.service';
 import { SessionStore } from '../../core/auth/session.store';
 import { I18nService, Lang } from '../../core/i18n/i18n.service';
 import { TranslatePipe, TranslateEnumPipe } from '../../core/i18n/translate.pipe';
 import { CartStore } from '../cart/cart.store';
 import { EmailVerificationBannerComponent } from './email-verification-banner';
 import { NAV_ITEMS, NAV_SECTIONS, NavItem } from './navigation';
+
+const NAV_COLLAPSED_KEY = 'hn.nav.collapsed';
 
 @Component({
   selector: 'hn-shell',
@@ -22,6 +25,7 @@ export class ShellComponent {
   protected readonly cart = inject(CartStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly storage = inject(StorageService);
 
   protected readonly navOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
@@ -36,21 +40,52 @@ export class ShellComponent {
 
   protected readonly visibleItems = computed(() => NAV_ITEMS.filter((item) => this.isVisible(item)));
 
+  /** Collapsed side-navigation categories, remembered per browser. */
+  private readonly collapsedSections = signal<ReadonlySet<string>>(
+    new Set(this.storage.getJson<string[]>(NAV_COLLAPSED_KEY)?.filter((s) => typeof s === 'string') ?? []),
+  );
+
   constructor() {
-    // Close the mobile drawer after navigation.
+    // Close the mobile drawer after navigation; open the category of the page you navigated to.
     this.router.events
       .pipe(
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => {
+      .subscribe((e) => {
         this.navOpen.set(false);
         this.userMenuOpen.set(false);
+        this.expandSectionOf((e as NavigationEnd).urlAfterRedirects);
       });
+    this.expandSectionOf(this.router.url);
   }
 
   protected itemsOf(section: NavItem['section']): NavItem[] {
     return this.visibleItems().filter((i) => i.section === section);
+  }
+
+  protected isCollapsed(section: NavItem['section']): boolean {
+    return this.collapsedSections().has(section);
+  }
+
+  protected toggleSection(section: NavItem['section']): void {
+    const next = new Set(this.collapsedSections());
+    if (!next.delete(section)) next.add(section);
+    this.setCollapsed(next);
+  }
+
+  private expandSectionOf(url: string): void {
+    const path = url.split(/[?#]/)[0];
+    const item = NAV_ITEMS.find((i) => (i.exact ? path === i.path : path === i.path || path.startsWith(i.path + '/')));
+    if (!item || !this.collapsedSections().has(item.section)) return;
+    const next = new Set(this.collapsedSections());
+    next.delete(item.section);
+    this.setCollapsed(next);
+  }
+
+  private setCollapsed(next: ReadonlySet<string>): void {
+    this.collapsedSections.set(next);
+    this.storage.setJson(NAV_COLLAPSED_KEY, [...next]);
   }
 
   protected switchOrganization(id: string): void {

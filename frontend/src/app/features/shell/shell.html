@@ -93,9 +93,21 @@
   @for (section of sections; track section) {
     @if (itemsOf(section).length > 0) {
       @if (section !== 'main') {
-        <p class="mt-4 mb-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ 'nav.sections.' + section | t }}</p>
+        <button
+          type="button"
+          class="hn-nav-section"
+          [attr.aria-expanded]="!isCollapsed(section)"
+          [attr.aria-controls]="'nav-section-' + section"
+          (click)="toggleSection(section)"
+          [attr.data-testid]="'nav-section-' + section"
+        >
+          <span>{{ 'nav.sections.' + section | t }}</span>
+          <svg class="hn-nav-chevron size-3.5 shrink-0" [class.hn-nav-chevron-collapsed]="isCollapsed(section)" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+          </svg>
+        </button>
       }
-      <ul class="space-y-0.5">
+      <ul class="space-y-0.5" [id]="'nav-section-' + section" [class.hn-nav-group]="section !== 'main'" [hidden]="section !== 'main' && isCollapsed(section)">
         @for (item of itemsOf(section); track item.path) {
           <li>
             <a

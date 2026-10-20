@@ -172,8 +172,30 @@
 
   /* Side navigation: clear hover, current page tinted with a bar on the start edge. */
   .hn-nav-link {
-    @apply flex items-center justify-between rounded-md border-s-[3px] border-transparent py-1.5 ps-[5px] pe-2 text-sm text-slate-700;
+    @apply flex items-center justify-between rounded-md border-s-[3px] border-transparent py-2 ps-[7px] pe-2 text-[0.9375rem] font-medium text-slate-700;
     @apply hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200;
+  }
+  /* Category header of the side navigation: smaller, uppercase, muted; toggles its group. */
+  .hn-nav-section {
+    @apply mt-4 mb-1 flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-[0.6875rem] font-semibold tracking-[0.08em] text-slate-500 uppercase;
+    @apply hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-accent-600;
+  }
+  .hn-nav-group {
+    @apply ms-2 border-s border-slate-100 ps-1;
+  }
+  .hn-nav-chevron {
+    transition: rotate 150ms ease;
+  }
+  .hn-nav-chevron.hn-nav-chevron-collapsed {
+    rotate: -90deg;
+  }
+  [dir='rtl'] .hn-nav-chevron.hn-nav-chevron-collapsed {
+    rotate: 90deg;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hn-nav-chevron {
+      transition: none;
+    }
   }
   .hn-nav-link.hn-nav-active {
     @apply border-accent-600 bg-accent-50 font-semibold text-accent-800 hover:bg-accent-100;
