@@ -98,6 +98,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromSeconds(30),
             NameClaimType = "name",
         };
+        // Disabled accounts and revoked platform-admin roles take effect immediately, not when the access token expires.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var check = context.HttpContext.RequestServices.GetRequiredService<AccountStatusCheck>();
+                if (await check.RejectReasonAsync(context.Principal!, context.HttpContext.RequestAborted) is { } reason)
+                    context.Fail(reason);
+            },
+        };
     });
 
 builder.Services.AddAuthorizationBuilder()

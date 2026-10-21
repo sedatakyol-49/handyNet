@@ -1,5 +1,6 @@
 using HandyNet.Modules.Identity.Domain;
 using HandyNet.Persistence;
+using HandyNet.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace HandyNet.Modules.Identity.Infrastructure;
@@ -12,10 +13,13 @@ public sealed class IdentityModel : IModuleModel
     {
         modelBuilder.Entity<User>(b =>
         {
-            b.ToTable("users", Schema);
+            // The last active platform admin is protected by a deferred trigger (migration PlatformAdministration).
+            b.ToTable("users", Schema, t =>
+                t.HasCheckConstraint("ck_users_disabled", "(is_active AND disabled_at IS NULL AND disabled_reason IS NULL) OR (NOT is_active)"));
             b.HasKey(x => x.Id);
             b.Property(x => x.Email).HasMaxLength(320).IsRequired();
-            b.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            b.Property(x => x.DisplayName).HasMaxLength(User.MaxDisplayNameLength).IsRequired();
+            b.Property(x => x.DisabledReason).HasMaxLength(AdminReason.MaxLength);
             b.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
             b.Property(x => x.Version).IsRowVersion();
             b.HasIndex(x => x.Email).IsUnique();

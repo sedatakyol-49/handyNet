@@ -60,8 +60,8 @@ flowchart TD
 
 | Module | Schema | Owns | Public contract |
 |---|---|---|---|
-| Identity | `identity` | users, password hashing, lockout, JWT access tokens, rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested` |
-| Tenancy | `tenancy` | organizations, verification, memberships/roles (incl. per-cashier POS rights on staff memberships), module activation, tenant resolution | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module) |
+| Identity | `identity` | users, password hashing, lockout, JWT access tokens (disabled accounts / revoked admin role rejected per request), rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010); platform administration of user accounts (`/api/admin/users`, ADR-0013) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested`; port `IUserMembershipSource` (implemented by Tenancy) |
+| Tenancy | `tenancy` | organizations (master data incl. tax number and contact data), verification, status history, memberships/roles (incl. per-cashier POS rights on staff memberships; at least one owner, DB-enforced), module activation, tenant resolution; platform administration of companies (`/api/admin/organizations`, ADR-0013) | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module); port `IOrganizationFactSource` (admin counts, implemented by POS and Marketplace) |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules, lookup, canonical product images (upload by creating org or platform admin, SkiaSharp re-encoding, public immutable serving — ADR-0011) | `IProductCatalog`, `ProductMatcher` |
 | Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule), sell/return staging for POS | `IInventory` |
 | Marketplace | `marketplace` | supplier offers, B2B listing view (with model data + images), filters, facets, offer detail with other sellers; read-only for products (no product creation); platform moderation (offer and seller blocks, separate from the seller's status, audited; `/api/admin/marketplace`) | `IOfferReservations` (incl. `GetBlockedAsync` → `offer.blocked`), `IOfferSync`, `IOwnOfferPrices` |
@@ -94,7 +94,7 @@ flowchart TD
 
 ## Request pipeline
 
-1. JWT bearer authentication (`sub`, `hn_admin` claims).
+1. JWT bearer authentication (`sub`, `hn_admin` claims); `AccountStatusCheck` rejects tokens of disabled accounts and stale `hn_admin` claims (ADR-0013).
 2. `TenantResolutionMiddleware`: if `X-Organization-Id` is present, verify membership in the DB, load status,
    role and modules into `TenantContext`.
 3. Endpoint filters: `RequireTenant` → `RequireModule` (verified + enabled) → `RequirePermission`.

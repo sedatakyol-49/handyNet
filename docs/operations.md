@@ -78,6 +78,21 @@ development, never for production. Support: a user's sessions can be ended with 
 user) or by a password reset; `identity.refresh_tokens.revocation_reason = 'Reuse'` marks a detected token theft
 (also logged as a warning).
 
+## Platform administration of companies and users (ADR-0013)
+
+Administration → "Unternehmen" / "Benutzer" (`/api/admin/organizations`, `/api/admin/users`). Support cases are handled
+there: lock an account (all sessions end at once; reason `AccountDisabled` on its refresh tokens), lift a lockout, end
+all sessions (`AdminRevoked`), send a reset or verification link, fix a display name, change roles or transfer the
+ownership of a company. Admins see contract and account data only — no receipts, customers, sales or Ankauf seller data.
+
+- Audit: admin writes are `infra.audit_log` rows with `action LIKE 'Admin%'` and `changes->>'Reason'`; opening a detail
+  view is an `AdminRead` row (who looked at which company/account and when), e.g.
+  `SELECT occurred_at, user_id, entity_type, entity_id, action, changes FROM infra.audit_log WHERE changes->>'Source' = 'platform' ORDER BY id DESC;`
+- The database refuses to remove the last owner of a company (`ck_memberships_owner_required`) and the last active
+  platform admin (`ck_users_last_platform_admin`), also for manual SQL. The `Bootstrap:AdminEmail` account gets the
+  platform-admin role back at every API start; it is not re-enabled automatically — if it was disabled, enable it with
+  the owner connection (`UPDATE identity.users SET is_active = true, disabled_at = NULL, disabled_reason = NULL WHERE email = '…'`).
+
 ## Deploying a new version
 
 1. Take a backup (`deploy/backup/backup.sh`).

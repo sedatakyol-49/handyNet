@@ -22,6 +22,7 @@ public static class MarketplaceModule
         services.AddScoped<IOfferSync>(sp => sp.GetRequiredService<OfferService>());
         services.AddScoped<IOfferReservations>(sp => sp.GetRequiredService<OfferService>());
         services.AddScoped<IOwnOfferPrices, OwnOfferPrices>();
+        services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, MarketplaceOrganizationFacts>();
         services.AddValidatorsFromAssemblyContaining<OfferService>(includeInternalTypes: true);
         return services;
     }

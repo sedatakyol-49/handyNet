@@ -25,13 +25,36 @@ public sealed class TenancyModel : IModuleModel
             b.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().IsRequired();
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
             b.Property(x => x.StatusReason).HasMaxLength(1000);
+            b.Property(x => x.TaxNumber).HasMaxLength(Organization.MaxTaxNumberLength);
+            b.Property(x => x.ContactEmail).HasMaxLength(Organization.MaxContactEmailLength);
+            b.Property(x => x.ContactPhone).HasMaxLength(Organization.MaxContactPhoneLength);
+            b.Property(x => x.Website).HasMaxLength(Organization.MaxWebsiteLength);
             b.Property(x => x.Version).IsRowVersion();
             b.HasIndex(x => x.VatId).IsUnique().HasFilter("vat_id IS NOT NULL");
             b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.CreatedAt);
             b.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
             b.HasMany(x => x.Modules).WithOne().HasForeignKey(m => m.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             b.Navigation(x => x.Modules).UsePropertyAccessMode(PropertyAccessMode.Field);
+            b.HasMany(x => x.StatusChanges).WithOne().HasForeignKey(c => c.OrganizationId).OnDelete(DeleteBehavior.Restrict);
+            b.Navigation(x => x.StatusChanges).UsePropertyAccessMode(PropertyAccessMode.Field);
+            b.Ignore(x => x.Profile);
             b.Ignore(x => x.DomainEvents);
+        });
+
+        // Append-only status history (UPDATE/DELETE revoked from the app role). Not tenant-owned: platform data about the
+        // organization, like the organization row itself (ADR-0003 §5).
+        modelBuilder.Entity<OrganizationStatusChange>(b =>
+        {
+            b.ToTable("organization_status_changes", Schema);
+            b.HasKey(x => x.Id);
+            // Ids are assigned in the domain; added through the organization's collection they must be inserted, not updated.
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.Reason).HasMaxLength(1000);
+            b.HasIndex(x => new { x.OrganizationId, x.ChangedAt });
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.ChangedBy).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OrganizationModule>(b =>

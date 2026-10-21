@@ -37,6 +37,12 @@ public enum RefreshTokenRevocation
     Reuse,
     PasswordChanged,
     PasswordReset,
+
+    /// <summary>A platform admin disabled the account.</summary>
+    AccountDisabled,
+
+    /// <summary>A platform admin ended all sessions of the user.</summary>
+    AdminRevoked,
 }
 
 /// <summary>
