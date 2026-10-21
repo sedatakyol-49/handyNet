@@ -65,7 +65,8 @@
       "purchasing": "Compras",
       "sales": "Ventas y almacén",
       "settings": "Gestión",
-      "pos": "Venta en tienda"
+      "pos": "Venta en tienda",
+      "platform": "Plataforma"
     },
     "finance": "Finanzas",
     "ankauf": "Recompra",
@@ -571,7 +572,8 @@
     },
     "purchasesToInspect": "Compras: revisar mercancía recibida",
     "salesDisputed": "Reclamaciones abiertas",
-    "purchasesDisputed": "Compras: en reclamación"
+    "purchasesDisputed": "Compras: en reclamación",
+    "platformHint": "Es administrador de la plataforma. Aquí gestiona empresas, usuarios, el marketplace y las cajas de todos los comercios."
   },
   "marketplace": {
     "title": "Marketplace",

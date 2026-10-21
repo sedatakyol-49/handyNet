@@ -65,7 +65,8 @@
       "purchasing": "Einkauf",
       "sales": "Verkauf & Lager",
       "settings": "Verwaltung",
-      "pos": "Ladenverkauf"
+      "pos": "Ladenverkauf",
+      "platform": "Plattform"
     },
     "finance": "Finanzen",
     "ankauf": "Ankauf",
@@ -571,7 +572,8 @@
     },
     "purchasesToInspect": "Einkauf: Wareneingang prüfen",
     "salesDisputed": "Offene Reklamationen",
-    "purchasesDisputed": "Einkauf: in Reklamation"
+    "purchasesDisputed": "Einkauf: in Reklamation",
+    "platformHint": "Sie sind Plattform-Administrator. Hier verwalten Sie Unternehmen, Benutzer, den Marktplatz und die Kassen aller Händler."
   },
   "marketplace": {
     "title": "Marktplatz",

@@ -38,6 +38,7 @@
     "adminMgmt.company.website"
   ],
   "tr": [
+    "nav.sections.platform",
     "pos.invoice.fields.company",
     "category.Tablet",
     "category.Camera",

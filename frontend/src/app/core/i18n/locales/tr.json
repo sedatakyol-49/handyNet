@@ -65,7 +65,8 @@
       "purchasing": "Satın alma",
       "sales": "Satış ve depo",
       "settings": "Yönetim",
-      "pos": "Mağaza satışı"
+      "pos": "Mağaza satışı",
+      "platform": "Platform"
     },
     "finance": "Finans",
     "ankauf": "Geri alım",
@@ -571,7 +572,8 @@
     },
     "purchasesToInspect": "Satın alma: mal kabulünü kontrol et",
     "salesDisputed": "Açık şikâyetler",
-    "purchasesDisputed": "Satın alma: şikâyette"
+    "purchasesDisputed": "Satın alma: şikâyette",
+    "platformHint": "Platform yöneticisisiniz. Tüm işletmelerin firmalarını, kullanıcılarını, pazaryerini ve kasalarını buradan yönetirsiniz."
   },
   "marketplace": {
     "title": "Pazar yeri",

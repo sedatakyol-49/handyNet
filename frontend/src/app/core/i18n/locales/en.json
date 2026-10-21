@@ -65,7 +65,8 @@
       "purchasing": "Purchasing",
       "sales": "Sales & inventory",
       "settings": "Management",
-      "pos": "Store sales"
+      "pos": "Store sales",
+      "platform": "Platform"
     },
     "finance": "Finances",
     "ankauf": "Buyback",
@@ -571,7 +572,8 @@
     },
     "purchasesToInspect": "Purchases: inspect goods",
     "salesDisputed": "Open complaints",
-    "purchasesDisputed": "Purchases: disputed"
+    "purchasesDisputed": "Purchases: disputed",
+    "platformHint": "You are a platform administrator. Manage companies, users, the marketplace and the tills of all merchants here."
   },
   "marketplace": {
     "title": "Marketplace",

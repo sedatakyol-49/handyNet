@@ -84,9 +84,21 @@
       </section>
     }
   </div>
+} @else if (session.isPlatformAdmin()) {
+  <section class="hn-card p-4" data-testid="dashboard-platform">
+    <h2 class="text-base font-semibold">{{ 'nav.sections.platform' | t }}</h2>
+    <p class="hn-muted mt-1 text-sm">{{ 'dashboard.platformHint' | t }}</p>
+    <ul class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      @for (link of platformLinks; track link.path) {
+        <li>
+          <a [routerLink]="link.path" class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 hover:border-accent-600 hover:bg-accent-50 hover:text-accent-800 focus-visible:outline-2 focus-visible:outline-accent-600">
+            <span>{{ link.labelKey | t }}</span>
+            <span aria-hidden="true" class="text-slate-400 rtl:rotate-180">›</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
 } @else {
   <hn-banner tone="info" [heading]="'dashboard.noOrganization.title' | t" [text]="'dashboard.noOrganization.text' | t" />
-  @if (session.isPlatformAdmin()) {
-    <p class="mt-4"><a hnButton variant="primary" routerLink="/app/administration">{{ 'nav.admin' | t }}</a></p>
-  }
 }

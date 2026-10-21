@@ -13,6 +13,8 @@ import { NAV_ITEMS, NAV_SECTIONS, NavItem } from './navigation';
 
 const NAV_COLLAPSED_KEY = 'hn.nav.collapsed';
 
+const pathOf = (url: string) => url.split(/[?#]/)[0];
+
 @Component({
   selector: 'hn-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, TranslateEnumPipe, EmailVerificationBannerComponent],
@@ -40,6 +42,8 @@ export class ShellComponent {
 
   protected readonly visibleItems = computed(() => NAV_ITEMS.filter((item) => this.isVisible(item)));
 
+  private readonly currentPath = signal(pathOf(this.router.url));
+
   /** Collapsed side-navigation categories, remembered per browser. */
   private readonly collapsedSections = signal<ReadonlySet<string>>(
     new Set(this.storage.getJson<string[]>(NAV_COLLAPSED_KEY)?.filter((s) => typeof s === 'string') ?? []),
@@ -55,9 +59,16 @@ export class ShellComponent {
       .subscribe((e) => {
         this.navOpen.set(false);
         this.userMenuOpen.set(false);
-        this.expandSectionOf((e as NavigationEnd).urlAfterRedirects);
+        this.currentPath.set(pathOf((e as NavigationEnd).urlAfterRedirects));
+        this.expandSectionOf(this.currentPath());
       });
-    this.expandSectionOf(this.router.url);
+    this.expandSectionOf(this.currentPath());
+  }
+
+  /** Active through `alsoActive` (e.g. a company detail page under the companies entry). */
+  protected isAlsoActive(item: NavItem): boolean {
+    const path = this.currentPath();
+    return !!item.alsoActive?.some((p) => path === p || path.startsWith(p + '/'));
   }
 
   protected itemsOf(section: NavItem['section']): NavItem[] {
@@ -74,9 +85,12 @@ export class ShellComponent {
     this.setCollapsed(next);
   }
 
-  private expandSectionOf(url: string): void {
-    const path = url.split(/[?#]/)[0];
-    const item = NAV_ITEMS.find((i) => (i.exact ? path === i.path : path === i.path || path.startsWith(i.path + '/')));
+  private expandSectionOf(path: string): void {
+    const item = NAV_ITEMS.find(
+      (i) =>
+        (i.exact ? path === i.path : path === i.path || path.startsWith(i.path + '/')) ||
+        !!i.alsoActive?.some((p) => path === p || path.startsWith(p + '/')),
+    );
     if (!item || !this.collapsedSections().has(item.section)) return;
     const next = new Set(this.collapsedSections());
     next.delete(item.section);

@@ -35,6 +35,9 @@ export class DashboardPage {
     NAV_ITEMS.filter((i) => i.path !== '/app/uebersicht' && !i.adminOnly && !i.always && this.session.allows(i.module, i.permission)),
   );
 
+  /** Platform administration areas, shown to platform admins (who need no company of their own). */
+  protected readonly platformLinks = NAV_ITEMS.filter((i) => i.section === 'platform');
+
   constructor() {
     void this.loadCounters();
   }

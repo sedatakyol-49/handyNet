@@ -11,7 +11,9 @@ export interface NavItem {
   badge?: 'cart';
   /** Active only on exactly this path (not on child paths that have their own entry). */
   exact?: boolean;
-  section: 'main' | 'purchasing' | 'sales' | 'pos' | 'settings';
+  /** Further path prefixes that also mark this entry active (e.g. detail pages under another path). */
+  alsoActive?: string[];
+  section: 'main' | 'purchasing' | 'sales' | 'pos' | 'platform' | 'settings';
 }
 
 /** Single source of truth for the side navigation; visibility mirrors the API's module/permission checks. */
@@ -29,7 +31,13 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
-  { path: '/app/administration', labelKey: 'nav.admin', adminOnly: true, section: 'settings' },
+  { path: '/app/administration', labelKey: 'admin.tabs.organizations', adminOnly: true, exact: true, alsoActive: ['/app/administration/unternehmen'], section: 'platform' },
+  { path: '/app/administration/benutzer', labelKey: 'admin.tabs.users', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/marktplatz', labelKey: 'admin.tabs.moderation', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/reklamationen', labelKey: 'admin.tabs.disputes', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/ankauf', labelKey: 'admin.tabs.ankauf', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/rechnungen', labelKey: 'admin.tabs.invoices', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/kassen-tse', labelKey: 'admin.tabs.fiscal', adminOnly: true, section: 'platform' },
 ];
 
-export const NAV_SECTIONS: NavItem['section'][] = ['main', 'purchasing', 'sales', 'pos', 'settings'];
+export const NAV_SECTIONS: NavItem['section'][] = ['main', 'purchasing', 'sales', 'pos', 'platform', 'settings'];

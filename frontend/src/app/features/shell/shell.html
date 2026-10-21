@@ -115,7 +115,8 @@
               routerLinkActive="hn-nav-active"
               [routerLinkActiveOptions]="{ exact: !!item.exact }"
               #rla="routerLinkActive"
-              [attr.aria-current]="rla.isActive ? 'page' : null"
+              [attr.aria-current]="rla.isActive || isAlsoActive(item) ? 'page' : null"
+              [class.hn-nav-active]="isAlsoActive(item)"
               class="hn-nav-link"
             >
               <span>{{ item.labelKey | t }}</span>
