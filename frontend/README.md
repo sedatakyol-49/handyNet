@@ -33,7 +33,7 @@ CORS on the API already allows `http://localhost:4200`).
 | `npm run serve:ssr:handynet-web` | Runs the built SSR server (port 4000, or `PORT`); forwards `/api` to `HN_API_URL` (default `http://localhost:5170`) |
 | `npm test` | Unit tests once (Vitest via `ng test --watch=false`) |
 | `npm run test:watch` | Unit tests in watch mode |
-| `npm run e2e` | Playwright e2e tests (see below) |
+| `npm run e2e` | Playwright e2e tests on their own stack (API :5270, web :4270, database `handynet_e2e`; see below) |
 | `node scripts/check-i18n.mjs` | Verifies the translation keys of all seven locale files (see i18n) |
 
 For SSR deployments the Angular server only accepts known `Host` headers (SSRF protection). `localhost` is allowed in
@@ -449,22 +449,27 @@ Money is always formatted with `Intl.NumberFormat('de-DE', { style: 'currency' }
 ## End-to-end tests (Playwright)
 
 The e2e tests run against the **real API** and create their own uniquely named test companies on every run (they do
-not clean up). They need a platform admin account of the target environment, passed via environment variables – never
-commit these credentials:
+not clean up). They therefore run on a **separate stack and database**, never on the development data:
 
 ```bash
-# API must be running on http://localhost:5170 (override with HN_API_URL)
-# The frontend is started automatically (npm start) unless something already listens on HN_BASE_URL (default :4200)
-HN_ADMIN_EMAIL=admin@handynet.local HN_ADMIN_PASSWORD='…' npm run e2e
+npm run e2e
 ```
 
-PowerShell:
+`playwright.config.ts` starts (or reuses, if already running):
 
-```powershell
-$env:HN_ADMIN_EMAIL='admin@handynet.local'; $env:HN_ADMIN_PASSWORD='…'; npm run e2e
-```
+- an API on `http://localhost:5270`, built into `.artifacts/e2e-api` (so the development API's `bin/` stays unlocked),
+  using database **`handynet_e2e`** – created and migrated automatically. The connection strings come from the API's
+  user-secrets with only the database name replaced; payment/email links point to the e2e ports; image files go to
+  `.artifacts/e2e-api/App_Data/files`;
+- the frontend on `http://localhost:4270`: a production build in `.artifacts/e2e-web` served by the SSR server, which
+  forwards `/api` to `:5270` (no second Vite dev server next to `npm start`).
 
-Without these variables the tests are skipped. Specs:
+The platform admin login is taken from `HN_ADMIN_EMAIL` / `HN_ADMIN_PASSWORD` or, when unset, from the API's
+user-secrets (`Bootstrap:AdminEmail` / `Bootstrap:AdminPassword`, the account the API bootstraps). Nothing secret is
+printed or written to disk. To start over with an empty e2e database, stop the e2e servers and drop `handynet_e2e`.
+
+Running against the development servers (`HN_BASE_URL` on `:4200` or `HN_API_URL` on `:5170`, i.e. database
+`handynet`) is refused unless `HN_E2E_ALLOW_DEV_DB=1` is set. Specs:
 
 - `e2e/login-marketplace.spec.ts` – seeds a supplier (committed price list) and a shop via the API, then the shop logs
   in, checks module-based navigation and browses the marketplace (`/` shortcut, search, stock filter, quantity limits).

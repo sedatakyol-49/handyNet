@@ -31,10 +31,11 @@ using Serilog;
 // `dotnet HandyNet.Api.dll migrate` applies database migrations with the owner connection and exits.
 if (args.Contains("migrate"))
 {
+    // Same precedence as the web host: user-secrets < environment variables < command line.
     var config = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)
-        .AddEnvironmentVariables()
         .AddUserSecrets<Program>(optional: true)
+        .AddEnvironmentVariables()
         .AddCommandLine(args)
         .Build();
     var owner = config.GetConnectionString("HandyNetMigrations")
