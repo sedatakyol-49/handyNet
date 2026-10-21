@@ -1,0 +1,328 @@
+<nav class="mb-2 text-sm"><a class="hn-link" routerLink="/app/administration">← {{ 'admin.tabs.organizations' | t }}</a></nav>
+<hn-page-header [title]="org()?.name ?? ('adminMgmt.company.title' | t)" [description]="'adminMgmt.company.subtitle' | t">
+  @if (org(); as o) {
+    <hn-status-badge [status]="o.status" kind="orgStatus" data-testid="company-status" />
+  }
+</hn-page-header>
+<hn-admin-tabs />
+
+<hn-banner class="mb-3" [error]="detail.error()" />
+
+@if (detail.value(); as d) {
+  @let o = d.organization;
+  <p class="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600" data-testid="company-scope-note">
+    {{ 'adminMgmt.company.scopeNote' | t }}
+  </p>
+
+  <!-- Kennzahlen -->
+  <section class="mb-4" aria-labelledby="company-facts-heading">
+    <h2 id="company-facts-heading" class="sr-only">{{ 'adminMgmt.company.facts' | t }}</h2>
+    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="company-facts">
+      <div class="hn-card p-3">
+        <dt class="text-xs text-slate-500">{{ 'adminMgmt.companies.members' | t }}</dt>
+        <dd class="text-lg font-semibold" data-testid="fact-members">{{ o.memberCount }}</dd>
+      </div>
+      <div class="hn-card p-3">
+        <dt class="text-xs text-slate-500">{{ 'adminMgmt.company.registers' | t }}</dt>
+        <dd class="text-lg font-semibold" data-testid="fact-registers">{{ o.registerCount }}</dd>
+      </div>
+      <div class="hn-card p-3">
+        <dt class="text-xs text-slate-500">{{ 'adminMgmt.company.offers' | t }}</dt>
+        <dd class="text-lg font-semibold" data-testid="fact-offers">
+          {{ o.offerCount }}
+          <span class="block text-xs font-normal text-slate-500">{{ 'adminMgmt.company.published' | t: { count: d.publishedOfferCount } }}</span>
+        </dd>
+      </div>
+      <div class="hn-card p-3">
+        <dt class="text-xs text-slate-500">{{ 'admin.registered' | t }}</dt>
+        <dd class="text-sm font-medium">
+          {{ o.createdAt | hnDate }}
+          @if (d.createdBy) {
+            <span class="block text-xs font-normal text-slate-500"><bdi>{{ d.createdBy.displayName }}</bdi></span>
+          }
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <!-- Stammdaten -->
+    <section class="hn-card p-4 lg:col-span-2" aria-labelledby="company-master-heading">
+      <h2 id="company-master-heading" class="mb-3 text-sm">{{ 'adminMgmt.company.masterData' | t }}</h2>
+      @if (form; as f) {
+        <form class="space-y-4" (ngSubmit)="save()" novalidate data-testid="company-form">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <hn-field [label]="'auth.register.name' | t" for="cf-name" [required]="true" [errors]="fieldError('name')">
+              <input hnInput id="cf-name" name="name" maxlength="200" required [(ngModel)]="f.name" (ngModelChange)="touched()" [attr.aria-invalid]="!!fieldError('name')"
+                [attr.aria-describedby]="fieldError('name') ? 'cf-name-error' : null" data-testid="cf-name" />
+            </hn-field>
+            <hn-field [label]="'auth.register.legalName' | t" for="cf-legal" [required]="true" [errors]="fieldError('legalName')">
+              <input hnInput id="cf-legal" name="legalName" maxlength="300" required [(ngModel)]="f.legalName" (ngModelChange)="touched()"
+                [attr.aria-invalid]="!!fieldError('legalName')" [attr.aria-describedby]="fieldError('legalName') ? 'cf-legal-error' : null" data-testid="cf-legal" />
+            </hn-field>
+            <hn-field [label]="'auth.register.street' | t" for="cf-street" [required]="true" [errors]="fieldError('street')" class="sm:col-span-2">
+              <input hnInput id="cf-street" name="street" maxlength="200" required autocomplete="off" [(ngModel)]="f.street" (ngModelChange)="touched()"
+                [attr.aria-invalid]="!!fieldError('street')" [attr.aria-describedby]="fieldError('street') ? 'cf-street-error' : null" data-testid="cf-street" />
+            </hn-field>
+            <div class="grid grid-cols-[6rem_1fr_5rem] gap-3 sm:col-span-2">
+              <hn-field [label]="'auth.register.postalCode' | t" for="cf-zip" [required]="true" [errors]="fieldError('postalCode')">
+                <input hnInput id="cf-zip" name="postalCode" maxlength="10" required inputmode="numeric" [(ngModel)]="f.postalCode" (ngModelChange)="touched()"
+                  [attr.aria-invalid]="!!fieldError('postalCode')" [attr.aria-describedby]="fieldError('postalCode') ? 'cf-zip-error' : null" data-testid="cf-zip" />
+              </hn-field>
+              <hn-field [label]="'auth.register.city' | t" for="cf-city" [required]="true" [errors]="fieldError('city')">
+                <input hnInput id="cf-city" name="city" maxlength="100" required [(ngModel)]="f.city" (ngModelChange)="touched()"
+                  [attr.aria-invalid]="!!fieldError('city')" [attr.aria-describedby]="fieldError('city') ? 'cf-city-error' : null" data-testid="cf-city" />
+              </hn-field>
+              <hn-field [label]="'auth.register.country' | t" for="cf-country" [required]="true" [errors]="fieldError('countryCode')">
+                <input hnInput id="cf-country" name="countryCode" maxlength="2" required class="uppercase" [(ngModel)]="f.countryCode" (ngModelChange)="touched()"
+                  [attr.aria-invalid]="!!fieldError('countryCode')" [attr.aria-describedby]="fieldError('countryCode') ? 'cf-country-error' : null" />
+              </hn-field>
+            </div>
+            <hn-field [label]="'auth.register.vatId' | t" for="cf-vat" [hint]="'auth.register.vatIdHint' | t" [errors]="fieldError('vatId')">
+              <input hnInput id="cf-vat" name="vatId" maxlength="20" class="hn-mono" [ngModel]="f.vatId" (ngModelChange)="f.vatId = $event; touched()"
+                [attr.aria-invalid]="!!fieldError('vatId')" [attr.aria-describedby]="fieldError('vatId') ? 'cf-vat-error' : 'cf-vat-hint'" />
+            </hn-field>
+            <hn-field [label]="'adminMgmt.company.taxNumber' | t" for="cf-tax" [hint]="'adminMgmt.company.taxNumberHint' | t" [errors]="fieldError('taxNumber')">
+              <input hnInput id="cf-tax" name="taxNumber" maxlength="30" class="hn-mono" [ngModel]="f.taxNumber" (ngModelChange)="f.taxNumber = $event; touched()"
+                [attr.aria-invalid]="!!fieldError('taxNumber')" [attr.aria-describedby]="fieldError('taxNumber') ? 'cf-tax-error' : 'cf-tax-hint'" />
+            </hn-field>
+            <hn-field [label]="'adminMgmt.company.contactEmail' | t" for="cf-email" [errors]="fieldError('contactEmail')">
+              <input hnInput id="cf-email" name="contactEmail" type="email" maxlength="320" [ngModel]="f.contactEmail" (ngModelChange)="f.contactEmail = $event; touched()"
+                [attr.aria-invalid]="!!fieldError('contactEmail')" [attr.aria-describedby]="fieldError('contactEmail') ? 'cf-email-error' : null" data-testid="cf-email" />
+            </hn-field>
+            <hn-field [label]="'adminMgmt.company.contactPhone' | t" for="cf-phone" [errors]="fieldError('contactPhone')">
+              <input hnInput id="cf-phone" name="contactPhone" type="tel" maxlength="40" dir="ltr" [ngModel]="f.contactPhone" (ngModelChange)="f.contactPhone = $event; touched()"
+                [attr.aria-invalid]="!!fieldError('contactPhone')" [attr.aria-describedby]="fieldError('contactPhone') ? 'cf-phone-error' : null" />
+            </hn-field>
+            <hn-field [label]="'adminMgmt.company.website' | t" for="cf-web" [hint]="'adminMgmt.company.websiteHint' | t" [errors]="fieldError('website')" class="sm:col-span-2">
+              <input hnInput id="cf-web" name="website" type="url" maxlength="300" dir="ltr" placeholder="https://" [ngModel]="f.website" (ngModelChange)="f.website = $event; touched()"
+                [attr.aria-invalid]="!!fieldError('website')" [attr.aria-describedby]="fieldError('website') ? 'cf-web-error' : 'cf-web-hint'" data-testid="cf-website" />
+            </hn-field>
+          </div>
+          <fieldset [attr.aria-describedby]="fieldError('capabilities') ? 'cf-caps-error' : null">
+            <legend class="mb-1 block text-xs font-medium text-slate-700">{{ 'dashboard.businessTypes' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="hn-checkbox" name="isWholesaler" [(ngModel)]="f.isWholesaler" (ngModelChange)="touched()" />{{ 'businessType.wholesaler' | t }}</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="hn-checkbox" name="isRetailer" [(ngModel)]="f.isRetailer" (ngModelChange)="touched()" />{{ 'businessType.retailer' | t }}</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="hn-checkbox" name="isRepairProvider" [(ngModel)]="f.isRepairProvider" (ngModelChange)="touched()" />{{ 'businessType.repair' | t }}</label>
+            </div>
+            @if (fieldError('capabilities')) {
+              <p class="mt-1 text-xs text-red-700" id="cf-caps-error" role="alert">{{ fieldError('capabilities') }}</p>
+            }
+          </fieldset>
+          <hn-field [label]="'adminMgmt.reasonOptional' | t" for="cf-reason" [hint]="'adminMgmt.company.reasonHint' | t">
+            <input hnInput id="cf-reason" name="reason" [maxlength]="maxReason" [(ngModel)]="formReason" aria-describedby="cf-reason-hint" data-testid="cf-reason" />
+          </hn-field>
+          @if (saveError()) {
+            <hn-banner [error]="saveError()" />
+          }
+          <div class="flex flex-wrap justify-end gap-2">
+            <button hnButton variant="ghost" type="button" [disabled]="!dirty() || saving()" (click)="discard()">{{ 'adminMgmt.discard' | t }}</button>
+            <button hnButton variant="primary" type="submit" [loading]="saving()" [disabled]="!dirty() || saving()" data-testid="cf-save">{{ 'common.save' | t }}</button>
+          </div>
+        </form>
+      }
+    </section>
+
+    <div class="space-y-4">
+      <!-- Status & Verlauf -->
+      <section class="hn-card p-4" aria-labelledby="company-status-heading" data-testid="company-status-section">
+        <h2 id="company-status-heading" class="mb-2 flex flex-wrap items-center gap-2 text-sm">
+          {{ 'adminMgmt.company.statusHistory' | t }}
+          <hn-status-badge [status]="o.status" kind="orgStatus" />
+        </h2>
+        @if (o.statusReason) {
+          <p class="mb-2 text-sm"><span class="hn-muted">{{ 'orders.reason' | t }}:</span> <bdi>{{ o.statusReason }}</bdi></p>
+        }
+        @if (o.verifiedAt) {
+          <p class="mb-2 text-xs text-slate-600">
+            {{ 'adminMgmt.company.verifiedOn' | t: { date: (o.verifiedAt | hnDate) } }}
+            @if (d.verifiedBy) { · <bdi>{{ d.verifiedBy.displayName }}</bdi> }
+          </p>
+        }
+        <div class="mb-3 flex flex-wrap gap-2">
+          @if (o.status === 'PendingVerification') {
+            <button hnButton size="sm" variant="primary" type="button" (click)="askStatus('verify')" data-testid="company-verify">{{ 'adminMgmt.status.verify' | t }}</button>
+            <button hnButton size="sm" variant="danger" type="button" (click)="askStatus('reject')" data-testid="company-reject">{{ 'adminMgmt.status.reject' | t }}</button>
+          }
+          @if (o.status === 'Verified') {
+            <button hnButton size="sm" variant="danger" type="button" (click)="askStatus('suspend')" data-testid="company-suspend">{{ 'adminMgmt.status.suspend' | t }}</button>
+          }
+          @if (o.status === 'Suspended') {
+            <button hnButton size="sm" variant="primary" type="button" (click)="askStatus('reactivate')" data-testid="company-reactivate">{{ 'adminMgmt.status.reactivate' | t }}</button>
+          }
+        </div>
+        <ol class="space-y-2 border-s border-slate-200 ps-3" data-testid="company-history">
+          @for (h of d.statusHistory.slice().reverse(); track $index) {
+            <li class="text-xs">
+              <span class="flex flex-wrap items-center gap-1">
+                @if (h.from) {
+                  <hn-status-badge [status]="h.from" kind="orgStatus" tone="neutral" /><span aria-hidden="true" class="rtl:rotate-180">→</span>
+                }
+                <hn-status-badge [status]="h.to" kind="orgStatus" />
+              </span>
+              <span class="mt-0.5 block text-slate-600">
+                {{ h.at | hnDate }}@if (h.by) { · <bdi>{{ h.by.displayName }}</bdi> }
+              </span>
+              @if (h.reason) {
+                <span class="block text-slate-800"><bdi>{{ h.reason }}</bdi></span>
+              }
+            </li>
+          } @empty {
+            <li class="text-xs text-slate-500">{{ 'adminMgmt.company.noHistory' | t }}</li>
+          }
+        </ol>
+      </section>
+
+      <!-- Module -->
+      <section class="hn-card p-4" aria-labelledby="company-modules-heading">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 id="company-modules-heading" class="text-sm">{{ 'dashboard.modules' | t }}</h2>
+          <button hnButton size="sm" type="button" (click)="openModules()" data-testid="company-modules-edit">{{ 'common.edit' | t }}</button>
+        </div>
+        <div class="flex flex-wrap gap-1">
+          @for (m of o.modules; track m) {
+            <hn-status-badge [status]="m" kind="module" tone="neutral" />
+          } @empty {
+            <span class="text-xs text-slate-500">{{ 'adminMgmt.company.noModules' | t }}</span>
+          }
+        </div>
+        @if (o.status !== 'Verified' && o.modules.length) {
+          <p class="mt-2 text-xs text-amber-800">{{ 'admin.modulesNotVerified' | t }}</p>
+        }
+      </section>
+
+      <!-- Kassen -->
+      <section class="hn-card p-4" aria-labelledby="company-registers-heading">
+        <h2 id="company-registers-heading" class="mb-2 text-sm">{{ 'adminMgmt.company.registers' | t }}</h2>
+        <ul class="flex flex-wrap gap-1" data-testid="company-registers">
+          @for (r of d.registers; track $index) {
+            <li class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-800"><bdi>{{ r }}</bdi></li>
+          } @empty {
+            <li class="text-xs text-slate-500">{{ 'adminMgmt.company.noRegisters' | t }}</li>
+          }
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- Mitglieder -->
+  <section class="mt-4" aria-labelledby="company-members-heading">
+    <div class="mb-2 flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <h2 id="company-members-heading" class="text-sm">{{ 'adminMgmt.members.heading' | t }}</h2>
+        <p class="text-xs text-slate-600">{{ 'adminMgmt.members.hint' | t }}</p>
+      </div>
+      <button hnButton size="sm" type="button" [disabled]="!transferCandidates().length" (click)="askTransfer()" data-testid="member-transfer-open">
+        {{ 'adminMgmt.members.transfer' | t }}
+      </button>
+    </div>
+    <hn-table [loading]="detail.loading()">
+      <table class="hn-table" data-testid="company-members">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'common.name' | t }}</th>
+            <th scope="col">{{ 'team.role' | t }}</th>
+            <th scope="col">{{ 'common.status' | t }}</th>
+            <th scope="col">{{ 'team.since' | t }}</th>
+            <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of d.members; track m.userId) {
+            <tr [attr.data-member]="m.email">
+              <td>
+                <a class="hn-link font-medium" [routerLink]="['/app/administration/benutzer', m.userId]"><bdi>{{ m.displayName }}</bdi></a>
+                <span class="block text-xs text-slate-500" dir="ltr"><bdi>{{ m.email }}</bdi></span>
+              </td>
+              <td>
+                <label class="sr-only" [for]="'role-' + m.userId">{{ 'team.role' | t }}: {{ m.displayName }}</label>
+                <select hnSelect class="w-36" [id]="'role-' + m.userId" [name]="'role-' + m.userId" [(ngModel)]="roleDraft[m.userId]" data-testid="member-role-select">
+                  @for (r of roles; track r) {
+                    <option [value]="r" [disabled]="isLastOwner(m) && r !== 'Owner'">{{ r | tEnum: 'role' }}</option>
+                  }
+                </select>
+                @if (isLastOwner(m)) {
+                  <span class="mt-0.5 block text-xs text-slate-500">{{ 'adminMgmt.members.lastOwner' | t }}</span>
+                }
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  @if (m.isDisabled) {
+                    <hn-status-badge status="disabled" kind="adminMgmt.userBadge" tone="danger" />
+                  }
+                  @if (!m.emailVerified) {
+                    <hn-status-badge status="unverified" kind="adminMgmt.userBadge" tone="neutral" />
+                  }
+                  @if (!m.isDisabled && m.emailVerified) {
+                    <hn-status-badge status="active" kind="adminMgmt.userBadge" tone="success" />
+                  }
+                </div>
+              </td>
+              <td class="whitespace-nowrap text-xs">{{ m.joinedAt | hnDate }}</td>
+              <td class="hn-actions">
+                <div class="hn-actions-inner flex justify-end gap-1 whitespace-nowrap">
+                  <button hnButton size="sm" type="button" [disabled]="!canApplyRole(m)" (click)="askRole(m)"
+                    [attr.aria-label]="('adminMgmt.members.changeRole' | t) + ': ' + m.displayName" data-testid="member-role-apply">{{ 'adminMgmt.members.changeRole' | t }}</button>
+                  <button hnButton size="sm" variant="ghost" type="button" [disabled]="isLastOwner(m)" (click)="askRemove(m)"
+                    [attr.aria-label]="('adminMgmt.members.remove' | t) + ': ' + m.displayName" data-testid="member-remove-open">{{ 'adminMgmt.members.remove' | t }}</button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5"><hn-empty-state [title]="'adminMgmt.members.empty' | t" /></td></tr>
+          }
+        </tbody>
+      </table>
+    </hn-table>
+  </section>
+} @else if (detail.loading()) {
+  <div class="hn-card p-4"><hn-skeleton-rows [rows]="6" /></div>
+}
+
+<!-- Confirmation with reason -->
+<hn-dialog [open]="!!pending()" [title]="pending()?.title ?? ''" (closed)="pending.set(null)" testId="company-dialog">
+  @if (pending(); as p) {
+    <form class="space-y-4" (ngSubmit)="confirm()" novalidate>
+      <p class="text-sm" data-testid="company-dialog-text">{{ p.text }}</p>
+      @if (p.transfer) {
+        <hn-field [label]="'adminMgmt.members.newOwner' | t" for="transfer-to" [required]="true">
+          <select hnSelect id="transfer-to" name="transferTo" [(ngModel)]="transferTo" data-testid="transfer-to">
+            @for (m of transferCandidates(); track m.userId) {
+              <option [value]="m.userId">{{ m.displayName }} ({{ m.role | tEnum: 'role' }})</option>
+            }
+          </select>
+        </hn-field>
+      }
+      <hn-field [label]="(p.reasonRequired ? 'orders.reason' : 'adminMgmt.reasonOptional') | t" for="company-reason" [required]="p.reasonRequired"
+        [errors]="reasonError() ? (reasonError()! | t) : null">
+        <textarea hnInput id="company-reason" name="reason" rows="3" [maxlength]="maxReason" [required]="p.reasonRequired" [(ngModel)]="reason"
+          [attr.aria-invalid]="!!reasonError()" [attr.aria-describedby]="reasonError() ? 'company-reason-error' : null" data-testid="company-reason"></textarea>
+      </hn-field>
+      <hn-banner [error]="actionError()" />
+      <div class="flex justify-end gap-2">
+        <button hnButton type="button" (click)="pending.set(null)">{{ 'common.cancel' | t }}</button>
+        <button hnButton [variant]="p.danger ? 'danger' : 'primary'" type="submit" [loading]="busy()" [disabled]="busy()" data-testid="company-confirm">{{ p.confirmLabel }}</button>
+      </div>
+    </form>
+  }
+</hn-dialog>
+
+<hn-dialog [open]="modulesOpen()" [title]="'admin.modulesTitle' | t: { name: org()?.name ?? '' }" (closed)="modulesOpen.set(false)">
+  <form class="space-y-4" (ngSubmit)="saveModules()">
+    <hn-banner [error]="modulesOpen() ? actionError() : null" />
+    <fieldset class="space-y-2">
+      <legend class="sr-only">{{ 'dashboard.modules' | t }}</legend>
+      @for (m of allModules.value() ?? []; track m) {
+        <label class="flex items-start gap-2 text-sm">
+          <input type="checkbox" class="hn-checkbox mt-0.5" [name]="'cmod-' + m" [(ngModel)]="selectedModules[m]" [attr.data-module]="m" />
+          <span><span class="font-medium">{{ m | tEnum: 'module' }}</span><span class="block text-xs text-slate-500">{{ 'moduleHelp.' + m | t }}</span></span>
+        </label>
+      }
+    </fieldset>
+    <div class="flex justify-end gap-2">
+      <button hnButton type="button" (click)="modulesOpen.set(false)">{{ 'common.cancel' | t }}</button>
+      <button hnButton variant="primary" type="submit" [loading]="busy()" [disabled]="busy()">{{ 'common.save' | t }}</button>
+    </div>
+  </form>
+</hn-dialog>

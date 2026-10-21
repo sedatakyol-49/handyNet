@@ -2,7 +2,8 @@ using HandyNet.SharedKernel;
 
 namespace HandyNet.Modules.Identity.Contracts;
 
-public sealed record UserSummary(Guid Id, string Email, string DisplayName, bool IsPlatformAdmin, bool EmailVerified = false);
+/// <param name="IsActive">False when a platform admin disabled the account.</param>
+public sealed record UserSummary(Guid Id, string Email, string DisplayName, bool IsPlatformAdmin, bool EmailVerified = false, bool IsActive = true);
 
 /// <summary>
 /// A freshly issued single-use account token (email verification or password reset). <see cref="Token"/> is the

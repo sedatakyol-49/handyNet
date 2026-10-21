@@ -1072,6 +1072,15 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("DisabledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("disabled_at");
+
+                    b.Property<string>("DisabledReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("disabled_reason");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1135,7 +1144,10 @@ namespace HandyNet.Migrations.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
-                    b.ToTable("users", "identity");
+                    b.ToTable("users", "identity", t =>
+                        {
+                            t.HasCheckConstraint("ck_users_disabled", "(is_active AND disabled_at IS NULL AND disabled_reason IS NULL) OR (NOT is_active)");
+                        });
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Imports.Domain.ImportBatch", b =>
@@ -4775,6 +4787,16 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("city");
 
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("contact_email");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("contact_phone");
+
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -4837,6 +4859,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("street");
 
+                    b.Property<string>("TaxNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tax_number");
+
                     b.Property<string>("VatId")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
@@ -4856,8 +4883,16 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
+                    b.Property<string>("Website")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("website");
+
                     b.HasKey("Id")
                         .HasName("pk_organizations");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_organizations_created_at");
 
                     b.HasIndex("CreatedBy")
                         .HasDatabaseName("ix_organizations_created_by");
@@ -4899,6 +4934,52 @@ namespace HandyNet.Migrations.Migrations
                         .HasName("pk_organization_modules");
 
                     b.ToTable("organization_modules", "tenancy");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.OrganizationStatusChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("changed_by");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("from_status");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("to_status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_organization_status_changes");
+
+                    b.HasIndex("ChangedBy")
+                        .HasDatabaseName("ix_organization_status_changes_changed_by");
+
+                    b.HasIndex("OrganizationId", "ChangedAt")
+                        .HasDatabaseName("ix_organization_status_changes_organization_id_changed_at");
+
+                    b.ToTable("organization_status_changes", "tenancy");
                 });
 
             modelBuilder.Entity("HandyNet.Persistence.AuditEntry", b =>
@@ -5690,6 +5771,22 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_organization_modules_organizations_organization_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.OrganizationStatusChange", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_organization_status_changes_users_changed_by");
+
+                    b.HasOne("HandyNet.Modules.Tenancy.Domain.Organization", null)
+                        .WithMany("StatusChanges")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_organization_status_changes_organizations_organization_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Disputes.Domain.Dispute", b =>
                 {
                     b.Navigation("Messages");
@@ -5720,6 +5817,8 @@ namespace HandyNet.Migrations.Migrations
             modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.Organization", b =>
                 {
                     b.Navigation("Modules");
+
+                    b.Navigation("StatusChanges");
                 });
 #pragma warning restore 612, 618
         }

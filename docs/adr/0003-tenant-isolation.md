@@ -33,6 +33,9 @@ organizations. Leaking one tenant's stock, prices or orders to another is a crit
      and write `infra.audit_log` in the same statement. The app role may only read its own `seller_blocks` row; a
      trigger rejects any change of the moderation columns on `offers` (and any status change of a blocked offer)
      outside `moderate_offers`. `blocked_offers(ids)` only tells a caller which of the ids it already has are blocked.
+   - Company administration (added 2026-10-21, ADR-0013, migration `PlatformAdministration`): `pos.admin_register_names(ids)`
+     and `marketplace.admin_offer_counts(ids)` return only register names and offer counts and refuse tenant sessions;
+     `tenancy.admin_remove_membership` is the only path that deletes a membership (active platform admin, reason, audited).
 5. Identity/tenancy/catalog tables are not tenant-owned (users, memberships, organizations, canonical products)
    and are protected by application authorization instead.
 
@@ -41,4 +44,5 @@ organizations. Leaking one tenant's stock, prices or orders to another is a crit
 - A forgotten `WHERE organization_id = …` in application code returns no foreign rows instead of leaking them
   (proven by `DatabaseSecurityTests`, including a mutation check during development).
 - Every new tenant-owned table must get an RLS policy in its migration — part of the review checklist.
-- Platform-admin reporting across tenants will need dedicated, audited read paths (not yet built).
+- Platform-admin reporting across tenants needs dedicated, audited read paths; ADR-0013 adds the ones for company and
+  account administration (counts and names only). Tenants' operational data stays out of reach of the admin paths.

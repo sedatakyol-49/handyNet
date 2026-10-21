@@ -28,6 +28,14 @@ Dependencies: Phase 1.
 - ✅ Payments core (ADR-0006): PSP adapter interface + Simulated provider, idempotent webhooks (status re-fetched), commission + VAT, refunds on cancel, payouts after completion, immutable double-entry ledger with a single validated write path, seller balance. Open: Mollie Connect adapter (needs contract + test key), seller onboarding/KYC at the PSP, reconciliation with PSP reports, partial refunds, chargebacks.
 - ✅ Commission invoices (ADR-0009): monthly invoice per seller for captured payments, corrections (Rechnungskorrektur) for refunds after invoicing, gapless platform-wide numbers `HN-YYYY-nnnnnn` / `HN-RK-YYYY-nnnnnn` (DB-enforced), immutable documents (GoBD-style triggers), German PDF with the §14 UStG fields, issuer from configuration (placeholders refused in Production), monthly job + admin endpoint, idempotent per seller and month, run per seller under RLS. Open: ⬜ XRechnung/ZUGFeRD e-invoices, ⬜ DATEV export, ⬜ archiving of issued PDFs, ⬜ invoice emails, ⬜ reverse charge for non-German sellers, ⬜ seller/admin UI, ⬜ tax adviser review of the template.
 - ✅ Disputes: complaint within the inspection window puts the order on hold (no auto-completion, no payout); seller refund, buyer withdrawal, escalation, platform decision; refund flows to Payments + ledger. Open: return shipments and restocking, partial refunds, evidence uploads (photos), dispute emails, SLA/auto-escalation.
+- ✅ Platform administration of companies and user accounts (ADR-0013, 2026-10-21): `/api/admin/organizations` (list
+  with status/module/business-type/period filters and member/register/offer counts, detail with status history and
+  members, master-data edit with optimistic concurrency, reactivate, member role change / removal / ownership transfer)
+  and `/api/admin/users` (search and filters, detail with sessions and memberships, lock/unlock with immediate session
+  end, clear lockout, end sessions, password reset / verification email, mark verified, display name, grant/revoke
+  platform admin); DB-enforced "keep an owner" and "keep an active platform admin"; audit with reason and access log;
+  admin UI tabs "Unternehmen" and "Benutzer" in all seven languages. Open: ⬜ GDPR export/erasure of an account, ⬜ admin
+  view of the audit/access log, ⬜ invitations of existing accounts by the admin.
 - Ratings and risk indicators.
 - Import: saved mapping profiles, REST/JSON/XML feeds, SFTP pull via job scheduler (Hangfire), resumable
   chunked commits for >20k rows, platform moderation queue for new canonical products.
@@ -147,8 +155,16 @@ Dependencies: Phase 2 payments + invoicing.
 ## Known limitations of Phase 1
 - Single VAT rate (19 %); no invoices; no payments — orders are commitments only.
 - Order = one seller; the UI splits the cart per seller.
-- Access tokens live 60 min (refresh tokens since ADR-0010; logout revokes only the refresh token, the access token runs out); revoking admin rights or membership takes effect at the next request for tenant
-  data (membership is checked per request) but the admin claim persists until token expiry.
+- Access tokens live 15 min (refresh tokens since ADR-0010; logout revokes only the refresh token, the access token runs out). Since ADR-0013 a
+  disabled account and a revoked platform-admin role take effect at the next request (the access token is rejected);
+  a removed membership takes effect at the next request for tenant data (membership is checked per request).
 - Import commit runs row-by-row in one transaction (fine up to the 20,000-row limit; to be batched later).
 - No Redis/Hangfire yet — not needed by the slice.
-- Platform admins cannot yet view tenant data across organizations (by design; needs audited read paths).
+- Platform admins manage company master data and user accounts (ADR-0013, Administration → "Unternehmen" / "Benutzer"):
+  company list with filters and counts, master data (audited before/after), status with history, modules, members (role
+  change, removal, ownership transfer, last owner protected in the database), register names; user list with filters,
+  lock/unlock (all sessions end at once), lockout reset, end sessions, password reset and verification emails, mark
+  verified, display name, platform-admin role (no self-revoke, last admin protected). Every write is audited with the
+  reason, opening a detail view is access-logged. **Still excluded by design:** tenants' operational data — POS
+  receipts, customers, sales, Ankauf seller data, prices — and impersonation; deleting accounts or companies (GDPR
+  erasure) needs its own process.

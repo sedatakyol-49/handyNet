@@ -30,7 +30,8 @@ queued emails, but Notifications depends on Identity, so Identity cannot call it
    out every 15 minutes. Target is 15 minutes once the frontend refreshes (config only, `Jwt:AccessTokenMinutes`).
    Update 2026-10-17: the web app now refreshes (single-flight, cross-tab lock); the default is 15 minutes.
    Until then a revoked session's *access* token keeps working until it expires — revocation is immediate only for
-   refresh tokens.
+   refresh tokens. Update 2026-10-21 (ADR-0013): access tokens of a **disabled** account (and `hn_admin` claims whose role
+   was revoked) are rejected on every request; for enabled accounts the rule above still holds.
 6. **Account tokens** (`identity.account_tokens`, purpose `EmailVerification` | `PasswordReset`): same opaque
    format, stored hashed, single use (`used_at`, `xmin` guard against a double submit), short-lived
    (`Identity:PasswordResetTokenMinutes` 60, `Identity:EmailVerificationTokenHours` 48). Issuing a new one revokes the

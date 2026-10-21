@@ -139,7 +139,156 @@ export interface AdminOrganization {
   createdAt: string;
   verifiedAt: string | null;
   modules: string[];
+  taxNumber: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  memberCount: number;
+  registerCount: number;
+  offerCount: number;
 }
+
+export type MemberRole = 'Owner' | 'Manager' | 'Staff';
+export type OrganizationCapability = 'wholesaler' | 'retailer' | 'repair';
+
+export interface AdminOrganizationQuery {
+  status?: string;
+  search?: string;
+  module?: string;
+  capability?: string;
+  /** ISO timestamp, inclusive. */
+  createdFrom?: string;
+  /** ISO timestamp, exclusive. */
+  createdTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminPerson {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export interface AdminStatusChange {
+  from: OrganizationStatus | null;
+  to: OrganizationStatus;
+  reason: string | null;
+  at: string;
+  by: AdminPerson | null;
+}
+
+export interface AdminMember {
+  userId: string;
+  email: string;
+  displayName: string;
+  role: MemberRole;
+  joinedAt: string;
+  emailVerified: boolean;
+  isDisabled: boolean;
+}
+
+/** GET /api/admin/organizations/{id} — company master data, status history, members, registers (no operational data). */
+export interface AdminOrganizationDetail {
+  organization: AdminOrganization;
+  /** Concurrency token; send back with a master-data update. */
+  version: number;
+  createdBy: AdminPerson | null;
+  verifiedBy: AdminPerson | null;
+  statusHistory: AdminStatusChange[];
+  members: AdminMember[];
+  registers: string[];
+  publishedOfferCount: number;
+}
+
+/** Master data as edited by the platform admin (same rules as the registration). */
+export interface OrganizationProfileInput {
+  name: string;
+  legalName: string;
+  vatId: string | null;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode: string;
+  isWholesaler: boolean;
+  isRetailer: boolean;
+  isRepairProvider: boolean;
+  taxNumber: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  website: string | null;
+}
+
+export interface UserMembershipInfo {
+  organizationId: string;
+  organizationName: string;
+  role: MemberRole;
+  organizationStatus: OrganizationStatus;
+  joinedAt: string;
+}
+
+export interface AdminUserQuery {
+  search?: string;
+  emailVerified?: boolean;
+  locked?: boolean;
+  disabled?: boolean;
+  platformAdmin?: boolean;
+  noOrganization?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  /** Temporarily locked after too many failed sign-ins. */
+  isLockedOut: boolean;
+  lockedUntil: string | null;
+  /** Disabled by a platform admin. */
+  isDisabled: boolean;
+  isPlatformAdmin: boolean;
+  memberships: UserMembershipInfo[];
+}
+
+/** GET /api/admin/users/{id} — account data only (never password hashes or tokens). */
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  displayName: string;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  failedLoginCount: number;
+  lockedUntil: string | null;
+  isLockedOut: boolean;
+  isDisabled: boolean;
+  disabledAt: string | null;
+  disabledReason: string | null;
+  isPlatformAdmin: boolean;
+  /** Signed-in devices (refresh-token families with a live token). */
+  activeSessions: number;
+  verificationEmailRequestedAt: string | null;
+  passwordResetRequestedAt: string | null;
+  memberships: UserMembershipInfo[];
+  /** The signed-in admin's own account (self-disable / self-revoke are refused). */
+  isSelf: boolean;
+}
+
+export type AdminUserAction =
+  | 'disable'
+  | 'enable'
+  | 'clear-lockout'
+  | 'revoke-sessions'
+  | 'mark-email-verified'
+  | 'grant-platform-admin'
+  | 'revoke-platform-admin'
+  | 'password-reset'
+  | 'resend-verification';
 
 export interface CatalogProduct {
   id: string;

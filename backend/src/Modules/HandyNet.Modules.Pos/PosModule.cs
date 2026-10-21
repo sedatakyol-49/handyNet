@@ -71,6 +71,7 @@ public static class PosModule
         services.AddScoped<ApprovalService>();
         services.AddScoped<EReceiptService>();
         services.AddScoped<PosInvoiceService>();
+        services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
         services.AddValidatorsFromAssemblyContaining<SaleService>(includeInternalTypes: true);

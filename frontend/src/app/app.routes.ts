@@ -151,6 +151,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin.page').then((m) => m.AdminPage),
       },
       {
+        path: 'administration/unternehmen/:id',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/management/admin-company-detail.page').then((m) => m.AdminCompanyDetailPage),
+      },
+      {
+        path: 'administration/benutzer',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/management/admin-users.page').then((m) => m.AdminUsersPage),
+      },
+      {
+        path: 'administration/benutzer/:id',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/management/admin-user-detail.page').then((m) => m.AdminUserDetailPage),
+      },
+      {
         path: 'administration/reklamationen',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/admin-disputes.page').then((m) => m.AdminDisputesPage),

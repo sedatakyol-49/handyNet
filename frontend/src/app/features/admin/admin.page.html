@@ -1,18 +1,54 @@
-<hn-page-header [title]="'admin.title' | t" [description]="'admin.subtitle' | t" />
+<hn-page-header [title]="'admin.title' | t" [description]="'adminMgmt.companies.subtitle' | t" />
 <hn-admin-tabs />
 
-<form class="mb-3 flex flex-wrap items-end gap-3" role="search" (submit)="$event.preventDefault(); applySearch(q.value)">
-  <hn-field [label]="'common.status' | t" for="admin-status" class="w-56">
-    <select hnSelect id="admin-status" [value]="status()" (change)="setStatus($any($event.target).value)" data-testid="admin-status">
+<form class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" role="search" (submit)="$event.preventDefault(); applyFilters()" data-testid="admin-filters">
+  <hn-field [label]="'common.search' | t" for="admin-search" class="sm:col-span-2">
+    <input hnInput id="admin-search" name="search" type="search" [(ngModel)]="form.search" [placeholder]="'admin.searchPlaceholder' | t"
+      data-testid="admin-search" />
+  </hn-field>
+  <hn-field [label]="'common.status' | t" for="admin-status">
+    <select hnSelect id="admin-status" name="status" [ngModel]="form.status" (ngModelChange)="setStatus($event)" data-testid="admin-status">
       <option value="">{{ 'common.all' | t }}</option>
       @for (s of statuses; track s) {
-        <option [value]="s" [selected]="s === status()">{{ s | tEnum: 'orgStatus' }}</option>
+        <option [value]="s">{{ s | tEnum: 'orgStatus' }}</option>
       }
     </select>
   </hn-field>
-  <hn-field [label]="'common.search' | t" for="admin-search" class="w-full max-w-xs">
-    <input #q hnInput id="admin-search" type="search" [placeholder]="'admin.searchPlaceholder' | t" (change)="applySearch(q.value)" data-testid="admin-search" />
+  <hn-field [label]="'dashboard.modules' | t" for="admin-module">
+    <select hnSelect id="admin-module" name="module" [(ngModel)]="form.module" (ngModelChange)="applyFilters()" data-testid="admin-module">
+      <option value="">{{ 'common.all' | t }}</option>
+      @for (m of modules.value() ?? []; track m) {
+        <option [value]="m">{{ m | tEnum: 'module' }}</option>
+      }
+    </select>
   </hn-field>
+  <hn-field [label]="'dashboard.businessTypes' | t" for="admin-capability">
+    <select hnSelect id="admin-capability" name="capability" [(ngModel)]="form.capability" (ngModelChange)="applyFilters()" data-testid="admin-capability">
+      <option value="">{{ 'common.all' | t }}</option>
+      @for (c of capabilities; track c) {
+        <option [value]="c">{{ 'businessType.' + c | t }}</option>
+      }
+    </select>
+  </hn-field>
+  <div class="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1 lg:col-start-6 lg:row-start-1">
+    <hn-field [label]="'adminMgmt.companies.createdFrom' | t" for="admin-from">
+      <input hnInput id="admin-from" name="createdFrom" type="date" [(ngModel)]="form.createdFrom" (change)="applyFilters()"
+        [attr.aria-invalid]="!!rangeError()" [attr.aria-describedby]="rangeError() ? 'admin-range-error' : null" />
+    </hn-field>
+    <hn-field [label]="'adminMgmt.companies.createdTo' | t" for="admin-to">
+      <input hnInput id="admin-to" name="createdTo" type="date" [(ngModel)]="form.createdTo" (change)="applyFilters()"
+        [attr.aria-invalid]="!!rangeError()" [attr.aria-describedby]="rangeError() ? 'admin-range-error' : null" />
+    </hn-field>
+  </div>
+  <div class="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-6">
+    <button hnButton variant="primary" type="submit" data-testid="admin-filter-apply">{{ 'adminMgmt.applyFilters' | t }}</button>
+    @if (hasFilters()) {
+      <button hnButton variant="ghost" type="button" (click)="resetFilters()" data-testid="admin-filter-reset">{{ 'common.reset' | t }}</button>
+    }
+    @if (rangeError()) {
+      <p class="text-xs text-red-700" id="admin-range-error" role="alert">{{ rangeError()! | t }}</p>
+    }
+  </div>
 </form>
 
 @if (!reasonFor() && !modulesFor()) {
@@ -25,33 +61,26 @@
     <thead>
       <tr>
         <th scope="col">{{ 'admin.organization' | t }}</th>
-        <th scope="col">{{ 'admin.address' | t }}</th>
-        <th scope="col">{{ 'auth.register.vatId' | t }}</th>
-        <th scope="col">{{ 'dashboard.businessTypes' | t }}</th>
+        <th scope="col">{{ 'auth.register.city' | t }}</th>
         <th scope="col">{{ 'common.status' | t }}</th>
         <th scope="col">{{ 'dashboard.modules' | t }}</th>
+        <th scope="col" class="num">{{ 'adminMgmt.companies.members' | t }}</th>
         <th scope="col">{{ 'admin.registered' | t }}</th>
-        <th scope="col"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+        <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
       </tr>
     </thead>
     <tbody>
       @for (o of organizations.value()?.items ?? []; track o.id) {
-        <tr [attr.data-org]="o.name">
+        <tr class="hn-row-link" [attr.data-org]="o.name" (click)="openRow($event, o)">
           <td>
-            <span class="font-medium">{{ o.name }}</span>
-            <span class="block text-xs text-slate-500">{{ o.legalName }}</span>
+            <a class="hn-link font-medium" [routerLink]="['/app/administration/unternehmen', o.id]" data-testid="admin-open"><bdi>{{ o.name }}</bdi></a>
+            <span class="block text-xs text-slate-500"><bdi>{{ o.legalName }}</bdi></span>
           </td>
-          <td class="text-xs">{{ o.street }}<br />{{ o.postalCode }} {{ o.city }} ({{ o.countryCode }})</td>
-          <td class="hn-mono">{{ o.vatId ?? '–' }}</td>
-          <td class="text-xs">
-            @if (o.isWholesaler) { <span class="block">{{ 'businessType.wholesaler' | t }}</span> }
-            @if (o.isRetailer) { <span class="block">{{ 'businessType.retailer' | t }}</span> }
-            @if (o.isRepairProvider) { <span class="block">{{ 'businessType.repair' | t }}</span> }
-          </td>
+          <td class="text-sm"><bdi>{{ o.city }}</bdi></td>
           <td>
             <hn-status-badge [status]="o.status" kind="orgStatus" />
             @if (o.statusReason) {
-              <span class="mt-0.5 block max-w-48 text-xs text-slate-500">{{ o.statusReason }}</span>
+              <span class="mt-0.5 block max-w-48 text-xs text-slate-500"><bdi>{{ o.statusReason }}</bdi></span>
             }
           </td>
           <td>
@@ -63,24 +92,29 @@
               }
             </div>
           </td>
+          <td class="num" data-testid="admin-members">{{ o.memberCount }}</td>
           <td class="whitespace-nowrap text-xs">{{ o.createdAt | hnDate }}</td>
-          <td class="text-end whitespace-nowrap">
-            @if (o.status !== 'Verified') {
-              <button hnButton size="sm" variant="primary" type="button" [loading]="busyId() === o.id" [disabled]="!!busyId()" (click)="verify(o)"
-                data-testid="admin-verify">{{ 'admin.verify' | t }}</button>
-            }
-            @if (o.status === 'PendingVerification') {
-              <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'reject')">{{ 'admin.reject' | t }}</button>
-            }
-            @if (o.status === 'Verified') {
-              <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'suspend')">{{ 'admin.suspend' | t }}</button>
-            }
-            <button hnButton size="sm" type="button" [disabled]="!!busyId()" (click)="openModules(o)" data-testid="admin-modules">{{ 'admin.modules' | t }}</button>
+          <td class="hn-actions">
+            <div class="hn-actions-inner flex justify-end gap-1 whitespace-nowrap">
+              @if (o.status === 'PendingVerification' || o.status === 'Suspended') {
+                <button hnButton size="sm" variant="primary" type="button" [loading]="busyId() === o.id" [disabled]="!!busyId()" (click)="verify(o)"
+                  data-testid="admin-verify">{{ (o.status === 'Suspended' ? 'adminMgmt.status.reactivate' : 'admin.verify') | t }}</button>
+              }
+              @if (o.status === 'PendingVerification') {
+                <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'reject')">{{ 'admin.reject' | t }}</button>
+              }
+              @if (o.status === 'Verified') {
+                <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'suspend')">{{ 'admin.suspend' | t }}</button>
+              }
+              <button hnButton size="sm" type="button" [disabled]="!!busyId()" (click)="openModules(o)" data-testid="admin-modules">{{ 'admin.modules' | t }}</button>
+            </div>
           </td>
         </tr>
       } @empty {
-        @if (!organizations.loading()) {
-          <tr><td colspan="8"><hn-empty-state [title]="'admin.empty' | t" /></td></tr>
+        @if (organizations.loading() && !organizations.value()) {
+          <tr class="hn-row-static"><td colspan="7"><hn-skeleton-rows /></td></tr>
+        } @else if (!organizations.loading()) {
+          <tr><td colspan="7"><hn-empty-state [title]="'admin.empty' | t" [text]="hasFilters() ? ('adminMgmt.emptyFiltered' | t) : null" /></td></tr>
         }
       }
     </tbody>
@@ -92,10 +126,10 @@
 
 <hn-dialog [open]="!!reasonFor()" [title]="(reasonFor()?.action === 'reject' ? 'admin.reject' : 'admin.suspend') | t" (closed)="reasonFor.set(null)">
   <form class="space-y-4" (ngSubmit)="submitReason()">
-    <p class="text-sm">{{ reasonFor()?.org?.name }}</p>
+    <p class="text-sm"><bdi>{{ reasonFor()?.org?.name }}</bdi></p>
     <hn-banner [error]="actionError()" />
     <hn-field [label]="'orders.reason' | t" for="admin-reason" [required]="true">
-      <textarea hnInput id="admin-reason" name="reason" rows="3" required [(ngModel)]="reason"></textarea>
+      <textarea hnInput id="admin-reason" name="reason" rows="3" required maxlength="1000" [(ngModel)]="reason"></textarea>
     </hn-field>
     <div class="flex justify-end gap-2">
       <button hnButton type="button" (click)="reasonFor.set(null)">{{ 'common.cancel' | t }}</button>

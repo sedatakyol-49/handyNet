@@ -32,6 +32,9 @@ public sealed class HandyNetFixture : IAsyncLifetime
     private string _databaseName = null!;
 
     public string OwnerConnectionString { get; private set; } = null!;
+
+    /// <summary>Superuser connection (maintenance database); for tests that need a database of their own.</summary>
+    public string AdminConnectionString => _adminConnection;
     public string AppConnectionString { get; private set; } = null!;
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
     public CapturingEmailSender Emails { get; } = new();

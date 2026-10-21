@@ -1,5 +1,6 @@
 using FluentValidation;
 using HandyNet.Modules.Identity;
+using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Tenancy.Application;
 using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
@@ -21,6 +22,7 @@ public static class TenancyModule
         services.AddScoped<AdministrationService>();
         services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
         services.AddScoped<IOrganizationModuleDirectory, OrganizationModuleDirectory>();
+        services.AddScoped<IUserMembershipSource, UserMembershipSource>();
         services.AddValidatorsFromAssemblyContaining<OrganizationService>(includeInternalTypes: true);
         return services;
     }
@@ -72,21 +74,48 @@ public static class TenancyModule
 
         var admin = app.MapGroup("/api/admin/organizations").WithTags("Administration").RequirePlatformAdmin();
 
-        admin.MapGet("/", async (string? status, string? search, int? page, int? pageSize,
+        // Companies (Unternehmen): list with filters and counts, detail (access-logged), master data, status, modules,
+        // memberships. Platform data only; tenants' operational data is out of scope (ADR-0013).
+        admin.MapGet("/", async ([AsParameters] AdminOrganizationQuery query, IValidator<AdminOrganizationQuery> validator,
                 AdministrationService service, CancellationToken ct) =>
-            Results.Ok(await service.ListAsync(status, search, page, pageSize, ct)));
+            await validator.ProblemIfInvalidAsync(query, ct) ?? (await service.ListAsync(query, ct)).ToHttp(Results.Ok));
+
+        admin.MapGet("/{id:guid}", async (Guid id, AdministrationService service, CancellationToken ct) =>
+            (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
+
+        admin.MapPut("/{id:guid}", async (Guid id, AdminUpdateOrganizationRequest request, IValidator<AdminUpdateOrganizationRequest> validator,
+                AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.UpdateAsync(id, request, ct)).ToHttp(Results.Ok));
 
         admin.MapPost("/{id:guid}/verify", async (Guid id, AdministrationService service, CancellationToken ct) =>
             (await service.VerifyAsync(id, ct)).ToHttp(Results.Ok));
 
-        admin.MapPost("/{id:guid}/reject", async (Guid id, ReasonRequest request, AdministrationService service, CancellationToken ct) =>
-            (await service.RejectAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
+        admin.MapPost("/{id:guid}/reject", async (Guid id, ReasonRequest request, IValidator<ReasonRequest> validator,
+                AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.RejectAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
 
-        admin.MapPost("/{id:guid}/suspend", async (Guid id, ReasonRequest request, AdministrationService service, CancellationToken ct) =>
-            (await service.SuspendAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
+        admin.MapPost("/{id:guid}/suspend", async (Guid id, ReasonRequest request, IValidator<ReasonRequest> validator,
+                AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SuspendAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
+
+        admin.MapPost("/{id:guid}/reactivate", async (Guid id, ReasonRequest request, IValidator<ReasonRequest> validator,
+                AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.ReactivateAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
 
         admin.MapPut("/{id:guid}/modules", async (Guid id, SetModulesRequest request, AdministrationService service, CancellationToken ct) =>
             (await service.SetModulesAsync(id, request.Modules, ct)).ToHttp(Results.Ok));
+
+        admin.MapPut("/{id:guid}/members/{userId:guid}/role", async (Guid id, Guid userId, ChangeMemberRoleRequest request,
+                IValidator<ChangeMemberRoleRequest> validator, AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.ChangeMemberRoleAsync(id, userId, request, ct)).ToHttp(Results.Ok));
+
+        admin.MapPost("/{id:guid}/members/{userId:guid}/remove", async (Guid id, Guid userId, ReasonRequest request,
+                IValidator<ReasonRequest> validator, AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.RemoveMemberAsync(id, userId, request.Reason, ct)).ToHttp(Results.Ok));
+
+        admin.MapPost("/{id:guid}/transfer-ownership", async (Guid id, TransferOwnershipRequest request, IValidator<TransferOwnershipRequest> validator,
+                AdministrationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.TransferOwnershipAsync(id, request, ct)).ToHttp(Results.Ok));
 
         app.MapGet("/api/admin/modules", () => Results.Ok(Enum.GetNames<PlatformModule>()))
             .WithTags("Administration")

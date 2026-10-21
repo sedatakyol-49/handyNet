@@ -54,7 +54,7 @@ internal sealed class UserAccounts(
     public async Task<IReadOnlyDictionary<Guid, UserSummary>> GetAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct) =>
         await db.Set<User>().AsNoTracking()
             .Where(u => userIds.Contains(u.Id))
-            .Select(u => new UserSummary(u.Id, u.Email, u.DisplayName, u.IsPlatformAdmin, u.EmailVerifiedAt != null))
+            .Select(u => new UserSummary(u.Id, u.Email, u.DisplayName, u.IsPlatformAdmin, u.EmailVerifiedAt != null, u.IsActive))
             .ToDictionaryAsync(u => u.Id, ct);
 
     public async Task<IssuedAccountToken?> IssueEmailVerificationTokenAsync(Guid userId, CancellationToken ct)

@@ -19,10 +19,15 @@ public sealed record OrganizationInput(
     string? CountryCode,
     bool IsWholesaler,
     bool IsRetailer,
-    bool IsRepairProvider)
+    bool IsRepairProvider,
+    string? TaxNumber = null,
+    string? ContactEmail = null,
+    string? ContactPhone = null,
+    string? Website = null)
 {
     public OrganizationProfile ToProfile() =>
-        new(Name, LegalName, VatId, Street, PostalCode, City, CountryCode ?? "DE", IsWholesaler, IsRetailer, IsRepairProvider);
+        new(Name, LegalName, VatId, Street, PostalCode, City, CountryCode ?? "DE", IsWholesaler, IsRetailer, IsRepairProvider,
+            TaxNumber, ContactEmail, ContactPhone, Website);
 }
 
 /// <param name="Language">Language of the verification email ("de" default, "en").</param>
@@ -82,6 +87,17 @@ internal sealed class OrganizationInputValidator : AbstractValidator<Organizatio
             .WithMessage("German postal codes have five digits.");
         RuleFor(x => x.VatId).Matches(@"^DE\s?\d{9}$").When(x => !string.IsNullOrWhiteSpace(x.VatId) && (x.CountryCode ?? "DE") == "DE")
             .WithMessage("German USt-IdNr. must be DE followed by nine digits.");
+        RuleFor(x => x.PostalCode).NotEmpty().MaximumLength(10);
+        RuleFor(x => x.VatId).MaximumLength(20);
+        // Optional contact data (maintained by the platform admin; registration may send it too).
+        RuleFor(x => x.TaxNumber!).Must(OrganizationContactRules.IsTaxNumber).When(x => !string.IsNullOrWhiteSpace(x.TaxNumber))
+            .WithMessage("A tax number (Steuernummer) has 10 to 13 digits, optionally separated by / or spaces.");
+        RuleFor(x => x.ContactEmail!).EmailAddress().MaximumLength(Organization.MaxContactEmailLength).When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
+        RuleFor(x => x.ContactPhone!).Matches(@"^\+?[0-9 ()/\-]{6,40}$").When(x => !string.IsNullOrWhiteSpace(x.ContactPhone))
+            .WithMessage("Enter a phone number with digits, spaces, ( ) / - and an optional leading +.");
+        RuleFor(x => x.Website!).Must(OrganizationContactRules.IsWebsite).MaximumLength(Organization.MaxWebsiteLength)
+            .When(x => !string.IsNullOrWhiteSpace(x.Website))
+            .WithMessage("The website must be a full address starting with https:// or http://.");
         RuleFor(x => x).Must(x => x.IsWholesaler || x.IsRetailer || x.IsRepairProvider)
             .OverridePropertyName("Capabilities").WithMessage("Select at least one business type.");
     }

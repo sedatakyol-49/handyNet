@@ -34,7 +34,8 @@
     "pos.receipt.tseStart",
     "pos.detail.max",
     "pos.customers.fields.name",
-    "invoices.admin.code"
+    "invoices.admin.code",
+    "adminMgmt.company.website"
   ],
   "tr": [
     "pos.invoice.fields.company",
@@ -50,7 +51,8 @@
     "ankaufAdmin.review.model",
     "ankaufAdmin.policy.scopeModel",
     "ankauf.model",
-    "disputeParty.Platform"
+    "disputeParty.Platform",
+    "adminMgmt.company.contactPhone"
   ],
   "es": [
     "admin.fiscal.no",
@@ -73,6 +75,7 @@
     "pos.sell.ticket",
     "pos.till.total",
     "pos.receipt.total",
-    "invoices.admin.total"
+    "invoices.admin.total",
+    "adminMgmt.no"
   ]
 }
