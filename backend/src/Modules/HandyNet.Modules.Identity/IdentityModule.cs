@@ -57,8 +57,8 @@ public static class IdentityModule
     {
         var auth = app.MapGroup("/api/auth").WithTags("Auth");
 
-        auth.MapPost("/login", async (LoginRequest request, AuthenticationService service, CancellationToken ct) =>
-                (await service.LoginAsync(request, ct)).ToHttp(Results.Ok))
+        auth.MapPost("/login", async (LoginRequest request, IValidator<LoginRequest> validator, AuthenticationService service, CancellationToken ct) =>
+                await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.LoginAsync(request, ct)).ToHttp(Results.Ok))
             .AllowAnonymous()
             .RequireRateLimiting(AuthRateLimitPolicy);
 

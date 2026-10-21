@@ -122,6 +122,15 @@ public sealed partial class AuthTokenTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task Login_with_missing_fields_is_a_validation_error_not_a_server_error()
+    {
+        var client = fixture.CreateClient();
+        Assert.Equal("validation.failed", (await client.PostAsync("/api/auth/login", new { })).Expect(HttpStatusCode.UnprocessableEntity).Code);
+        Assert.Equal("validation.failed",
+            (await client.PostAsync("/api/auth/login", new { email = "someone@example.test" })).Expect(HttpStatusCode.UnprocessableEntity).Code);
+    }
+
+    [Fact]
     public async Task Refresh_rotates_and_reusing_a_rotated_token_revokes_the_whole_family()
     {
         var account = await RegisterAsync();

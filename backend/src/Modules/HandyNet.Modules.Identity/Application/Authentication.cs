@@ -61,6 +61,15 @@ public sealed record TokenResponse(
     bool IsPlatformAdmin,
     bool EmailVerified);
 
+internal sealed class LoginRequestValidator : AbstractValidator<LoginRequest>
+{
+    public LoginRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().MaximumLength(320);
+        RuleFor(x => x.Password).NotEmpty().MaximumLength(1024);
+    }
+}
+
 internal sealed class RefreshRequestValidator : AbstractValidator<RefreshRequest>
 {
     public RefreshRequestValidator() => RuleFor(x => x.RefreshToken).NotEmpty().MaximumLength(OpaqueToken.MaxLength);
