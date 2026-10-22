@@ -13,12 +13,20 @@ import { resolve } from 'node:path';
  * The connection strings are taken from the API's user-secrets with the database name replaced by `handynet_e2e`;
  * the database is created and migrated on start. Nothing secret is printed or written to disk.
  * Running against the development servers (:4200 / :5170) is refused unless HN_E2E_ALLOW_DEV_DB=1.
+ * Several stacks side by side (e.g. parallel worktrees): HN_E2E_API_PORT, HN_E2E_WEB_PORT and HN_E2E_DB (must start
+ * with `handynet_e2e`) select other ports and another database.
  */
-const E2E_DB = 'handynet_e2e';
-const apiUrl = process.env['HN_API_URL'] ?? 'http://localhost:5270';
-const baseUrl = process.env['HN_BASE_URL'] ?? 'http://localhost:4270';
+const E2E_DB = process.env['HN_E2E_DB'] ?? 'handynet_e2e';
+const apiPort = process.env['HN_E2E_API_PORT'] ?? '5270';
+const webPort = process.env['HN_E2E_WEB_PORT'] ?? '4270';
+const apiUrl = process.env['HN_API_URL'] ?? `http://localhost:${apiPort}`;
+const baseUrl = process.env['HN_BASE_URL'] ?? `http://localhost:${webPort}`;
 process.env['HN_API_URL'] = apiUrl;
+process.env['HN_BASE_URL'] = baseUrl;
 
+if (!/^handynet_e2e\w*$/.test(E2E_DB)) {
+  throw new Error(`HN_E2E_DB must start with "handynet_e2e" (got "${E2E_DB}") so e2e never writes to the development database.`);
+}
 if (process.env['HN_E2E_ALLOW_DEV_DB'] !== '1' && (/:4200\b/.test(baseUrl) || /:5170\b/.test(apiUrl))) {
   throw new Error('e2e must not run against the development servers (:4200/:5170, database handynet). '
     + 'Use the default e2e stack, or set HN_E2E_ALLOW_DEV_DB=1 if you really mean it.');
@@ -47,7 +55,7 @@ function withDatabase(connectionString: string | undefined, database: string): s
     : `${connectionString};Database=${database}`;
 }
 
-const ownStack = /localhost:5270\b/.test(apiUrl);
+const ownStack = apiUrl === `http://localhost:${apiPort}`;
 const secrets = ownStack || !process.env['HN_ADMIN_EMAIL'] ? userSecrets() : {};
 process.env['HN_ADMIN_EMAIL'] ??= secrets['Bootstrap:AdminEmail'];
 process.env['HN_ADMIN_PASSWORD'] ??= secrets['Bootstrap:AdminPassword'];
@@ -98,7 +106,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     ...(apiServer ? [apiServer] : []),
-    /localhost:4270\b/.test(baseUrl)
+    baseUrl === `http://localhost:${webPort}`
       ? {
           // Production build served by the SSR server (no second Vite dev server next to `npm start`, which shares its
           // cache and keeps re-optimizing/reloading); /api is forwarded to the e2e API.

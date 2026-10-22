@@ -469,7 +469,9 @@ user-secrets (`Bootstrap:AdminEmail` / `Bootstrap:AdminPassword`, the account th
 printed or written to disk. To start over with an empty e2e database, stop the e2e servers and drop `handynet_e2e`.
 
 Running against the development servers (`HN_BASE_URL` on `:4200` or `HN_API_URL` on `:5170`, i.e. database
-`handynet`) is refused unless `HN_E2E_ALLOW_DEV_DB=1` is set. Specs:
+`handynet`) is refused unless `HN_E2E_ALLOW_DEV_DB=1` is set. To run several e2e stacks side by side (e.g. parallel
+worktrees), give each its own `HN_E2E_API_PORT`, `HN_E2E_WEB_PORT` and `HN_E2E_DB` (the database name must start with
+`handynet_e2e`). Specs:
 
 - `e2e/login-marketplace.spec.ts` – seeds a supplier (committed price list) and a shop via the API, then the shop logs
   in, checks module-based navigation and browses the marketplace (`/` shortcut, search, stock filter, quantity limits).
