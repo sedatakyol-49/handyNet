@@ -1,3 +1,5 @@
+using HandyNet.FileStorage.Imaging;
+using HandyNet.SharedKernel.Imaging;
 using HandyNet.SharedKernel.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +77,7 @@ public static class FileStorageRegistration
                     : options.Local.RootPath),
             };
         });
+        services.AddSingleton<IImageCodec, SkiaImageCodec>();
         return services;
     }
 }

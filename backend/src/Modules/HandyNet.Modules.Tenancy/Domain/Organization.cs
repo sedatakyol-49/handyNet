@@ -57,6 +57,26 @@ public sealed class Organization : Entity, IAuditable
     public Guid? VerifiedBy { get; private set; }
     public uint Version { get; private set; }
 
+    // ---- maintained by the company itself (ADR-0014) ----------------------------------------------------------------
+    /// <summary>Printed under the logo at the top of till receipts (e.g. a slogan or the address line).</summary>
+    public string? ReceiptHeader { get; private set; }
+
+    /// <summary>Printed at the bottom of till receipts (e.g. opening hours, return policy).</summary>
+    public string? ReceiptFooter { get; private set; }
+
+    public string? BankName { get; private set; }
+
+    /// <summary>Stored without spaces, upper case; checksum-validated (domain and database check).</summary>
+    public string? Iban { get; private set; }
+
+    public string? Bic { get; private set; }
+    public string? ManagingDirector { get; private set; }
+    public string? RegisterCourt { get; private set; }
+    public string? RegisterNumber { get; private set; }
+
+    /// <summary>Default payment terms of the company's invoices in days (null = not set).</summary>
+    public int? PaymentTermsDays { get; private set; }
+
     public IReadOnlyCollection<OrganizationModule> Modules => _modules;
 
     /// <summary>New status changes of this unit of work (written append-only; read the history from its own table).</summary>
@@ -112,6 +132,65 @@ public sealed class Organization : Entity, IAuditable
             return Error.Conflict("organization.unchanged", "The master data is unchanged.");
         Apply(profile);
         return Result.Success();
+    }
+
+    /// <summary>The company data as the company maintains it (ADR-0014).</summary>
+    public CompanyProfile CompanyProfile => new(Name, LegalName, Street, PostalCode, City, CountryCode, VatId, TaxNumber, ContactEmail,
+        ContactPhone, Website, ReceiptHeader, ReceiptFooter, BankName, Iban, Bic, ManagingDirector, RegisterCourt, RegisterNumber, PaymentTermsDays);
+
+    /// <summary>
+    /// The company updates its own data (ADR-0014). A change of the legal identity (legal name, VAT ID) needs no
+    /// re-verification for now, but is recorded in the status history (<see cref="OrganizationHistoryKind.LegalDetailsChanged"/>)
+    /// so that the platform administration sees it. Saving unchanged data is a no-op.
+    /// </summary>
+    public Result<CompanyProfileChange> UpdateCompanyProfile(CompanyProfile profile, Guid userId, DateTimeOffset now)
+    {
+        if (CompanyProfileRules.Validate(profile) is { } invalid)
+            return invalid;
+        var before = CompanyProfile;
+        var after = profile.Normalized();
+        if (after == before)
+            return new CompanyProfileChange(before, before, []);
+
+        var legal = new List<string>();
+        if (after.LegalName != before.LegalName)
+            legal.Add(nameof(LegalName));
+        if (after.VatId != before.VatId)
+            legal.Add(nameof(VatId));
+
+        Name = after.Name;
+        LegalName = after.LegalName;
+        Street = after.Street;
+        PostalCode = after.PostalCode;
+        City = after.City;
+        CountryCode = after.CountryCode;
+        VatId = after.VatId;
+        TaxNumber = after.TaxNumber;
+        ContactEmail = after.ContactEmail;
+        ContactPhone = after.ContactPhone;
+        Website = after.Website;
+        ReceiptHeader = after.ReceiptHeader;
+        ReceiptFooter = after.ReceiptFooter;
+        BankName = after.BankName;
+        Iban = after.Iban;
+        Bic = after.Bic;
+        ManagingDirector = after.ManagingDirector;
+        RegisterCourt = after.RegisterCourt;
+        RegisterNumber = after.RegisterNumber;
+        PaymentTermsDays = after.PaymentTermsDays;
+
+        if (legal.Count > 0)
+        {
+            var parts = new List<string>();
+            if (legal.Contains(nameof(LegalName)))
+                parts.Add($"Firmenname: {before.LegalName} → {after.LegalName}");
+            if (legal.Contains(nameof(VatId)))
+                parts.Add($"USt-IdNr.: {before.VatId ?? "–"} → {after.VatId ?? "–"}");
+            var reason = "Vom Unternehmen geändert: " + string.Join("; ", parts);
+            _statusChanges.Add(new OrganizationStatusChange(Id, Status, Status, reason.Length > AdminReason.MaxLength ? reason[..AdminReason.MaxLength] : reason,
+                userId, now, OrganizationHistoryKind.LegalDetailsChanged));
+        }
+        return new CompanyProfileChange(before, after, legal);
     }
 
     public Result Verify(Guid adminId, DateTimeOffset now)
@@ -202,6 +281,15 @@ public sealed record OrganizationProfile(
     }
 }
 
+public enum OrganizationHistoryKind
+{
+    /// <summary>A status transition (registration, verification, rejection, suspension, reactivation).</summary>
+    StatusChange,
+
+    /// <summary>The company changed its legal name or VAT ID itself (status unchanged; for the platform admin's attention).</summary>
+    LegalDetailsChanged,
+}
+
 /// <summary>
 /// One status transition of an organization (registration, verification, rejection, suspension, reactivation): who, when,
 /// why. Append-only — the app role may insert and read, never update or delete.
@@ -210,8 +298,10 @@ public sealed class OrganizationStatusChange
 {
     private OrganizationStatusChange() { }
 
-    internal OrganizationStatusChange(Guid organizationId, OrganizationStatus? from, OrganizationStatus to, string? reason, Guid? changedBy, DateTimeOffset at)
+    internal OrganizationStatusChange(Guid organizationId, OrganizationStatus? from, OrganizationStatus to, string? reason, Guid? changedBy, DateTimeOffset at,
+        OrganizationHistoryKind kind = OrganizationHistoryKind.StatusChange)
     {
+        Kind = kind;
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         FromStatus = from;
@@ -223,6 +313,9 @@ public sealed class OrganizationStatusChange
 
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; private set; }
+
+    /// <summary>Status transition, or a legal-details change by the company (from = to = current status).</summary>
+    public OrganizationHistoryKind Kind { get; private set; }
 
     /// <summary>Null for the registration (first entry).</summary>
     public OrganizationStatus? FromStatus { get; private set; }
