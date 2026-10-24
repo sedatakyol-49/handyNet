@@ -72,7 +72,8 @@
     "ankauf": "Buyback",
     "intakes": "Purchases",
     "pos": "Till",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "company": "Company"
   },
   "auth": {
     "email": "Email address",
@@ -538,7 +539,11 @@
       "user.display_name_unchanged": "The display name is unchanged.",
       "auth.reset_recently_sent": "A link was sent just now. Please wait a minute.",
       "reason.too_long": "The reason may have at most 1000 characters.",
-      "admin.tenant_header": "The administration is called without a company context. Please reload the page."
+      "admin.tenant_header": "The administration is called without a company context. Please reload the page.",
+      "company.logo_not_found": "The company has no logo.",
+      "company.logo_concurrent": "The logo was changed at the same time. Please try again.",
+      "company.logo_already_removed": "The logo has already been removed.",
+      "image.too_small": "The image is too small (at least 16 pixels per side)."
     }
   },
   "dashboard": {
@@ -2989,6 +2994,126 @@
       "taxNumber": "The tax number has 10 to 13 digits, separated by / or spaces.",
       "phone": "Please enter a phone number with digits, spaces, ( ) / - and an optional leading +.",
       "website": "Please enter the full address with https:// or http://."
+    }
+  },
+  "company": {
+    "title": "Company",
+    "subtitle": "Company details, contact, tax, bank details, receipt texts and logo of your company",
+    "readOnly": "You can view the company details. Only the owner can change them.",
+    "conflict": {
+      "title": "Changed in the meantime",
+      "text": "Someone else has just saved the company details. Load the current version and enter your changes again.",
+      "reload": "Load current version"
+    },
+    "sections": {
+      "master": "Company details",
+      "contact": "Contact",
+      "tax": "Tax and register",
+      "bank": "Bank details and payment terms",
+      "receipts": "Receipts",
+      "logo": "Company logo"
+    },
+    "legalHint": "These details appear on invoices and purchase receipts. Changes to the legal name or the VAT ID are reported to the platform.",
+    "legalNotice": "You are changing the legal name or VAT ID – the platform will be notified.",
+    "unsaved": "Unsaved changes",
+    "discard": "Discard",
+    "saved": "Company details saved.",
+    "receiptsHint": "The header and footer appear on every till receipt (screen, 80 mm print and digital receipt).",
+    "receiptCounter": "{used} of {max} characters · {lines} of {maxLines} lines",
+    "adminHistoryLegal": "Changed by the company",
+    "fields": {
+      "name": "Display name",
+      "legalName": "Legal name",
+      "street": "Street and number",
+      "postalCode": "Postal code",
+      "city": "City",
+      "countryCode": "Country",
+      "vatId": "VAT ID",
+      "taxNumber": "Tax number",
+      "contactEmail": "Email address",
+      "contactPhone": "Phone",
+      "website": "Website",
+      "receiptHeader": "Receipt header text",
+      "receiptFooter": "Receipt footer text",
+      "bankName": "Bank name",
+      "iban": "IBAN (account number)",
+      "bic": "BIC (bank code)",
+      "managingDirector": "Managing director",
+      "registerCourt": "Register court",
+      "registerNumber": "Register number",
+      "paymentTermsDays": "Payment terms in days"
+    },
+    "hints": {
+      "name": "How your company appears in SEHA and at the top of the receipt.",
+      "legalName": "Including the legal form, e.g. “Handy Shop Berlin GmbH”.",
+      "countryCode": "Two-letter country code, e.g. DE.",
+      "website": "Full address with https://",
+      "vatId": "DE followed by nine digits.",
+      "registerCourt": "e.g. Amtsgericht Charlottenburg",
+      "registerNumber": "e.g. HRB 123456",
+      "iban": "Checked with its check digits; spaces are allowed.",
+      "paymentTermsDays": "Default for your invoices, 0 to 365 days."
+    },
+    "placeholders": {
+      "receiptHeader": "e.g. Your phone experts in Berlin-Mitte",
+      "receiptFooter": "e.g. Opening hours Mon–Sat 10–19\nExchange within 14 days with receipt"
+    },
+    "errors": {
+      "required": "Required.",
+      "country": "Enter a two-letter country code, e.g. DE.",
+      "postalCode": "German postal codes have five digits.",
+      "vatId": "Invalid VAT ID (German numbers: DE followed by nine digits).",
+      "taxNumber": "A tax number has 10 to 13 digits.",
+      "email": "Enter a valid email address.",
+      "phone": "Use only digits, spaces, ( ) / - and a leading +.",
+      "website": "The website must start with https:// or http://.",
+      "receiptText": "The text is too long or has too many lines.",
+      "iban": "The IBAN is invalid (check digits or length).",
+      "ibanRequired": "Enter the IBAN together with the bank name or BIC.",
+      "bic": "A BIC has 8 or 11 characters, e.g. COBADEFFXXX.",
+      "paymentTerms": "Enter 0 to 365 days.",
+      "vatTaken": "This VAT ID is already registered for another company."
+    },
+    "preview": {
+      "title": "Receipt preview (80 mm)",
+      "hint": "This is how the logo and texts appear on the receipt.",
+      "sampleItem": "Sample item"
+    },
+    "logo": {
+      "hint": "PNG, JPEG or WebP up to 2 MB. The logo appears in SEHA, at the till, on receipts, invoices and digital receipts.",
+      "none": "No logo uploaded yet",
+      "alt": "Logo of {name}",
+      "upload": "Upload logo",
+      "replace": "Replace logo",
+      "remove": "Remove logo",
+      "removeTitle": "Remove the logo?",
+      "removeText": "The logo will be removed from receipts, invoices and digital receipts.",
+      "removed": "Logo removed.",
+      "uploaded": "Logo saved.",
+      "topbarLabel": "Company details of {name}",
+      "cropTitle": "Crop logo",
+      "previewLabel": "Preview of the cropped logo",
+      "onLight": "on a light background",
+      "onDark": "on a dark background",
+      "aspect": "Shape",
+      "aspects": {
+        "free": "As uploaded",
+        "square": "Square",
+        "wide": "Wide (3:1)"
+      },
+      "zoom": "Zoom",
+      "horizontal": "Horizontal position",
+      "vertical": "Vertical position",
+      "resetCrop": "Reset",
+      "useOriginal": "Upload without cropping",
+      "uploadCropped": "Upload cropped logo",
+      "errors": {
+        "type": "Choose a PNG, JPEG or WebP image.",
+        "size": "The logo may be at most 2 MB.",
+        "small": "The image is too small (at least 16 pixels per side).",
+        "read": "The image could not be read.",
+        "dimensions": "The image has too many pixels (at most 12,000 per side)."
+      }
     }
   }
 }

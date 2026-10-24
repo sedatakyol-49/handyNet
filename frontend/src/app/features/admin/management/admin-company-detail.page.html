@@ -154,13 +154,19 @@
         </div>
         <ol class="space-y-2 border-s border-slate-200 ps-3" data-testid="company-history">
           @for (h of d.statusHistory.slice().reverse(); track $index) {
-            <li class="text-xs">
-              <span class="flex flex-wrap items-center gap-1">
-                @if (h.from) {
-                  <hn-status-badge [status]="h.from" kind="orgStatus" tone="neutral" /><span aria-hidden="true" class="rtl:rotate-180">→</span>
-                }
-                <hn-status-badge [status]="h.to" kind="orgStatus" />
-              </span>
+            <li class="text-xs" [attr.data-kind]="h.kind ?? 'StatusChange'">
+              @if (h.kind === 'LegalDetailsChanged') {
+                <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900" data-testid="company-history-legal">
+                  {{ 'company.adminHistoryLegal' | t }}
+                </span>
+              } @else {
+                <span class="flex flex-wrap items-center gap-1">
+                  @if (h.from) {
+                    <hn-status-badge [status]="h.from" kind="orgStatus" tone="neutral" /><span aria-hidden="true" class="rtl:rotate-180">→</span>
+                  }
+                  <hn-status-badge [status]="h.to" kind="orgStatus" />
+                </span>
+              }
               <span class="mt-0.5 block text-slate-600">
                 {{ h.at | hnDate }}@if (h.by) { · <bdi>{{ h.by.displayName }}</bdi> }
               </span>

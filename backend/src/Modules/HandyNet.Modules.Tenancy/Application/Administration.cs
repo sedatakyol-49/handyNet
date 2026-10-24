@@ -42,7 +42,8 @@ public sealed record AdminPersonDto(Guid Id, string Email, string DisplayName);
 
 /// <param name="From">Null for the registration.</param>
 /// <param name="By">Admin who made the change (the registering user for the first entry); null if unknown.</param>
-public sealed record AdminStatusChangeDto(string? From, string To, string? Reason, DateTimeOffset At, AdminPersonDto? By);
+/// <param name="Kind">"StatusChange", or "LegalDetailsChanged" when the company changed its legal name / VAT ID itself (ADR-0014).</param>
+public sealed record AdminStatusChangeDto(string? From, string To, string? Reason, DateTimeOffset At, AdminPersonDto? By, string Kind = "StatusChange");
 
 public sealed record AdminMemberDto(Guid UserId, string Email, string DisplayName, string Role, DateTimeOffset JoinedAt, bool EmailVerified, bool IsDisabled);
 
@@ -427,7 +428,8 @@ internal sealed class AdministrationService(
             version,
             Person(o.CreatedBy),
             Person(o.VerifiedBy),
-            history.Select(h => new AdminStatusChangeDto(h.FromStatus?.ToString(), h.ToStatus.ToString(), h.Reason, h.ChangedAt, Person(h.ChangedBy))).ToList(),
+            history.Select(h => new AdminStatusChangeDto(h.FromStatus?.ToString(), h.ToStatus.ToString(), h.Reason, h.ChangedAt, Person(h.ChangedBy),
+                h.Kind.ToString())).ToList(),
             memberDtos,
             facts.RegisterNames,
             facts.Counts.GetValueOrDefault(OrganizationFactKeys.PublishedOffers));
