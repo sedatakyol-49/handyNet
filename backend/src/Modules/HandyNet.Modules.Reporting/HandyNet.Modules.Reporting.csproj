@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\HandyNet.SharedKernel\HandyNet.SharedKernel.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Pos\HandyNet.Modules.Pos.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Ankauf\HandyNet.Modules.Ankauf.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Ordering\HandyNet.Modules.Ordering.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Payments\HandyNet.Modules.Payments.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Tenancy\HandyNet.Modules.Tenancy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

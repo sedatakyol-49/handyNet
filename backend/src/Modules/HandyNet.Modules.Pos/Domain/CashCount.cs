@@ -76,6 +76,12 @@ public enum CashMovementReason
     OwnerDeposit,
 
     Other,
+
+    /// <summary>
+    /// Ankauf: cash paid to a private seller for a bought device (withdrawal). Reserved for the Ankauf payout
+    /// (<c>ICashPayouts</c>); never offered or accepted for manual cash movements.
+    /// </summary>
+    Ankauf,
 }
 
 public static class CashMovementReasons
@@ -93,6 +99,14 @@ public static class CashMovementReasons
         new(CashMovementReason.Other, CashMovementKind.Withdrawal, "Sonstige Entnahme"),
     ];
 
+    /// <summary>System reasons: recorded by other modules through a contract, never selectable for manual movements.</summary>
+    public static readonly IReadOnlyList<Definition> System =
+    [
+        new(CashMovementReason.Ankauf, CashMovementKind.Withdrawal, "Ankauf"),
+    ];
+
+    public static bool IsSystem(CashMovementReason? code) => code is { } c && System.Any(d => d.Code == c);
+
     /// <summary>
     /// The stored reason text: the free text if given, otherwise the predefined label. A code must fit the kind; "Other"
     /// and movements without a code need a free text.
@@ -102,6 +116,8 @@ public static class CashMovementReasons
         var free = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
         if (code is null)
             return free is null ? Error.Validation("pos.reason", "A reason is required.") : free;
+        if (IsSystem(code))
+            return Error.Validation("pos.reason_code_reserved", $"The reason '{code}' is recorded automatically and cannot be chosen.");
         var definition = All.FirstOrDefault(d => d.Code == code && d.Kind == kind);
         if (definition is null)
             return Error.Validation("pos.reason_code", $"The reason '{code}' does not fit a {kind.ToString().ToLowerInvariant()}.");

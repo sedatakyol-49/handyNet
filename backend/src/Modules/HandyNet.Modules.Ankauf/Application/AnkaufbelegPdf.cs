@@ -32,6 +32,10 @@ internal static class AnkaufbelegPdf
         }
 
         // Signature block stays on one page.
+        // TODO(ankauf-signature-pdf): once SimplePdf supports images (parallel work, do not edit SimplePdf here), draw
+        // content.SellerSignaturePng (PNG, transparent background) above the seller's signature line, about 60 pt high and
+        // scaled to the half column. Until then the PDF prints the "Elektronische Unterschrift" section (time, source,
+        // binding checksum); the image is shown in the HTML/print view of the intake.
         var half = pdf.ContentWidth / 2;
         pdf.Space(12).KeepTogether(80)
             .Space(40)

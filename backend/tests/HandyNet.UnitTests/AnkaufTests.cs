@@ -167,7 +167,7 @@ public class IntakeRulesTests
     }
 
     private static SellerDetails Seller(DateOnly birth) =>
-        new("Max", "Mustermann", "Hauptstr. 5", "10115", "Berlin", birth, IdDocumentType.IdCard, "L01X00T47");
+        new("Max", "Mustermann", "Hauptstr. 5", "10115", "Berlin", birth, IdDocumentType.IdCard, "L01X00T47") { IdExpiryDate = new DateOnly(2030, 1, 31) };
 
     [Fact]
     public void Sellers_must_be_adults_on_the_day_of_purchase()

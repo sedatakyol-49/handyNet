@@ -17,38 +17,10 @@ public enum IntakeStatus
     Rejected,
 }
 
-public enum IdDocumentType
-{
-    IdCard,
-    Passport,
-    ResidencePermit,
-}
-
 public enum PaymentMethod
 {
     Cash,
     BankTransfer,
-}
-
-/// <summary>Who sold the device. Personal data: kept only as long as legal record-keeping requires (ADR-0009).</summary>
-public sealed record SellerDetails(
-    string FirstName,
-    string LastName,
-    string Street,
-    string PostalCode,
-    string City,
-    DateOnly BirthDate,
-    IdDocumentType IdDocumentType,
-    string IdDocumentNumber)
-{
-    public const string AnonymizedText = "anonymisiert";
-
-    /// <summary>
-    /// Fixed placeholder that replaces the seller's data after the retention period. The database checks these values
-    /// (constraint <c>ck_intakes_anonymized</c>) — change both together.
-    /// </summary>
-    public static readonly SellerDetails Anonymized = new(AnonymizedText, AnonymizedText, AnonymizedText, "00000", AnonymizedText,
-        new DateOnly(1900, 1, 1), IdDocumentType.IdCard, "ANONYMISIERT");
 }
 
 /// <summary>
@@ -58,7 +30,7 @@ public sealed record SellerDetails(
 /// </summary>
 public sealed class Intake : IAuditable
 {
-    public const int MinimumSellerAge = 18;
+    public const int MinimumSellerAge = SellerRules.MinimumAge;
     public const int MaxNotesLength = 2000;
     public const int MaxReasonLength = 1000;
 
@@ -80,6 +52,12 @@ public sealed class Intake : IAuditable
     public DateTimeOffset ReceivedAt { get; private set; }
     public Guid ReceivedBy { get; private set; }
 
+    /// <summary>How the seller's identity data was captured (manual, MRZ, self check-in).</summary>
+    public SellerCaptureMethod CaptureMethod { get; private set; }
+
+    /// <summary>The self check-in the seller data came from, if any.</summary>
+    public Guid? CheckInId { get; private set; }
+
     public DeviceCondition? InspectedCondition { get; private set; }
     public List<DeviceDefect> InspectedDefects { get; private set; } = [];
     public int? InspectedBatteryHealthPercent { get; private set; }
@@ -91,11 +69,20 @@ public sealed class Intake : IAuditable
     public long? PaidMinor { get; private set; }
     public PaymentMethod? PaymentMethod { get; private set; }
     public Guid? StockUnitId { get; private set; }
+
+    /// <summary>The seller's purchase signature that was valid when the intake was completed (null if signing was not required).</summary>
+    public Guid? SignatureId { get; private set; }
+
+    /// <summary>Cash payout from a till (POS cash movement) for cash purchases of organizations using the POS module.</summary>
+    public Guid? CashMovementId { get; private set; }
+
+    public Guid? CashRegisterId { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public string? RejectionReason { get; private set; }
     public uint Version { get; private set; }
 
-    public static Result<Intake> Receive(Guid organizationId, Quote quote, string imei, SellerDetails seller, Guid userId, DateTimeOffset now)
+    public static Result<Intake> Receive(Guid organizationId, Quote quote, string imei, SellerDetails seller, Guid userId, DateTimeOffset now,
+        SellerCaptureMethod captureMethod = SellerCaptureMethod.Manual, Guid? checkInId = null)
     {
         if (quote.OrganizationId != organizationId)
             return Error.NotFound("ankauf.quote_not_found", "Quote not found.");
@@ -105,10 +92,11 @@ public sealed class Intake : IAuditable
             return Error.Validation("ankauf.imei", "IMEI must be 15 digits with a valid check digit.");
         if (quote.Imei is { } quoted && quoted != normalized)
             return Error.Validation("ankauf.imei_mismatch", "The IMEI differs from the one in the quote.");
-        if (AgeOn(seller.BirthDate, DateOnly.FromDateTime(now.UtcDateTime)) < MinimumSellerAge)
-            return Error.Validation("ankauf.seller_minor", $"Devices can only be bought from sellers aged {MinimumSellerAge} or older.");
-        if (new[] { seller.FirstName, seller.LastName, seller.Street, seller.PostalCode, seller.City, seller.IdDocumentNumber }.Any(string.IsNullOrWhiteSpace))
-            return Error.Validation("ankauf.seller_incomplete", "Name, address and ID document are required.");
+        var checkedSeller = SellerRules.Validate(seller, Today(now));
+        if (!checkedSeller.IsSuccess)
+            return checkedSeller.Error!;
+        if (captureMethod == SellerCaptureMethod.SelfCheckIn && checkInId is null)
+            throw new ArgumentException("A self check-in intake names its check-in.", nameof(checkInId));
 
         return new Intake
         {
@@ -116,16 +104,29 @@ public sealed class Intake : IAuditable
             OrganizationId = organizationId,
             QuoteId = quote.Id,
             Imei = normalized,
-            Seller = seller with
-            {
-                FirstName = seller.FirstName.Trim(),
-                LastName = seller.LastName.Trim(),
-                IdDocumentNumber = Text.NormalizeKey(seller.IdDocumentNumber),
-            },
+            Seller = checkedSeller.Value,
             Status = IntakeStatus.Received,
             ReceivedAt = now,
             ReceivedBy = userId,
+            CaptureMethod = captureMethod,
+            CheckInId = checkInId,
         };
+    }
+
+    /// <summary>Calendar day of an instant in German local time (age and ID expiry are judged on the shop's day).</summary>
+    public static DateOnly Today(DateTimeOffset now) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Ankaufbeleg.GermanTimeZone).DateTime);
+
+    /// <summary>The amount paid must be positive and at most the inspected offer (otherwise the device is sold at a loss).</summary>
+    public static Error? CheckPaidAmount(long paidMinor, long? inspectedOfferMinor)
+    {
+        if (paidMinor <= 0)
+            return Error.Validation("ankauf.paid_amount", "The amount paid must be positive.");
+        if (inspectedOfferMinor is null)
+            return Error.Conflict("ankauf.not_inspected", "Inspect the device before paying the seller.");
+        if (paidMinor > inspectedOfferMinor)
+            return Error.Validation("ankauf.paid_above_offer",
+                $"The amount exceeds the inspected offer ({inspectedOfferMinor / 100m:0.00} €) and would be sold at a loss.");
+        return null;
     }
 
     /// <summary>Intakes whose retention start lies before this instant are due for anonymization.</summary>
@@ -169,20 +170,41 @@ public sealed class Intake : IAuditable
         return Result.Success();
     }
 
-    public Result Complete(long paidMinor, PaymentMethod method, Guid stockUnitId, DateTimeOffset now)
+    /// <summary>
+    /// Checks everything that must hold before money changes hands (no side effects): open, inspected, amount within the
+    /// offer, and — if required — a purchase signature that confirms exactly this intake, amount and payment method.
+    /// </summary>
+    public Error? CheckPayable(Quote quote, long paidMinor, PaymentMethod method, IntakeSignature? signature, bool signatureRequired)
     {
         if (IsAnonymized)
             return Error.Conflict("ankauf.intake_anonymized", "The seller data of this intake was anonymized; it cannot be continued.");
         if (Status != IntakeStatus.Inspected)
             return Error.Conflict("ankauf.not_inspected", "Inspect the device before paying the seller.");
-        if (paidMinor <= 0)
-            return Error.Validation("ankauf.paid_amount", "The amount paid must be positive.");
-        if (paidMinor > InspectedOfferMinor)
-            return Error.Validation("ankauf.paid_above_offer",
-                $"The amount exceeds the inspected offer ({InspectedOfferMinor / 100m:0.00} €) and would be sold at a loss.");
+        if (CheckPaidAmount(paidMinor, InspectedOfferMinor) is { } amountError)
+            return amountError;
+        if (signature is not null && !signature.Confirms(this, quote, paidMinor, method))
+            return Error.Conflict("ankauf.signature_invalid",
+                "The seller's signature does not match the current data, amount or payment method. The seller must sign again.");
+        if (signature is null && signatureRequired)
+            return Error.Conflict("ankauf.signature_required", "The seller must sign the purchase (declaration of ownership and price) before payment.");
+        return null;
+    }
+
+    public Result Complete(long paidMinor, PaymentMethod method, Guid stockUnitId, DateTimeOffset now, Quote? quote = null, IntakeSignature? signature = null,
+        bool signatureRequired = false, (Guid MovementId, Guid RegisterId)? cashPayout = null)
+    {
+        if (quote is null && (signature is not null || signatureRequired))
+            throw new ArgumentNullException(nameof(quote));
+        if (CheckPayable(quote!, paidMinor, method, signature, signatureRequired) is { } error)
+            return error;
+        if (cashPayout is not null && method != Domain.PaymentMethod.Cash)
+            throw new ArgumentException("Only cash purchases are paid out of a till.", nameof(cashPayout));
         PaidMinor = paidMinor;
         PaymentMethod = method;
         StockUnitId = stockUnitId;
+        SignatureId = signature?.Id;
+        CashMovementId = cashPayout?.MovementId;
+        CashRegisterId = cashPayout?.RegisterId;
         CompletedAt = now;
         Status = IntakeStatus.Completed;
         return Result.Success();
@@ -200,9 +222,4 @@ public sealed class Intake : IAuditable
         return Result.Success();
     }
 
-    private static int AgeOn(DateOnly birth, DateOnly day)
-    {
-        var age = day.Year - birth.Year;
-        return birth > day.AddYears(-age) ? age - 1 : age;
-    }
 }

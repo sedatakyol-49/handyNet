@@ -41,7 +41,9 @@ public sealed record SessionSummary(
     long ExpectedCashMinor,
     long? FirstReceiptNumber,
     long? LastReceiptNumber,
-    long RoundingMinor = 0);
+    long RoundingMinor = 0,
+    int AnkaufCount = 0,
+    long AnkaufPayoutsMinor = 0);
 
 public static class SessionCalculator
 {
@@ -82,7 +84,10 @@ public static class SessionCalculator
             checked(openingCashMinor + cash + deposits - withdrawals),
             receipts.Count == 0 ? null : receipts.Min(r => r.Number),
             receipts.Count == 0 ? null : receipts.Max(r => r.Number),
-            receipts.Sum(r => r.RoundingMinor));
+            receipts.Sum(r => r.RoundingMinor),
+            // Ankauf payouts are withdrawals (already part of WithdrawalsMinor); the Z-report shows them separately.
+            movements.Count(m => m.ReasonCode == CashMovementReason.Ankauf),
+            movements.Where(m => m.ReasonCode == CashMovementReason.Ankauf).Sum(m => m.AmountMinor));
     }
 }
 
@@ -190,6 +195,12 @@ public sealed class CashMovement : IAuditable
 
     /// <summary>Predefined reason (null for movements recorded before codes existed, or free text only).</summary>
     public CashMovementReason? ReasonCode { get; private set; }
+
+    /// <summary>
+    /// What another module recorded this movement for (e.g. <c>ankauf:{intakeId}</c>); unique per organization, so a
+    /// source is paid out at most once (database index). Null for manual movements.
+    /// </summary>
+    public string? SourceReference { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
 
@@ -220,6 +231,44 @@ public sealed class CashMovement : IAuditable
             AmountMinor = amountMinor,
             Reason = text.Value,
             ReasonCode = reasonCode,
+            CreatedAt = now,
+            CreatedBy = userId,
+        };
+    }
+
+    public const int MaxSourceReferenceLength = 100;
+
+    /// <summary>
+    /// A payout recorded by another module (Ankauf): a withdrawal with a system reason and a source reference. Like any
+    /// withdrawal it cannot exceed the expected cash.
+    /// </summary>
+    public static Result<CashMovement> RecordPayout(CashSession session, CashMovementReason reasonCode, long amountMinor, string? description,
+        string sourceReference, long expectedCashMinor, Guid userId, DateTimeOffset now)
+    {
+        if (!CashMovementReasons.IsSystem(reasonCode))
+            throw new ArgumentException("Payouts use a system reason.", nameof(reasonCode));
+        if (string.IsNullOrWhiteSpace(sourceReference) || sourceReference.Length > MaxSourceReferenceLength)
+            throw new ArgumentException("A source reference is required.", nameof(sourceReference));
+        if (session.Status != CashSessionStatus.Open)
+            return Error.Conflict("pos.session_closed", "The cash session is closed.");
+        if (amountMinor <= 0)
+            return Error.Validation("pos.amount", "The amount must be positive.");
+        if (amountMinor > expectedCashMinor)
+            return Error.Conflict("pos.insufficient_cash",
+                    $"Only {expectedCashMinor / 100m:0.00} € should be in the drawer; {amountMinor / 100m:0.00} € cannot be paid out.")
+                .WithDetails(new Dictionary<string, object?> { ["expectedCashMinor"] = expectedCashMinor });
+        var label = CashMovementReasons.System.First(d => d.Code == reasonCode).Label;
+        var text = string.IsNullOrWhiteSpace(description) ? label : description.Trim();
+        return new CashMovement
+        {
+            Id = Guid.CreateVersion7(),
+            OrganizationId = session.OrganizationId,
+            SessionId = session.Id,
+            Kind = CashMovementKind.Withdrawal,
+            AmountMinor = amountMinor,
+            Reason = text.Length > MaxReasonLength ? text[..MaxReasonLength] : text,
+            ReasonCode = reasonCode,
+            SourceReference = sourceReference,
             CreatedAt = now,
             CreatedBy = userId,
         };

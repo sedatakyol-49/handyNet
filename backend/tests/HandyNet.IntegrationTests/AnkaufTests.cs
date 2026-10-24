@@ -14,7 +14,7 @@ using Npgsql;
 namespace HandyNet.IntegrationTests;
 
 [Collection(HandyNetCollection.Name)]
-public sealed class AnkaufTests(HandyNetFixture fixture)
+public sealed partial class AnkaufTests(HandyNetFixture fixture)
 {
     private readonly Scenario _scenario = new(fixture);
 
@@ -206,11 +206,22 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
 
     // ---- device intake ------------------------------------------------------------------------------
 
-    private static readonly object AdultSeller = new
+    internal static readonly object AdultSeller = new
     {
         firstName = "Max", lastName = "Mustermann", street = "Hauptstr. 5", postalCode = "10115", city = "Berlin",
-        birthDate = "1990-05-01", idDocumentType = "IdCard", idDocumentNumber = "L01X00T47",
+        birthDate = "1990-05-01", idDocumentType = "IdCard", idDocumentNumber = "L01X00T47", idExpiryDate = "2031-01-31",
     };
+
+    /// <summary>The seller signs the agreed amount and method on screen, then the intake is paid (signature required by default).</summary>
+    internal static async Task<ApiResponse> PayAsync(ApiClient dealer, string intakeId, decimal amount, string method, Guid? registerId = null)
+    {
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/signature",
+            new { paidAmount = amount, paymentMethod = method, image = Convert.ToBase64String(SignaturePng) })).Expect(HttpStatusCode.OK);
+        return await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = amount, paymentMethod = method, registerId });
+    }
+
+    /// <summary>A real PNG as drawn by the signature pad (size within the accepted range).</summary>
+    internal static readonly byte[] SignaturePng = TestImages.Png(400, 150);
 
     /// <summary>Unique valid IMEI (Luhn) per call.</summary>
     private static string NewImei()
@@ -272,7 +283,7 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
 
         Assert.Equal("ankauf.paid_above_offer",
             (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 280m, paymentMethod = "Cash" })).Code);
-        var completed = (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 220m, paymentMethod = "Cash" }))
+        var completed = (await PayAsync(dealer, intakeId, 220m, "Cash"))
             .Expect(HttpStatusCode.OK).Json;
         Assert.Equal("Completed", completed["status"]!.GetValue<string>());
         Assert.NotNull(completed["stockUnitId"]);
@@ -303,7 +314,7 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
         var minor = new
         {
             firstName = "Tim", lastName = "Jung", street = "A 1", postalCode = "10115", city = "Berlin",
-            birthDate = DateTime.UtcNow.AddYears(-16).ToString("yyyy-MM-dd"), idDocumentType = "IdCard", idDocumentNumber = "X1",
+            birthDate = DateTime.UtcNow.AddYears(-16).ToString("yyyy-MM-dd"), idDocumentType = "IdCard", idDocumentNumber = "X1", idExpiryDate = "2031-01-31",
         };
         Assert.Equal("ankauf.seller_minor", (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei, seller = minor })).Code);
         Assert.Equal(HttpStatusCode.UnprocessableEntity,
@@ -313,7 +324,7 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
             .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
         Assert.Equal("ankauf.quote_used", (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei, seller = AdultSeller })).Code);
         (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut" })).Expect(HttpStatusCode.OK);
-        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 200m, paymentMethod = "BankTransfer" }))
+        (await PayAsync(dealer, intakeId, 200m, "BankTransfer"))
             .Expect(HttpStatusCode.OK);
 
         // Another shop is offered the same (now stocked) device: refused before any money changes hands.
@@ -349,7 +360,7 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
         (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut", defects = new[] { "HousingDamage" } }))
             .Expect(HttpStatusCode.OK);
         Assert.Equal("ankauf.not_completed", (await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Code);
-        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 219.5m, paymentMethod = "Cash" }))
+        (await PayAsync(dealer, intakeId, 219.5m, "Cash"))
             .Expect(HttpStatusCode.OK);
 
         var (status, mediaType, fileName, body) = await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg");
@@ -387,7 +398,7 @@ public sealed class AnkaufTests(HandyNetFixture fixture)
         var intakeId = (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei = NewImei(), seller = AdultSeller }))
             .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
         (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut" })).Expect(HttpStatusCode.OK);
-        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/complete", new { paidAmount = 150m, paymentMethod = "Cash" })).Expect(HttpStatusCode.OK);
+        (await PayAsync(dealer, intakeId, 150m, "Cash")).Expect(HttpStatusCode.OK);
         return intakeId;
     }
 

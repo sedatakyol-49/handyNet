@@ -61,7 +61,11 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.Reason).HasMaxLength(CashMovement.MaxReasonLength).IsRequired();
             b.Property(x => x.ReasonCode).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.SourceReference).HasMaxLength(CashMovement.MaxSourceReferenceLength);
             b.HasIndex(x => new { x.OrganizationId, x.SessionId });
+            // A source (e.g. an Ankauf intake) is paid out of a till at most once.
+            b.HasIndex(x => new { x.OrganizationId, x.SourceReference }).IsUnique().HasFilter("source_reference IS NOT NULL")
+                .HasDatabaseName("ux_cash_movements_source");
             b.HasOne<CashSession>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SessionId })
                 .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
         });

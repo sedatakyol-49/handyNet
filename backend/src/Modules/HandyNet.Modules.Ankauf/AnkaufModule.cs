@@ -1,5 +1,6 @@
 using FluentValidation;
 using HandyNet.Modules.Ankauf.Application;
+using HandyNet.Modules.Ankauf.Domain;
 using HandyNet.Modules.Ankauf.Infrastructure;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel.Tenancy;
@@ -20,6 +21,8 @@ public static class AnkaufModule
     {
         services.AddOptions<AnkaufOptions>().Bind(configuration.GetSection(AnkaufOptions.Section))
             .Validate(o => o.SellerDataRetentionYears is null or (>= 1 and <= 30), "Ankauf:SellerDataRetentionYears must be between 1 and 30 (or null).")
+            .Validate(o => o.CheckInMinutes is >= 1 and <= 120, "Ankauf:CheckInMinutes must be between 1 and 120.")
+            .Validate(o => o.CheckInPurgeHours is >= 1 and <= 168, "Ankauf:CheckInPurgeHours must be between 1 and 168.")
             .ValidateOnStart();
         services.AddSingleton<SellerDataRetention>();
         services.AddHostedService(sp => sp.GetRequiredService<SellerDataRetention>());
@@ -27,9 +30,14 @@ public static class AnkaufModule
         services.AddScoped<PriceListService>();
         services.AddScoped<QuoteService>();
         services.AddScoped<IntakeService>();
+        services.AddScoped<CheckInService>();
+        services.AddScoped<Contracts.IAnkaufDailyFigures, AnkaufDailyFigures>();
         services.AddValidatorsFromAssemblyContaining<QuoteService>(includeInternalTypes: true);
         return services;
     }
+
+    /// <summary>Anonymous QR self check-in form: per client IP and minute.</summary>
+    public const string CheckInRateLimitPolicy = "ankauf-checkin";
 
     public static IEndpointRouteBuilder MapAnkaufEndpoints(this IEndpointRouteBuilder app)
     {
@@ -105,6 +113,57 @@ public static class AnkaufModule
 
         intakes.MapPost("/{id:guid}/reject", async (Guid id, RejectIntakeRequest request, IntakeService service, CancellationToken ct) =>
             (await service.RejectAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
+
+        // ---- seller signature (bound to data + price, ADR-0014) ------------------------------------------------------------
+        intakes.MapPost("/{id:guid}/signature", async (Guid id, SignIntakeRequest request, IValidator<SignIntakeRequest> validator, IntakeService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SignAsync(id, request, ct)).ToHttp(Results.Ok))
+            .WithMetadata(new RequestBodyLimit(SignatureImage.MaxBytes * 2));
+
+        intakes.MapGet("/{id:guid}/signatures/{signatureId:guid}/image", async (Guid id, Guid signatureId, HttpResponse response, IntakeService service,
+                CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                return (await service.GetSignatureImageAsync(id, signatureId, ct)).ToHttp(png => Results.File(png, "image/png"));
+            });
+
+        // ---- returning sellers and tills for the payout --------------------------------------------------------------------
+        var staff = dealer.MapGroup("").RequirePermission(Permissions.InventoryManage);
+        staff.MapGet("/sellers", async (string? search, IntakeService service, CancellationToken ct) =>
+            Results.Ok(await service.SearchSellersAsync(search, ct)));
+
+        staff.MapGet("/payout-registers", async (IntakeService service, CancellationToken ct) => Results.Ok(await service.PayoutRegistersAsync(ct)));
+
+        // ---- QR self check-in (employee side) ------------------------------------------------------------------------------
+        staff.MapPost("/checkins", async (CheckInService service, CancellationToken ct) =>
+            (await service.CreateAsync(ct)).ToHttp(c => Results.Created($"/api/ankauf/checkins/{c.Id}", c)));
+
+        staff.MapGet("/checkins/{id:guid}", async (Guid id, HttpResponse response, CheckInService service, CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                return (await service.GetAsync(id, ct)).ToHttp(Results.Ok);
+            });
+
+        staff.MapGet("/checkins/{id:guid}/signature", async (Guid id, HttpResponse response, CheckInService service, CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                return (await service.GetSignatureAsync(id, ct)).ToHttp(png => Results.File(png, "image/png"));
+            });
+
+        // ---- QR self check-in (public, anonymous, rate-limited; only by the unguessable token) -----------------------------
+        var checkin = app.MapGroup("/api/public/ankauf/checkins").WithTags("Ankauf self check-in").AllowAnonymous()
+            .RequireRateLimiting(CheckInRateLimitPolicy);
+
+        checkin.MapGet("/{token}", async (string token, HttpResponse response, CheckInService service, CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                return (await service.GetPublicAsync(token, ct)).ToHttp(Results.Ok);
+            });
+
+        checkin.MapPost("/{token}", async (string token, PublicCheckInRequest request, IValidator<PublicCheckInRequest> validator, CheckInService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SubmitPublicAsync(token, request, ct)).ToHttp(Results.NoContent))
+            .WithMetadata(new RequestBodyLimit(SignatureImage.MaxBytes * 2));
 
         return app;
     }

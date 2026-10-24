@@ -6,6 +6,7 @@
     <ProjectReference Include="..\HandyNet.Modules.Catalog\HandyNet.Modules.Catalog.csproj" />
     <ProjectReference Include="..\HandyNet.Modules.Inventory\HandyNet.Modules.Inventory.csproj" />
     <ProjectReference Include="..\HandyNet.Modules.Tenancy\HandyNet.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\HandyNet.Modules.Pos\HandyNet.Modules.Pos.csproj" />
   </ItemGroup>
 
   <ItemGroup>
