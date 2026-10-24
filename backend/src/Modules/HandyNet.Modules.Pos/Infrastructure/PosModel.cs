@@ -18,6 +18,7 @@ public sealed class PosModel : IModuleModel
             b.ToTable("registers", Schema, t =>
             {
                 t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+                t.HasCheckConstraint("ck_registers_next_z_number", "next_z_number >= 1");
                 t.HasCheckConstraint("ck_registers_auto_lock", $"auto_lock_minutes BETWEEN 1 AND {Register.MaxAutoLockMinutes}");
             });
             b.HasKey(x => x.Id);
@@ -38,6 +39,7 @@ public sealed class PosModel : IModuleModel
                 t.HasCheckConstraint("ck_cash_sessions_closed",
                     "status = 'Open' OR (closed_at IS NOT NULL AND closed_by IS NOT NULL AND summary IS NOT NULL AND counted_cash_minor >= 0 "
                     + "AND expected_cash_minor IS NOT NULL AND difference_minor = counted_cash_minor - expected_cash_minor)");
+                t.HasCheckConstraint("ck_cash_sessions_z_number", "(status = 'Open' AND z_number IS NULL) OR (status = 'Closed' AND z_number >= 1)");
             });
             b.HasKey(x => x.Id);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
@@ -49,6 +51,8 @@ public sealed class PosModel : IModuleModel
             b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
             // Only one open session per register.
             b.HasIndex(x => x.RegisterId).IsUnique().HasFilter("status = 'Open'").HasDatabaseName("ux_cash_sessions_one_open_per_register");
+            // Z numbers are unique per register (gapless with the allocation triggers).
+            b.HasIndex(x => new { x.RegisterId, x.ZNumber }).IsUnique().HasFilter("z_number IS NOT NULL").HasDatabaseName("ux_cash_sessions_z_number");
             b.HasIndex(x => new { x.OrganizationId, x.RegisterId, x.OpenedAt });
             b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
@@ -74,8 +78,9 @@ public sealed class PosModel : IModuleModel
                 t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
                 t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                 t.HasCheckConstraint("ck_receipts_kind",
-                    "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) "
-                    + "OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL)");
+                    "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NULL) "
+                    + "OR (kind = 'InvoicePayment' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NOT NULL) "
+                    + "OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL AND sales_invoice_id IS NULL)");
             });
             b.HasKey(x => x.Id);
             b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
@@ -117,6 +122,9 @@ public sealed class PosModel : IModuleModel
                 .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
                 .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => x.SalesInvoiceId).HasFilter("sales_invoice_id IS NOT NULL");
+            b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SalesInvoiceId })
+                .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReferencedReceiptId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasMany(x => x.Lines).WithOne().HasForeignKey(l => new { l.OrganizationId, l.ReceiptId })
@@ -136,6 +144,8 @@ public sealed class PosModel : IModuleModel
                     "line_gross_minor = unit_price_minor * quantity - discount_minor AND net_minor + vat_minor = line_gross_minor");
                 t.HasCheckConstraint("ck_receipt_lines_margin",
                     "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
+                t.HasCheckConstraint("ck_receipt_lines_product",
+                    "(product_id IS NOT NULL AND tax_treatment <> 'NotTaxable') OR (product_id IS NULL AND tax_treatment = 'NotTaxable' AND stock_unit_id IS NULL AND vat_minor = 0)");
             });
             b.HasKey(x => new { x.ReceiptId, x.LineNumber });
             b.Property(x => x.Imei).HasMaxLength(15).IsFixedLength();
@@ -222,8 +232,8 @@ public sealed class PosModel : IModuleModel
                 t.HasCheckConstraint("ck_approvals_permissions", "cardinality(permissions) >= 1");
                 t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
                 t.HasCheckConstraint("ck_approvals_use",
-                    "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) "
-                    + "OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                    "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL AND sales_invoice_id IS NULL) "
+                    + "OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id, sales_invoice_id) = 1)");
                 t.HasCheckConstraint("ck_approvals_not_self", "approver_user_id <> requested_by_user_id");
             });
             b.HasKey(x => x.Id);
@@ -234,6 +244,9 @@ public sealed class PosModel : IModuleModel
             b.HasIndex(x => x.ReceiptId).HasFilter("receipt_id IS NOT NULL");
             b.HasIndex(x => x.CashMovementId).HasFilter("cash_movement_id IS NOT NULL");
             b.HasIndex(x => x.SessionId).HasFilter("session_id IS NOT NULL");
+            b.HasIndex(x => x.SalesInvoiceId).HasFilter("sales_invoice_id IS NOT NULL");
+            b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SalesInvoiceId })
+                .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
@@ -266,6 +279,8 @@ public sealed class PosModel : IModuleModel
             b.HasKey(x => x.Id);
             b.Property(x => x.Number).HasMaxLength(20).IsRequired();
             b.Property(x => x.Customer).HasJsonConversion().IsRequired();
+            b.Property(x => x.CustomerName).HasComputedColumnSql("customer ->> 'name'", stored: true);
+            b.Property(x => x.CustomerCompany).HasComputedColumnSql("customer ->> 'company'", stored: true);
             b.Property(x => x.Document).HasJsonConversion().IsRequired();
             b.HasIndex(x => x.ReceiptId).IsUnique();
             b.HasIndex(x => new { x.OrganizationId, x.Year, x.SequenceNumber }).IsUnique();
@@ -291,6 +306,7 @@ public sealed class PosModel : IModuleModel
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         });
         ConfigureFiscal(modelBuilder);
+        ConfigureSalesDocuments(modelBuilder);
 
         modelBuilder.Entity<ReceiptReprint>(b =>
         {
@@ -299,6 +315,124 @@ public sealed class PosModel : IModuleModel
             b.HasIndex(x => new { x.ReceiptId, x.Sequence }).IsUnique();
             b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    /// <summary>Quotations, sales invoices outside the till, their payments and emails (ADR-0014).</summary>
+    private static void ConfigureSalesDocuments(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Quotation>(b =>
+        {
+            b.ToTable("quotations", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_quotations_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'AN-' || year::text || '-' "
+                    + "|| CASE WHEN sequence_number < 10000 THEN lpad(sequence_number::text, 4, '0') ELSE sequence_number::text END");
+                t.HasCheckConstraint("ck_quotations_totals", "total_net_minor + total_vat_minor = total_gross_minor AND total_gross_minor >= 0");
+                t.HasCheckConstraint("ck_quotations_valid_until", "valid_until >= issue_date");
+                t.HasCheckConstraint("ck_quotations_converted", "converted_invoice_id IS NULL OR status = 'Accepted'");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Number).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.PriceMode).HasConversion<string>().HasMaxLength(10);
+            b.Property(x => x.Customer).HasJsonConversion().IsRequired();
+            b.Property(x => x.CustomerName).HasComputedColumnSql("customer ->> 'name'", stored: true);
+            b.Property(x => x.CustomerCompany).HasComputedColumnSql("customer ->> 'company'", stored: true);
+            b.Property(x => x.Lines).HasJsonConversion().IsRequired();
+            b.Property(x => x.Vat).HasJsonConversion().IsRequired();
+            b.Property(x => x.Notes).HasMaxLength(Quotation.MaxNotesLength);
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
+            b.HasIndex(x => new { x.OrganizationId, x.Year, x.SequenceNumber }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.IssueDate });
+            b.HasIndex(x => new { x.OrganizationId, x.CustomerId }).HasFilter("customer_id IS NOT NULL");
+            b.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.CustomerId })
+                .HasPrincipalKey(c => new { c.OrganizationId, c.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ConvertedInvoiceId })
+                .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<QuotationSequence>(b =>
+        {
+            b.ToTable("quotation_sequences", Schema, t => t.HasCheckConstraint("ck_quotation_sequences_next", "next_number >= 2"));
+            b.HasKey(x => new { x.OrganizationId, x.Year });
+        });
+
+        modelBuilder.Entity<SalesInvoice>(b =>
+        {
+            b.ToTable("sales_invoices", Schema, t =>
+            {
+                // Drafts and discarded drafts carry no number; issued rows the number of the shared series and their snapshot.
+                t.HasCheckConstraint("ck_sales_invoices_number",
+                    "(status IN ('Draft', 'Discarded') AND number IS NULL AND year IS NULL AND sequence_number IS NULL AND issued_at IS NULL AND document IS NULL) "
+                    + "OR (status = 'Issued' AND sequence_number >= 1 AND year BETWEEN 2000 AND 9999 "
+                    + "AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0') AND invoice_date IS NOT NULL AND due_date IS NOT NULL "
+                    + "AND service_date IS NOT NULL AND customer IS NOT NULL AND document IS NOT NULL AND issued_at IS NOT NULL AND issued_by IS NOT NULL)");
+                t.HasCheckConstraint("ck_sales_invoices_totals",
+                    "total_net_minor + total_vat_minor = total_gross_minor "
+                    + "AND ((kind = 'Invoice' AND original_invoice_id IS NULL AND total_gross_minor >= 0 AND total_vat_minor >= 0 AND (status <> 'Issued' OR total_gross_minor > 0)) "
+                    + "OR (kind = 'CreditNote' AND status = 'Issued' AND original_invoice_id IS NOT NULL AND total_gross_minor < 0 AND total_vat_minor <= 0 AND reason IS NOT NULL))");
+                t.HasCheckConstraint("ck_sales_invoices_terms", $"payment_term_days BETWEEN 0 AND {SalesInvoice.MaxPaymentTermDays} AND (due_date IS NULL OR due_date >= invoice_date)");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.PriceMode).HasConversion<string>().HasMaxLength(10);
+            b.Property(x => x.Number).HasMaxLength(20);
+            b.Property(x => x.Customer!).HasJsonConversion();
+            b.Property(x => x.CustomerName).HasComputedColumnSql("customer ->> 'name'", stored: true);
+            b.Property(x => x.CustomerCompany).HasComputedColumnSql("customer ->> 'company'", stored: true);
+            b.Property(x => x.Lines).HasJsonConversion().IsRequired();
+            b.Property(x => x.Vat).HasJsonConversion().IsRequired();
+            b.Property(x => x.MarginDetails!).HasJsonConversion();
+            b.Property(x => x.Document!).HasJsonConversion();
+            b.Property(x => x.Notes).HasMaxLength(SalesInvoice.MaxNotesLength);
+            b.Property(x => x.Reason).HasMaxLength(SalesInvoice.MaxReasonLength);
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
+            b.HasIndex(x => new { x.OrganizationId, x.Year, x.SequenceNumber }).IsUnique().HasFilter("sequence_number IS NOT NULL");
+            b.HasIndex(x => new { x.OrganizationId, x.Number }).IsUnique().HasFilter("number IS NOT NULL");
+            // An invoice is cancelled at most once.
+            b.HasIndex(x => x.OriginalInvoiceId).IsUnique().HasFilter("original_invoice_id IS NOT NULL").HasDatabaseName("ux_sales_invoices_one_credit_note");
+            b.HasIndex(x => new { x.OrganizationId, x.Status, x.DueDate });
+            b.HasIndex(x => new { x.OrganizationId, x.CustomerId }).HasFilter("customer_id IS NOT NULL");
+            b.HasIndex(x => x.QuotationId).HasFilter("quotation_id IS NOT NULL");
+            b.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.CustomerId })
+                .HasPrincipalKey(c => new { c.OrganizationId, c.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
+                .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.OriginalInvoiceId })
+                .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesInvoicePayment>(b =>
+        {
+            b.ToTable("sales_invoice_payments", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_sales_invoice_payments_amount", "amount_minor > 0");
+                // Cash in the shop always goes through the till (a receipt).
+                t.HasCheckConstraint("ck_sales_invoice_payments_cash", "method <> 'Cash' OR receipt_id IS NOT NULL");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Method).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Reference).HasMaxLength(SalesInvoicePayment.MaxReferenceLength);
+            b.HasIndex(x => new { x.OrganizationId, x.InvoiceId });
+            b.HasIndex(x => x.ReceiptId).IsUnique().HasFilter("receipt_id IS NOT NULL");
+            b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.InvoiceId })
+                .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesDocumentEmail>(b =>
+        {
+            b.ToTable("sales_document_emails", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.DocumentType).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Recipient).HasMaxLength(ReceiptEmail.MaxEmailLength).IsRequired();
+            b.Ignore(x => x.DomainEvents);
+            b.HasIndex(x => new { x.OrganizationId, x.DocumentType, x.DocumentId });
         });
     }
 

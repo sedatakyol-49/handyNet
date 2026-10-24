@@ -98,13 +98,8 @@ internal sealed class PosInvoiceService(HandyNetDbContext db, ITenantContext ten
         return new InvoiceFile($"{invoice.Number}.pdf", PosInvoicePdf.Render(invoice.Document));
     }
 
-    /// <summary>Takes the next number of the year: INSERT … ON CONFLICT DO UPDATE +1 RETURNING, row-locked until commit.</summary>
-    private async Task<long> AllocateNumberAsync(int year, CancellationToken ct) =>
-        (await db.Database.SqlQuery<long>($"""
-            INSERT INTO pos.invoice_sequences (organization_id, year, next_number) VALUES ({OrganizationId}, {year}, 2)
-            ON CONFLICT (organization_id, year) DO UPDATE SET next_number = pos.invoice_sequences.next_number + 1
-            RETURNING next_number - 1 AS "Value"
-            """).ToListAsync(ct)).Single();
+    /// <summary>Takes the next number of the organization's single invoice series (shared with sales invoices and credit notes).</summary>
+    private Task<long> AllocateNumberAsync(int year, CancellationToken ct) => DocumentNumbers.InvoiceAsync(db, OrganizationId, year, ct);
 
     private async Task<Result<InvoiceCustomer>> CustomerAsync(Receipt receipt, InvoiceCustomerRequest? given, CancellationToken ct)
     {

@@ -80,6 +80,10 @@ internal sealed class InventoryService(
         return warehouse.Id;
     }
 
+    public async Task<IReadOnlyList<WarehouseSnapshot>> GetWarehousesAsync(CancellationToken ct) =>
+        await db.Set<Warehouse>().AsNoTracking().Where(w => w.OrganizationId == OrganizationId).OrderByDescending(w => w.IsDefault).ThenBy(w => w.Name)
+            .Select(w => new WarehouseSnapshot(w.Id, w.Code, w.Name, w.IsDefault)).ToListAsync(ct);
+
     public Task<bool> IsOwnWarehouseAsync(Guid warehouseId, CancellationToken ct) =>
         db.Set<Warehouse>().AnyAsync(w => w.Id == warehouseId && w.OrganizationId == OrganizationId, ct);
 

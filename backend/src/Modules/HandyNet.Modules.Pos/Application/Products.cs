@@ -109,6 +109,14 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         var warehouseId = await WarehouseOfAsync(registerId, ct);
         if (warehouseId is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
+        return await ListInWarehouseAsync(warehouseId.Value, search, category, includeOutOfStock, page, pageSize, ct);
+    }
+
+    /// <summary>Products of one of the organization's warehouses (quotations and invoices outside the till).</summary>
+    public async Task<Result<PagedResult<PosProductDto>>> ListInWarehouseAsync(Guid warehouse, string? search, string? category, bool includeOutOfStock,
+        int? page, int? pageSize, CancellationToken ct)
+    {
+        Guid? warehouseId = warehouse;
         var query = Stock(warehouseId.Value, includeOutOfStock);
         if (!string.IsNullOrWhiteSpace(category))
         {

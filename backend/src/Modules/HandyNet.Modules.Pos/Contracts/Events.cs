@@ -36,3 +36,24 @@ public sealed record EReceiptContent(
 /// Notifications module renders and sends it. The recipient address is the only personal data in the payload.
 /// </summary>
 public sealed record ReceiptEmailRequested(Guid RequestId, Guid OrganizationId, Guid ReceiptId, string Recipient, EReceiptContent Content) : IDomainEvent;
+
+/// <summary>
+/// A quotation or invoice to be emailed to the customer as a PDF attachment. Raised by POS (outbox, same transaction as the
+/// recorded request); the Notifications module sends it. Kind: "Quotation", "Invoice" or "CreditNote". The PDF contains the
+/// customer's name and address (as printed); the email body only the seller, number, total and due/validity date.
+/// </summary>
+public sealed record SalesDocumentEmailRequested(
+    Guid RequestId,
+    Guid OrganizationId,
+    Guid DocumentId,
+    string Kind,
+    string Title,
+    string Number,
+    string Recipient,
+    string SellerName,
+    long TotalGrossMinor,
+    DateOnly Date,
+    DateOnly? DueDate,
+    DateOnly? ValidUntil,
+    string PdfFileName,
+    string PdfBase64) : IDomainEvent;

@@ -76,11 +76,21 @@ public sealed record ReceiptDocument(
     public const string MarginSchemeNote =
         "Gebrauchtgegenstände/Sonderregelung (Differenzbesteuerung nach § 25a UStG): Die enthaltene Umsatzsteuer wird nicht gesondert ausgewiesen.";
     public const string NotConnectedNotice = "TSE nicht angebunden – Testbetrieb";
+    public const string NotTaxableLabel = "N";
+    public const string InvoicePaymentNote =
+        "Zahlung auf eine Rechnung (Forderungsauflösung, nicht steuerbar): Die Umsatzsteuer ist in der Rechnung ausgewiesen.";
+
+    public static string LabelFor(TaxTreatment treatment) => treatment switch
+    {
+        TaxTreatment.Margin25a => MarginLabel,
+        TaxTreatment.NotTaxable => NotTaxableLabel,
+        _ => StandardLabel,
+    };
 
     public static ReceiptDocument For(Receipt receipt, SellerInfo seller, string registerName, long? referencedReceiptNumber, FiscalData fiscal)
     {
         var lines = receipt.Lines.Select(l => new DocumentLine(l.Description, l.Imei, l.Quantity, l.UnitPriceMinor, l.DiscountMinor,
-            l.LineGrossMinor, l.TaxTreatment == TaxTreatment.Margin25a ? MarginLabel : StandardLabel, l.Note)).ToList();
+            l.LineGrossMinor, LabelFor(l.TaxTreatment), l.Note)).ToList();
 
         var vat = receipt.Lines.Where(l => l.TaxTreatment == TaxTreatment.Standard19)
             .GroupBy(l => l.VatRateBasisPoints)
@@ -89,6 +99,8 @@ public sealed record ReceiptDocument(
             .ToList();
 
         var notes = new List<string>();
+        if (receipt.Kind == ReceiptKind.InvoicePayment)
+            notes.Add(InvoicePaymentNote);
         if (receipt.Lines.Any(l => l.TaxTreatment == TaxTreatment.Margin25a))
             notes.Add(MarginSchemeNote);
         if (fiscal.Status == FiscalStatus.NotConnected)
@@ -102,6 +114,7 @@ public sealed record ReceiptDocument(
         {
             ReceiptKind.Storno => "Storno-Beleg",
             ReceiptKind.Return => "Rückgabe-Beleg",
+            ReceiptKind.InvoicePayment => "Zahlungsbeleg",
             _ => "Kassenbeleg",
         };
 
