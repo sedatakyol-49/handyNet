@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { OrdersApi } from '../../core/api/handynet-api';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionStore } from '../../core/auth/session.store';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 import { UI } from '../../shared/ui';
 import { NAV_ITEMS } from '../shell/navigation';
 
@@ -22,6 +23,7 @@ interface Counter {
 })
 export class DashboardPage {
   protected readonly session = inject(SessionStore);
+  protected readonly branding = inject(CompanyBrandingStore);
   private readonly auth = inject(AuthService);
   private readonly orders = inject(OrdersApi);
 

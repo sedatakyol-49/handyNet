@@ -559,6 +559,13 @@
   --color-amber-50: oklch(98.7% 0.022 95.277);
 }
 
+/* Company logo on receipts (screen); printed in grayscale for thermal printers (see the print block below). */
+.hn-receipt-logo {
+  max-height: 4.5rem;
+  max-width: 70%;
+  object-fit: contain;
+}
+
 /*
  * Receipt printing (window.print on POS pages): only the element marked .hn-print-area is printed, on a narrow
  * 80 mm receipt roll. Pages without a print area print normally.
@@ -593,6 +600,11 @@
   }
   .hn-no-print {
     display: none !important;
+  }
+  .hn-receipt-logo {
+    max-height: 18mm;
+    max-width: 56mm;
+    filter: grayscale(1) contrast(1.2);
   }
   /* The POS app is a fixed full-screen frame with scrolling panes: print from the normal document flow instead. */
   .hn-pos,

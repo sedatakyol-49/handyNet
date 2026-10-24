@@ -8,6 +8,7 @@ import { SessionStore } from '../../core/auth/session.store';
 import { I18nService, Lang } from '../../core/i18n/i18n.service';
 import { TranslatePipe, TranslateEnumPipe } from '../../core/i18n/translate.pipe';
 import { CartStore } from '../cart/cart.store';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 import { EmailVerificationBannerComponent } from './email-verification-banner';
 import { NAV_ITEMS, NAV_SECTIONS, NavItem } from './navigation';
 
@@ -25,6 +26,8 @@ export class ShellComponent {
   protected readonly session = inject(SessionStore);
   protected readonly i18n = inject(I18nService);
   protected readonly cart = inject(CartStore);
+  /** Company logo next to the SEHA mark (own company profile). */
+  protected readonly branding = inject(CompanyBrandingStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly storage = inject(StorageService);

@@ -26,7 +26,7 @@ import { ReceiptViewComponent } from './receipt-view';
             {{ 'pos.ereceipt.publicCancelled' | t }}
           </p>
         }
-        <hn-receipt-view [doc]="r.document" />
+        <hn-receipt-view [doc]="r.document" [branding]="r.branding ?? null" />
         <p class="mt-3 text-center text-xs text-slate-500">{{ 'pos.ereceipt.validUntil' | t: { date: (r.expiresAt | hnDate: 'date') } }}</p>
       } @else {
         <p class="py-10 text-center text-sm text-slate-500">{{ 'common.loading' | t }}</p>
