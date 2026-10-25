@@ -575,6 +575,10 @@
     size: 80mm auto;
     margin: 3mm;
   }
+  @page hn-receipt-58 {
+    size: 58mm auto;
+    margin: 3mm;
+  }
   body:has(.hn-print-area) {
     background: #fff;
   }
@@ -600,6 +604,12 @@
   }
   .hn-no-print {
     display: none !important;
+  }
+  /* 58 mm printer profile (ADR-0018): narrow named page and receipt width. */
+  body.hn-paper-58:has(.hn-print-area) .hn-print-area {
+    page: hn-receipt-58;
+    width: 52mm;
+    font-size: 7.5pt;
   }
   .hn-receipt-logo {
     max-height: 18mm;

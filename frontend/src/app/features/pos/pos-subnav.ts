@@ -40,6 +40,7 @@ export class PosSubnavComponent {
     { id: 'quotations', path: ['angebote'], label: 'pos.subnav.quotations', manage: false },
     { id: 'invoices', path: ['rechnungen'], label: 'pos.subnav.invoices', manage: false },
     { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
+    { id: 'printers', path: ['drucker'], label: 'pos.subnav.printers', manage: false },
   ];
   /** Price maintenance only with `pos.manage`. */
   protected readonly visibleTabs = computed(() => this.tabs.filter((t) => !t.manage || this.store.can('pos.manage')));

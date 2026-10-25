@@ -83,6 +83,7 @@ import {
   updateOrder,
 } from './pos.logic';
 import { ReceiptViewComponent } from './receipt-view';
+import { PrinterService } from './printing/printer.service';
 
 /** Codes after which the current session may have changed (closed elsewhere etc.) → reload it. */
 const RELOAD_SESSION_CODES = new Set(['pos.no_open_session', 'pos.session_closed', 'pos.register_inactive']);
@@ -120,6 +121,7 @@ export class TillPage {
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
+  private readonly printer = inject(PrinterService);
   protected readonly ctx = inject(PosContext);
   private readonly fiscalStatus = inject(PosFiscalStatus, { optional: true });
 
@@ -728,6 +730,8 @@ export class TillPage {
       void this.fiscalStatus?.refresh(); // a signed receipt ends a TSE outage; a failed one starts it
       this.finishOrder(order.id);
       this.screen.set('receipt');
+      // Auto-print / cash drawer per the device's printer profile (ADR-0018), once the receipt is on the page.
+      afterNextRender(() => void this.printer.afterSale(receipt), { injector: this.injector });
       this.sessionQuery.reload();
       this.grid()?.reload();
       this.focusId('pos-new-sale');
@@ -782,8 +786,10 @@ export class TillPage {
     this.focusCode();
   }
 
+  /** Prints with the device's printer profile; without one (or after a printer error) the browser print dialog opens. */
   protected print(): void {
-    if (typeof window !== 'undefined') window.print();
+    const receipt = this.lastReceipt();
+    if (receipt) void this.printer.printReceipt(receipt);
   }
 
   // =============================================================== keyboard

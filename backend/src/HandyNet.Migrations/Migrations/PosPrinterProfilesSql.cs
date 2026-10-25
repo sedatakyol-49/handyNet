@@ -11,6 +11,7 @@ internal static class PosPrinterProfilesSql
     public static void Up(MigrationBuilder m) =>
         m.Sql("""
             ALTER TABLE pos.printer_profiles ENABLE ROW LEVEL SECURITY;
+            DROP POLICY IF EXISTS tenant_isolation ON pos.printer_profiles;
             CREATE POLICY tenant_isolation ON pos.printer_profiles
                 USING (organization_id = infra.current_org()) WITH CHECK (organization_id = infra.current_org());
             GRANT SELECT, INSERT, UPDATE, DELETE ON pos.printer_profiles TO handynet_app;
