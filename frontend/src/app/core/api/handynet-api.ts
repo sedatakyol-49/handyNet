@@ -95,6 +95,8 @@ import {
   BulkModerationResult,
   OwnModeration,
   SellerModerationResult,
+  CatalogProductDetail,
+  UpdateProductRequest,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -106,8 +108,13 @@ export class CatalogApi {
     return this.http.get<Paged<CatalogProduct>>(`${this.base}/api/catalog/products`, { params: queryParams(q) });
   }
 
-  product(id: string): Observable<CatalogProduct> {
-    return this.http.get<CatalogProduct>(`${this.base}/api/catalog/products/${id}`);
+  product(id: string): Observable<CatalogProductDetail> {
+    return this.http.get<CatalogProductDetail>(`${this.base}/api/catalog/products/${id}`);
+  }
+
+  /** Creating organization only (ProductImport + imports.manage); 409 `concurrency` / `product.ean_taken` / `product.identity_taken`. */
+  updateProduct(id: string, body: UpdateProductRequest): Observable<CatalogProductDetail> {
+    return this.http.put<CatalogProductDetail>(`${this.base}/api/catalog/products/${id}`, body);
   }
 
   categories(): Observable<CatalogCategories> {
@@ -261,7 +268,7 @@ export class OffersApi {
   private readonly base = inject(API_BASE_URL);
   private readonly url = `${this.base}/api/offers`;
 
-  list(q: { search?: string; status?: string; page?: number; pageSize?: number }): Observable<Paged<OwnOffer>> {
+  list(q: { search?: string; status?: string; productId?: string | null; page?: number; pageSize?: number }): Observable<Paged<OwnOffer>> {
     return this.http.get<Paged<OwnOffer>>(this.url, { params: queryParams(q) });
   }
 
@@ -338,7 +345,7 @@ export class InventoryApi {
     return this.http.post<Warehouse>(`${this.url}/warehouses`, body);
   }
 
-  stock(q: { warehouseId?: string | null; page?: number; pageSize?: number }): Observable<Paged<StockRow>> {
+  stock(q: { warehouseId?: string | null; productId?: string | null; page?: number; pageSize?: number }): Observable<Paged<StockRow>> {
     return this.http.get<Paged<StockRow>>(`${this.url}/stock`, { params: queryParams(q) });
   }
 

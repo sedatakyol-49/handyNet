@@ -14,6 +14,7 @@
     "orders.reasonOptional",
     "inventory.entry.matchedBy.Text",
     "inventory.entry.imeis",
+    "inventory.panel.details",
     "team.title",
     "admin.title",
     "role.Manager",

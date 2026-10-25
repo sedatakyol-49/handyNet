@@ -310,12 +310,15 @@ internal sealed class InventoryService(
         return new WarehouseDto(warehouse.Id, warehouse.Code, warehouse.Name, warehouse.IsDefault);
     }
 
-    public async Task<PagedResult<StockRowDto>> ListStockAsync(Guid? warehouseId, int? page, int? pageSize, CancellationToken ct)
+    public async Task<PagedResult<StockRowDto>> ListStockAsync(Guid? warehouseId, int? page, int? pageSize, CancellationToken ct,
+        Guid? productId = null)
     {
         var (p, size) = Paging.Normalize(page, pageSize);
         var query = db.Set<StockLevel>().AsNoTracking().Where(s => s.OrganizationId == OrganizationId);
         if (warehouseId is { } w)
             query = query.Where(s => s.WarehouseId == w);
+        if (productId is { } product)
+            query = query.Where(s => s.ProductId == product);
 
         var total = await query.CountAsync(ct);
         var levels = await query.OrderByDescending(s => s.UpdatedAt).Skip((p - 1) * size).Take(size).ToListAsync(ct);

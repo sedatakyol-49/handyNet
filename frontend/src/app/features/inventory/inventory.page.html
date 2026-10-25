@@ -45,7 +45,8 @@
         </thead>
         <tbody>
           @for (s of stock.value()?.items ?? []; track s.warehouseId + s.productId) {
-            <tr [class.hn-row-selected]="activeRow() === rowKey(s)" data-testid="stock-row">
+            <tr [class.hn-row-selected]="activeRow() === rowKey(s)" tabindex="0" (click)="onRowClick($event, s)" (keydown)="onRowKey($event, s)"
+              [attr.aria-label]="('inventory.panel.open' | t) + ': ' + s.brand + ' ' + s.productName" data-testid="stock-row">
               <td class="min-w-48 font-medium">{{ s.brand }} {{ s.productName }}</td>
               <td class="hn-mono text-slate-600">{{ s.ean ?? s.mpn ?? '–' }}</td>
               <td>{{ warehouseCode(s.warehouseId) }}</td>
@@ -55,6 +56,8 @@
               <td class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
               <td class="hn-actions">
                 <span class="hn-actions-inner">
+                  <button hnButton size="sm" type="button" (click)="openPanel(s)" data-testid="stock-details"
+                    [attr.aria-label]="('inventory.panel.details' | t) + ': ' + s.brand + ' ' + s.productName">{{ 'inventory.panel.details' | t }}</button>
                   @if (canManage) {
                     <button hnButton size="sm" type="button" (click)="openAdjust(s)"
                       [attr.aria-label]="('inventory.adjust' | t) + ': ' + s.brand + ' ' + s.productName" [title]="'inventory.adjustTitle' | t">{{ 'inventory.adjust' | t }}</button>
@@ -172,6 +175,9 @@
     </div>
   </form>
 </hn-dialog>
+
+<hn-product-panel [row]="panelRow()" [warehouses]="warehouses.value() ?? []" [refresh]="panelRefresh()" (closed)="panelRow.set(null)"
+  (changed)="onPanelChanged()" (adjust)="adjustFromPanel($event)" (showMovements)="movementsFromPanel($event)" />
 
 @if (canManage) {
   <hn-manual-entry-dialog [open]="entryOpen()" (closed)="entryOpen.set(false)" (saved)="onEntrySaved()" />
