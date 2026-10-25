@@ -2062,6 +2062,8 @@ export interface CollectInvoiceResult {
   receipt: Receipt;
   invoiceId: string;
   replayed: boolean;
+}
+
 // ---- Company profile of the tenant (Unternehmen / Firmendaten, ADR-0014) ------------------------------------------------
 /** Logo and receipt texts as printed on till receipts (also on the public e-receipt). */
 export interface ReceiptBranding {
