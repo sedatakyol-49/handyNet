@@ -64,6 +64,64 @@ public sealed class Product : Entity, IAuditable
 
     public static Result<Product> Create(NewProduct input, Guid? createdByOrganizationId, DateTimeOffset now)
     {
+        var data = Normalize(input);
+        if (!data.IsSuccess)
+            return data.Error!;
+        var product = new Product { Id = Guid.CreateVersion7(), CreatedAt = now, CreatedByOrganizationId = createdByOrganizationId };
+        product.Apply(data.Value);
+        return product;
+    }
+
+    /// <summary>
+    /// Changes the product data with the same rules as <see cref="Create"/>. Only the creating organization may do this
+    /// (<see cref="CanEdit"/>; RLS on catalog.products enforces it as well). Switching between a category stocked by IMEI
+    /// and one that is not is refused (<c>product.category_stock_mode</c>): existing stock — serialized units vs.
+    /// quantities, possibly of other organizations — would no longer fit the product. Collisions of the new EAN or
+    /// brand + part number + quality with another product are checked by the caller. Returns whether anything changed.
+    /// </summary>
+    public Result<bool> Update(NewProduct input)
+    {
+        var data = Normalize(input);
+        if (!data.IsSuccess)
+            return data.Error!;
+        var next = data.Value;
+        if (next.Category != Category
+            && (SerializedStock.RequiresImei(next.Category) != SerializedStock.RequiresImei(Category)
+                || SerializedStock.AllowsImei(next.Category) != SerializedStock.AllowsImei(Category)))
+            return Error.Validation("product.category_stock_mode",
+                $"The category cannot change from {Category} to {next.Category}: the two are stocked differently (IMEI vs. quantity).");
+        var changed = next.Brand != Brand || next.Name != Name || next.Category != Category || next.Quality != Quality
+                      || next.Mpn != Mpn || next.Ean != Ean || next.ModelName != ModelName
+                      || !next.CompatibleModels.SequenceEqual(CompatibleModels, StringComparer.Ordinal);
+        if (changed)
+            Apply(next);
+        return changed;
+    }
+
+    /// <summary>Whether <paramref name="organizationId"/> may change this product's data and images (ADR-0011, ADR-0017).</summary>
+    public static bool CanEdit(Guid? createdByOrganizationId, Guid? organizationId) =>
+        organizationId is not null && createdByOrganizationId == organizationId;
+
+    private void Apply(ProductData d)
+    {
+        Brand = d.Brand;
+        BrandKey = Text.NormalizeKey(d.Brand);
+        Name = d.Name;
+        Category = d.Category;
+        Quality = d.Quality;
+        Mpn = d.Mpn;
+        MpnKey = d.Mpn is null ? null : Text.NormalizeKey(d.Mpn);
+        Ean = d.Ean;
+        ModelName = d.ModelName;
+        CompatibleModels = d.CompatibleModels;
+        ModelKeys = ModelKeysOf(d.ModelName, d.CompatibleModels);
+    }
+
+    private sealed record ProductData(string Brand, string Name, ProductCategory Category, PartQuality Quality, string? Mpn, string? Ean,
+        string? ModelName, List<string> CompatibleModels);
+
+    private static Result<ProductData> Normalize(NewProduct input)
+    {
         if (string.IsNullOrWhiteSpace(input.Brand) || string.IsNullOrWhiteSpace(input.Name))
             return Error.Validation("product.incomplete", "Brand and name are required.");
         if (input.Brand.Trim().Length > 100 || input.Name.Trim().Length > 300 || input.Mpn?.Trim().Length > 100)
@@ -86,23 +144,8 @@ public sealed class Product : Entity, IAuditable
         if (compatible.Count > MaxCompatibleModels)
             return Error.Validation("product.too_many_models", $"At most {MaxCompatibleModels} compatible models.");
 
-        return new Product
-        {
-            Id = Guid.CreateVersion7(),
-            Brand = input.Brand.Trim(),
-            BrandKey = Text.NormalizeKey(input.Brand),
-            Name = input.Name.Trim(),
-            Category = input.Category,
-            Quality = input.Quality,
-            Mpn = string.IsNullOrWhiteSpace(input.Mpn) ? null : input.Mpn.Trim(),
-            MpnKey = string.IsNullOrWhiteSpace(input.Mpn) ? null : Text.NormalizeKey(input.Mpn),
-            Ean = ean,
-            ModelName = modelName,
-            CompatibleModels = compatible,
-            ModelKeys = ModelKeysOf(modelName, compatible),
-            CreatedAt = now,
-            CreatedByOrganizationId = createdByOrganizationId,
-        };
+        return new ProductData(input.Brand.Trim(), input.Name.Trim(), input.Category, input.Quality,
+            string.IsNullOrWhiteSpace(input.Mpn) ? null : input.Mpn.Trim(), ean, modelName, compatible);
     }
 
     public const int MaxCompatibleModels = 100;

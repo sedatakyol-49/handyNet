@@ -334,7 +334,9 @@ public sealed class CompanyProfileTests(HandyNetFixture fixture)
         Assert.Equal(logo["screenUrl"]!.GetValue<string>(), view["branding"]!["logoUrl"]!.GetValue<string>());
         Assert.Equal("Willkommen bei uns", view["branding"]!["receiptHeader"]!.GetValue<string>());
         Assert.Equal("Umtausch innerhalb von 14 Tagen", view["branding"]!["receiptFooter"]!.GetValue<string>());
-        Assert.DoesNotContain("DE89", view.ToJsonString()); // bank data is not part of the public receipt
+        // Bank data is not part of the public receipt (full IBAN: a random VAT ID may contain "DE89").
+        Assert.DoesNotContain("DE89370400440532013000", view.ToJsonString());
+        Assert.DoesNotContain("IBAN", view.ToJsonString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -88,12 +88,15 @@ internal sealed partial class OfferService(
 
     // ---- own offers ---------------------------------------------------------------------------
 
-    public async Task<PagedResult<OwnOfferDto>> ListOwnAsync(string? search, string? status, int? page, int? pageSize, CancellationToken ct)
+    public async Task<PagedResult<OwnOfferDto>> ListOwnAsync(string? search, string? status, int? page, int? pageSize, CancellationToken ct,
+        Guid? productId = null)
     {
         var (p, size) = Paging.Normalize(page, pageSize);
         var query = db.Set<Offer>().AsNoTracking().Where(o => o.OrganizationId == OrganizationId);
         if (Enum.TryParse<OfferStatus>(status, true, out var parsed))
             query = query.Where(o => o.Status == parsed);
+        if (productId is { } product)
+            query = query.Where(o => o.ProductId == product);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var key = Text.NormalizeKey(search);
