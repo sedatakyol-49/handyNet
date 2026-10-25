@@ -31,6 +31,7 @@ import { PosSubnavComponent } from './pos-subnav';
 import { ReceiptViewComponent } from './receipt-view';
 import { PosEReceiptComponent } from './pos-ereceipt';
 import { PosInvoiceComponent } from './pos-invoice';
+import { PrinterService } from './printing/printer.service';
 
 /** One receipt as issued (printable) with Storno (`pos.manage`) and Return (select lines/quantities). */
 @Component({
@@ -232,6 +233,7 @@ export class PosReceiptDetailPage {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly printer = inject(PrinterService);
 
   readonly id = input.required<string>();
 
@@ -296,7 +298,8 @@ export class PosReceiptDetailPage {
       this.query.set(copy.receipt);
       this.copy.set(copy.sequence);
       this.toast.success(this.i18n.t('pos.detail.reprinted', { sequence: copy.sequence }));
-      afterNextRender(() => typeof window !== 'undefined' && window.print(), { injector: this.injector });
+      // With the device's printer profile (ADR-0018); browser print without one or after a printer error.
+      afterNextRender(() => void this.printer.printReceipt(copy.receipt, { copy: copy.sequence }), { injector: this.injector });
     } catch (e) {
       this.reprintError.set(e);
     } finally {

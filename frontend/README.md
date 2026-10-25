@@ -96,7 +96,10 @@ src/app
    │                         % discounts, VAT preview, numpad, split payments/change, parked orders, idempotency,
    │                         returnable quantities, shortcuts), pos-rights.ts (cashier rights, discount limit),
    │                         cash-count.ts (denominations), sales-filter.ts (history filter ↔ query/URL),
-   │                         customer-form.ts, receipt-view (printable 80 mm receipt, "Kopie n"), z-report
+   │                         customer-form.ts, receipt-view (printable 80 mm receipt, "Kopie n"), z-report;
+   │                         printing/ (ADR-0018): printer profiles page (/kasse/:id/drucker), ESC/POS encoder
+   │                         (CP858/PC437, QR), receipt layout, ePOS-Print / WebPRNT / HTML renderers, transports
+   │                         (network, Print Bridge, WebUSB, WebSerial) with browser-print fallback
    └─ admin/                 platform administration: tabs "Unternehmen" (verify/reject/suspend, module toggles),
       │                      "Reklamationen" (escalated disputes queue, detail + decision), "Ankaufspreise" and
       │                      "Provisionsrechnungen" (issue a month, run result, documents of the month)
