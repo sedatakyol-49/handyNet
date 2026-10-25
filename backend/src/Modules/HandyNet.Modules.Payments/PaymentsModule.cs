@@ -32,6 +32,7 @@ public static class PaymentsModule
         services.AddScoped<PaymentService>();
         services.AddScoped<PaymentProcessor>();
         services.AddScoped<ICommissionStatements, CommissionStatements>();
+        services.AddScoped<IPaymentDailyFigures, PaymentDailyFigures>();
         services.AddSingleton<PaymentRunner>();
         services.AddScoped<IPaymentProvider, SimulatedPaymentProvider>();
         services.AddScoped<IOutboxHandler, OrderStatusPaymentHandler>();

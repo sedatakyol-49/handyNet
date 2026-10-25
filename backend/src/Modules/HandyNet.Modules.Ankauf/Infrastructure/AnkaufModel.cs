@@ -93,6 +93,7 @@ public sealed class AnkaufModel : IModuleModel
             b.Property(x => x.InspectionNotes).HasMaxLength(2000);
             b.Property(x => x.PaymentMethod).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.RejectionReason).HasMaxLength(1000);
+            b.Property(x => x.CaptureMethod).HasConversion<string>().HasMaxLength(20);
             b.Property(x => x.Version).IsRowVersion();
             b.Ignore(x => x.IsAnonymized);
             b.Ignore(x => x.RetentionStart);
@@ -101,6 +102,52 @@ public sealed class AnkaufModel : IModuleModel
             b.HasIndex(x => new { x.OrganizationId, x.ReceivedAt });
             b.HasIndex(x => x.Imei);
             b.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Restrict);
+            // A self check-in feeds at most one intake.
+            b.HasIndex(x => x.CheckInId).IsUnique().HasFilter("check_in_id IS NOT NULL");
+            b.HasOne<CheckIn>().WithMany().HasForeignKey(x => x.CheckInId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<IntakeSignature>().WithMany().HasForeignKey(x => x.SignatureId).OnDelete(DeleteBehavior.Restrict);
+            // Cash taken from a till: at most one payout per intake (also unique in pos.cash_movements by source reference).
+            b.HasIndex(x => x.CashMovementId).IsUnique().HasFilter("cash_movement_id IS NOT NULL");
+        });
+
+        modelBuilder.Entity<IntakeSignature>(b =>
+        {
+            b.ToTable("intake_signatures", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_intake_signatures_image", "image IS NOT NULL OR anonymized_at IS NOT NULL");
+                t.HasCheckConstraint("ck_intake_signatures_purchase",
+                    "purpose <> 'Purchase' OR (agreed_paid_minor > 0 AND agreed_payment_method IS NOT NULL)");
+                t.HasCheckConstraint("ck_intake_signatures_hashes",
+                    "length(image_sha256) = 64 AND length(data_hash) = 64 AND length(binding_hash) = 64");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Purpose).HasConversion<string>().HasMaxLength(30);
+            b.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.ImageSha256).HasMaxLength(64).IsFixedLength().IsRequired();
+            b.Property(x => x.DataHash).HasMaxLength(64).IsFixedLength().IsRequired();
+            b.Property(x => x.BindingHash).HasMaxLength(64).IsFixedLength().IsRequired();
+            b.Property(x => x.DeclarationVersion).HasMaxLength(50).IsRequired();
+            b.Property(x => x.AgreedPaymentMethod).HasConversion<string>().HasMaxLength(20);
+            b.HasIndex(x => new { x.OrganizationId, x.IntakeId, x.SignedAt });
+            b.HasOne<Intake>().WithMany().HasForeignKey(x => x.IntakeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CheckIn>(b =>
+        {
+            b.ToTable("checkins", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_checkins_expiry", "expires_at > created_at");
+                t.HasCheckConstraint("ck_checkins_submitted", "submitted_at IS NOT NULL OR (seller IS NULL AND signature_image IS NULL)");
+                t.HasCheckConstraint("ck_checkins_purged", "purged_at IS NULL OR (seller IS NULL AND signature_image IS NULL)");
+                t.HasCheckConstraint("ck_checkins_consumed", "(consumed_at IS NULL) = (intake_id IS NULL)");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength().IsRequired();
+            b.Property(x => x.ShopName).HasMaxLength(CheckIn.MaxShopNameLength).IsRequired();
+            b.Property(x => x.Seller!).HasJsonConversion();
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
         });
 
         modelBuilder.Entity<Quote>(b =>

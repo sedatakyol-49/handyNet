@@ -42,12 +42,12 @@ public class ModuleBoundaryTests
         { "Ordering", "HandyNet.Modules.Ankauf" },
         { "Tenancy", "HandyNet.Modules.Ankauf" },
         { "Inventory", "HandyNet.Modules.Ankauf" },
-        // POS sits on top of Inventory, Catalog and Tenancy; nothing depends on it, and it does not use the B2B money flow.
+        // POS sits on top of Inventory, Catalog and Tenancy; it does not use the B2B money flow. Ankauf uses only its contract
+        // (ICashPayouts, ADR-0016); POS never depends on Ankauf.
         { "Inventory", "HandyNet.Modules.Pos" },
         { "Catalog", "HandyNet.Modules.Pos" },
         { "Tenancy", "HandyNet.Modules.Pos" },
         { "Ordering", "HandyNet.Modules.Pos" },
-        { "Ankauf", "HandyNet.Modules.Pos" },
         { "Payments", "HandyNet.Modules.Pos" },
         { "Pos", "HandyNet.Modules.Ordering" },
         { "Pos", "HandyNet.Modules.Payments" },
@@ -67,7 +67,40 @@ public class ModuleBoundaryTests
         { "Invoicing", "HandyNet.Modules.Ledger" },
         { "Invoicing", "HandyNet.Modules.Pos" },
         { "Invoicing", "HandyNet.Modules.Ankauf" },
+        // Reporting composes read contracts (POS, Ankauf, Ordering, Payments, Tenancy); nothing depends on it (ADR-0016).
+        { "Pos", "HandyNet.Modules.Reporting" },
+        { "Ankauf", "HandyNet.Modules.Reporting" },
+        { "Ordering", "HandyNet.Modules.Reporting" },
+        { "Payments", "HandyNet.Modules.Reporting" },
+        { "Tenancy", "HandyNet.Modules.Reporting" },
+        { "Invoicing", "HandyNet.Modules.Reporting" },
+        { "Notifications", "HandyNet.Modules.Reporting" },
+        { "Reporting", "HandyNet.Persistence" },
+        { "Reporting", "HandyNet.Modules.Inventory" },
+        { "Reporting", "HandyNet.Modules.Marketplace" },
     };
+
+    [Fact]
+    public void Reporting_uses_only_the_contracts_of_the_modules_it_reports_on()
+    {
+        var result = Types.InAssembly(Module("Reporting"))
+            .ShouldNot().HaveDependencyOnAny(
+                "HandyNet.Modules.Pos.Domain", "HandyNet.Modules.Pos.Application", "HandyNet.Modules.Pos.Infrastructure",
+                "HandyNet.Modules.Ankauf.Domain", "HandyNet.Modules.Ankauf.Application", "HandyNet.Modules.Ankauf.Infrastructure",
+                "HandyNet.Modules.Ordering.Domain", "HandyNet.Modules.Ordering.Application", "HandyNet.Modules.Ordering.Infrastructure",
+                "HandyNet.Modules.Payments.Domain", "HandyNet.Modules.Payments.Application", "HandyNet.Modules.Payments.Infrastructure")
+            .GetResult();
+        Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void Ankauf_uses_only_the_pos_contract()
+    {
+        var result = Types.InAssembly(Module("Ankauf"))
+            .ShouldNot().HaveDependencyOnAny("HandyNet.Modules.Pos.Domain", "HandyNet.Modules.Pos.Application", "HandyNet.Modules.Pos.Infrastructure")
+            .GetResult();
+        Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
+    }
 
     [Fact]
     public void Invoicing_uses_only_the_contracts_of_payments_and_tenancy()
@@ -136,6 +169,7 @@ public class ModuleBoundaryTests
     [InlineData("Identity", "Tenancy")]
     [InlineData("Payments", "Invoicing")]
     [InlineData("Tenancy", "Invoicing")]
+    [InlineData("Pos", "Ankauf")]
     public void Other_modules_use_only_contracts_and_domain_types(string provider, string consumer)
     {
         var result = Types.InAssembly(Module(consumer))
@@ -147,7 +181,7 @@ public class ModuleBoundaryTests
     [Fact]
     public void Money_is_never_floating_point()
     {
-        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf", "Pos", "Invoicing" }.Select(Module))
+        var offending = Types.InAssemblies(new[] { "Catalog", "Inventory", "Marketplace", "Imports", "Ordering", "Notifications", "Shipping", "Ledger", "Payments", "Disputes", "Ankauf", "Pos", "Invoicing", "Reporting" }.Select(Module))
             .GetTypes()
             .SelectMany(t => t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             .Where(p => (p.Name.Contains("Price") || p.Name.Contains("Total") || p.Name.EndsWith("Minor"))

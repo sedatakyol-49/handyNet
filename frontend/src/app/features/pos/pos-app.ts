@@ -143,6 +143,12 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
                 @if (rights().manage) {
                   <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'preise']" (click)="closeMenu()" data-testid="pos-menu-prices">{{ 'pos.app.prices' | t }}</a>
                 }
+                @if (session.hasModule('Ankauf')) {
+                  <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'ankauf']" (click)="closeMenu()" data-testid="pos-menu-ankauf">{{ 'pos.app.ankauf' | t }}</a>
+                }
+              }
+              @if (session.can('reports.read')) {
+                <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte/tag" (click)="closeMenu()" data-testid="pos-menu-daily">{{ 'pos.app.dailyReport' | t }}</a>
               }
               @if (rights().manage) {
                 <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte" (click)="closeMenu()" data-testid="pos-menu-reports">{{ 'pos.app.reports' | t }}</a>

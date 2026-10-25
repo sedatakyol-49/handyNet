@@ -260,7 +260,7 @@ export function yearsAgo(years: number, extraDays = 0): string {
  * approves all pending entries and publishes it. Use a unique brand per run; publish right before the quotes are made,
  * because every run replaces the current list of the target environment.
  */
-export async function publishAnkaufList(label: string, rows: AnkaufRow[]): Promise<void> {
+export async function publishAnkaufList(label: string, rows: AnkaufRow[], startedAgoMs = 60_000): Promise<void> {
   const ctx = await request.newContext({ baseURL: API_URL });
   try {
     const login = await ctx.post('/api/auth/login', { data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
@@ -273,7 +273,7 @@ export async function publishAnkaufList(label: string, rows: AnkaufRow[]): Promi
       multipart: {
         file: { name: `${label}.xlsx`, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await ankaufPriceListXlsx(rows) },
         label,
-        validFrom: new Date(now - 60_000).toISOString(),
+        validFrom: new Date(now - startedAgoMs).toISOString(),
         validUntil: new Date(now + 5 * 24 * 3600_000).toISOString(),
       },
     });
@@ -291,4 +291,17 @@ export async function publishAnkaufList(label: string, rows: AnkaufRow[]): Promi
   } finally {
     await ctx.dispose();
   }
+}
+
+/** Draws a signature-like stroke on a signature pad (canvas) with the mouse. */
+export async function drawSignature(page: Page, testId: string): Promise<void> {
+  const canvas = page.getByTestId(testId);
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error(`signature pad ${testId} not visible`);
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 30, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 24; i++) await page.mouse.move(box.x + 30 + i * 9, y + Math.sin(i / 2) * 25, { steps: 2 });
+  await page.mouse.up();
 }

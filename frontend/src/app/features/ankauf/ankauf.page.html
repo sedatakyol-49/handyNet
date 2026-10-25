@@ -1,4 +1,11 @@
-<hn-page-header [title]="'ankauf.title' | t" [description]="'ankauf.subtitle' | t" />
+@if (links.registerId; as rid) {
+  <hn-pos-subnav [registerId]="rid" />
+}
+<hn-page-header [title]="'ankauf.title' | t" [description]="'ankauf.subtitle' | t">
+  @if (canIntake()) {
+    <a hnButton [routerLink]="links.intakes" data-testid="ak-to-intakes">{{ 'ankauf.intakes.title' | t }} →</a>
+  }
+</hn-page-header>
 
 <div class="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
   <section class="hn-card p-4" aria-labelledby="ak-form-heading">
@@ -175,10 +182,10 @@
         @if (canIntake()) {
           <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
             @if (intakeFor().get(q.id); as intake) {
-              <a hnButton [routerLink]="['/app/ankauf/ankaeufe', intake.id]" data-testid="ak-open-intake">{{ 'ankauf.intake.openIntake' | t }}</a>
+              <a hnButton [routerLink]="links.intake(intake.id)" data-testid="ak-open-intake">{{ 'ankauf.intake.openIntake' | t }}</a>
             } @else if (usable(q)) {
               <span class="text-xs text-slate-600">{{ 'ankauf.intake.startHint' | t }}</span>
-              <a hnButton variant="primary" [routerLink]="['/app/ankauf/ankaeufe/neu', q.id]" data-testid="ak-start-intake">{{ 'ankauf.intake.start' | t }}</a>
+              <a hnButton variant="primary" [routerLink]="links.newIntake(q.id)" data-testid="ak-start-intake">{{ 'ankauf.intake.start' | t }}</a>
             }
           </div>
         }
@@ -236,9 +243,9 @@
             @if (canIntake()) {
               <td class="hn-actions">
                 @if (intakeFor().get(q.id); as intake) {
-                  <a class="hn-link text-xs" [routerLink]="['/app/ankauf/ankaeufe', intake.id]">{{ intake.status | tEnum: 'intakeStatus' }}</a>
+                  <a class="hn-link text-xs" [routerLink]="links.intake(intake.id)">{{ intake.status | tEnum: 'intakeStatus' }}</a>
                 } @else if (usable(q)) {
-                  <a hnButton size="sm" [routerLink]="['/app/ankauf/ankaeufe/neu', q.id]" data-testid="ak-history-start">{{ 'ankauf.intake.start' | t }}</a>
+                  <a hnButton size="sm" [routerLink]="links.newIntake(q.id)" data-testid="ak-history-start">{{ 'ankauf.intake.start' | t }}</a>
                 }
               </td>
             }

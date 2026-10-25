@@ -40,9 +40,12 @@ export class PosSubnavComponent {
     { id: 'quotations', path: ['angebote'], label: 'pos.subnav.quotations', manage: false },
     { id: 'invoices', path: ['rechnungen'], label: 'pos.subnav.invoices', manage: false },
     { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
+    { id: 'ankauf', path: ['ankauf'], label: 'pos.subnav.ankauf', manage: false, module: 'Ankauf' as const },
   ];
-  /** Price maintenance only with `pos.manage`. */
-  protected readonly visibleTabs = computed(() => this.tabs.filter((t) => !t.manage || this.store.can('pos.manage')));
+  /** Price maintenance only with `pos.manage`; Ankauf only with the module. */
+  protected readonly visibleTabs = computed(() =>
+    this.tabs.filter((t) => (!t.manage || this.store.can('pos.manage')) && (!('module' in t) || !t.module || this.store.hasModule(t.module))),
+  );
 
   private readonly register = createQuery(
     () => this.registerId(),

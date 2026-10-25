@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Ankauf\HandyNet.Modules.Ankauf.csproj" />
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Pos\HandyNet.Modules.Pos.csproj" />
     <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Invoicing\HandyNet.Modules.Invoicing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\HandyNet.Modules.Reporting\HandyNet.Modules.Reporting.csproj" />
   </ItemGroup>
 
 </Project>

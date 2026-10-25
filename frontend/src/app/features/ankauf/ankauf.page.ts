@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, firstValueFrom, of } from 'rxjs';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { fieldErrors, toApiProblem } from '../../core/api/api-problem';
@@ -14,11 +14,14 @@ import { UI } from '../../shared/ui';
 import { formatBp } from '../admin/ankauf/ankauf-admin.logic';
 import { QuoteForm, ankaufProblemText, modelLabel, validateQuoteForm } from './ankauf.logic';
 import { intakeByQuote, isQuoteUsable } from './intake.logic';
+import { ankaufLinks } from './ankauf-links';
+import { PosSubnavComponent } from '../pos/pos-subnav';
 
 /** Dealer: preliminary buyback quotes for used devices (module Ankauf). */
 @Component({
   selector: 'hn-ankauf-page',
-  imports: [FormsModule, RouterLink, ...UI],
+  imports: [FormsModule, RouterLink, PosSubnavComponent, ...UI],
+  host: { '[class]': 'links.registerId ? "pos-page block" : "block"' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ankauf.page.html',
 })
@@ -27,6 +30,7 @@ export class AnkaufPage {
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   protected readonly session = inject(SessionStore);
+  protected readonly links = ankaufLinks(inject(Router).url);
 
   protected readonly conditions = DEVICE_CONDITIONS;
   protected readonly defects = DEVICE_DEFECTS;

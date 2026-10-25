@@ -15,6 +15,7 @@ using HandyNet.Modules.Disputes;
 using HandyNet.Modules.Ankauf;
 using HandyNet.Modules.Pos;
 using HandyNet.Modules.Invoicing;
+using HandyNet.Modules.Reporting;
 using HandyNet.Modules.Ordering;
 using HandyNet.Modules.Tenancy;
 using HandyNet.Persistence;
@@ -71,7 +72,8 @@ builder.Services
     .AddDisputesModule()
     .AddAnkaufModule(builder.Configuration, builder.Environment)
     .AddPosModule(builder.Configuration, builder.Environment)
-    .AddInvoicingModule(builder.Configuration);
+    .AddInvoicingModule(builder.Configuration)
+    .AddReportingModule();
 
 // Data Protection encrypts secrets at rest (fiscal credentials, simulated TSE keys). The key ring must be persisted and
 // shared by all instances in production (DataProtection:KeysPath, e.g. a Docker volume); see docs/operations.md.
@@ -155,6 +157,14 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = builder.Configuration.GetValue("RateLimits:PublicReceiptsPerMinute", 30),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // Ankauf QR self check-in form (anonymous): per client IP and minute.
+    options.AddPolicy(AnkaufModule.CheckInRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:AnkaufCheckInPerMinute", 20),
+            Window = TimeSpan.FromMinutes(1),
+        }));
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
@@ -202,7 +212,8 @@ app.MapIdentityEndpoints()
     .MapDisputesEndpoints()
     .MapAnkaufEndpoints()
     .MapPosEndpoints()
-    .MapInvoicingEndpoints();
+    .MapInvoicingEndpoints()
+    .MapReportingEndpoints();
 
 if (app.Configuration["Bootstrap:AdminEmail"] is { Length: > 0 } adminEmail)
 {

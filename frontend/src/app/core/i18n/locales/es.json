@@ -75,7 +75,8 @@
     "invoices": "Facturas",
     "company": "Empresa",
     "salesDocuments": "Facturas y presupuestos",
-    "overdueInvoices": "{count} facturas vencidas"
+    "overdueInvoices": "{count} facturas vencidas",
+    "dailyReport": "Informe diario"
   },
   "auth": {
     "email": "Correo electrónico",
@@ -595,7 +596,31 @@
       "pos.sales_unit_line": "Un dispositivo (IMEI) se factura por unidad con su producto.",
       "pos.sales_unit_price": "El precio debe estar entre 0 y 1.000.000,00 €.",
       "pos.sales_vat_rate": "El tipo de IVA debe ser 19 %, 7 % o 0 %.",
-      "pos.z_number": "Número Z no válido."
+      "pos.z_number": "Número Z no válido.",
+      "ankauf.mrz_format": "La zona de lectura mecánica está incompleta o no es válida.",
+      "ankauf.mrz_check_digit": "Un dígito de control de la zona de lectura mecánica es incorrecto. Vuelva a escanear.",
+      "ankauf.mrz_mismatch": "El número, el tipo, la fecha de nacimiento o de caducidad no coinciden con la zona de lectura mecánica.",
+      "ankauf.id_expired": "El documento ha caducado. No se puede aceptar un documento caducado.",
+      "ankauf.id_expiry_required": "Indique la fecha de caducidad del documento.",
+      "ankauf.id_number": "El número de documento solo puede contener letras y dígitos.",
+      "ankauf.country_code": "Indique un código de país válido (p. ej. D, DE, TUR).",
+      "ankauf.seller_birth_date": "La fecha de nacimiento no es plausible.",
+      "ankauf.signature_image": "La firma falta o no es una imagen válida.",
+      "ankauf.signature_required": "El cliente debe firmar primero la compra (declaración de propiedad y precio).",
+      "ankauf.signature_invalid": "La firma ya no coincide con los datos, el importe o la forma de pago. Hágala firmar de nuevo.",
+      "ankauf.signature_not_found": "Firma no encontrada.",
+      "ankauf.register_required": "Elija la caja de la que se paga en efectivo.",
+      "ankauf.already_paid": "Esta compra ya se pagó desde una caja.",
+      "ankauf.checkin_not_found": "No se encontró el autorregistro.",
+      "ankauf.checkin_used": "Este autorregistro ya se usó para una compra.",
+      "ankauf.checkin_not_submitted": "El cliente aún no ha enviado el autorregistro.",
+      "ankauf.checkin_expired": "El autorregistro ha caducado. Muestre un nuevo código QR.",
+      "ankauf.checkin_already_submitted": "Los datos ya se enviaron.",
+      "ankauf.checkin_link_invalid": "Este enlace no existe o ha caducado.",
+      "pos.reason_code_reserved": "Este motivo se registra automáticamente y no se puede elegir.",
+      "pos.payout_exists": "Esta compra ya se pagó desde una caja.",
+      "reports.date_in_future": "El día está en el futuro.",
+      "reports.date_invalid": "La fecha no es plausible."
     }
   },
   "dashboard": {
@@ -777,7 +802,19 @@
     "deliveredAt": "Fecha de entrega",
     "inspectionEndsAt": "Plazo de revisión hasta",
     "completedAt": "Fecha de cierre",
-    "shipWithoutShipmentHint": "Marcar como enviado sin envío a través de SEHA (sin etiqueta ni seguimiento)."
+    "shipWithoutShipmentHint": "Marcar como enviado sin envío a través de SEHA (sin etiqueta ni seguimiento).",
+    "timeline": {
+      "title": "Progreso del pedido",
+      "label": "Pasos del pedido",
+      "placed": "Realizado",
+      "confirmed": "Confirmado",
+      "shipped": "Enviado",
+      "delivered": "Entregado",
+      "completed": "Completado"
+    },
+    "positionsCount": "{count} posiciones",
+    "emptyPurchases": "Los pedidos del marketplace aparecen aquí con su estado.",
+    "emptySales": "Los pedidos que otros comercios le hacen aparecen aquí."
   },
   "offers": {
     "title": "Ofertas",
@@ -1932,7 +1969,8 @@
       "step": {
         "receive": "Recepción",
         "inspect": "Revisión",
-        "complete": "Pago y alta en almacén"
+        "complete": "Pago",
+        "sign": "Firma"
       },
       "stepState": {
         "done": "completado",
@@ -2025,9 +2063,14 @@
         "amountPositive": "El importe debe ser mayor que 0.",
         "amountAboveOffer": "El importe no puede superar la oferta tras la revisión ({offer}).",
         "notInspected": "Revise primero el dispositivo.",
-        "reasonRequired": "Indique un motivo."
+        "reasonRequired": "Indique un motivo.",
+        "idExpired": "El documento ha caducado. No se puede aceptar un documento caducado.",
+        "date": "Introduzca una fecha válida.",
+        "countryCode": "Introduzca un código de país como D, DE o TUR.",
+        "idNumber": "Solo letras y dígitos (2–30 caracteres)."
       },
-      "belegDownload": "Justificante de compra (PDF)"
+      "belegDownload": "Justificante de compra (PDF)",
+      "summary": "Resumen"
     },
     "intakes": {
       "title": "Recompras",
@@ -2036,7 +2079,171 @@
       "open": "Abrir",
       "empty": "Aún no hay recompras.",
       "emptyText": "Las recompras se inician desde una oferta provisional en «Recompra».",
-      "limit": "Se muestran las últimas 100 recompras."
+      "limit": "Se muestran las últimas 100 recompras.",
+      "new": "Nueva compra",
+      "statOpen": "Abiertas",
+      "statCompleted": "Completadas",
+      "statPaid": "Total pagado",
+      "statRejected": "Rechazadas"
+    },
+    "wizard": {
+      "receive": "Cliente y documento",
+      "inspect": "Revisar el dispositivo",
+      "sign": "Precio y firma",
+      "complete": "Pagar e inventariar"
+    },
+    "capture": {
+      "title": "Capturar datos del cliente",
+      "subtitle": "Escanee el documento, deje que el cliente se registre por código QR o reutilice un cliente habitual, y compare siempre con el documento.",
+      "manualHint": "Introduzca los datos abajo a mano y compárelos con el documento presentado.",
+      "tabs": {
+        "mrz": "Escanear documento",
+        "checkin": "Autorregistro QR",
+        "returning": "Cliente habitual",
+        "manual": "A mano"
+      },
+      "from": {
+        "Mrz": "Tomado de la zona de lectura mecánica: dígitos de control correctos",
+        "SelfCheckIn": "Introducido por el cliente por código QR: compárelo con el documento",
+        "Returning": "Cliente habitual reutilizado: capture de nuevo el documento"
+      },
+      "Manual": "Introducido a mano",
+      "Mrz": "Documento escaneado",
+      "SelfCheckIn": "Autorregistro QR"
+    },
+    "mrz": {
+      "label": "Zona de lectura mecánica (MRZ)",
+      "hint": "Haga clic en el campo y pase el documento por el escáner, o pegue las 2–3 líneas.",
+      "step1": "Tome el reverso del DNI o la página de datos del pasaporte",
+      "step2": "Prepare el escáner (campo enfocado) y escanee",
+      "step3": "Los datos se verifican y se rellenan: añada la dirección",
+      "waiting": "Esperando el escaneo …",
+      "reading": "Leyendo …",
+      "valid": "MRZ válida",
+      "applied": "Se han rellenado el nombre, la fecha de nacimiento y el documento.",
+      "filled": "Datos tomados del documento.",
+      "transliterated": "Los nombres en la MRZ no llevan diéresis (Ä → AE, ß → SS): compare la grafía con el documento.",
+      "checkDigit": "Dígito de control incorrecto ({field}): vuelva a escanear.",
+      "format": "No es una MRZ completa (3 × 30 o 2 × 44 caracteres).",
+      "date": "Una fecha de la MRZ no es válida.",
+      "ready": "Escáner listo",
+      "fields": {
+        "documentNumber": "número de documento",
+        "birthDate": "fecha de nacimiento",
+        "expiryDate": "fecha de caducidad",
+        "personalNumber": "número personal",
+        "composite": "dígito de control global"
+      }
+    },
+    "checkin": {
+      "intro": "El cliente escanea un código QR con su móvil e introduce sus datos. No necesita cuenta; el enlace es breve y de un solo uso.",
+      "start": "Mostrar código QR",
+      "qrLabel": "Código QR para autorregistro",
+      "scan": "Escanee con la cámara del móvil",
+      "scanHint": "Los datos aparecen aquí en cuanto el cliente los envía.",
+      "waiting": "Esperando al cliente …",
+      "showLink": "Mostrar enlace",
+      "submittedHeading": "El cliente ha enviado sus datos",
+      "verify": "Compare cada dato con el documento presentado antes de aceptarlo.",
+      "phoneSignature": "Firma en el móvil",
+      "take": "Revisado: tomar los datos",
+      "taken": "Datos del autorregistro aceptados.",
+      "discard": "Descartar",
+      "used": "Este autorregistro ya se ha utilizado.",
+      "expired": "El enlace ha caducado.",
+      "again": "Mostrar un nuevo código QR"
+    },
+    "returning": {
+      "search": "Buscar cliente habitual",
+      "hint": "Solo clientes de su empresa. El documento se captura de nuevo en cada compra.",
+      "placeholder": "Nombre, p. ej. García",
+      "results": "Clientes encontrados",
+      "count": "{count} compras",
+      "none": "No se encontró ningún cliente.",
+      "typeMore": "Escriba al menos 2 letras.",
+      "taken": "Cliente habitual aceptado: capture el documento."
+    },
+    "seller": {
+      "title": "Vendedor (particular)",
+      "person": "Persona",
+      "address": "Dirección",
+      "country": "País",
+      "document": "Documento de identidad",
+      "nationality": "Nacionalidad",
+      "nationalityHint": "Código como en el documento, p. ej. D o TUR",
+      "expiry": "Válido hasta",
+      "expiryHint": "No se aceptan documentos caducados.",
+      "authority": "Autoridad expedidora",
+      "authorityHint": "Opcional, figura en el documento (p. ej. Ayuntamiento de Colonia)",
+      "issuingCountry": "Estado expedidor",
+      "issuedBy": "Expedido por",
+      "verifyHint": "Pida el documento original y compruebe foto, nombre y validez. No se guarda ninguna copia.",
+      "expiresSoon": "caduca pronto",
+      "anonymized": "Los datos se anonimizaron el {date} tras el plazo de conservación."
+    },
+    "signature": {
+      "title": "Confirmar el precio y firmar",
+      "declarationTitle": "Declaración de propiedad",
+      "confirmPrice": "Con la firma, el cliente confirma esta declaración, el importe y la forma de pago.",
+      "padLabel": "Campo de firma",
+      "placeholder": "Firme aquí",
+      "hint": "Firme con el dedo, un lápiz o el ratón.",
+      "clear": "Borrar",
+      "missing": "Pida al cliente que firme.",
+      "save": "Guardar firma",
+      "saved": "Firma guardada.",
+      "valid": "Firmado",
+      "stale": "Se necesita una nueva firma",
+      "staleText": "Después de firmar cambiaron los datos, el importe o la forma de pago. La firma anterior ya no es válida.",
+      "signedAt": "Firmado el",
+      "checksum": "Suma de verificación",
+      "again": "Volver a firmar",
+      "reinspectWarning": "Una nueva revisión cambia los datos firmados: el cliente deberá firmar de nuevo.",
+      "checkInSigned": "El cliente firmó sus datos en su móvil el {date}."
+    },
+    "pay": {
+      "hint": "En efectivo de la caja o por transferencia; después el dispositivo entra en inventario.",
+      "register": "Caja para el pago",
+      "expectedCash": "Efectivo previsto {amount}",
+      "noSession": "No hay sesión de caja abierta",
+      "noRegisters": "No hay ninguna caja activa.",
+      "registerRequired": "Elija la caja de la que se paga en efectivo.",
+      "noOpenSession": "Esta caja no tiene sesión abierta. Ábrala primero.",
+      "notEnoughCash": "No hay suficiente efectivo en esta caja para el pago.",
+      "signFirst": "El cliente debe firmar primero exactamente este importe y forma de pago.",
+      "transferHint": "Transferencia: no se saca efectivo de la caja.",
+      "confirmTill": "Se retirarán {amount} de la caja «{register}» como compra (movimiento de caja firmado por la TSE).",
+      "paidFromTill": "Pagado desde «{register}», dispositivo en inventario.",
+      "fromTill": "Pagado en efectivo desde la caja (movimiento «Ankauf», en el informe Z)."
+    },
+    "beleg": {
+      "show": "Mostrar comprobante",
+      "hide": "Ocultar comprobante",
+      "print": "Imprimir comprobante"
+    },
+    "timeline": {
+      "title": "Historial",
+      "received": "Recibido",
+      "inspected": "Revisado",
+      "signed": "Firmado",
+      "completed": "Pagado e inventariado",
+      "rejected": "Rechazado"
+    },
+    "public": {
+      "kicker": "Compra – autorregistro",
+      "intro": "Introduzca sus datos como en su documento. Los vendedores deben tener al menos {age} años. El personal los comprobará con su documento.",
+      "validUntil": "Este enlace es válido hasta {time}.",
+      "signTitle": "Firma (opcional)",
+      "consent": "Acepto que la tienda trate mis datos para esta compra y la obligación legal de registro.",
+      "consentRequired": "Confirme el aviso.",
+      "submit": "Enviar datos",
+      "privacy": "Los datos solo son visibles para esta tienda. No se crea ninguna cuenta ni se guarda foto del documento.",
+      "doneTitle": "¡Gracias!",
+      "doneText": "Sus datos han llegado. Muestre su documento en el mostrador.",
+      "missingTitle": "Enlace no válido",
+      "missing": "Este enlace no existe o ha caducado. Pida un nuevo código QR en el mostrador.",
+      "alreadyTitle": "Ya enviado",
+      "already": "Sus datos ya han llegado. Diríjase al personal."
     }
   },
   "intakeStatus": {
@@ -2103,7 +2310,9 @@
       "reports": "Informes",
       "sessionReport": "Informe de sesión",
       "quotations": "Presupuestos",
-      "invoices": "Facturas"
+      "invoices": "Facturas",
+      "ankauf": "Compra de usados",
+      "dailyReport": "Informe diario"
     },
     "launch": {
       "title": "TPV (venta en tienda)",
@@ -2181,7 +2390,8 @@
       "sessions": "Sesiones",
       "prices": "Precios",
       "quotations": "Presupuestos",
-      "invoices": "Facturas"
+      "invoices": "Facturas",
+      "ankauf": "Compra de usados"
     },
     "registers": {
       "title": "Caja",
@@ -2486,7 +2696,12 @@
       "closedBy": "Cerrada por {name}",
       "openingCount": "Recuento de apertura",
       "closingCount": "Recuento de cierre",
-      "number": "N.º Z {number}"
+      "number": "N.º Z {number}",
+      "ankauf": "Compras pagadas desde la caja",
+      "ankaufCount": "Número de compras (efectivo)",
+      "ankaufCash": "Pagado en efectivo",
+      "ankaufNote": "Las compras por transferencia no afectan a la caja; figuran en el informe diario.",
+      "ofWhichAnkauf": "de ellas compras"
     },
     "cashCount": {
       "label": "Recuento por denominación",
@@ -2575,7 +2790,8 @@
       "BankDeposit": "Ingreso en banco",
       "Expense": "Gasto",
       "OwnerWithdrawal": "Retirada del titular",
-      "OtherWithdrawal": "Otra salida"
+      "OtherWithdrawal": "Otra salida",
+      "Ankauf": "Pago de compra"
     },
     "report": {
       "title": "Informe de ventas",
@@ -3422,6 +3638,49 @@
     "warnings": {
       "customer_vat_id_missing": "Cliente empresa sin NIF-IVA: necesario en entregas intracomunitarias o inversión del sujeto pasivo.",
       "reverse_charge_check": "Inversión del sujeto pasivo activada: compruébelo con su asesor fiscal antes de emitir."
+    }
+  },
+  "reports": {
+    "daily": {
+      "title": "Informe diario",
+      "subtitle": "Lo que su empresa vendió y compró en un día.",
+      "print": "Imprimir",
+      "date": "Día",
+      "previous": "Día anterior",
+      "next": "Día siguiente",
+      "today": "Hoy",
+      "generated": "generado {time}",
+      "sold": "Vendido",
+      "soldHint": "Ventas brutas de caja (tras devoluciones) + cobros de ventas B2B",
+      "bought": "Comprado",
+      "boughtHint": "Compras a particulares (pagadas) + compras B2B pagadas",
+      "pos": "Caja",
+      "sales": "Ventas ({count})",
+      "refunds": "Anulaciones y devoluciones ({count})",
+      "invoices": "Facturas emitidas",
+      "ankaufPayouts": "de ellas compras ({count})",
+      "register": "Caja",
+      "ankauf": "Compras a particulares",
+      "ankaufSummary": "{completed} completadas · {received} recibidas · {rejected} rechazadas",
+      "ankaufTotal": "Total pagado",
+      "time": "Hora",
+      "fromTill": "de la caja",
+      "purchases": "Compras (marketplace B2B)",
+      "placed": "Pedido ({count})",
+      "goodsReceived": "Mercancía recibida ({count})",
+      "paid": "Pagado ({count})",
+      "b2bSales": "Ventas (marketplace B2B)",
+      "ordersIn": "Pedidos recibidos ({count})",
+      "shipped": "Enviado ({count})",
+      "completed": "Completado ({count})",
+      "paymentsIn": "Cobros recibidos ({count})",
+      "event": {
+        "Placed": "realizado",
+        "Delivered": "mercancía recibida"
+      },
+      "emptyTitle": "No hay áreas activas",
+      "empty": "No hay ningún módulo con movimientos activo para su empresa (caja, compras, marketplace).",
+      "note": "Día natural en hora local ({zone}). Importes brutos; IVA por tipo como en el informe Z. No es una evaluación fiscal."
     }
   }
 }

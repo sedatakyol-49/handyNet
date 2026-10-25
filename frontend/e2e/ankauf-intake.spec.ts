@@ -9,6 +9,7 @@ import {
   hasAdmin,
   login,
   logout,
+  drawSignature,
   publishAnkaufList,
   randomImei,
   yearsAgo,
@@ -68,6 +69,7 @@ test.describe.serial('Ankauf intake', () => {
     await page.getByTestId('in-birth').fill(birthDate);
     await page.getByTestId('in-idtype').selectOption({ label: 'Personalausweis' });
     await page.getByTestId('in-idno').fill('L01X00T47');
+    await page.getByTestId('in-expiry').fill('2031-01-31');
   }
 
   test('admin publishes a price list and enables Ankauf + Inventory for the shop', async ({ page }) => {
@@ -122,14 +124,23 @@ test.describe.serial('Ankauf intake', () => {
     await expect(page.getByTestId('intake-max-consumer')).toHaveText(/^122,40\s€$/);
     await expect(page.getByTestId('intake-quote-prices-note')).toContainText('nicht mit den heutigen Preisen');
 
-    // Payment: prefilled with the max. consumer price; above the offer is refused client-side.
+    // Price + signature: prefilled with the max. consumer price; above the offer is refused client-side.
+    await expect(page.locator('[data-step="sign"]')).toHaveAttribute('data-state', 'current');
     await expect(page.getByTestId('in-paid')).toHaveValue('122,40');
     await page.getByTestId('in-paid').fill('150');
-    await page.getByTestId('in-complete').click();
+    await page.getByTestId('in-sign').click();
     await expect(page.getByText('Der Betrag darf das geprüfte Angebot (144,00 €) nicht übersteigen.')).toBeVisible();
-    await expect(page.getByRole('dialog')).toBeHidden();
     await page.getByTestId('in-paid').fill('120,50');
     await page.locator('input[data-method="BankTransfer"]').check();
+    await page.getByTestId('in-sign').click();
+    await expect(page.getByText('Bitte unterschreiben lassen.')).toBeVisible(); // no signature drawn yet
+    await expect(page.getByTestId('intake-declaration')).toContainText('alleiniger Eigentümer');
+    await drawSignature(page, 'intake-signature-pad');
+    await page.getByTestId('in-sign').click();
+    await expect(page.getByTestId('intake-signature-state')).toHaveAttribute('data-state', 'valid');
+    await expect(page.getByTestId('intake-signed-amount')).toHaveText(/^120,50\s€$/);
+
+    // Payout (transfer: no till) and stock.
     await expect(page.getByTestId('in-warehouse')).toContainText('Standardlager');
     await page.getByTestId('in-complete').click();
 
@@ -159,7 +170,7 @@ test.describe.serial('Ankauf intake', () => {
     // List "Ankäufe" in the navigation.
     await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Ankäufe' }).click();
     await expect(page).toHaveURL(/\/app\/ankauf\/ankaeufe$/);
-    const row = page.locator(`tr[data-intake="${imei}"]`);
+    const row = page.locator(`[data-intake="${imei}"]`);
     await expect(row).toContainText('Abgeschlossen');
     await expect(row).toContainText('120,50');
 

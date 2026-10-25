@@ -26,6 +26,98 @@ namespace HandyNet.Migrations.Migrations
             modelBuilder.HasSequence("order_number_seq", "ordering")
                 .StartsAt(1000L);
 
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.CheckIn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid?>("IntakeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("intake_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset?>("PurgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purged_at");
+
+                    b.Property<string>("Seller")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("seller");
+
+                    b.Property<string>("ShopName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("shop_name");
+
+                    b.Property<byte[]>("SignatureImage")
+                        .HasColumnType("bytea")
+                        .HasColumnName("signature_image");
+
+                    b.Property<DateTimeOffset?>("SignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("signed_at");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_checkins");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_checkins_token_hash");
+
+                    b.HasIndex("OrganizationId", "CreatedAt")
+                        .HasDatabaseName("ix_checkins_organization_id_created_at");
+
+                    b.ToTable("checkins", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_checkins_consumed", "(consumed_at IS NULL) = (intake_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_checkins_expiry", "expires_at > created_at");
+
+                            t.HasCheckConstraint("ck_checkins_purged", "purged_at IS NULL OR (seller IS NULL AND signature_image IS NULL)");
+
+                            t.HasCheckConstraint("ck_checkins_submitted", "submitted_at IS NOT NULL OR (seller IS NULL AND signature_image IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.ConditionPolicy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -77,6 +169,24 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<DateTimeOffset?>("AnonymizedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("anonymized_at");
+
+                    b.Property<string>("CaptureMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("capture_method");
+
+                    b.Property<Guid?>("CashMovementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cash_movement_id");
+
+                    b.Property<Guid?>("CashRegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cash_register_id");
+
+                    b.Property<Guid?>("CheckInId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("check_in_id");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
@@ -155,6 +265,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("seller");
 
+                    b.Property<Guid?>("SignatureId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("signature_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -174,6 +288,16 @@ namespace HandyNet.Migrations.Migrations
                     b.HasKey("Id")
                         .HasName("pk_intakes");
 
+                    b.HasIndex("CashMovementId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_intakes_cash_movement_id")
+                        .HasFilter("cash_movement_id IS NOT NULL");
+
+                    b.HasIndex("CheckInId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_intakes_check_in_id")
+                        .HasFilter("check_in_id IS NOT NULL");
+
                     b.HasIndex("Imei")
                         .HasDatabaseName("ix_intakes_imei");
 
@@ -181,6 +305,9 @@ namespace HandyNet.Migrations.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_intakes_one_per_quote")
                         .HasFilter("status <> 'Rejected'");
+
+                    b.HasIndex("SignatureId")
+                        .HasDatabaseName("ix_intakes_signature_id");
 
                     b.HasIndex("OrganizationId", "ReceivedAt")
                         .HasDatabaseName("ix_intakes_organization_id_received_at");
@@ -190,6 +317,104 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_intakes_anonymized", "anonymized_at IS NULL OR seller = '{\"firstName\":\"anonymisiert\",\"lastName\":\"anonymisiert\",\"street\":\"anonymisiert\",\"postalCode\":\"00000\",\"city\":\"anonymisiert\",\"birthDate\":\"1900-01-01\",\"idDocumentType\":0,\"idDocumentNumber\":\"ANONYMISIERT\"}'::jsonb");
 
                             t.HasCheckConstraint("ck_intakes_paid", "paid_minor IS NULL OR paid_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.IntakeSignature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("AgreedPaidMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("agreed_paid_minor");
+
+                    b.Property<string>("AgreedPaymentMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("agreed_payment_method");
+
+                    b.Property<DateTimeOffset?>("AnonymizedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("anonymized_at");
+
+                    b.Property<string>("BindingHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("binding_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DataHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("data_hash")
+                        .IsFixedLength();
+
+                    b.Property<string>("DeclarationVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("declaration_version");
+
+                    b.Property<byte[]>("Image")
+                        .HasColumnType("bytea")
+                        .HasColumnName("image");
+
+                    b.Property<string>("ImageSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("image_sha256")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("IntakeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("intake_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("purpose");
+
+                    b.Property<DateTimeOffset>("SignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("signed_at");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.HasKey("Id")
+                        .HasName("pk_intake_signatures");
+
+                    b.HasIndex("IntakeId")
+                        .HasDatabaseName("ix_intake_signatures_intake_id");
+
+                    b.HasIndex("OrganizationId", "IntakeId", "SignedAt")
+                        .HasDatabaseName("ix_intake_signatures_organization_id_intake_id_signed_at");
+
+                    b.ToTable("intake_signatures", "ankauf", t =>
+                        {
+                            t.HasCheckConstraint("ck_intake_signatures_hashes", "length(image_sha256) = 64 AND length(data_hash) = 64 AND length(binding_hash) = 64");
+
+                            t.HasCheckConstraint("ck_intake_signatures_image", "image IS NOT NULL OR anonymized_at IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_intake_signatures_purchase", "purpose <> 'Purchase' OR (agreed_paid_minor > 0 AND agreed_payment_method IS NOT NULL)");
                         });
                 });
 
@@ -3011,11 +3236,21 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
 
+                    b.Property<string>("SourceReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("source_reference");
+
                     b.HasKey("Id")
                         .HasName("pk_cash_movements");
 
                     b.HasIndex("OrganizationId", "SessionId")
                         .HasDatabaseName("ix_cash_movements_organization_id_session_id");
+
+                    b.HasIndex("OrganizationId", "SourceReference")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cash_movements_source")
+                        .HasFilter("source_reference IS NOT NULL");
 
                     b.ToTable("cash_movements", "pos", t =>
                         {
@@ -5817,12 +6052,34 @@ namespace HandyNet.Migrations.Migrations
 
             modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.Intake", b =>
                 {
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.CheckIn", null)
+                        .WithMany()
+                        .HasForeignKey("CheckInId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_intakes_check_in_check_in_id");
+
                     b.HasOne("HandyNet.Modules.Ankauf.Domain.Quote", null)
                         .WithMany()
                         .HasForeignKey("QuoteId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_intakes_quote_quote_id");
+
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.IntakeSignature", null)
+                        .WithMany()
+                        .HasForeignKey("SignatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_intakes_intake_signature_signature_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.IntakeSignature", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Ankauf.Domain.Intake", null)
+                        .WithMany()
+                        .HasForeignKey("IntakeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_intake_signatures_intakes_intake_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Ankauf.Domain.PriceListEntry", b =>

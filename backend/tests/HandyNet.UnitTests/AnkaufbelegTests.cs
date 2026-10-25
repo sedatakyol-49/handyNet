@@ -11,7 +11,7 @@ public class AnkaufbelegTests
     private static readonly BelegDealer Dealer = new("Handy Müller", "Handy Müller GmbH", "Königstraße 7", "70173", "Stuttgart", "DE", "DE123456789");
 
     private static SellerDetails Seller(string idNumber = "L01X00T47") =>
-        new("Jürgen", "Weiß", "Lindenstraße 5", "10115", "Berlin", new DateOnly(1990, 5, 1), IdDocumentType.IdCard, idNumber);
+        new("Jürgen", "Weiß", "Lindenstraße 5", "10115", "Berlin", new DateOnly(1990, 5, 1), IdDocumentType.IdCard, idNumber) { IdExpiryDate = new DateOnly(2031, 3, 1) };
 
     private static (Intake Intake, Quote Quote) Intake(PaymentMethod method = PaymentMethod.Cash, bool complete = true,
         DeviceDefect[]? defects = null, string idNumber = "L01X00T47")

@@ -10,6 +10,9 @@ public sealed record BelegField(string Label, string Value);
 
 public sealed record BelegSection(string Heading, IReadOnlyList<BelegField> Fields, IReadOnlyList<string> Paragraphs);
 
+/// <summary>The seller's electronic purchase signature as printed (the image itself is laid out by the renderer).</summary>
+public sealed record BelegSignature(DateTimeOffset SignedAt, string BindingHash, SignatureSource Source, byte[]? Png);
+
 /// <summary>Everything printed on an Ankaufbeleg, already formatted (German). Rendering only lays it out.</summary>
 public sealed record AnkaufbelegContent(
     string Title,
@@ -20,6 +23,12 @@ public sealed record AnkaufbelegContent(
     IReadOnlyList<string> SignatureLabels,
     string Footer)
 {
+    /// <summary>
+    /// The seller's signature image (PNG) when signed on screen; null otherwise (then the seller signs on paper).
+    /// Drawn above the seller's signature line in the PDF (converted to JPEG) and in the HTML print view.
+    /// </summary>
+    public byte[]? SellerSignaturePng { get; init; }
+
     /// <summary>All printed text in reading order (for checks and search).</summary>
     public IEnumerable<string> AllText()
     {
@@ -58,7 +67,7 @@ public static class Ankaufbeleg
     /// <summary>German local time for printed dates (falls back to UTC if the zone is unknown on the host).</summary>
     public static readonly TimeZoneInfo GermanTimeZone = FindGermanTimeZone();
 
-    public static Result<AnkaufbelegContent> Build(Intake intake, Quote quote, BelegDealer dealer, TimeZoneInfo zone)
+    public static Result<AnkaufbelegContent> Build(Intake intake, Quote quote, BelegDealer dealer, TimeZoneInfo zone, BelegSignature? signature = null)
     {
         if (intake.Status != IntakeStatus.Completed
             || intake is not { PaidMinor: { } paid, PaymentMethod: { } method, CompletedAt: { } completedAt, InspectedCondition: { } condition })
@@ -115,14 +124,7 @@ public static class Ankaufbeleg
                     $"Die personenbezogenen Daten des Verkäufers / der Verkäuferin wurden am "
                     + $"{TimeZoneInfo.ConvertTime(anonymizedAt, zone).ToString("dd.MM.yyyy", German)} nach Ablauf der Aufbewahrungsfrist anonymisiert.",
                 ])
-                : new("Verkäufer/in (Privatperson)",
-                [
-                    new("Name", $"{seller.FirstName} {seller.LastName}"),
-                    new("Anschrift", Address(seller.Street, seller.PostalCode, seller.City, null)),
-                    new("Geburtsdatum", seller.BirthDate.ToString("dd.MM.yyyy", German)),
-                    new("Ausweisdokument", IdDocumentName(seller.IdDocumentType)),
-                    new("Ausweisnummer", MaskIdNumber(seller.IdDocumentNumber)),
-                ], []),
+                : new("Verkäufer/in (Privatperson)", SellerFields(intake), []),
             new("Gerät", deviceFields, []),
             new("Ankaufpreis und Zahlung",
             [
@@ -138,21 +140,69 @@ public static class Ankaufbeleg
             new("Eigentumserklärung",
             [],
             [
-                "Der Verkäufer / die Verkäuferin erklärt, alleiniger Eigentümer / alleinige Eigentümerin des oben genannten Geräts "
-                + "zu sein und darüber frei verfügen zu dürfen. Das Gerät ist frei von Rechten Dritter; es ist insbesondere "
-                + "nicht gestohlen, verloren, gemietet, finanziert, verpfändet oder unter Eigentumsvorbehalt gekauft. "
-                + "Die Angaben zur Person und zum Gerät sind richtig und vollständig.",
+                OwnershipDeclaration,
             ]),
         };
+        if (signature is not null)
+            sections.Add(new("Elektronische Unterschrift",
+            [
+                new("Unterschrieben am", TimeZoneInfo.ConvertTime(signature.SignedAt, zone).ToString("dd.MM.yyyy, HH:mm:ss 'Uhr'", German)),
+                new("Ort der Unterschrift", signature.Source == SignatureSource.Counter ? "Bildschirm im Geschäft" : "eigenes Mobilgerät"),
+                new("Prüfsumme", signature.BindingHash[..16].ToUpperInvariant()),
+            ],
+            [
+                "Der Verkäufer / die Verkäuferin hat die Eigentumserklärung sowie Ankaufpreis und Zahlungsart auf dem Bildschirm "
+                + "bestätigt und unterschrieben. Die Prüfsumme bindet die Unterschrift an die Daten dieses Belegs; jede spätere "
+                + "Änderung hätte eine neue Unterschrift erfordert.",
+                signature.Png is null ? "Das Unterschriftsbild wurde nach Ablauf der Aufbewahrungsfrist gelöscht." : "",
+            ]));
 
         return new AnkaufbelegContent(
             "Ankaufbeleg",
             "Ankauf eines gebrauchten Mobilgeräts von einer Privatperson",
             number,
             local.ToString("dd.MM.yyyy, HH:mm 'Uhr'", German),
-            sections,
-            ["Ort, Datum, Unterschrift Verkäufer/in", "Ort, Datum, Unterschrift Käufer (Händler)"],
-            $"Ankaufbeleg {number} · {dealer.Name}");
+            sections.Select(s => s with { Paragraphs = s.Paragraphs.Where(p => p.Length > 0).ToList() }).ToList(),
+            [signature is null ? "Ort, Datum, Unterschrift Verkäufer/in" : "Unterschrift Verkäufer/in (elektronisch, siehe oben)",
+                "Ort, Datum, Unterschrift Käufer (Händler)"],
+            $"Ankaufbeleg {number} · {dealer.Name}")
+        {
+            SellerSignaturePng = signature?.Png,
+        };
+    }
+
+    /// <summary>The declaration of ownership the seller confirms (printed and shown before signing).</summary>
+    public const string OwnershipDeclaration =
+        "Der Verkäufer / die Verkäuferin erklärt, alleiniger Eigentümer / alleinige Eigentümerin des oben genannten Geräts "
+        + "zu sein und darüber frei verfügen zu dürfen. Das Gerät ist frei von Rechten Dritter; es ist insbesondere "
+        + "nicht gestohlen, verloren, gemietet, finanziert, verpfändet oder unter Eigentumsvorbehalt gekauft. "
+        + "Die Angaben zur Person und zum Gerät sind richtig und vollständig.";
+
+    private static List<BelegField> SellerFields(Intake intake)
+    {
+        var seller = intake.Seller;
+        var fields = new List<BelegField>
+        {
+            new("Name", $"{seller.FirstName} {seller.LastName}"),
+            new("Anschrift", Address(seller.Street, seller.PostalCode, seller.City, seller.Country)),
+            new("Geburtsdatum", seller.BirthDate.ToString("dd.MM.yyyy", German)),
+        };
+        if (!string.IsNullOrWhiteSpace(seller.Nationality))
+            fields.Add(new("Staatsangehörigkeit", seller.Nationality));
+        fields.Add(new("Ausweisdokument", IdDocumentName(seller.IdDocumentType)));
+        fields.Add(new("Ausweisnummer", MaskIdNumber(seller.IdDocumentNumber)));
+        if (seller.IdExpiryDate is { } expiry)
+            fields.Add(new("Gültig bis", expiry.ToString("dd.MM.yyyy", German)));
+        var issuer = string.Join(", ", new[] { seller.IdIssuingAuthority, seller.IdIssuingCountry }.Where(v => !string.IsNullOrWhiteSpace(v)));
+        if (issuer.Length > 0)
+            fields.Add(new("Ausgestellt von", issuer));
+        fields.Add(new("Erfassung", intake.CaptureMethod switch
+        {
+            SellerCaptureMethod.Mrz => "maschinenlesbare Zone des Ausweises (Prüfziffern geprüft)",
+            SellerCaptureMethod.SelfCheckIn => "Selbsterfassung per QR-Code, mit dem Ausweis abgeglichen",
+            _ => "manuell, mit dem Ausweis abgeglichen",
+        }));
+        return fields;
     }
 
     /// <summary>"AB-20261015-1A2B3C4D": purchase date and the random tail of the intake id (the head of a v7 id is a timestamp).</summary>

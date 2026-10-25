@@ -24,6 +24,7 @@ public static class OrderingModule
         services.AddSingleton<IModuleModel, Infrastructure.OrderingModel>();
         services.AddScoped<OrderService>();
         services.AddScoped<IOrderFulfilment>(sp => sp.GetRequiredService<OrderService>());
+        services.AddScoped<IOrderDailyFigures, OrderDailyFigures>();
         services.AddSingleton<OrderCompletionWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<OrderCompletionWorker>());
         services.AddValidatorsFromAssemblyContaining<OrderService>(includeInternalTypes: true);

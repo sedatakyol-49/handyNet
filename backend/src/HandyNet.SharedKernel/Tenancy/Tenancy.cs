@@ -56,6 +56,9 @@ public static class Permissions
     /// <summary>Close a cash session (Tagesabschluss) and read its session report.</summary>
     public const string PosCloseSession = "pos.close_session";
 
+    /// <summary>Read the organization's business reports (daily report: till, Ankauf, B2B purchases and sales). Owner and manager.</summary>
+    public const string ReportsRead = "reports.read";
+
     /// <summary>POS rights an owner can grant or withhold per staff membership (per-cashier permissions).</summary>
     public static readonly IReadOnlySet<string> ConfigurablePos =
         new HashSet<string> { PosPriceOverride, PosDiscount, PosRefund, PosCashMovement, PosCloseSession };
@@ -71,7 +74,7 @@ public static class Permissions
     private static readonly string[] All =
     [
         OrganizationManage, ImportsManage, OffersManage, InventoryManage, MarketplaceBrowse, OrdersRead, OrdersPlace, OrdersFulfil, PosSell, PosManage,
-        PosPriceOverride, PosDiscount, PosRefund, PosCashMovement, PosCloseSession,
+        PosPriceOverride, PosDiscount, PosRefund, PosCashMovement, PosCloseSession, ReportsRead,
     ];
 
     /// <summary>Default permissions of a role (for staff: a membership without own POS configuration).</summary>

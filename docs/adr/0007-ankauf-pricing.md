@@ -26,6 +26,8 @@
 
 ## Device intake (implemented)
 
+> **Update 2026-10-25:** extended by [ADR-0016](0016-ankauf-seller-capture-signature-till-payout-and-daily-report.md) — structured seller data with ID expiry, MRZ capture, QR self check-in, returning sellers, a signature bound to data and price before payment, and cash payouts from an open till.
+
 `Quote → Received → Inspected → Completed | Rejected`
 
 - **Received**: the quote must be the dealer's own and unexpired, used at most once; IMEI with valid Luhn digit

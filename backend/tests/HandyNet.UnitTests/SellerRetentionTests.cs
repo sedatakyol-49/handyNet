@@ -8,7 +8,7 @@ public class SellerRetentionTests
     private static readonly DateTimeOffset Now = IntakeRulesTests.Now;
 
     private static readonly SellerDetails Seller =
-        new("Jürgen", "Weiß", "Lindenstraße 5", "10115", "Berlin", new DateOnly(1990, 5, 1), IdDocumentType.Passport, "C4F7G9H2K");
+        new("Jürgen", "Weiß", "Lindenstraße 5", "10115", "Berlin", new DateOnly(1990, 5, 1), IdDocumentType.Passport, "C4F7G9H2K") { IdExpiryDate = new DateOnly(2031, 3, 1) };
 
     private static (Intake Intake, Quote Quote) Completed()
     {

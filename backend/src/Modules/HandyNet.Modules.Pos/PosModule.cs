@@ -74,6 +74,9 @@ public static class PosModule
         services.AddScoped<SalesInputResolver>();
         services.AddScoped<QuotationService>();
         services.AddScoped<SalesInvoiceService>();
+        // Contracts for other modules: till payouts (Ankauf) and the daily business report (Reporting).
+        services.AddScoped<ICashPayouts, CashPayouts>();
+        services.AddScoped<IPosDailyFigures, PosDailyFigures>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();

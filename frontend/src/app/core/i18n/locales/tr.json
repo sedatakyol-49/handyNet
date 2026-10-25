@@ -75,7 +75,8 @@
     "invoices": "Faturalar",
     "company": "Şirket",
     "salesDocuments": "Faturalar ve teklifler",
-    "overdueInvoices": "{count} vadesi geçmiş fatura"
+    "overdueInvoices": "{count} vadesi geçmiş fatura",
+    "dailyReport": "Günlük rapor"
   },
   "auth": {
     "email": "E-posta adresi",
@@ -595,7 +596,31 @@
       "pos.sales_unit_line": "Bir cihaz (IMEI) ürünüyle tek adet olarak faturalanır.",
       "pos.sales_unit_price": "Fiyat 0 ile 1.000.000,00 € arasında olmalıdır.",
       "pos.sales_vat_rate": "KDV oranı %19, %7 veya %0 olmalıdır.",
-      "pos.z_number": "Geçersiz Z numarası."
+      "pos.z_number": "Geçersiz Z numarası.",
+      "ankauf.mrz_format": "Makinede okunabilir bölge eksik veya geçersiz.",
+      "ankauf.mrz_check_digit": "Makinede okunabilir bölgedeki bir kontrol rakamı yanlış. Lütfen tekrar tarayın.",
+      "ankauf.mrz_mismatch": "Belge numarası, türü, doğum veya geçerlilik tarihi makinede okunabilir bölgeyle uyuşmuyor.",
+      "ankauf.id_expired": "Kimlik belgesinin süresi dolmuş. Süresi dolmuş belge kabul edilemez.",
+      "ankauf.id_expiry_required": "Lütfen kimlik belgesinin geçerlilik tarihini girin.",
+      "ankauf.id_number": "Belge numarası yalnızca harf ve rakam içerebilir.",
+      "ankauf.country_code": "Lütfen geçerli bir ülke kodu girin (ör. D, DE, TUR).",
+      "ankauf.seller_birth_date": "Doğum tarihi makul değil.",
+      "ankauf.signature_image": "İmza eksik veya geçerli bir görüntü değil.",
+      "ankauf.signature_required": "Müşteri önce alımı imzalamalıdır (mülkiyet beyanı ve fiyat).",
+      "ankauf.signature_invalid": "İmza artık bilgilere, tutara veya ödeme şekline uymuyor. Lütfen yeniden imzalatın.",
+      "ankauf.signature_not_found": "İmza bulunamadı.",
+      "ankauf.register_required": "Lütfen nakdin alınacağı kasayı seçin.",
+      "ankauf.already_paid": "Bu alım zaten bir kasadan ödendi.",
+      "ankauf.checkin_not_found": "Kendi kaydı bulunamadı.",
+      "ankauf.checkin_used": "Bu kendi kaydı zaten bir alım için kullanıldı.",
+      "ankauf.checkin_not_submitted": "Müşteri kendi kaydını henüz göndermedi.",
+      "ankauf.checkin_expired": "Kendi kaydının süresi doldu. Lütfen yeni bir QR kodu gösterin.",
+      "ankauf.checkin_already_submitted": "Bilgiler zaten gönderildi.",
+      "ankauf.checkin_link_invalid": "Bu bağlantı mevcut değil veya süresi doldu.",
+      "pos.reason_code_reserved": "Bu neden otomatik kaydedilir ve seçilemez.",
+      "pos.payout_exists": "Bu alım zaten bir kasadan ödendi.",
+      "reports.date_in_future": "Gün gelecekte.",
+      "reports.date_invalid": "Tarih makul değil."
     }
   },
   "dashboard": {
@@ -777,7 +802,19 @@
     "deliveredAt": "Teslim tarihi",
     "inspectionEndsAt": "İnceleme süresi sonu",
     "completedAt": "Tamamlanma tarihi",
-    "shipWithoutShipmentHint": "SEHA üzerinden gönderi oluşturmadan gönderildi olarak işaretle (etiket ve kargo takibi yok)."
+    "shipWithoutShipmentHint": "SEHA üzerinden gönderi oluşturmadan gönderildi olarak işaretle (etiket ve kargo takibi yok).",
+    "timeline": {
+      "title": "Sipariş durumu",
+      "label": "Sipariş adımları",
+      "placed": "Verildi",
+      "confirmed": "Onaylandı",
+      "shipped": "Kargolandı",
+      "delivered": "Teslim edildi",
+      "completed": "Tamamlandı"
+    },
+    "positionsCount": "{count} kalem",
+    "emptyPurchases": "Pazaryerindeki siparişler durumlarıyla burada görünür.",
+    "emptySales": "Diğer satıcıların size verdiği siparişler burada görünür."
   },
   "offers": {
     "title": "Teklifler",
@@ -1932,7 +1969,8 @@
       "step": {
         "receive": "Teslim alma",
         "inspect": "İnceleme",
-        "complete": "Ödeme ve stoka alma"
+        "complete": "Ödeme",
+        "sign": "İmza"
       },
       "stepState": {
         "done": "tamamlandı",
@@ -2025,9 +2063,14 @@
         "amountPositive": "Tutar 0'dan büyük olmalıdır.",
         "amountAboveOffer": "Tutar, inceleme sonrası teklifi ({offer}) aşamaz.",
         "notInspected": "Lütfen önce cihazı inceleyin.",
-        "reasonRequired": "Lütfen bir gerekçe belirtin."
+        "reasonRequired": "Lütfen bir gerekçe belirtin.",
+        "idExpired": "Kimlik belgesinin süresi dolmuş. Süresi dolmuş belge kabul edilemez.",
+        "date": "Lütfen geçerli bir tarih girin.",
+        "countryCode": "Lütfen D, DE veya TUR gibi bir ülke kodu girin.",
+        "idNumber": "Yalnızca harf ve rakam (2–30 karakter)."
       },
-      "belegDownload": "Alım belgesi (PDF)"
+      "belegDownload": "Alım belgesi (PDF)",
+      "summary": "Özet"
     },
     "intakes": {
       "title": "Geri alımlar",
@@ -2036,7 +2079,171 @@
       "open": "Aç",
       "empty": "Henüz geri alım yok.",
       "emptyText": "Geri alımı, “Geri alım” bölümündeki bir ön tekliften başlatırsınız.",
-      "limit": "Son 100 geri alım gösterilir."
+      "limit": "Son 100 geri alım gösterilir.",
+      "new": "Yeni alım",
+      "statOpen": "Açık",
+      "statCompleted": "Tamamlandı",
+      "statPaid": "Toplam ödenen",
+      "statRejected": "Reddedildi"
+    },
+    "wizard": {
+      "receive": "Müşteri ve kimlik",
+      "inspect": "Cihazı kontrol et",
+      "sign": "Fiyat ve imza",
+      "complete": "Öde ve stoğa al"
+    },
+    "capture": {
+      "title": "Müşteri bilgilerini al",
+      "subtitle": "Kimliği tarayın, müşteriyi QR kodla kendi kaydettirin veya kayıtlı müşteriyi seçin – ve her zaman kimlikle karşılaştırın.",
+      "manualHint": "Bilgileri aşağıya elle girin ve ibraz edilen kimlikle karşılaştırın.",
+      "tabs": {
+        "mrz": "Kimlik tara",
+        "checkin": "QR ile kendi kaydı",
+        "returning": "Kayıtlı müşteri",
+        "manual": "Elle"
+      },
+      "from": {
+        "Mrz": "Makinede okunabilir bölgeden alındı – kontrol rakamları doğru",
+        "SelfCheckIn": "Müşteri tarafından QR kodla girildi – lütfen kimlikle karşılaştırın",
+        "Returning": "Kayıtlı müşteri alındı – lütfen kimliği yeniden girin"
+      },
+      "Manual": "Elle girildi",
+      "Mrz": "Kimlik tarandı",
+      "SelfCheckIn": "QR ile kendi kaydı"
+    },
+    "mrz": {
+      "label": "Makinede okunabilir bölge (MRZ)",
+      "hint": "Alana tıklayın ve kimliği belge tarayıcıdan geçirin – ya da 2–3 satırı yapıştırın.",
+      "step1": "Kimlik kartının arka yüzünü veya pasaportun bilgi sayfasını alın",
+      "step2": "Tarayıcıyı hazırlayın (alan seçili) ve tarayın",
+      "step3": "Bilgiler kontrol edilip doldurulur – adresi ekleyin",
+      "waiting": "Tarama bekleniyor …",
+      "reading": "Okunuyor …",
+      "valid": "MRZ geçerli",
+      "applied": "Ad, doğum tarihi ve kimlik bilgileri dolduruldu.",
+      "filled": "Bilgiler kimlikten alındı.",
+      "transliterated": "MRZ’deki adlarda Almanca özel harfler yoktur (Ä → AE, ß → SS): yazılışı kimlikle karşılaştırın.",
+      "checkDigit": "Kontrol rakamı yanlış ({field}) – lütfen tekrar tarayın.",
+      "format": "Tam bir MRZ değil (3 × 30 veya 2 × 44 karakter).",
+      "date": "MRZ’deki bir tarih geçersiz.",
+      "ready": "Tarayıcı hazır",
+      "fields": {
+        "documentNumber": "belge numarası",
+        "birthDate": "doğum tarihi",
+        "expiryDate": "geçerlilik tarihi",
+        "personalNumber": "kişisel numara",
+        "composite": "genel kontrol rakamı"
+      }
+    },
+    "checkin": {
+      "intro": "Müşteri kendi telefonuyla bir QR kodu tarar ve bilgilerini kendisi girer. Hesap gerekmez; bağlantı kısa süreli ve tek kullanımlıktır.",
+      "start": "QR kodu göster",
+      "qrLabel": "Kendi kaydı için QR kodu",
+      "scan": "Lütfen telefon kamerasıyla tarayın",
+      "scanHint": "Bilgiler müşteri gönderir göndermez burada görünür.",
+      "waiting": "Müşteri bekleniyor …",
+      "showLink": "Bağlantıyı göster",
+      "submittedHeading": "Müşteri bilgilerini gönderdi",
+      "verify": "Lütfen her bilgiyi almadan önce ibraz edilen kimlikle karşılaştırın.",
+      "phoneSignature": "Telefondaki imza",
+      "take": "Kontrol edildi – bilgileri al",
+      "taken": "Kendi kaydındaki bilgiler alındı.",
+      "discard": "At",
+      "used": "Bu kendi kaydı zaten kullanıldı.",
+      "expired": "Bağlantının süresi doldu.",
+      "again": "Yeni QR kodu göster"
+    },
+    "returning": {
+      "search": "Kayıtlı müşteri ara",
+      "hint": "Yalnızca şirketinizin müşterileri. Kimlik her alımda yeniden alınır.",
+      "placeholder": "Ad, ör. Yılmaz",
+      "results": "Bulunan müşteriler",
+      "count": "{count} alım",
+      "none": "Müşteri bulunamadı.",
+      "typeMore": "En az 2 harf girin.",
+      "taken": "Kayıtlı müşteri alındı – lütfen kimliği girin."
+    },
+    "seller": {
+      "title": "Satıcı (özel kişi)",
+      "person": "Kişi",
+      "address": "Adres",
+      "country": "Ülke",
+      "document": "Kimlik belgesi",
+      "nationality": "Uyruk",
+      "nationalityHint": "Kimlikteki kod, ör. D veya TUR",
+      "expiry": "Geçerlilik sonu",
+      "expiryHint": "Süresi dolmuş kimlikler kabul edilmez.",
+      "authority": "Veren makam",
+      "authorityHint": "İsteğe bağlı, kimlikte yazar (ör. Köln Belediyesi)",
+      "issuingCountry": "Veren devlet",
+      "issuedBy": "Veren",
+      "verifyHint": "Kimliğin aslını isteyin; fotoğrafı, adı ve geçerliliği kontrol edin. Kimliğin kopyası saklanmaz.",
+      "expiresSoon": "yakında sona eriyor",
+      "anonymized": "Veriler saklama süresi dolduktan sonra {date} tarihinde anonimleştirildi."
+    },
+    "signature": {
+      "title": "Fiyatı onaylayın ve imzalayın",
+      "declarationTitle": "Mülkiyet beyanı",
+      "confirmPrice": "Müşteri imzasıyla bu beyanı, tutarı ve ödeme şeklini onaylar.",
+      "padLabel": "İmza alanı",
+      "placeholder": "Buraya imzalayın",
+      "hint": "Parmak, kalem veya fareyle imzalayın.",
+      "clear": "Temizle",
+      "missing": "Lütfen müşteriye imzalatın.",
+      "save": "İmzayı kaydet",
+      "saved": "İmza kaydedildi.",
+      "valid": "İmzalandı",
+      "stale": "Yeni imza gerekli",
+      "staleText": "İmzadan sonra bilgiler, tutar veya ödeme şekli değişti. Eski imza artık geçerli değil.",
+      "signedAt": "İmza tarihi",
+      "checksum": "Sağlama toplamı",
+      "again": "Yeniden imzala",
+      "reinspectWarning": "Yeni bir kontrol imzalanan bilgileri değiştirir: müşteri sonra yeniden imzalamalıdır.",
+      "checkInSigned": "Müşteri bilgilerini {date} tarihinde kendi telefonunda imzaladı."
+    },
+    "pay": {
+      "hint": "Kasadan nakit veya havale; cihaz ardından stoğa alınır.",
+      "register": "Ödeme yapılacak kasa",
+      "expectedCash": "Beklenen nakit {amount}",
+      "noSession": "Açık kasa oturumu yok",
+      "noRegisters": "Aktif kasa yok.",
+      "registerRequired": "Lütfen nakdin alınacağı kasayı seçin.",
+      "noOpenSession": "Bu kasanın açık oturumu yok. Lütfen önce kasayı açın.",
+      "notEnoughCash": "Bu kasada ödeme için yeterli nakit yok.",
+      "signFirst": "Müşteri önce tam olarak bu tutarı ve ödeme şeklini imzalamalıdır.",
+      "transferHint": "Havale: kasadan nakit alınmaz.",
+      "confirmTill": "{amount}, alım olarak “{register}” kasasından çıkarılacak (kasa hareketi, TSE imzalı).",
+      "paidFromTill": "“{register}” kasasından ödendi, cihaz stoğa alındı.",
+      "fromTill": "Kasadan nakit ödendi (“Ankauf” kasa hareketi, Z raporunda görünür)."
+    },
+    "beleg": {
+      "show": "Belgeyi göster",
+      "hide": "Belgeyi gizle",
+      "print": "Belgeyi yazdır"
+    },
+    "timeline": {
+      "title": "Geçmiş",
+      "received": "Teslim alındı",
+      "inspected": "Kontrol edildi",
+      "signed": "İmzalandı",
+      "completed": "Ödendi ve stoğa alındı",
+      "rejected": "Reddedildi"
+    },
+    "public": {
+      "kicker": "Alım – kendi kaydı",
+      "intro": "Lütfen bilgilerinizi kimliğinizdeki gibi girin. Satıcılar en az {age} yaşında olmalıdır. Personel bilgileri kimliğinizle kontrol eder.",
+      "validUntil": "Bu bağlantı {time} tarihine kadar geçerlidir.",
+      "signTitle": "İmza (isteğe bağlı)",
+      "consent": "Mağazanın bilgilerimi bu alım ve yasal kayıt yükümlülüğü için işlemesini kabul ediyorum.",
+      "consentRequired": "Lütfen bilgilendirmeyi onaylayın.",
+      "submit": "Bilgileri gönder",
+      "privacy": "Bilgiler yalnızca bu mağaza tarafından görülebilir. Hesap açılmaz ve kimlik fotoğrafı saklanmaz.",
+      "doneTitle": "Teşekkürler!",
+      "doneText": "Bilgileriniz ulaştı. Lütfen kasada kimliğinizi gösterin.",
+      "missingTitle": "Bağlantı geçersiz",
+      "missing": "Bu bağlantı mevcut değil veya süresi doldu. Lütfen kasadan yeni bir QR kodu isteyin.",
+      "alreadyTitle": "Zaten gönderildi",
+      "already": "Bilgileriniz zaten ulaştı. Lütfen personelle görüşün."
     }
   },
   "intakeStatus": {
@@ -2103,7 +2310,9 @@
       "reports": "Raporlar",
       "sessionReport": "Oturum raporu",
       "quotations": "Teklifler",
-      "invoices": "Faturalar"
+      "invoices": "Faturalar",
+      "ankauf": "Alım",
+      "dailyReport": "Günlük rapor"
     },
     "launch": {
       "title": "Kasa (mağaza satışı)",
@@ -2181,7 +2390,8 @@
       "sessions": "Oturumlar",
       "prices": "Fiyatlar",
       "quotations": "Teklifler",
-      "invoices": "Faturalar"
+      "invoices": "Faturalar",
+      "ankauf": "Alım"
     },
     "registers": {
       "title": "Kasa",
@@ -2486,7 +2696,12 @@
       "closedBy": "Kapatan: {name}",
       "openingCount": "Açılış sayımı",
       "closingCount": "Kapanış sayımı",
-      "number": "Z numarası {number}"
+      "number": "Z numarası {number}",
+      "ankauf": "Kasadan ödenen alımlar",
+      "ankaufCount": "Alım sayısı (nakit)",
+      "ankaufCash": "Nakit ödenen",
+      "ankaufNote": "Havaleyle yapılan alımlar kasayı etkilemez; günlük raporda yer alır.",
+      "ofWhichAnkauf": "bunun alımları"
     },
     "cashCount": {
       "label": "Küpür sayımı",
@@ -2575,7 +2790,8 @@
       "BankDeposit": "Bankaya yatırma",
       "Expense": "Gider",
       "OwnerWithdrawal": "Sahibin çektiği",
-      "OtherWithdrawal": "Diğer çıkış"
+      "OtherWithdrawal": "Diğer çıkış",
+      "Ankauf": "Alım ödemesi"
     },
     "report": {
       "title": "Satış raporu",
@@ -3422,6 +3638,49 @@
     "warnings": {
       "customer_vat_id_missing": "KDV kimlik numarası olmayan kurumsal müşteri – AB içi teslimat veya ters ibrazda gereklidir.",
       "reverse_charge_check": "Ters ibraz seçili: düzenlemeden önce vergi danışmanınızla kontrol edin."
+    }
+  },
+  "reports": {
+    "daily": {
+      "title": "Günlük rapor",
+      "subtitle": "Şirketinizin bir günde sattıkları ve satın aldıkları.",
+      "print": "Yazdır",
+      "date": "Gün",
+      "previous": "Önceki gün",
+      "next": "Sonraki gün",
+      "today": "Bugün",
+      "generated": "oluşturuldu {time}",
+      "sold": "Satılan",
+      "soldHint": "Kasa cirosu brüt (iadelerden sonra) + B2B satışlardan alınan ödemeler",
+      "bought": "Satın alınan",
+      "boughtHint": "Bireylerden alımlar (ödenen) + ödenmiş B2B alımlar",
+      "pos": "Kasa",
+      "sales": "Satışlar ({count})",
+      "refunds": "İptaller ve iadeler ({count})",
+      "invoices": "Düzenlenen faturalar",
+      "ankaufPayouts": "bunun alımları ({count})",
+      "register": "Kasa",
+      "ankauf": "Bireylerden alım",
+      "ankaufSummary": "{completed} tamamlandı · {received} teslim alındı · {rejected} reddedildi",
+      "ankaufTotal": "Toplam ödenen",
+      "time": "Saat",
+      "fromTill": "kasadan",
+      "purchases": "Satın alma (B2B pazaryeri)",
+      "placed": "Sipariş verildi ({count})",
+      "goodsReceived": "Mal teslim alındı ({count})",
+      "paid": "Ödendi ({count})",
+      "b2bSales": "Satış (B2B pazaryeri)",
+      "ordersIn": "Gelen siparişler ({count})",
+      "shipped": "Kargolandı ({count})",
+      "completed": "Tamamlandı ({count})",
+      "paymentsIn": "Alınan ödemeler ({count})",
+      "event": {
+        "Placed": "verildi",
+        "Delivered": "mal teslim alındı"
+      },
+      "emptyTitle": "Etkin alan yok",
+      "empty": "Şirketiniz için ciro içeren bir modül etkin değil (kasa, alım, pazaryeri).",
+      "note": "Yerel saate göre takvim günü ({zone}). Brüt tutarlar; KDV, Z raporundaki gibi vergi türüne göre. Vergi değerlendirmesi değildir."
     }
   }
 }

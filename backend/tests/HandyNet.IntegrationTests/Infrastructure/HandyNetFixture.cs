@@ -98,6 +98,7 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("RateLimits:AccountEmailsPerHour", "10000");
             web.UseSetting("RateLimits:PosPinPerMinute", "10000");
             web.UseSetting("RateLimits:PublicReceiptsPerMinute", "10000");
+            web.UseSetting("RateLimits:AnkaufCheckInPerMinute", "10000");
             web.UseSetting("Shipping:EnabledCarriers:0", "Manual");
             web.UseSetting("Shipping:EnabledCarriers:1", "Simulated");
             web.UseSetting("Shipping:SimulatedTransitMinutes", "0");

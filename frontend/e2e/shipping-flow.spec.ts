@@ -156,7 +156,7 @@ test.describe.serial('shipping and delivery', () => {
 
     // The purchases list shows and filters the new status.
     await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einkauf', exact: true }).click();
-    await page.getByLabel('Status').selectOption('Completed');
+    await page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Abgeschlossen' }).click();
     const row = page.getByTestId('orders-table').getByRole('row').filter({ hasText: order.number });
     await expect(row).toContainText('Abgeschlossen');
   });
