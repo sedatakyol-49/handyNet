@@ -1,0 +1,421 @@
+<hn-dialog [open]="!!row()" [title]="title()" size="xl" [guardClose]="true" testId="product-panel" (closed)="close()">
+  @if (row(); as r) {
+    @if (discardPrompt()) {
+      <hn-banner class="mb-3" tone="warning" [text]="'inventory.panel.discardChanges' | t" data-testid="panel-discard">
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button hnButton size="sm" variant="danger" type="button" (click)="discardAndClose()">{{ 'inventory.panel.discard' | t }}</button>
+          <button hnButton size="sm" type="button" (click)="discardPrompt.set(false)">{{ 'inventory.panel.keepEditing' | t }}</button>
+        </div>
+      </hn-banner>
+    }
+
+    <!-- Summary of the stock row -->
+    <div class="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" data-testid="panel-summary">
+      <span class="hn-mono text-slate-600">{{ product()?.ean ?? r.ean ?? product()?.mpn ?? r.mpn ?? '–' }}</span>
+      @if (product(); as p) {
+        <span>{{ p.category | tEnum: 'category' }}</span>
+        @if (p.quality !== 'NotApplicable') {
+          <span>{{ p.quality | tEnum: 'quality' }}</span>
+        }
+      }
+      <span>{{ 'inventory.warehouse' | t }}: {{ warehouseLabel(r.warehouseId) }}</span>
+      @let c = current() ?? r;
+      <span class="tabular-nums">{{ 'inventory.onHand' | t }} {{ c.onHand }} · {{ 'inventory.reserved' | t }} {{ c.reserved }} ·
+        <span class="font-semibold" [class.text-red-700]="c.available <= 0">{{ 'inventory.available' | t }} {{ c.available }}</span></span>
+    </div>
+
+    <hn-banner class="mb-3" [error]="detailError()" />
+
+    <div role="tablist" class="hn-tabs mb-3 overflow-x-auto" [attr.aria-label]="'inventory.panel.sections' | t">
+      @for (t of access().tabs; track t) {
+        <button type="button" role="tab" class="hn-tab whitespace-nowrap" [id]="'panel-tab-' + t" [attr.aria-controls]="'panel-sec-' + t"
+          [attr.aria-selected]="tab() === t" [attr.tabindex]="tab() === t ? 0 : -1" (click)="selectTab(t)" (keydown)="onTabKey($event)"
+          [attr.data-testid]="'panel-tab-' + t">
+          {{ tabLabel(t) }}
+        </button>
+      }
+    </div>
+
+    @if (access().readOnlyReason && (tab() === 'images' || tab() === 'data')) {
+      <hn-banner class="mb-3" tone="info" data-testid="panel-readonly"
+        [text]="(access().readOnlyReason === 'foreign' ? 'inventory.panel.readOnlyForeign' : 'inventory.panel.readOnlyPermission') | t" />
+    }
+
+    @switch (tab()) {
+      <!-- ============================================================ Bilder -->
+      @case ('images') {
+        <section id="panel-sec-images" role="tabpanel" aria-labelledby="panel-tab-images" data-testid="panel-images">
+          @if (!product()) {
+            <hn-skeleton-rows [rows]="3" />
+          } @else if (access().manageImages) {
+            <hn-product-image-manager [productId]="product()!.id" [canManage]="true" />
+          } @else {
+            <div class="max-w-xl">
+              @if (galleryLoading() && galleryImages().length === 0) {
+                <hn-skeleton-rows [rows]="3" />
+              } @else {
+                <hn-image-gallery [images]="galleryImages()" [productName]="title()" />
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ============================================================ Artikeldaten -->
+      @case ('data') {
+        <section id="panel-sec-data" role="tabpanel" aria-labelledby="panel-tab-data" data-testid="panel-data">
+          @if (!product()) {
+            <hn-skeleton-rows [rows]="4" />
+          } @else if (access().editProduct) {
+            <form (ngSubmit)="saveProduct()" novalidate>
+              @if (productBanner(); as problem) {
+                <hn-banner class="mb-3" [error]="problem">
+                  @if (problem.code === 'concurrency') {
+                    <button hnButton size="sm" class="mt-2" type="button" (click)="reloadProduct()">{{ 'inventory.panel.reload' | t }}</button>
+                  }
+                </hn-banner>
+              }
+              @let cats = categories.value();
+              <div class="grid gap-3 sm:grid-cols-2">
+                <hn-field [label]="'marketplace.brand' | t" for="pp-brand" [required]="true" [errors]="productError('brand')">
+                  <input hnInput id="pp-brand" name="brand" maxlength="100" required [(ngModel)]="form.brand" [attr.aria-invalid]="productError('brand').length > 0"
+                    [attr.aria-describedby]="productError('brand').length ? 'pp-brand-error' : null" data-testid="pp-brand" />
+                </hn-field>
+                <hn-field [label]="'common.name' | t" for="pp-name" [required]="true" [errors]="productError('name')">
+                  <input hnInput id="pp-name" name="name" maxlength="300" required [(ngModel)]="form.name" [attr.aria-invalid]="productError('name').length > 0"
+                    [attr.aria-describedby]="productError('name').length ? 'pp-name-error' : null" data-testid="pp-name" />
+                </hn-field>
+                <hn-field [label]="'marketplace.category' | t" for="pp-category" [required]="true" [errors]="productError('category')"
+                  [hint]="'inventory.panel.categoryHint' | t">
+                  <select hnSelect id="pp-category" name="category" [(ngModel)]="form.category" [attr.aria-invalid]="productError('category').length > 0"
+                    aria-describedby="pp-category-hint" data-testid="pp-category">
+                    @for (c of cats?.categories ?? [form.category]; track c) {
+                      <option [value]="c" [disabled]="!categoryAllowed(c)">
+                        {{ c | tEnum: 'category' }}{{ cats?.imeiRequired?.includes(c) ? ' – ' + ('inventory.entry.imeiTag' | t) : '' }}
+                      </option>
+                    }
+                  </select>
+                </hn-field>
+                <hn-field [label]="'common.quality' | t" for="pp-quality">
+                  <select hnSelect id="pp-quality" name="quality" [(ngModel)]="form.quality" data-testid="pp-quality">
+                    @for (q of cats?.qualities ?? [form.quality]; track q) {
+                      <option [value]="q">{{ q === 'NotApplicable' ? ('inventory.entry.qualityNone' | t) : (q | tEnum: 'quality') }}</option>
+                    }
+                  </select>
+                </hn-field>
+                <hn-field label="EAN / GTIN" for="pp-ean" [errors]="productError('ean')" [hint]="'inventory.entry.eanHint' | t">
+                  <input hnInput id="pp-ean" name="ean" inputmode="numeric" autocomplete="off" maxlength="14" dir="ltr" [(ngModel)]="form.ean"
+                    [attr.aria-invalid]="productError('ean').length > 0 || productError('identifier').length > 0"
+                    [attr.aria-describedby]="productError('ean').length ? 'pp-ean-error' : 'pp-ean-hint'" data-testid="pp-ean" />
+                </hn-field>
+                <hn-field [label]="'inventory.entry.mpn' | t" for="pp-mpn" [errors]="productError('mpn')">
+                  <input hnInput id="pp-mpn" name="mpn" autocomplete="off" maxlength="100" dir="ltr" [(ngModel)]="form.mpn"
+                    [attr.aria-invalid]="productError('mpn').length > 0 || productError('identifier').length > 0"
+                    [attr.aria-describedby]="productError('mpn').length ? 'pp-mpn-error' : null" data-testid="pp-mpn" />
+                </hn-field>
+                @if (productError('identifier'); as err) {
+                  @if (err.length) {
+                    <p class="text-xs text-red-700 sm:col-span-2" role="alert">{{ err.join(' ') }}</p>
+                  }
+                }
+                <hn-field [label]="'marketplace.detail.model' | t" for="pp-model" [errors]="productError('modelName')" [hint]="'inventory.entry.modelHint' | t">
+                  <input hnInput id="pp-model" name="modelName" maxlength="200" [(ngModel)]="form.modelName" aria-describedby="pp-model-hint" data-testid="pp-model" />
+                </hn-field>
+                <hn-field [label]="'marketplace.detail.compatible' | t" for="pp-compatible" [errors]="productError('compatibleModels')"
+                  [hint]="'inventory.entry.compatibleHint' | t: { count: modelCount() }">
+                  <textarea hnInput id="pp-compatible" name="compatibleModels" rows="3" [(ngModel)]="form.compatibleModels"
+                    aria-describedby="pp-compatible-hint" data-testid="pp-compatible"></textarea>
+                </hn-field>
+              </div>
+              <p class="mt-3 text-xs text-slate-500">{{ 'inventory.panel.sharedNote' | t }}</p>
+              <div class="mt-3 flex flex-wrap justify-end gap-2">
+                <button hnButton type="button" [disabled]="productBusy() || !isProductDirty()" (click)="resetProduct()">{{ 'common.reset' | t }}</button>
+                <button hnButton variant="primary" type="submit" [loading]="productBusy()" [disabled]="productBusy() || !isProductDirty()" data-testid="pp-save">
+                  {{ 'common.save' | t }}
+                </button>
+              </div>
+            </form>
+          } @else {
+            @let p = product()!;
+            <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]" data-testid="pp-readonly">
+              <dt class="text-slate-500">{{ 'marketplace.brand' | t }}</dt>
+              <dd>{{ p.brand }}</dd>
+              <dt class="text-slate-500">{{ 'common.name' | t }}</dt>
+              <dd class="font-medium">{{ p.name }}</dd>
+              <dt class="text-slate-500">{{ 'marketplace.category' | t }}</dt>
+              <dd>{{ p.category | tEnum: 'category' }}</dd>
+              <dt class="text-slate-500">{{ 'common.quality' | t }}</dt>
+              <dd>{{ p.quality === 'NotApplicable' ? ('inventory.entry.qualityNone' | t) : (p.quality | tEnum: 'quality') }}</dd>
+              <dt class="text-slate-500">EAN / GTIN</dt>
+              <dd class="hn-mono" dir="ltr">{{ p.ean ?? '–' }}</dd>
+              <dt class="text-slate-500">{{ 'inventory.entry.mpn' | t }}</dt>
+              <dd class="hn-mono" dir="ltr">{{ p.mpn ?? '–' }}</dd>
+              <dt class="text-slate-500">{{ 'marketplace.detail.model' | t }}</dt>
+              <dd>{{ p.modelName ?? '–' }}</dd>
+              <dt class="text-slate-500">{{ 'marketplace.detail.compatible' | t }}</dt>
+              <dd>{{ p.compatibleModels.length ? p.compatibleModels.join(', ') : '–' }}</dd>
+            </dl>
+          }
+        </section>
+      }
+
+      <!-- ============================================================ Preise & Angebot -->
+      @case ('prices') {
+        <section id="panel-sec-prices" role="tabpanel" aria-labelledby="panel-tab-prices" class="grid gap-4 lg:grid-cols-2" data-testid="panel-prices">
+          <!-- Purchase price (EK) from goods receipts -->
+          <div class="rounded-md border border-slate-200 p-3">
+            <h3 class="mb-2 text-sm font-semibold">{{ 'inventory.panel.purchaseTitle' | t }}</h3>
+            @if (movementsLoading() && movements().length === 0) {
+              <hn-skeleton-rows [rows]="1" />
+            } @else if (purchasePrice(); as ek) {
+              <p class="text-sm" data-testid="panel-ek">
+                <bdi dir="ltr" class="text-base font-semibold tabular-nums">{{ ek.unitCostMinor | money }}</bdi>
+                <span class="text-slate-500"> · {{ 'inventory.panel.purchaseFrom' | t: { date: (ek.occurredAt | hnDate), warehouse: warehouseLabel(ek.warehouseId) } }}</span>
+              </p>
+            } @else {
+              <p class="text-sm text-slate-500" data-testid="panel-ek">{{ 'inventory.panel.purchaseNone' | t }}</p>
+            }
+            <p class="mt-2 text-xs text-slate-500">{{ 'inventory.panel.purchaseHint' | t }}</p>
+          </div>
+
+          <!-- Own POS price -->
+          @if (access().posPrice) {
+            <div class="rounded-md border border-slate-200 p-3" data-testid="panel-pos">
+              <h3 class="mb-2 text-sm font-semibold">{{ 'pos.price.tillPrice' | t }}</h3>
+              <hn-banner class="mb-2" [error]="posError()" />
+              @if (posLoading() && !posPrice()) {
+                <hn-skeleton-rows [rows]="2" />
+              } @else if (posPrice(); as c) {
+                <dl class="mb-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
+                  <dt>{{ 'pos.price.tillPrice' | t }}</dt>
+                  <dd class="text-end font-semibold tabular-nums" data-testid="panel-pos-current">
+                    <bdi dir="ltr">{{ c.priceMinor === null ? ('pos.sell.noPrice' | t) : (c.priceMinor | money) }}</bdi>
+                  </dd>
+                  <dt>{{ 'pos.price.source' | t }}</dt>
+                  <dd class="text-end">{{ 'pos.price.sources.' + c.priceSource | t }}</dd>
+                  @if (c.updatedAt) {
+                    <dt>{{ 'pos.price.updatedAt' | t }}</dt>
+                    <dd class="text-end text-xs">{{ c.updatedAt | hnDate }}</dd>
+                  }
+                </dl>
+              }
+              @if (access().posPrice === 'edit') {
+                <form (ngSubmit)="savePosPrice()" novalidate>
+                  <hn-field [label]="'pos.price.posPrice' | t" for="pp-pos" [hint]="'pos.price.hint' | t" [errors]="posErrorText()">
+                    <input hnInput id="pp-pos" name="posPrice" inputmode="decimal" autocomplete="off" placeholder="0,00" dir="ltr" class="text-end tabular-nums"
+                      [(ngModel)]="posInput" (ngModelChange)="posErrorText.set(null)" [attr.aria-invalid]="!!posErrorText()"
+                      [attr.aria-describedby]="posErrorText() ? 'pp-pos-error' : 'pp-pos-hint'" data-testid="pp-pos" />
+                  </hn-field>
+                  <div class="mt-3 flex flex-wrap justify-end gap-2">
+                    @if (posPrice()?.posPriceMinor) {
+                      <button hnButton variant="ghost" type="button" class="me-auto" [disabled]="posBusy()" (click)="savePosPrice(true)" data-testid="pp-pos-clear">
+                        {{ 'pos.price.clear' | t }}
+                      </button>
+                    }
+                    <button hnButton variant="primary" type="submit" [loading]="posBusy()" [disabled]="posBusy()" data-testid="pp-pos-save">{{ 'common.save' | t }}</button>
+                  </div>
+                </form>
+              }
+            </div>
+          }
+
+          <!-- Own marketplace offer -->
+          @if (access().offer) {
+            <div class="rounded-md border border-slate-200 p-3 lg:col-span-2" data-testid="panel-offer">
+              <h3 class="mb-2 text-sm font-semibold">{{ 'inventory.panel.offerTitle' | t }}</h3>
+              <hn-banner class="mb-2" [error]="offersError()" />
+              @if (offersLoading() && !offers()) {
+                <hn-skeleton-rows [rows]="2" />
+              } @else if (offers(); as list) {
+                @let o = offer();
+                @if (list.length > 1) {
+                  <hn-field [label]="'inventory.panel.offerChoose' | t" for="pp-offer-choose" class="mb-3 max-w-md">
+                    <select hnSelect id="pp-offer-choose" [value]="o?.id ?? ''" (change)="chooseOffer($any($event.target).value)">
+                      @for (x of list; track x.id) {
+                        <option [value]="x.id">{{ x.supplierSku }} · {{ warehouseLabel(x.warehouseId) }} · {{ x.status | tEnum: 'offerStatus' }}</option>
+                      }
+                    </select>
+                  </hn-field>
+                }
+                @if (o) {
+                  <p class="mb-3 flex flex-wrap items-center gap-2 text-sm" data-testid="pp-offer-current">
+                    <span class="hn-mono">{{ o.supplierSku }}</span>
+                    <hn-status-badge [status]="o.status" kind="offerStatus" />
+                    <span class="text-slate-500">{{ warehouseLabel(o.warehouseId) }}</span>
+                    <span class="tabular-nums"><bdi dir="ltr">{{ o.priceMinor | money }}</bdi> {{ 'common.net' | t }}</span>
+                  </p>
+                  @if (o.moderation?.blocked) {
+                    <hn-banner class="mb-3" tone="warning" [text]="(o.moderation.blockedBy === 'offer' ? 'inventory.panel.offerBlocked' : 'moderation.seller.bannerText') | t" />
+                  }
+                } @else {
+                  <p class="mb-3 text-sm text-slate-500" data-testid="pp-offer-none">{{ 'inventory.panel.offerNone' | t }}</p>
+                }
+
+                @if (access().offer === 'edit' && (o || !offerUnsupported())) {
+                  <form (ngSubmit)="saveOffer()" novalidate data-testid="pp-offer-form">
+                    @if (offerBanner(); as problem) {
+                      <hn-banner class="mb-3" [error]="problem" />
+                    }
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      @if (!o) {
+                        <hn-field [label]="'common.sku' | t" for="pp-sku" [required]="true" [errors]="offerError('supplierSku')" [hint]="'inventory.entry.skuHint' | t">
+                          <input hnInput id="pp-sku" name="sku" maxlength="100" dir="ltr" [(ngModel)]="offerDraft.sku" aria-describedby="pp-sku-hint" data-testid="pp-sku" />
+                        </hn-field>
+                      }
+                      <hn-field [label]="'offers.priceNet' | t" for="pp-price" [required]="true" [errors]="offerError('price')"
+                        [hint]="offerGross() !== null ? ('inventory.panel.grossPreview' | t: { gross: (offerGross() | money) }) : ('offers.priceHint' | t)">
+                        <input hnInput id="pp-price" name="price" inputmode="decimal" autocomplete="off" placeholder="0,00" dir="ltr" class="text-end tabular-nums"
+                          [(ngModel)]="offerDraft.price" (ngModelChange)="updateOfferGross()" [attr.aria-invalid]="offerError('price').length > 0"
+                          [attr.aria-describedby]="offerError('price').length ? 'pp-price-error' : 'pp-price-hint'" data-testid="pp-price" />
+                      </hn-field>
+                      <hn-field [label]="'marketplace.moq' | t" for="pp-moq" [required]="true" [errors]="offerError('minOrderQuantity')">
+                        <input hnInput id="pp-moq" name="moq" inputmode="numeric" dir="ltr" class="text-end tabular-nums" [(ngModel)]="offerDraft.minOrderQuantity" data-testid="pp-moq" />
+                      </hn-field>
+                      <hn-field [label]="'offers.deliveryDays' | t" for="pp-days" [required]="true" [errors]="offerError('deliveryDays')">
+                        <input hnInput id="pp-days" name="days" inputmode="numeric" dir="ltr" class="text-end tabular-nums" [(ngModel)]="offerDraft.deliveryDays" data-testid="pp-days" />
+                      </hn-field>
+                      <hn-field [label]="'common.condition' | t" for="pp-condition">
+                        <select hnSelect id="pp-condition" name="condition" [(ngModel)]="offerDraft.condition" data-testid="pp-condition">
+                          @for (c of conditions; track c) {
+                            <option [value]="c">{{ c | tEnum: 'condition' }}</option>
+                          }
+                        </select>
+                      </hn-field>
+                      @if (o) {
+                        <hn-field [label]="'common.status' | t" for="pp-status">
+                          <select hnSelect id="pp-status" name="status" [(ngModel)]="offerDraft.status" [disabled]="o.moderation?.blockedBy === 'offer'" data-testid="pp-status">
+                            <option value="">{{ 'inventory.panel.keepStatus' | t: { status: (o.status | tEnum: 'offerStatus') } }}</option>
+                            @for (s of statusChoices(o); track s) {
+                              <option [value]="s">{{ s | tEnum: 'offerStatus' }}</option>
+                            }
+                          </select>
+                        </hn-field>
+                      } @else {
+                        <label class="flex items-center gap-2 self-end pb-2 text-sm">
+                          <input type="checkbox" name="publish" class="size-4" [(ngModel)]="offerDraft.publish" data-testid="pp-publish" />
+                          {{ 'offers.publishNow' | t }}
+                        </label>
+                      }
+                    </div>
+                    @if (!o) {
+                      <p class="mt-2 text-xs text-slate-500">{{ 'inventory.panel.offerWarehouse' | t: { warehouse: warehouseLabel(r.warehouseId) } }}</p>
+                    }
+                    <div class="mt-3 flex justify-end">
+                      <button hnButton variant="primary" type="submit" [loading]="offerBusy()" [disabled]="offerBusy()" data-testid="pp-offer-save">
+                        {{ (o ? 'common.save' : 'inventory.panel.offerCreate') | t }}
+                      </button>
+                    </div>
+                  </form>
+                } @else if (!o && offerUnsupported()) {
+                  <p class="text-sm text-slate-500">{{ 'inventory.entry.noOfferForImei' | t }}</p>
+                }
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ============================================================ Bestand -->
+      @case ('stock') {
+        <section id="panel-sec-stock" role="tabpanel" aria-labelledby="panel-tab-stock" class="space-y-4" data-testid="panel-stock">
+          <hn-banner [error]="stockError()" />
+          <hn-table [loading]="stockLoading()">
+            <table class="hn-table">
+              <caption class="sr-only">{{ 'inventory.panel.perWarehouse' | t }}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{{ 'inventory.warehouse' | t }}</th>
+                  <th scope="col" class="num">{{ 'inventory.onHand' | t }}</th>
+                  <th scope="col" class="num">{{ 'inventory.reserved' | t }}</th>
+                  <th scope="col" class="num">{{ 'inventory.available' | t }}</th>
+                  <th scope="col">{{ 'common.updatedAt' | t }}</th>
+                  @if (access().adjustStock) {
+                    <th scope="col" class="hn-actions"><span class="sr-only">{{ 'common.actions' | t }}</span></th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of stockRows(); track s.warehouseId) {
+                  <tr [class.hn-row-selected]="s.warehouseId === r.warehouseId" data-testid="panel-stock-row">
+                    <td>{{ warehouseLabel(s.warehouseId) }}</td>
+                    <td class="num">{{ s.onHand }}</td>
+                    <td class="num">{{ s.reserved }}</td>
+                    <td class="num font-semibold" [class.text-red-700]="s.available <= 0">{{ s.available }}</td>
+                    <td class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
+                    @if (access().adjustStock) {
+                      <td class="hn-actions">
+                        <button hnButton size="sm" type="button" (click)="adjustRow(s)"
+                          [attr.aria-label]="('inventory.adjust' | t) + ': ' + warehouseLabel(s.warehouseId)">{{ 'inventory.adjust' | t }}</button>
+                      </td>
+                    }
+                  </tr>
+                } @empty {
+                  @if (stockLoading()) {
+                    <tr><td [attr.colspan]="access().adjustStock ? 6 : 5"><hn-skeleton-rows [rows]="2" /></td></tr>
+                  } @else {
+                    <tr><td [attr.colspan]="access().adjustStock ? 6 : 5"><hn-empty-state [title]="'inventory.empty' | t" /></td></tr>
+                  }
+                }
+              </tbody>
+              @if (stockRows().length > 1) {
+                <tfoot>
+                  <tr class="font-semibold">
+                    <td class="px-3 py-1.5">{{ 'inventory.panel.total' | t }}</td>
+                    <td class="num px-3 py-1.5">{{ totals().onHand }}</td>
+                    <td class="num px-3 py-1.5">{{ totals().reserved }}</td>
+                    <td class="num px-3 py-1.5">{{ totals().available }}</td>
+                    <td [attr.colspan]="access().adjustStock ? 2 : 1"></td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </hn-table>
+
+          <div>
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-semibold">{{ 'inventory.panel.recentMovements' | t }}</h3>
+              <button hnButton size="sm" variant="ghost" type="button" (click)="openMovements()">{{ 'inventory.panel.allMovements' | t }}</button>
+            </div>
+            <hn-banner class="mb-2" [error]="movementsError()" />
+            <hn-table [loading]="movementsLoading()">
+              <table class="hn-table" data-testid="panel-movements">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'inventory.occurredAt' | t }}</th>
+                    <th scope="col">{{ 'inventory.type' | t }}</th>
+                    <th scope="col">{{ 'inventory.warehouse' | t }}</th>
+                    <th scope="col" class="num">{{ 'inventory.quantity' | t }}</th>
+                    <th scope="col" class="num">{{ 'inventory.onHandAfter' | t }}</th>
+                    <th scope="col" class="num">{{ 'inventory.panel.ek' | t }}</th>
+                    <th scope="col">{{ 'inventory.reference' | t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of movements(); track m.id) {
+                    <tr>
+                      <td class="whitespace-nowrap">{{ m.occurredAt | hnDate }}</td>
+                      <td>{{ m.type | tEnum: 'movementType' }}</td>
+                      <td>{{ warehouseLabel(m.warehouseId) }}</td>
+                      <td class="num font-medium" [class.text-emerald-700]="m.quantity > 0" [class.text-red-700]="m.quantity < 0">
+                        <bdi dir="ltr">{{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}</bdi>
+                      </td>
+                      <td class="num">{{ m.onHandAfter }}</td>
+                      <td class="num"><bdi dir="ltr">{{ m.unitCostMinor != null ? (m.unitCostMinor | money) : '–' }}</bdi></td>
+                      <td class="text-slate-600">{{ m.reference ?? '–' }}</td>
+                    </tr>
+                  } @empty {
+                    @if (movementsLoading()) {
+                      <tr><td colspan="7"><hn-skeleton-rows [rows]="2" /></td></tr>
+                    } @else {
+                      <tr><td colspan="7"><hn-empty-state [title]="'inventory.noMovements' | t" /></td></tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </hn-table>
+          </div>
+        </section>
+      }
+    }
+  }
+</hn-dialog>

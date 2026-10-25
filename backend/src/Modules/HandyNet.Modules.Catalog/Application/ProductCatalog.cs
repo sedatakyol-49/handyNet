@@ -32,6 +32,57 @@ internal sealed class CreateProductValidator : AbstractValidator<CreateProductRe
     }
 }
 
+/// <summary>
+/// Full replacement of a product's data by the organization that created it. <paramref name="Version"/> is the
+/// <c>version</c> from <c>GET /api/catalog/products/{id}</c> (optimistic concurrency: 409 <c>concurrency</c> when stale).
+/// </summary>
+public sealed record UpdateProductRequest(
+    string Brand,
+    string Name,
+    string Category,
+    string? Quality,
+    string? Mpn,
+    string? Ean,
+    string? ModelName,
+    string[]? CompatibleModels,
+    uint? Version);
+
+/// <summary>
+/// A product with what the current organization may do with it: <c>CreatedByCurrentOrganization</c> (owner of the
+/// canonical data and images) and <c>CanEdit</c> (owner and module ProductImport + permission imports.manage).
+/// </summary>
+public sealed record ProductDetailDto(
+    Guid Id,
+    string Brand,
+    string Name,
+    string Category,
+    string Quality,
+    string? Mpn,
+    string? Ean,
+    string? ModelName,
+    IReadOnlyList<string> CompatibleModels,
+    bool CreatedByCurrentOrganization,
+    bool CanEdit,
+    uint Version);
+
+internal sealed class UpdateProductValidator : AbstractValidator<UpdateProductRequest>
+{
+    public UpdateProductValidator()
+    {
+        RuleFor(x => x.Brand).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(300);
+        RuleFor(x => x.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.");
+        RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.");
+        RuleFor(x => x.Mpn).MaximumLength(100);
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.ModelName).MaximumLength(200);
+        RuleFor(x => x.CompatibleModels).Must(m => m is null || m.Length <= Product.MaxCompatibleModels)
+            .WithMessage($"At most {Product.MaxCompatibleModels} compatible models.");
+        RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.Ean) || !string.IsNullOrWhiteSpace(x.Mpn))
+            .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.");
+    }
+}
+
 internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenantContext tenant) : IProductCatalog
 {
     public async Task<ProductMatcher> CreateMatcherAsync(IReadOnlyCollection<ProductKey> keys, CancellationToken ct)
@@ -189,6 +240,83 @@ internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenant
         }
 
         return ToSummary(product);
+    }
+
+    public async Task<ProductDetailDto?> GetDetailAsync(Guid id, CancellationToken ct)
+    {
+        var product = await db.Set<Product>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+        return product is null ? null : ToDetail(product);
+    }
+
+    /// <summary>
+    /// Changes the canonical data of a product the current organization created (ADR-0017). The new EAN and the new
+    /// brand + part number + quality must not belong to another product (409 <c>product.ean_taken</c> /
+    /// <c>product.identity_taken</c> with the other product's id). Audited through <see cref="IAuditable"/>.
+    /// </summary>
+    public async Task<Result<ProductDetailDto>> UpdateAsync(Guid id, UpdateProductRequest request, CancellationToken ct)
+    {
+        var product = await db.Set<Product>().FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null)
+            return Error.NotFound("product.not_found", "Product not found.");
+        if (!Product.CanEdit(product.CreatedByOrganizationId, tenant.OrganizationId))
+            return Error.Forbidden("product.not_owner", "Only the organization that created the product can change its data.");
+        if (product.Version != request.Version)
+            return StaleVersion();
+
+        CategoryParser.TryParse(request.Category, out var category);
+        QualityParser.TryParse(request.Quality, out var quality);
+        var (oldEan, oldBrandKey, oldMpnKey, oldQuality) = (product.Ean, product.BrandKey, product.MpnKey, product.Quality);
+        var updated = product.Update(new NewProduct(request.Brand, request.Name, category, quality, request.Mpn, request.Ean,
+            request.ModelName, request.CompatibleModels));
+        if (!updated.IsSuccess)
+            return updated.Error!;
+        if (!updated.Value)
+            return ToDetail(product);
+
+        if (product.Ean is { } ean && ean != oldEan
+            && await db.Set<Product>().AsNoTracking().Where(p => p.Id != id && p.Ean == ean).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct) is { } eanOwner)
+            return EanTaken(ean, eanOwner);
+        if (product.MpnKey is { } mpnKey && (mpnKey != oldMpnKey || product.BrandKey != oldBrandKey || product.Quality != oldQuality)
+            && await db.Set<Product>().AsNoTracking()
+                .Where(p => p.Id != id && p.BrandKey == product.BrandKey && p.MpnKey == mpnKey && p.Quality == product.Quality)
+                .Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct) is { } identityOwner)
+            return IdentityTaken(identityOwner);
+
+        // Optimistic concurrency: the row version (xmin) the client saw must still be current.
+        db.Entry(product).Property(p => p.Version).OriginalValue = request.Version!.Value;
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return StaleVersion();
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_products_identity"))
+        {
+            return IdentityTaken(null);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            return EanTaken(product.Ean, null);
+        }
+
+        return ToDetail(product);
+
+        static Error StaleVersion() => Error.Conflict("concurrency", "The product was changed in the meantime. Reload and try again.");
+        static Error EanTaken(string? ean, Guid? other) => Error.Conflict("product.ean_taken", $"The EAN {ean} already belongs to another product.")
+            .WithDetails(new Dictionary<string, object?> { ["productId"] = other });
+        static Error IdentityTaken(Guid? other) => Error.Conflict("product.identity_taken",
+                "Another product already has this brand, manufacturer part number and quality.")
+            .WithDetails(new Dictionary<string, object?> { ["productId"] = other });
+    }
+
+    private ProductDetailDto ToDetail(Product p)
+    {
+        var own = Product.CanEdit(p.CreatedByOrganizationId, tenant.OrganizationId);
+        var canEdit = own && tenant.HasModule(PlatformModule.ProductImport) && tenant.Permissions.Contains(Permissions.ImportsManage);
+        return new ProductDetailDto(p.Id, p.Brand, p.Name, p.Category.ToString(), p.Quality.ToString(), p.Mpn, p.Ean, p.ModelName,
+            p.CompatibleModels, own, canEdit, p.Version);
     }
 
     private static ProductSummary ToSummary(Product p) => new(

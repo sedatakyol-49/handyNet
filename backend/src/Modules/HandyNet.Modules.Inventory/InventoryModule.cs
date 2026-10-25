@@ -35,8 +35,9 @@ public static class InventoryModule
                 .ToHttp(w => Results.Created($"/api/inventory/warehouses/{w.Id}", w)))
             .RequirePermission(Permissions.InventoryManage);
 
-        group.MapGet("/stock", async (Guid? warehouseId, int? page, int? pageSize, InventoryService service, CancellationToken ct) =>
-            Results.Ok(await service.ListStockAsync(warehouseId, page, pageSize, ct)));
+        // productId: the stock of one product in every warehouse (Lager product panel).
+        group.MapGet("/stock", async (Guid? warehouseId, Guid? productId, int? page, int? pageSize, InventoryService service, CancellationToken ct) =>
+            Results.Ok(await service.ListStockAsync(warehouseId, page, pageSize, ct, productId)));
 
         group.MapPost("/adjustments", async (AdjustStockRequest request, IValidator<AdjustStockRequest> validator,
                 InventoryService service, CancellationToken ct) =>

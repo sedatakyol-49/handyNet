@@ -303,6 +303,39 @@ export interface CatalogProduct {
   [key: string]: unknown;
 }
 
+/**
+ * `GET /api/catalog/products/{id}`: the canonical product plus what the selected organization may do with it.
+ * `createdByCurrentOrganization` = owner of the shared data and images; `canEdit` = owner with module ProductImport and
+ * permission imports.manage (same as managing images). `version` goes back with `PUT` (optimistic concurrency).
+ */
+export interface CatalogProductDetail {
+  id: string;
+  brand: string;
+  name: string;
+  category: string;
+  quality: string;
+  mpn: string | null;
+  ean: string | null;
+  modelName: string | null;
+  compatibleModels: string[];
+  createdByCurrentOrganization: boolean;
+  canEdit: boolean;
+  version: number;
+}
+
+/** `PUT /api/catalog/products/{id}` (creating organization only): full replacement of the product data. */
+export interface UpdateProductRequest {
+  brand: string;
+  name: string;
+  category: string;
+  quality: string;
+  mpn: string | null;
+  ean: string | null;
+  modelName: string | null;
+  compatibleModels: string[] | null;
+  version: number;
+}
+
 export interface CatalogCategories {
   categories: string[];
   qualities: string[];
@@ -564,6 +597,8 @@ export interface StockMovement {
   type: string;
   reference: string | null;
   occurredAt: string;
+  /** Purchase price (EK) per unit of a goods receipt, integer cents; null for other movements. */
+  unitCostMinor?: number | null;
 }
 
 export interface Listing {
