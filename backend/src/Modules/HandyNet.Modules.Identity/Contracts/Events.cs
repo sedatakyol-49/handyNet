@@ -2,16 +2,22 @@ using HandyNet.SharedKernel;
 
 namespace HandyNet.Modules.Identity.Contracts;
 
-/// <summary>Supported email languages. German is the platform default.</summary>
+/// <summary>Supported email languages (the seven UI locales). German is the platform default and the fallback.</summary>
 public static class EmailLanguage
 {
     public const string German = "de";
     public const string English = "en";
 
-    public static string Normalize(string? language) =>
-        language?.Trim().StartsWith(English, StringComparison.OrdinalIgnoreCase) == true ? English : German;
+    public static readonly IReadOnlyList<string> All = ["de", "en", "tr", "es", "ru", "ar", "fa"];
 
-    public static bool IsSupported(string? language) => language is null or German or English;
+    /// <summary>Primary subtag of <paramref name="language"/> ("en-GB" becomes "en") when supported, otherwise German.</summary>
+    public static string Normalize(string? language)
+    {
+        var primary = language?.Trim().Split('-', '_')[0].ToLowerInvariant();
+        return primary is not null && All.Contains(primary) ? primary : German;
+    }
+
+    public static bool IsSupported(string? language) => language is null || All.Contains(language);
 }
 
 /// <summary>

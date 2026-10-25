@@ -32,7 +32,7 @@ internal sealed class PasswordResetRequestValidator : AbstractValidator<Password
     public PasswordResetRequestValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
-        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be 'de' or 'en'.");
+        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.");
     }
 }
 
@@ -53,7 +53,7 @@ internal sealed class VerifyEmailRequestValidator : AbstractValidator<VerifyEmai
 internal sealed class ResendVerificationRequestValidator : AbstractValidator<ResendVerificationRequest>
 {
     public ResendVerificationRequestValidator() =>
-        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be 'de' or 'en'.");
+        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.");
 }
 
 /// <summary>Password reset and email verification. Emails are sent by Notifications from the outbox events.</summary>

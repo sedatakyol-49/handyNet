@@ -202,7 +202,10 @@ public class UserAccountRulesTests
     [InlineData("de", "de")]
     [InlineData("en", "en")]
     [InlineData("en-GB", "en")]
-    [InlineData("tr", "de")]
+    [InlineData("tr", "tr")]
+    [InlineData("fa-IR", "fa")]
+    [InlineData("AR", "ar")]
+    [InlineData("fr", "de")]
     public void Email_language_falls_back_to_german(string? input, string expected) =>
         Assert.Equal(expected, EmailLanguage.Normalize(input));
 }
