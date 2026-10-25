@@ -223,6 +223,8 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
 
 ## Consequences
 
+> **Update 2026-10-25 (ADR-0015):** system cash-movement reason `Ankauf` (payout to a private seller via `ICashPayouts`, not selectable manually); the Z-report shows Ankauf count and cash paid out.
+
 - The till cannot be used in production until a certified TSE adapter exists. A real adapter must also handle TSE
   outages (KassenSichV allows selling with a "TSE ausgefallen" mark) — the current interface returns `Result` so that
   path can be added, but it is not designed in detail.

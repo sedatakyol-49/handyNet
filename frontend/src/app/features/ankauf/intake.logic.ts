@@ -205,7 +205,7 @@ export function validateReceiveForm(
   const city = text('city');
   const idDocumentNumber = text('idDocumentNumber');
   if (!form.idDocumentType) errors.idDocumentType = 'ankauf.intake.validation.idDocumentType';
-  if (idDocumentNumber && !/^[A-Za-z0-9 <-]{2,30}$/.test(idDocumentNumber)) errors.idDocumentNumber = 'ankauf.intake.validation.idNumber';
+  if (idDocumentNumber && !errors.idDocumentNumber && !/^[A-Za-z0-9 <-]{2,30}$/.test(idDocumentNumber)) errors.idDocumentNumber = 'ankauf.intake.validation.idNumber';
 
   const expiry = parseIsoDate(form.idExpiryDate);
   if (!(form.idExpiryDate ?? '').trim()) errors.idExpiryDate = 'ankauf.intake.validation.required';
