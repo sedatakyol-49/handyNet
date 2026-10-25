@@ -30,7 +30,8 @@ test.describe.serial('Ankauf capture, signature and till payout', () => {
     registerId = register.id;
     sessionId = (await owner.call<{ id: string }>('POST', `/api/pos/registers/${register.id}/sessions`, orgId, { openingCashMinor: 500_00 })).id;
     await owner.dispose();
-    await publishAnkaufList(`E2E Capture ${RUN}`, [{ brand, model, storage: '128 GB', price: 300 }]);
+    // Started 3 min ago: lists published later by other specs (valid from the minute, UI) stay the more recent ones.
+    await publishAnkaufList(`E2E Capture ${RUN}`, [{ brand, model, storage: '128 GB', price: 300 }], 180_000);
   });
 
   async function quoteAndStart(page: Page): Promise<void> {
