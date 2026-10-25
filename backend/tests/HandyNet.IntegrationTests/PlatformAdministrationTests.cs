@@ -629,10 +629,11 @@ public sealed class PlatformAdministrationTests(HandyNetFixture fixture)
         await using (var admin = new NpgsqlConnection(fixture.AdminConnectionString))
         {
             await admin.OpenAsync();
-            await using var create = new NpgsqlCommand($"CREATE DATABASE {database}", admin);
+            // Generous timeouts: CREATE DATABASE and the full migration run slow down under parallel test load.
+            await using var create = new NpgsqlCommand($"CREATE DATABASE {database}", admin) { CommandTimeout = 180 };
             await create.ExecuteNonQueryAsync();
         }
-        var connection = new NpgsqlConnectionStringBuilder(fixture.AdminConnectionString) { Database = database }.ConnectionString;
+        var connection = new NpgsqlConnectionStringBuilder(fixture.AdminConnectionString) { Database = database, CommandTimeout = 180 }.ConnectionString;
         try
         {
             await using (var db = DatabaseMigrator.CreateContext(connection))
