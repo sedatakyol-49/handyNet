@@ -54,7 +54,8 @@ export interface TokenResponse {
 }
 
 /** Language of account emails (verification, password reset); the API accepts only these two. */
-export type EmailLanguage = 'de' | 'en';
+export const EMAIL_LANGUAGES = ['de', 'en', 'tr', 'es', 'ru', 'ar', 'fa'] as const;
+export type EmailLanguage = (typeof EMAIL_LANGUAGES)[number];
 
 export interface Membership {
   organizationId: string;

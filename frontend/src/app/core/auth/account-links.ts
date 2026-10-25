@@ -1,4 +1,4 @@
-import { EmailLanguage } from '../api/models';
+import { EMAIL_LANGUAGES, EmailLanguage } from '../api/models';
 
 /**
  * Reads the one-time token from an email link's fragment (`#token=…`). The token is in the fragment so it never
@@ -28,10 +28,7 @@ export function consumeFragmentToken(win: Window | null | undefined): string | n
   return token;
 }
 
-/**
- * Language for account emails. The API accepts only `de` and `en` (anything else is a 422) and defaults to German,
- * so English is sent only for the English UI; every other UI language gets the German email.
- */
+/** Language for account emails: the UI language (all seven are supported by the API); German otherwise. */
 export function emailLanguage(uiLanguage: string): EmailLanguage {
-  return uiLanguage === 'en' ? 'en' : 'de';
+  return (EMAIL_LANGUAGES as readonly string[]).includes(uiLanguage) ? (uiLanguage as EmailLanguage) : 'de';
 }

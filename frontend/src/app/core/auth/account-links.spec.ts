@@ -41,9 +41,9 @@ describe('consumeFragmentToken', () => {
 });
 
 describe('emailLanguage', () => {
-  it('sends English only for the English UI; everything else gets German like the API default', () => {
-    expect(emailLanguage('en')).toBe('en');
-    for (const lang of ['de', 'tr', 'es', 'ru', 'ar', 'fa']) expect(emailLanguage(lang)).toBe('de');
+  it('sends the UI language for all seven locales; anything else gets German like the API default', () => {
+    for (const lang of ['de', 'en', 'tr', 'es', 'ru', 'ar', 'fa']) expect(emailLanguage(lang)).toBe(lang);
+    for (const lang of ['fr', '', 'EN']) expect(emailLanguage(lang)).toBe('de');
   });
 });
 
