@@ -1,4 +1,4 @@
-# ADR-0015: Editing canonical products and the Lager product panel
+# ADR-0017: Editing canonical products and the Lager product panel
 
 - Status: Accepted
 - Date: 2026-10-25

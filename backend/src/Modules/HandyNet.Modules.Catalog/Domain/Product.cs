@@ -98,7 +98,7 @@ public sealed class Product : Entity, IAuditable
         return changed;
     }
 
-    /// <summary>Whether <paramref name="organizationId"/> may change this product's data and images (ADR-0011, ADR-0015).</summary>
+    /// <summary>Whether <paramref name="organizationId"/> may change this product's data and images (ADR-0011, ADR-0017).</summary>
     public static bool CanEdit(Guid? createdByOrganizationId, Guid? organizationId) =>
         organizationId is not null && createdByOrganizationId == organizationId;
 

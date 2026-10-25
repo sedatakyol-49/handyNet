@@ -325,7 +325,7 @@ Backend rules: `../docs/adr/0011-file-storage-and-product-images.md` and the Imp
   wizard (lookup result and after saving) and on Angebote ("Bilder"). Upload with preview (button or drop files),
   reorder by drag & drop or the earlier/later buttons, "Als Hauptbild", remove with inline confirmation. Image URLs are
   relative to the API base (`CatalogApi.imageUrl`).
-- **Lager product panel** (`features/inventory/product-panel`, ADR-0015): a stock row (click, Enter/Space on the focused
+- **Lager product panel** (`features/inventory/product-panel`, ADR-0017): a stock row (click, Enter/Space on the focused
   row, or "Details") opens a dialog with tabs (arrow keys, mirrored in RTL): **Bilder** (image manager when the product
   detail says `canEdit`, else the read-only gallery), **Artikeldaten** (form → `PUT /api/catalog/products/{id}` with
   `version`; categories with another stock mode are disabled; `product.ean_taken` / `product.identity_taken` show at

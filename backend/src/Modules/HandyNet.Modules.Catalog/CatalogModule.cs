@@ -44,7 +44,7 @@ public static class CatalogModule
                     : Results.NotFound())
             .RequireTenant();
 
-        // Only the organization that created the product (ADR-0015); same module/permission as creating products.
+        // Only the organization that created the product (ADR-0017); same module/permission as creating products.
         group.MapPut("/products/{id:guid}", async (Guid id, UpdateProductRequest request, IValidator<UpdateProductRequest> validator,
                 ProductCatalog catalog, CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct) ?? (await catalog.UpdateAsync(id, request, ct)).ToHttp(Results.Ok))

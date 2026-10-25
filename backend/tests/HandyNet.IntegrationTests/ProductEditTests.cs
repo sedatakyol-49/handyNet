@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace HandyNet.IntegrationTests;
 
-/// <summary>ADR-0015: PUT /api/catalog/products/{id} for the creating organization (real PostgreSQL, RLS on).</summary>
+/// <summary>ADR-0017: PUT /api/catalog/products/{id} for the creating organization (real PostgreSQL, RLS on).</summary>
 [Collection(HandyNetCollection.Name)]
 public sealed class ProductEditTests(HandyNetFixture fixture)
 {

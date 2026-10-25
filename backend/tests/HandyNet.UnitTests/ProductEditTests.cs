@@ -2,7 +2,7 @@ using HandyNet.Modules.Catalog.Domain;
 
 namespace HandyNet.UnitTests;
 
-/// <summary>ADR-0015: the creating organization changes a canonical product's data with the same rules as creating it.</summary>
+/// <summary>ADR-0017: the creating organization changes a canonical product's data with the same rules as creating it.</summary>
 public class ProductEditTests
 {
     private static readonly Guid Owner = Guid.NewGuid();

@@ -249,7 +249,7 @@ internal sealed class ProductCatalog(HandyNetDbContext db, IClock clock, ITenant
     }
 
     /// <summary>
-    /// Changes the canonical data of a product the current organization created (ADR-0015). The new EAN and the new
+    /// Changes the canonical data of a product the current organization created (ADR-0017). The new EAN and the new
     /// brand + part number + quality must not belong to another product (409 <c>product.ean_taken</c> /
     /// <c>product.identity_taken</c> with the other product's id). Audited through <see cref="IAuditable"/>.
     /// </summary>
