@@ -22,6 +22,7 @@ internal static class AnkaufCheckInSignaturePayoutSql
         foreach (var table in TenantTables)
             m.Sql($"""
                 ALTER TABLE ankauf.{table} ENABLE ROW LEVEL SECURITY;
+                DROP POLICY IF EXISTS tenant_isolation ON ankauf.{table};
                 CREATE POLICY tenant_isolation ON ankauf.{table}
                     USING (organization_id = infra.current_org()) WITH CHECK (organization_id = infra.current_org());
                 """);
@@ -29,6 +30,8 @@ internal static class AnkaufCheckInSignaturePayoutSql
         // ---- Intakes: capture method and payout consistency ------------------------------------------------------------------
         m.Sql("""
             ALTER TABLE ankauf.intakes ALTER COLUMN capture_method DROP DEFAULT;
+            ALTER TABLE ankauf.intakes DROP CONSTRAINT IF EXISTS ck_intakes_capture_method;
+            ALTER TABLE ankauf.intakes DROP CONSTRAINT IF EXISTS ck_intakes_cash_payout;
             ALTER TABLE ankauf.intakes ADD CONSTRAINT ck_intakes_capture_method
                 CHECK (capture_method IN ('Manual', 'Mrz', 'SelfCheckIn') AND (capture_method <> 'SelfCheckIn' OR check_in_id IS NOT NULL));
             ALTER TABLE ankauf.intakes ADD CONSTRAINT ck_intakes_cash_payout
@@ -40,7 +43,7 @@ internal static class AnkaufCheckInSignaturePayoutSql
 
         // ---- Check-ins: identity fixed; submitted once; data only removed (consumed/purged), never changed or restored ---------
         m.Sql("""
-            CREATE FUNCTION ankauf.guard_checkin() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION ankauf.guard_checkin() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN
                     RAISE EXCEPTION 'check-ins are never deleted' USING ERRCODE = '42501';
@@ -71,13 +74,14 @@ internal static class AnkaufCheckInSignaturePayoutSql
                 END IF;
                 RETURN NEW;
             END $$;
+            DROP TRIGGER IF EXISTS checkins_guard ON ankauf.checkins;
             CREATE TRIGGER checkins_guard BEFORE UPDATE OR DELETE ON ankauf.checkins
                 FOR EACH ROW EXECUTE FUNCTION ankauf.guard_checkin();
             """);
 
         // ---- Signatures: append-only; the only change is the one-way anonymization (image removed) -----------------------------
         m.Sql("""
-            CREATE FUNCTION ankauf.guard_intake_signature() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION ankauf.guard_intake_signature() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 IF TG_OP = 'DELETE' THEN
                     RAISE EXCEPTION 'signatures are never deleted' USING ERRCODE = '42501';
@@ -92,13 +96,14 @@ internal static class AnkaufCheckInSignaturePayoutSql
                 END IF;
                 RETURN NEW;
             END $$;
+            DROP TRIGGER IF EXISTS intake_signatures_guard ON ankauf.intake_signatures;
             CREATE TRIGGER intake_signatures_guard BEFORE UPDATE OR DELETE ON ankauf.intake_signatures
                 FOR EACH ROW EXECUTE FUNCTION ankauf.guard_intake_signature();
             """);
 
         // ---- Public self check-in (anonymous): the only cross-tenant paths, by the SHA-256 of an unguessable token -------------
         m.Sql("""
-            CREATE FUNCTION ankauf.checkin_public(p_token_hash text)
+            CREATE OR REPLACE FUNCTION ankauf.checkin_public(p_token_hash text)
                 RETURNS TABLE (shop_name text, expires_at timestamptz, submitted boolean)
                 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
             AS $$
@@ -109,7 +114,7 @@ internal static class AnkaufCheckInSignaturePayoutSql
             $$;
 
             -- 1 = written, 2 = already submitted, 0 = unknown, expired, used or purged. Single use: written only once, before expiry.
-            CREATE FUNCTION ankauf.checkin_submit(p_token_hash text, p_seller jsonb, p_signature bytea, p_signed_at timestamptz)
+            CREATE OR REPLACE FUNCTION ankauf.checkin_submit(p_token_hash text, p_seller jsonb, p_signature bytea, p_signed_at timestamptz)
                 RETURNS integer
                 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
             AS $$
@@ -139,7 +144,7 @@ internal static class AnkaufCheckInSignaturePayoutSql
             END $$;
 
             -- Retention job: unused check-ins expired before the cutoff that still hold (or may hold) personal data.
-            CREATE FUNCTION ankauf.checkins_due_for_purge(p_cutoff timestamptz, p_limit integer)
+            CREATE OR REPLACE FUNCTION ankauf.checkins_due_for_purge(p_cutoff timestamptz, p_limit integer)
                 RETURNS TABLE (id uuid, organization_id uuid)
                 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
             AS $$

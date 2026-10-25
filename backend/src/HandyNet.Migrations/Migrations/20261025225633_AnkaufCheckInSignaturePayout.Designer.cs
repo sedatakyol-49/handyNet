@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261025223551_AnkaufCheckInSignaturePayout")]
+    [Migration("20261025225633_AnkaufCheckInSignaturePayout")]
     partial class AnkaufCheckInSignaturePayout
     {
         /// <inheritdoc />
