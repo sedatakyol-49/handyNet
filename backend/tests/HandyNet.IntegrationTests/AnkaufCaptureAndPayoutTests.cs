@@ -12,7 +12,7 @@ using Npgsql;
 
 namespace HandyNet.IntegrationTests;
 
-/// <summary>ADR-0014: seller capture (MRZ, returning sellers, QR self check-in), signature binding, till payout and reports.</summary>
+/// <summary>ADR-0015: seller capture (MRZ, returning sellers, QR self check-in), signature binding, till payout and reports.</summary>
 public sealed partial class AnkaufTests
 {
     // German specimen passport "Erika Mustermann" (valid until 28.02.2027).
@@ -144,8 +144,11 @@ public sealed partial class AnkaufTests
         var otherShop = await DealerAsync();
         Assert.Equal(HttpStatusCode.NotFound, (await otherShop.GetFileAsync($"/api/ankauf/intakes/{intakeId}/signatures/{signatureId}/image")).Status);
 
-        var text = PdfText.All((await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Body);
+        var belegPdf = (await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Body;
+        var text = PdfText.All(belegPdf);
         Assert.Contains("Elektronische Unterschrift", text);
+        // The signature image is drawn above the seller's signature line (PNG converted to JPEG; no logo set in this shop).
+        Assert.Equal((1, 1), (PdfText.ImageCount(belegPdf), PdfText.ImageDraws(belegPdf)));
         Assert.Contains(done["signature"]!["bindingHash"]!.GetValue<string>()[..16].ToUpperInvariant(), text);
 
         // The database keeps signatures append-only (no edit, no delete, other tenants see nothing).
@@ -405,7 +408,9 @@ public sealed partial class AnkaufTests
             $"SELECT seller IS NULL AND signature_image IS NULL AND purged_at IS NOT NULL FROM ankauf.checkins WHERE id = '{checkIn["id"]}'"));
         Assert.Equal("anonymisiert", (await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}")).Json["sellerName"]!.GetValue<string>());
         Assert.Null((await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}")).Json["seller"]);
-        Assert.Contains("gelöscht", PdfText.All((await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Body));
+        var anonymizedPdf = (await dealer.GetFileAsync($"/api/ankauf/intakes/{intakeId}/beleg")).Body;
+        Assert.Contains("gelöscht", PdfText.All(anonymizedPdf));
+        Assert.Equal(0, PdfText.ImageCount(anonymizedPdf)); // the signature image is gone with the retention period
 
         // Audit log: none of the personal data or the signature image was ever written there.
         Assert.Equal(0L, await ScalarAsync(owner, $"""

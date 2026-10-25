@@ -114,7 +114,7 @@ public static class AnkaufModule
         intakes.MapPost("/{id:guid}/reject", async (Guid id, RejectIntakeRequest request, IntakeService service, CancellationToken ct) =>
             (await service.RejectAsync(id, request.Reason, ct)).ToHttp(Results.Ok));
 
-        // ---- seller signature (bound to data + price, ADR-0014) ------------------------------------------------------------
+        // ---- seller signature (bound to data + price, ADR-0015) ------------------------------------------------------------
         intakes.MapPost("/{id:guid}/signature", async (Guid id, SignIntakeRequest request, IValidator<SignIntakeRequest> validator, IntakeService service,
                 CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SignAsync(id, request, ct)).ToHttp(Results.Ok))

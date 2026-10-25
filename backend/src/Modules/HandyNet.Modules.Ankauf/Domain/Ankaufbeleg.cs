@@ -25,7 +25,7 @@ public sealed record AnkaufbelegContent(
 {
     /// <summary>
     /// The seller's signature image (PNG) when signed on screen; null otherwise (then the seller signs on paper).
-    /// TODO(ankauf-signature-pdf): draw it above the seller's signature line once SimplePdf supports images.
+    /// Drawn above the seller's signature line in the PDF (converted to JPEG) and in the HTML print view.
     /// </summary>
     public byte[]? SellerSignaturePng { get; init; }
 

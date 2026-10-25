@@ -12,7 +12,7 @@ export const OWNERSHIP_DECLARATION =
 
 /**
  * HTML/print view of the Ankaufbeleg including the seller's on-screen signature. The PDF (`/beleg`) carries the same
- * content; the signature image is drawn there once SimplePdf supports images (TODO ankauf-signature-pdf).
+ * content including the signature image.
  */
 @Component({
   selector: 'hn-beleg-print',

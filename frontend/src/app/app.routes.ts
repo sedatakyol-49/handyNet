@@ -151,6 +151,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },
       {
+        path: 'unternehmen',
+        loadComponent: () => import('./features/company/company.page').then((m) => m.CompanyPage),
+      },
+      {
         path: 'team',
         canActivate: [accessGuard(undefined, 'organization.manage')],
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

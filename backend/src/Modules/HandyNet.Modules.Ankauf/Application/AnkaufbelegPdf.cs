@@ -7,10 +7,15 @@ namespace HandyNet.Modules.Ankauf.Application;
 internal static class AnkaufbelegPdf
 {
     private const double LabelWidth = 140;
+    private const double SignatureHeight = 60;
 
-    public static byte[] Render(AnkaufbelegContent content)
+    /// <param name="letterhead">Logo and footer lines of the dealer (its current company profile, ADR-0014).</param>
+    /// <param name="sellerSignatureJpeg">The seller's on-screen signature converted to JPEG (SimplePdf embeds JPEG only).</param>
+    public static byte[] Render(AnkaufbelegContent content, DocumentLetterhead? letterhead = null, byte[]? sellerSignatureJpeg = null)
     {
-        var pdf = new SimplePdf { Title = $"{content.Title} {content.DocumentNumber}", Footer = content.Footer };
+        letterhead ??= DocumentLetterhead.None;
+        var pdf = new SimplePdf { Title = $"{content.Title} {content.DocumentNumber}", Footer = content.Footer, FooterLines = letterhead.FooterLines };
+        letterhead.ApplyLogo(pdf);
 
         pdf.Text(content.Title, 20, PdfFont.Bold)
             .Text(content.Subtitle, 10)
@@ -31,15 +36,14 @@ internal static class AnkaufbelegPdf
                 pdf.Text(paragraph);
         }
 
-        // Signature block stays on one page.
-        // TODO(ankauf-signature-pdf): once SimplePdf supports images (parallel work, do not edit SimplePdf here), draw
-        // content.SellerSignaturePng (PNG, transparent background) above the seller's signature line, about 60 pt high and
-        // scaled to the half column. Until then the PDF prints the "Elektronische Unterschrift" section (time, source,
-        // binding checksum); the image is shown in the HTML/print view of the intake.
+        // Signature block stays on one page; the seller's electronic signature (if any) stands above the seller's line.
         var half = pdf.ContentWidth / 2;
-        pdf.Space(12).KeepTogether(80)
-            .Space(40)
-            .Rules(0.5, (0, half - 20), (half + 20, pdf.ContentWidth))
+        pdf.Space(12).KeepTogether(SignatureHeight + 40);
+        if (sellerSignatureJpeg is not null)
+            pdf.ImageBlock(sellerSignatureJpeg, half - 20, SignatureHeight);
+        else
+            pdf.Space(40);
+        pdf.Rules(0.5, (0, half - 20), (half + 20, pdf.ContentWidth))
             .Columns(9, PdfFont.Regular, (0, content.SignatureLabels[0]), (half + 20, content.SignatureLabels[1]));
 
         return pdf.ToBytes();

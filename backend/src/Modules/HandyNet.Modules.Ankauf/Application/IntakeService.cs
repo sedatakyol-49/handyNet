@@ -8,6 +8,7 @@ using HandyNet.Modules.Pos.Contracts;
 using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
+using HandyNet.SharedKernel.Imaging;
 using HandyNet.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -180,6 +181,8 @@ internal sealed class IntakeService(
     IOrganizationDirectory organizations,
     ICashPayouts payouts,
     IOptions<AnkaufOptions> options,
+    IOrganizationBranding branding,
+    IImageCodec imageCodec,
     IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
@@ -415,7 +418,15 @@ internal sealed class IntakeService(
             signature is null ? null : new BelegSignature(signature.SignedAt, signature.BindingHash, signature.Source, signature.Image));
         if (!content.IsSuccess)
             return content.Error!;
-        return new BelegFile($"{content.Value.DocumentNumber}.pdf", AnkaufbelegPdf.Render(content.Value));
+        var letterhead = (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).Letterhead;
+        // The signature pad delivers PNG (transparent); the PDF embeds JPEG, flattened onto white.
+        byte[]? signatureJpeg = null;
+        if (content.Value.SellerSignaturePng is { } png)
+        {
+            var jpeg = imageCodec.ToJpeg(png, new ImageDecodeLimits(SignatureImage.MaxBytes, MaxSide: SignatureImage.MaxWidth), maxSide: 800, quality: 85);
+            signatureJpeg = jpeg.IsSuccess ? jpeg.Value.Bytes : null;
+        }
+        return new BelegFile($"{content.Value.DocumentNumber}.pdf", AnkaufbelegPdf.Render(content.Value, letterhead, signatureJpeg));
     }
 
     /// <summary>

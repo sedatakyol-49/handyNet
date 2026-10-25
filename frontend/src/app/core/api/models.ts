@@ -177,6 +177,8 @@ export interface AdminStatusChange {
   reason: string | null;
   at: string;
   by: AdminPerson | null;
+  /** "LegalDetailsChanged": the company changed its legal name or VAT ID itself (from = to = current status). */
+  kind?: 'StatusChange' | 'LegalDetailsChanged';
 }
 
 export interface AdminMember {
@@ -1916,6 +1918,8 @@ export interface PosPublicReceipt {
   document: ReceiptDocument;
   cancelled: boolean;
   expiresAt: string;
+  /** Logo and receipt texts of the issuing company (current company profile). */
+  branding?: ReceiptBranding | null;
 }
 
 // ---- POS invoices (Rechnung for a sale) -----------------------------------------------------------------------------
@@ -2046,4 +2050,57 @@ export interface DailyReport {
     refundedMinor: number;
   } | null;
   totals: { soldMinor: number; boughtMinor: number };
+// ---- Company profile of the tenant (Unternehmen / Firmendaten, ADR-0014) ------------------------------------------------
+/** Logo and receipt texts as printed on till receipts (also on the public e-receipt). */
+export interface ReceiptBranding {
+  /** Relative URL of the small PNG (public, immutable), e.g. "/api/logos/{id}/screen". */
+  logoUrl: string | null;
+  receiptHeader: string | null;
+  receiptFooter: string | null;
+}
+
+export interface CompanyLogo {
+  id: string;
+  screenUrl: string;
+  printUrl: string;
+  width: number;
+  height: number;
+  uploadedAt: string;
+}
+
+export interface CompanyProfileFields {
+  name: string;
+  legalName: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  countryCode: string;
+  vatId: string | null;
+  taxNumber: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  receiptHeader: string | null;
+  receiptFooter: string | null;
+  bankName: string | null;
+  iban: string | null;
+  bic: string | null;
+  managingDirector: string | null;
+  registerCourt: string | null;
+  registerNumber: string | null;
+  paymentTermsDays: number | null;
+}
+
+export interface CompanyProfile extends CompanyProfileFields {
+  id: string;
+  logo: CompanyLogo | null;
+  status: OrganizationStatus;
+  /** Concurrency token; send it back with the update. */
+  version: number;
+  /** Holds organization.manage (owners). */
+  canEdit: boolean;
+}
+
+export interface UpdateCompanyProfileRequest extends CompanyProfileFields {
+  version: number;
 }

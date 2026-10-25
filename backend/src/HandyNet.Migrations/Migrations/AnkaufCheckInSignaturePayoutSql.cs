@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HandyNet.Migrations.Migrations;
 
 /// <summary>
-/// Raw SQL of the migration <c>AnkaufCheckInSignaturePayout</c> (ADR-0014): grants, Row-Level Security and guard triggers for
+/// Raw SQL of the migration <c>AnkaufCheckInSignaturePayout</c> (ADR-0015): grants, Row-Level Security and guard triggers for
 /// self check-ins and seller signatures, the public check-in functions (SECURITY DEFINER, by token hash only), the purge
 /// finder for the retention job, and the extended intake guard (new columns are identity or fixed once closed).
 /// </summary>

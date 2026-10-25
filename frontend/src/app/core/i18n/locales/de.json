@@ -73,6 +73,7 @@
     "intakes": "Ankäufe",
     "pos": "Kasse",
     "invoices": "Rechnungen",
+    "company": "Unternehmen",
     "dailyReport": "Tagesbericht"
   },
   "auth": {
@@ -540,6 +541,10 @@
       "auth.reset_recently_sent": "Soeben wurde bereits ein Link gesendet. Bitte warten Sie eine Minute.",
       "reason.too_long": "Die Begründung darf höchstens 1000 Zeichen lang sein.",
       "admin.tenant_header": "Die Administration wird ohne Unternehmenskontext aufgerufen. Bitte laden Sie die Seite neu.",
+      "company.logo_not_found": "Das Unternehmen hat kein Logo.",
+      "company.logo_concurrent": "Das Logo wurde gleichzeitig geändert. Bitte versuchen Sie es erneut.",
+      "company.logo_already_removed": "Das Logo wurde bereits entfernt.",
+      "image.too_small": "Das Bild ist zu klein (mindestens 16 Pixel je Seite).",
       "ankauf.mrz_format": "Die maschinenlesbare Zone ist unvollständig oder ungültig.",
       "ankauf.mrz_check_digit": "Eine Prüfziffer der maschinenlesbaren Zone stimmt nicht. Bitte erneut scannen.",
       "ankauf.mrz_mismatch": "Ausweisnummer, Ausweisart, Geburts- oder Ablaufdatum weichen von der maschinenlesbaren Zone ab.",
@@ -3205,6 +3210,126 @@
       "taxNumber": "Die Steuernummer hat 10 bis 13 Ziffern, getrennt durch / oder Leerzeichen.",
       "phone": "Bitte eine Telefonnummer mit Ziffern, Leerzeichen, ( ) / - und optional führendem + eingeben.",
       "website": "Bitte die vollständige Adresse mit https:// oder http:// angeben."
+    }
+  },
+  "company": {
+    "title": "Unternehmen",
+    "subtitle": "Firmendaten, Kontakt, Steuer, Bankverbindung, Belegtexte und Logo Ihres Unternehmens",
+    "readOnly": "Sie können die Firmendaten ansehen. Ändern kann sie nur der Inhaber.",
+    "conflict": {
+      "title": "Inzwischen geändert",
+      "text": "Jemand anderes hat die Firmendaten gerade gespeichert. Laden Sie die aktuelle Fassung und tragen Sie Ihre Änderungen erneut ein.",
+      "reload": "Aktuelle Fassung laden"
+    },
+    "sections": {
+      "master": "Stammdaten",
+      "contact": "Kontakt",
+      "tax": "Steuer und Register",
+      "bank": "Bankverbindung und Zahlungsziel",
+      "receipts": "Belege",
+      "logo": "Logo"
+    },
+    "legalHint": "Diese Angaben erscheinen auf Rechnungen und Ankaufbelegen. Änderungen am Firmennamen oder an der USt-IdNr. werden der Plattform gemeldet.",
+    "legalNotice": "Sie ändern Firmenname oder USt-IdNr. – die Plattform wird darüber informiert.",
+    "unsaved": "Ungespeicherte Änderungen",
+    "discard": "Verwerfen",
+    "saved": "Firmendaten gespeichert.",
+    "receiptsHint": "Kopf- und Fußtext stehen auf jedem Kassenbon (Bildschirm, Druck 80 mm und digitaler Beleg).",
+    "receiptCounter": "{used} von {max} Zeichen · {lines} von {maxLines} Zeilen",
+    "adminHistoryLegal": "Vom Unternehmen geändert",
+    "fields": {
+      "name": "Anzeigename",
+      "legalName": "Firmenname (rechtlich)",
+      "street": "Straße und Hausnummer",
+      "postalCode": "Postleitzahl",
+      "city": "Ort",
+      "countryCode": "Land",
+      "vatId": "USt-IdNr.",
+      "taxNumber": "Steuernummer",
+      "contactEmail": "E-Mail-Adresse",
+      "contactPhone": "Telefon",
+      "website": "Webseite",
+      "receiptHeader": "Kopftext auf dem Kassenbon",
+      "receiptFooter": "Fußtext auf dem Kassenbon",
+      "bankName": "Name der Bank",
+      "iban": "IBAN",
+      "bic": "BIC",
+      "managingDirector": "Geschäftsführung",
+      "registerCourt": "Registergericht",
+      "registerNumber": "Registernummer",
+      "paymentTermsDays": "Zahlungsziel in Tagen"
+    },
+    "hints": {
+      "name": "So erscheint Ihr Unternehmen in SEHA und oben auf dem Bon.",
+      "legalName": "Mit Rechtsform, z. B. „Handy Shop Berlin GmbH“.",
+      "countryCode": "Zweistelliger Ländercode, z. B. DE.",
+      "website": "Vollständige Adresse mit https://",
+      "vatId": "DE und neun Ziffern.",
+      "registerCourt": "z. B. Amtsgericht Charlottenburg",
+      "registerNumber": "z. B. HRB 123456",
+      "iban": "Wird mit Prüfziffer geprüft; Leerzeichen sind erlaubt.",
+      "paymentTermsDays": "Standard für Ihre Rechnungen, 0 bis 365 Tage."
+    },
+    "placeholders": {
+      "receiptHeader": "z. B. Ihr Handy-Profi in Berlin-Mitte",
+      "receiptFooter": "z. B. Öffnungszeiten Mo–Sa 10–19 Uhr\nUmtausch innerhalb von 14 Tagen mit Beleg"
+    },
+    "errors": {
+      "required": "Pflichtfeld.",
+      "country": "Bitte einen zweistelligen Ländercode angeben, z. B. DE.",
+      "postalCode": "Deutsche Postleitzahlen haben fünf Ziffern.",
+      "vatId": "Ungültige USt-IdNr. (deutsche Nummern: DE und neun Ziffern).",
+      "taxNumber": "Eine Steuernummer hat 10 bis 13 Ziffern.",
+      "email": "Bitte eine gültige E-Mail-Adresse angeben.",
+      "phone": "Bitte nur Ziffern, Leerzeichen, ( ) / - und ein führendes + verwenden.",
+      "website": "Die Webseite muss mit https:// oder http:// beginnen.",
+      "receiptText": "Der Text ist zu lang oder hat zu viele Zeilen.",
+      "iban": "Die IBAN ist ungültig (Prüfziffer oder Länge).",
+      "ibanRequired": "Bitte die IBAN zusammen mit Bankname oder BIC angeben.",
+      "bic": "Eine BIC hat 8 oder 11 Zeichen, z. B. COBADEFFXXX.",
+      "paymentTerms": "Bitte 0 bis 365 Tage angeben.",
+      "vatTaken": "Diese USt-IdNr. ist bereits bei einem anderen Unternehmen eingetragen."
+    },
+    "preview": {
+      "title": "Vorschau Kassenbon (80 mm)",
+      "hint": "So erscheinen Logo und Texte auf dem Bon.",
+      "sampleItem": "Beispielartikel"
+    },
+    "logo": {
+      "hint": "PNG, JPEG oder WebP bis 2 MB. Das Logo erscheint in SEHA, an der Kasse, auf Bons, Rechnungen und digitalen Belegen.",
+      "none": "Noch kein Logo hochgeladen",
+      "alt": "Logo von {name}",
+      "upload": "Logo hochladen",
+      "replace": "Logo ersetzen",
+      "remove": "Logo entfernen",
+      "removeTitle": "Logo entfernen?",
+      "removeText": "Das Logo wird von Bons, Rechnungen und digitalen Belegen entfernt.",
+      "removed": "Logo entfernt.",
+      "uploaded": "Logo gespeichert.",
+      "topbarLabel": "Firmendaten von {name}",
+      "cropTitle": "Logo zuschneiden",
+      "previewLabel": "Vorschau des zugeschnittenen Logos",
+      "onLight": "auf hellem Grund",
+      "onDark": "auf dunklem Grund",
+      "aspect": "Format",
+      "aspects": {
+        "free": "Wie hochgeladen",
+        "square": "Quadratisch",
+        "wide": "Breit (3:1)"
+      },
+      "zoom": "Vergrößerung",
+      "horizontal": "Ausschnitt waagerecht",
+      "vertical": "Ausschnitt senkrecht",
+      "resetCrop": "Zurücksetzen",
+      "useOriginal": "Ohne Zuschnitt hochladen",
+      "uploadCropped": "Zuschnitt hochladen",
+      "errors": {
+        "type": "Bitte ein PNG-, JPEG- oder WebP-Bild wählen.",
+        "size": "Das Logo darf höchstens 2 MB groß sein.",
+        "small": "Das Bild ist zu klein (mindestens 16 Pixel je Seite).",
+        "read": "Das Bild konnte nicht gelesen werden.",
+        "dimensions": "Das Bild hat zu viele Pixel (höchstens 12.000 je Seite)."
+      }
     }
   },
   "reports": {

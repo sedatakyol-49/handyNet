@@ -24,7 +24,7 @@ public sealed class AnkaufOptions
     public int SellerDataRetentionCheckHours { get; set; } = 24;
 
     /// <summary>
-    /// Completing an intake needs the seller's on-screen signature bound to the data and price (ADR-0014). Set to false for
+    /// Completing an intake needs the seller's on-screen signature bound to the data and price (ADR-0015). Set to false for
     /// shops that have the printed Ankaufbeleg signed on paper instead.
     /// </summary>
     public bool RequireSellerSignature { get; set; } = true;

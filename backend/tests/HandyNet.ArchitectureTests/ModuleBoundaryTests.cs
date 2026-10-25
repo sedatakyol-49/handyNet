@@ -43,7 +43,7 @@ public class ModuleBoundaryTests
         { "Tenancy", "HandyNet.Modules.Ankauf" },
         { "Inventory", "HandyNet.Modules.Ankauf" },
         // POS sits on top of Inventory, Catalog and Tenancy; it does not use the B2B money flow. Ankauf uses only its contract
-        // (ICashPayouts, ADR-0014); POS never depends on Ankauf.
+        // (ICashPayouts, ADR-0015); POS never depends on Ankauf.
         { "Inventory", "HandyNet.Modules.Pos" },
         { "Catalog", "HandyNet.Modules.Pos" },
         { "Tenancy", "HandyNet.Modules.Pos" },
@@ -67,7 +67,7 @@ public class ModuleBoundaryTests
         { "Invoicing", "HandyNet.Modules.Ledger" },
         { "Invoicing", "HandyNet.Modules.Pos" },
         { "Invoicing", "HandyNet.Modules.Ankauf" },
-        // Reporting composes read contracts (POS, Ankauf, Ordering, Payments, Tenancy); nothing depends on it (ADR-0014).
+        // Reporting composes read contracts (POS, Ankauf, Ordering, Payments, Tenancy); nothing depends on it (ADR-0015).
         { "Pos", "HandyNet.Modules.Reporting" },
         { "Ankauf", "HandyNet.Modules.Reporting" },
         { "Ordering", "HandyNet.Modules.Reporting" },

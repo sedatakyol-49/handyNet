@@ -31,7 +31,7 @@ public static class CheckInToken
 }
 
 /// <summary>
-/// QR self check-in (ADR-0014): the shop shows a QR code with a short-lived, single-use link; the seller enters their data
+/// QR self check-in (ADR-0015): the shop shows a QR code with a short-lived, single-use link; the seller enters their data
 /// (and optionally signs) on their own phone without an account; the employee verifies it against the ID document and
 /// takes it into an intake. Submitting is a one-time write through a SECURITY DEFINER function; the personal data is
 /// cleared once used for an intake (it then lives in the intake) or, if never used, by the retention job shortly after expiry.

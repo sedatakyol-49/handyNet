@@ -1,4 +1,8 @@
-<hn-page-header [title]="'dashboard.title' | t" [description]="session.membership()?.organizationName ?? null" />
+<hn-page-header [title]="'dashboard.title' | t" [description]="session.membership()?.organizationName ?? null">
+  @if (branding.logoUrl(); as logo) {
+    <img [src]="logo" [alt]="'company.logo.alt' | t: { name: session.membership()?.organizationName ?? '' }" class="h-12 w-auto max-w-[12rem] object-contain" data-testid="dashboard-logo" />
+  }
+</hn-page-header>
 
 @if (session.membership(); as m) {
   @switch (m.status) {

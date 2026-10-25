@@ -5016,6 +5016,16 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<string>("Bic")
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("bic");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -5047,6 +5057,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("character varying(34)")
+                        .HasColumnName("iban");
+
                     b.Property<bool>("IsRepairProvider")
                         .HasColumnType("boolean")
                         .HasColumnName("is_repair_provider");
@@ -5065,17 +5080,46 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("legal_name");
 
+                    b.Property<string>("ManagingDirector")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("managing_director");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<int?>("PaymentTermsDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_terms_days");
+
                     b.Property<string>("PostalCode")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
                         .HasColumnName("postal_code");
+
+                    b.Property<string>("ReceiptFooter")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("receipt_footer");
+
+                    b.Property<string>("ReceiptHeader")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("receipt_header");
+
+                    b.Property<string>("RegisterCourt")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("register_court");
+
+                    b.Property<string>("RegisterNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("register_number");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -5142,7 +5186,114 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("organizations", "tenancy", t =>
                         {
+                            t.HasCheckConstraint("ck_organizations_bank_needs_iban", "iban IS NOT NULL OR (bic IS NULL AND bank_name IS NULL)");
+
+                            t.HasCheckConstraint("ck_organizations_bic", "bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'");
+
                             t.HasCheckConstraint("ck_organizations_has_capability", "is_wholesaler OR is_retailer OR is_repair_provider");
+
+                            t.HasCheckConstraint("ck_organizations_iban", "iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'");
+
+                            t.HasCheckConstraint("ck_organizations_payment_terms", "payment_terms_days BETWEEN 0 AND 365");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.OrganizationLogo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("OriginalFormat")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("original_format");
+
+                    b.Property<long>("OriginalSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("original_size_bytes");
+
+                    b.Property<int>("PrintHeight")
+                        .HasColumnType("integer")
+                        .HasColumnName("print_height");
+
+                    b.Property<long>("PrintSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("print_size_bytes");
+
+                    b.Property<string>("PrintStorageKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("print_storage_key");
+
+                    b.Property<int>("PrintWidth")
+                        .HasColumnType("integer")
+                        .HasColumnName("print_width");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("removed_at");
+
+                    b.Property<Guid?>("RemovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("removed_by");
+
+                    b.Property<int>("ScreenHeight")
+                        .HasColumnType("integer")
+                        .HasColumnName("screen_height");
+
+                    b.Property<long>("ScreenSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("screen_size_bytes");
+
+                    b.Property<string>("ScreenStorageKey")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("screen_storage_key");
+
+                    b.Property<int>("ScreenWidth")
+                        .HasColumnType("integer")
+                        .HasColumnName("screen_width");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("sha256")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_organization_logos");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_organization_logos_active")
+                        .HasFilter("removed_at IS NULL");
+
+                    b.HasIndex("RemovedBy")
+                        .HasDatabaseName("ix_organization_logos_removed_by");
+
+                    b.HasIndex("UploadedBy")
+                        .HasDatabaseName("ix_organization_logos_uploaded_by");
+
+                    b.ToTable("organization_logos", "tenancy", t =>
+                        {
+                            t.HasCheckConstraint("ck_organization_logos_removed", "(removed_at IS NULL) = (removed_by IS NULL)");
                         });
                 });
 
@@ -5189,6 +5340,14 @@ namespace HandyNet.Migrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("from_status");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("StatusChange")
+                        .HasColumnName("kind");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
@@ -6016,6 +6175,29 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_organizations_users_created_by");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.OrganizationLogo", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Tenancy.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_organization_logos_organizations_organization_id");
+
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("RemovedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_organization_logos_users_removed_by");
+
+                    b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_organization_logos_users_uploaded_by");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Tenancy.Domain.OrganizationModule", b =>

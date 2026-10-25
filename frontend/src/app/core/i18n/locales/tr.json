@@ -73,6 +73,7 @@
     "intakes": "Geri alımlar",
     "pos": "Kasa",
     "invoices": "Faturalar",
+    "company": "Şirket",
     "dailyReport": "Günlük rapor"
   },
   "auth": {
@@ -540,6 +541,10 @@
       "auth.reset_recently_sent": "Az önce bir bağlantı gönderildi. Lütfen bir dakika bekleyin.",
       "reason.too_long": "Gerekçe en fazla 1000 karakter olabilir.",
       "admin.tenant_header": "Yönetim, şirket bağlamı olmadan çağrılmalıdır. Lütfen sayfayı yenileyin.",
+      "company.logo_not_found": "Şirketin logosu yok.",
+      "company.logo_concurrent": "Logo aynı anda değiştirildi. Lütfen tekrar deneyin.",
+      "company.logo_already_removed": "Logo zaten kaldırıldı.",
+      "image.too_small": "Görsel çok küçük (her kenarda en az 16 piksel).",
       "ankauf.mrz_format": "Makinede okunabilir bölge eksik veya geçersiz.",
       "ankauf.mrz_check_digit": "Makinede okunabilir bölgedeki bir kontrol rakamı yanlış. Lütfen tekrar tarayın.",
       "ankauf.mrz_mismatch": "Belge numarası, türü, doğum veya geçerlilik tarihi makinede okunabilir bölgeyle uyuşmuyor.",
@@ -3205,6 +3210,126 @@
       "taxNumber": "Vergi numarası 10 ila 13 rakamdan oluşur; / veya boşlukla ayrılabilir.",
       "phone": "Lütfen rakam, boşluk, ( ) / - ve isteğe bağlı başta + içeren bir telefon numarası girin.",
       "website": "Lütfen https:// veya http:// ile tam adresi girin."
+    }
+  },
+  "company": {
+    "title": "Şirket",
+    "subtitle": "Şirketinizin firma bilgileri, iletişim, vergi, banka bilgileri, fiş metinleri ve logosu",
+    "readOnly": "Firma bilgilerini görüntüleyebilirsiniz. Yalnızca işletme sahibi değiştirebilir.",
+    "conflict": {
+      "title": "Bu arada değiştirildi",
+      "text": "Başka biri firma bilgilerini az önce kaydetti. Güncel sürümü yükleyin ve değişikliklerinizi yeniden girin.",
+      "reload": "Güncel sürümü yükle"
+    },
+    "sections": {
+      "master": "Temel bilgiler",
+      "contact": "İletişim",
+      "tax": "Vergi ve sicil",
+      "bank": "Banka bilgileri ve ödeme vadesi",
+      "receipts": "Fişler",
+      "logo": "Şirket logosu"
+    },
+    "legalHint": "Bu bilgiler faturalarda ve alım belgelerinde görünür. Ticari unvan veya KDV numarası değişiklikleri platforma bildirilir.",
+    "legalNotice": "Ticari unvanı veya KDV numarasını değiştiriyorsunuz – platform bilgilendirilecek.",
+    "unsaved": "Kaydedilmemiş değişiklikler",
+    "discard": "Vazgeç",
+    "saved": "Firma bilgileri kaydedildi.",
+    "receiptsHint": "Üst ve alt metin her kasa fişinde yer alır (ekran, 80 mm baskı ve dijital fiş).",
+    "receiptCounter": "{max} karakterden {used} · {maxLines} satırdan {lines}",
+    "adminHistoryLegal": "Şirket tarafından değiştirildi",
+    "fields": {
+      "name": "Görünen ad",
+      "legalName": "Ticari unvan",
+      "street": "Sokak ve bina numarası",
+      "postalCode": "Posta kodu",
+      "city": "Şehir",
+      "countryCode": "Ülke",
+      "vatId": "KDV kimlik numarası",
+      "taxNumber": "Vergi numarası",
+      "contactEmail": "E-posta adresi",
+      "contactPhone": "Telefon numarası",
+      "website": "Web sitesi",
+      "receiptHeader": "Fiş üst metni",
+      "receiptFooter": "Fiş alt metni",
+      "bankName": "Banka adı",
+      "iban": "IBAN (hesap numarası)",
+      "bic": "BIC (banka kodu)",
+      "managingDirector": "Genel müdür",
+      "registerCourt": "Sicil mahkemesi",
+      "registerNumber": "Sicil numarası",
+      "paymentTermsDays": "Gün olarak ödeme vadesi"
+    },
+    "hints": {
+      "name": "Şirketiniz SEHA’da ve fişin üstünde böyle görünür.",
+      "legalName": "Şirket türüyle birlikte, örn. „Handy Shop Berlin GmbH“.",
+      "countryCode": "İki harfli ülke kodu, örn. DE.",
+      "website": "https:// ile tam adres",
+      "vatId": "DE ve ardından dokuz rakam.",
+      "registerCourt": "örn. Amtsgericht Charlottenburg",
+      "registerNumber": "örn. HRB 123456",
+      "iban": "Kontrol basamaklarıyla doğrulanır; boşluklara izin verilir.",
+      "paymentTermsDays": "Faturalarınız için varsayılan, 0 ile 365 gün arası."
+    },
+    "placeholders": {
+      "receiptHeader": "örn. Berlin-Mitte’deki telefon uzmanınız",
+      "receiptFooter": "örn. Açılış saatleri Pzt–Cmt 10–19\nFişle 14 gün içinde değişim"
+    },
+    "errors": {
+      "required": "Zorunlu alan.",
+      "country": "İki harfli bir ülke kodu girin, örn. DE.",
+      "postalCode": "Alman posta kodları beş haneden oluşur.",
+      "vatId": "Geçersiz KDV numarası (Alman numaraları: DE ve dokuz rakam).",
+      "taxNumber": "Vergi numarası 10 ile 13 haneden oluşur.",
+      "email": "Geçerli bir e-posta adresi girin.",
+      "phone": "Yalnızca rakam, boşluk, ( ) / - ve baştaki + kullanın.",
+      "website": "Web sitesi https:// veya http:// ile başlamalıdır.",
+      "receiptText": "Metin çok uzun veya çok fazla satır içeriyor.",
+      "iban": "IBAN geçersiz (kontrol basamağı veya uzunluk).",
+      "ibanRequired": "IBAN’ı banka adı veya BIC ile birlikte girin.",
+      "bic": "BIC 8 veya 11 karakterden oluşur, örn. COBADEFFXXX.",
+      "paymentTerms": "0 ile 365 gün arasında girin.",
+      "vatTaken": "Bu KDV numarası başka bir şirkete kayıtlı."
+    },
+    "preview": {
+      "title": "Fiş önizlemesi (80 mm)",
+      "hint": "Logo ve metinler fişte böyle görünür.",
+      "sampleItem": "Örnek ürün"
+    },
+    "logo": {
+      "hint": "2 MB’a kadar PNG, JPEG veya WebP. Logo SEHA’da, kasada, fişlerde, faturalarda ve dijital fişlerde görünür.",
+      "none": "Henüz logo yüklenmedi",
+      "alt": "{name} logosu",
+      "upload": "Logo yükle",
+      "replace": "Logoyu değiştir",
+      "remove": "Logoyu kaldır",
+      "removeTitle": "Logo kaldırılsın mı?",
+      "removeText": "Logo fişlerden, faturalardan ve dijital fişlerden kaldırılır.",
+      "removed": "Logo kaldırıldı.",
+      "uploaded": "Logo kaydedildi.",
+      "topbarLabel": "{name} firma bilgileri",
+      "cropTitle": "Logoyu kırp",
+      "previewLabel": "Kırpılmış logonun önizlemesi",
+      "onLight": "açık zeminde",
+      "onDark": "koyu zeminde",
+      "aspect": "Biçim",
+      "aspects": {
+        "free": "Yüklendiği gibi",
+        "square": "Kare",
+        "wide": "Geniş (3:1)"
+      },
+      "zoom": "Yakınlaştırma",
+      "horizontal": "Yatay konum",
+      "vertical": "Dikey konum",
+      "resetCrop": "Sıfırla",
+      "useOriginal": "Kırpmadan yükle",
+      "uploadCropped": "Kırpılmış logoyu yükle",
+      "errors": {
+        "type": "Lütfen bir PNG, JPEG veya WebP görseli seçin.",
+        "size": "Logo en fazla 2 MB olabilir.",
+        "small": "Görsel çok küçük (her kenarda en az 16 piksel).",
+        "read": "Görsel okunamadı.",
+        "dimensions": "Görselde çok fazla piksel var (her kenarda en fazla 12.000)."
+      }
     }
   },
   "reports": {

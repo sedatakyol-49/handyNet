@@ -61,7 +61,7 @@ flowchart TD
 | Module | Schema | Owns | Public contract |
 |---|---|---|---|
 | Identity | `identity` | users, password hashing, lockout, JWT access tokens (disabled accounts / revoked admin role rejected per request), rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010); platform administration of user accounts (`/api/admin/users`, ADR-0013) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested`; port `IUserMembershipSource` (implemented by Tenancy) |
-| Tenancy | `tenancy` | organizations (master data incl. tax number and contact data), verification, status history, memberships/roles (incl. per-cashier POS rights on staff memberships; at least one owner, DB-enforced), module activation, tenant resolution; platform administration of companies (`/api/admin/organizations`, ADR-0013) | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module); port `IOrganizationFactSource` (admin counts, implemented by POS and Marketplace) |
+| Tenancy | `tenancy` | organizations (master data incl. tax number and contact data), verification, status history, memberships/roles (incl. per-cashier POS rights on staff memberships; at least one owner, DB-enforced), module activation, tenant resolution; platform administration of companies (`/api/admin/organizations`, ADR-0013); the tenant's own company profile (`/api/organization/profile`: master/contact/tax data, receipt texts, bank and register data, payment terms; legal-identity changes recorded in the status history) and company logo (`/api/organization/logo`, public `/api/logos/{id}/screen|print`, ADR-0014) | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module), `IOrganizationBranding` (receipt branding, PDF letterhead); port `IOrganizationFactSource` (admin counts, implemented by POS and Marketplace) |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules, lookup, canonical product images (upload by creating org or platform admin, SkiaSharp re-encoding, public immutable serving — ADR-0011) | `IProductCatalog`, `ProductMatcher` |
 | Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule), sell/return staging for POS | `IInventory` |
 | Marketplace | `marketplace` | supplier offers, B2B listing view (with model data + images), filters, facets, offer detail with other sellers; read-only for products (no product creation); platform moderation (offer and seller blocks, separate from the seller's status, audited; `/api/admin/marketplace`) | `IOfferReservations` (incl. `GetBlockedAsync` → `offer.blocked`), `IOfferSync`, `IOwnOfferPrices` |
@@ -90,7 +90,11 @@ flowchart TD
 ## Shared infrastructure
 
 - `HandyNet.FileStorage`: `IFileStorage` (interface in SharedKernel) with `Local` (disk) and `S3` (S3-compatible)
-  providers, selected by `FileStorage:Provider` (ADR-0011). Used by Catalog for product images.
+  providers, selected by `FileStorage:Provider` (ADR-0011). Used by Catalog for product images and by Tenancy for company logos.
+  It also hosts `SkiaImageCodec`, the implementation of the shared `IImageCodec` (SharedKernel `Imaging`): re-encoding of
+  untrusted uploads into renditions and conversion to JPEG for PDFs (ADR-0014).
+- `SharedKernel/Documents/SimplePdf`: dependency-free PDF writer (text, rules, JPEG images as DCTDecode XObjects via
+  `Image` / `ImageBlock`, letterhead `FooterLines`); `DocumentLetterhead` carries a tenant's logo and footer lines (ADR-0014).
 
 ## Request pipeline
 

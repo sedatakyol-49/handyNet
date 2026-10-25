@@ -36,6 +36,16 @@ Dependencies: Phase 1.
   platform admin); DB-enforced "keep an owner" and "keep an active platform admin"; audit with reason and access log;
   admin UI tabs "Unternehmen" and "Benutzer" in all seven languages. Open: ⬜ GDPR export/erasure of an account, ⬜ admin
   view of the audit/access log, ⬜ invitations of existing accounts by the admin.
+- ✅ Company profile and logo for tenants (ADR-0014, 2026-10-23): `/api/organization/profile` (members read, owners edit;
+  master/contact/tax data, receipt header/footer, bank details with IBAN checksum, managing director, register, payment
+  terms; optimistic concurrency; audit with before/after; legal name / VAT ID changes shown to the platform admin as
+  "changed by the company"), logo upload/remove (PNG/JPEG/WebP ≤ 2 MB, re-encoded to a screen PNG and a print JPEG,
+  public immutable serving by random id), RLS so a tenant session can update only its own organization row; shared
+  `IImageCodec`; `SimplePdf` JPEG images + letterhead footer lines; logo and letterhead on POS invoices and the
+  Ankaufbeleg; logo and texts on till receipts (screen, 80 mm print), public e-receipts, back-office and POS top bars and
+  the dashboard; page "Unternehmen" in all seven languages. Open: ⬜ VIES check of VAT IDs and re-verification after a legal
+  change, ⬜ freezing the letterhead with archived PDFs (today rendered from the current profile), ⬜ migrating the
+  Catalog image processor onto `IImageCodec`, ⬜ payment terms on the coming sales invoices.
 - Ratings and risk indicators.
 - Import: saved mapping profiles, REST/JSON/XML feeds, SFTP pull via job scheduler (Hangfire), resumable
   chunked commits for >20k rows, platform moderation queue for new canonical products.

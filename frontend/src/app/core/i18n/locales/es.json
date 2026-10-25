@@ -73,6 +73,7 @@
     "intakes": "Recompras",
     "pos": "Caja",
     "invoices": "Facturas",
+    "company": "Empresa",
     "dailyReport": "Informe diario"
   },
   "auth": {
@@ -540,6 +541,10 @@
       "auth.reset_recently_sent": "Se acaba de enviar un enlace. Espere un minuto.",
       "reason.too_long": "La justificación puede tener como máximo 1000 caracteres.",
       "admin.tenant_header": "La administración se llama sin contexto de empresa. Recargue la página.",
+      "company.logo_not_found": "La empresa no tiene logotipo.",
+      "company.logo_concurrent": "El logotipo se modificó al mismo tiempo. Inténtelo de nuevo.",
+      "company.logo_already_removed": "El logotipo ya se ha eliminado.",
+      "image.too_small": "La imagen es demasiado pequeña (al menos 16 píxeles por lado).",
       "ankauf.mrz_format": "La zona de lectura mecánica está incompleta o no es válida.",
       "ankauf.mrz_check_digit": "Un dígito de control de la zona de lectura mecánica es incorrecto. Vuelva a escanear.",
       "ankauf.mrz_mismatch": "El número, el tipo, la fecha de nacimiento o de caducidad no coinciden con la zona de lectura mecánica.",
@@ -3205,6 +3210,126 @@
       "taxNumber": "El número fiscal tiene de 10 a 13 dígitos, separados por / o espacios.",
       "phone": "Introduzca un teléfono con dígitos, espacios, ( ) / - y un + inicial opcional.",
       "website": "Introduzca la dirección completa con https:// o http://."
+    }
+  },
+  "company": {
+    "title": "Empresa",
+    "subtitle": "Datos, contacto, impuestos, datos bancarios, textos de tique y logotipo de su empresa",
+    "readOnly": "Puede ver los datos de la empresa. Solo el propietario puede modificarlos.",
+    "conflict": {
+      "title": "Modificado entretanto",
+      "text": "Otra persona acaba de guardar los datos de la empresa. Cargue la versión actual y vuelva a introducir sus cambios.",
+      "reload": "Cargar versión actual"
+    },
+    "sections": {
+      "master": "Datos generales",
+      "contact": "Contacto",
+      "tax": "Impuestos y registro",
+      "bank": "Datos bancarios y plazo de pago",
+      "receipts": "Tiques",
+      "logo": "Logotipo"
+    },
+    "legalHint": "Estos datos aparecen en facturas y justificantes de compra. Los cambios de la razón social o del NIF-IVA se comunican a la plataforma.",
+    "legalNotice": "Está cambiando la razón social o el NIF-IVA: se informará a la plataforma.",
+    "unsaved": "Cambios sin guardar",
+    "discard": "Descartar",
+    "saved": "Datos de la empresa guardados.",
+    "receiptsHint": "El encabezado y el pie aparecen en cada tique de caja (pantalla, impresión de 80 mm y tique digital).",
+    "receiptCounter": "{used} de {max} caracteres · {lines} de {maxLines} líneas",
+    "adminHistoryLegal": "Modificado por la empresa",
+    "fields": {
+      "name": "Nombre visible",
+      "legalName": "Razón social",
+      "street": "Calle y número",
+      "postalCode": "Código postal",
+      "city": "Localidad",
+      "countryCode": "País",
+      "vatId": "NIF-IVA",
+      "taxNumber": "Número fiscal",
+      "contactEmail": "Correo electrónico",
+      "contactPhone": "Teléfono",
+      "website": "Sitio web",
+      "receiptHeader": "Texto de encabezado del tique",
+      "receiptFooter": "Texto de pie del tique",
+      "bankName": "Nombre del banco",
+      "iban": "IBAN (número de cuenta)",
+      "bic": "BIC (código bancario)",
+      "managingDirector": "Dirección general",
+      "registerCourt": "Registro mercantil",
+      "registerNumber": "Número de registro",
+      "paymentTermsDays": "Plazo de pago en días"
+    },
+    "hints": {
+      "name": "Así aparece su empresa en SEHA y en la parte superior del tique.",
+      "legalName": "Con la forma jurídica, p. ej. «Handy Shop Berlin GmbH».",
+      "countryCode": "Código de país de dos letras, p. ej. DE.",
+      "website": "Dirección completa con https://",
+      "vatId": "DE seguido de nueve dígitos.",
+      "registerCourt": "p. ej. Amtsgericht Charlottenburg",
+      "registerNumber": "p. ej. HRB 123456",
+      "iban": "Se comprueba con sus dígitos de control; se admiten espacios.",
+      "paymentTermsDays": "Valor predeterminado para sus facturas, de 0 a 365 días."
+    },
+    "placeholders": {
+      "receiptHeader": "p. ej. Sus expertos en móviles en Berlín-Mitte",
+      "receiptFooter": "p. ej. Horario lun–sáb 10–19 h\nCambios en 14 días con tique"
+    },
+    "errors": {
+      "required": "Campo obligatorio.",
+      "country": "Indique un código de país de dos letras, p. ej. DE.",
+      "postalCode": "Los códigos postales alemanes tienen cinco dígitos.",
+      "vatId": "NIF-IVA no válido (números alemanes: DE y nueve dígitos).",
+      "taxNumber": "Un número fiscal tiene de 10 a 13 dígitos.",
+      "email": "Indique un correo electrónico válido.",
+      "phone": "Use solo dígitos, espacios, ( ) / - y un + inicial.",
+      "website": "El sitio web debe empezar por https:// o http://.",
+      "receiptText": "El texto es demasiado largo o tiene demasiadas líneas.",
+      "iban": "El IBAN no es válido (dígitos de control o longitud).",
+      "ibanRequired": "Indique el IBAN junto con el nombre del banco o el BIC.",
+      "bic": "Un BIC tiene 8 u 11 caracteres, p. ej. COBADEFFXXX.",
+      "paymentTerms": "Indique de 0 a 365 días.",
+      "vatTaken": "Este NIF-IVA ya está registrado para otra empresa."
+    },
+    "preview": {
+      "title": "Vista previa del tique (80 mm)",
+      "hint": "Así aparecen el logotipo y los textos en el tique.",
+      "sampleItem": "Artículo de ejemplo"
+    },
+    "logo": {
+      "hint": "PNG, JPEG o WebP de hasta 2 MB. El logotipo aparece en SEHA, en la caja, en tiques, facturas y tiques digitales.",
+      "none": "Aún no se ha subido ningún logotipo",
+      "alt": "Logotipo de {name}",
+      "upload": "Subir logotipo",
+      "replace": "Sustituir logotipo",
+      "remove": "Eliminar logotipo",
+      "removeTitle": "¿Eliminar el logotipo?",
+      "removeText": "El logotipo se eliminará de tiques, facturas y tiques digitales.",
+      "removed": "Logotipo eliminado.",
+      "uploaded": "Logotipo guardado.",
+      "topbarLabel": "Datos de la empresa {name}",
+      "cropTitle": "Recortar logotipo",
+      "previewLabel": "Vista previa del logotipo recortado",
+      "onLight": "sobre fondo claro",
+      "onDark": "sobre fondo oscuro",
+      "aspect": "Formato",
+      "aspects": {
+        "free": "Tal como se subió",
+        "square": "Cuadrado",
+        "wide": "Ancho (3:1)"
+      },
+      "zoom": "Ampliación",
+      "horizontal": "Posición horizontal",
+      "vertical": "Posición vertical",
+      "resetCrop": "Restablecer",
+      "useOriginal": "Subir sin recortar",
+      "uploadCropped": "Subir logotipo recortado",
+      "errors": {
+        "type": "Elija una imagen PNG, JPEG o WebP.",
+        "size": "El logotipo puede tener como máximo 2 MB.",
+        "small": "La imagen es demasiado pequeña (al menos 16 píxeles por lado).",
+        "read": "No se pudo leer la imagen.",
+        "dimensions": "La imagen tiene demasiados píxeles (como máximo 12.000 por lado)."
+      }
     }
   },
   "reports": {

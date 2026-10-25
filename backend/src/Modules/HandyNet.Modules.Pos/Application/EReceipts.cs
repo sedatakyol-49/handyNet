@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using HandyNet.Modules.Pos.Domain;
+using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
 using HandyNet.SharedKernel.Tenancy;
@@ -19,7 +20,8 @@ public sealed record ReceiptEmailDto(Guid Id, Guid ReceiptId, string RecipientMa
 public sealed record ReceiptLinkDto(string Token, string Path, DateTimeOffset ExpiresAt);
 
 /// <summary>A receipt as the public (QR) view shows it: the issued document without the customer block.</summary>
-public sealed record PublicReceiptDto(ReceiptDocument Document, bool Cancelled, DateTimeOffset ExpiresAt);
+/// <param name="Branding">Logo and receipt texts of the issuing company as currently configured (ADR-0014).</param>
+public sealed record PublicReceiptDto(ReceiptDocument Document, bool Cancelled, DateTimeOffset ExpiresAt, ReceiptBranding? Branding = null);
 
 internal sealed class EmailReceiptValidator : AbstractValidator<EmailReceiptRequest>
 {
@@ -31,10 +33,12 @@ internal sealed class PublicReceiptRow
     public string Document { get; set; } = null!;
     public bool Cancelled { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
+    public Guid OrganizationId { get; set; }
 }
 
 /// <summary>E-receipts: email via the Notifications outbox, and public read-only links (QR) with expiry.</summary>
-internal sealed class EReceiptService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IOptions<PosOptions> options, IClock clock)
+internal sealed class EReceiptService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IOptions<PosOptions> options, IClock clock,
+    IOrganizationBranding branding)
 {
     public const string PublicPathPrefix = "/beleg/";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -90,11 +94,12 @@ internal sealed class EReceiptService(HandyNetDbContext db, ITenantContext tenan
         if (!OpaqueToken.LooksValid(token))
             return notFound;
         var hash = OpaqueToken.HashOf(token);
-        var rows = await db.Database.SqlQuery<PublicReceiptRow>($"SELECT document, cancelled, expires_at FROM pos.public_receipt({hash})").ToListAsync(ct);
+        var rows = await db.Database.SqlQuery<PublicReceiptRow>($"SELECT document, cancelled, expires_at, organization_id FROM pos.public_receipt({hash})").ToListAsync(ct);
         if (rows.FirstOrDefault() is not { } row)
             return notFound;
         var document = JsonSerializer.Deserialize<ReceiptDocument>(row.Document, Json)!;
-        return new PublicReceiptDto(document with { Customer = null }, row.Cancelled, row.ExpiresAt);
+        return new PublicReceiptDto(document with { Customer = null }, row.Cancelled, row.ExpiresAt,
+            await branding.GetReceiptBrandingAsync(row.OrganizationId, ct));
     }
 
     internal static string Mask(string email)

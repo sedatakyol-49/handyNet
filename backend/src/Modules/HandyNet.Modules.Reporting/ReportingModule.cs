@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace HandyNet.Modules.Reporting;
 
 /// <summary>
-/// Cross-module business reports (ADR-0014). Owns no data: it composes the read contracts of POS, Ankauf, Ordering and
+/// Cross-module business reports (ADR-0015). Owns no data: it composes the read contracts of POS, Ankauf, Ordering and
 /// Payments under the caller's RLS. Nothing depends on it (architecture tests).
 /// </summary>
 public static class ReportingModule
