@@ -25,7 +25,8 @@ export type Permission =
   | 'pos.discount'
   | 'pos.refund'
   | 'pos.cash_movement'
-  | 'pos.close_session';
+  | 'pos.close_session'
+  | 'reports.read';
 
 /** POS rights an owner can grant or withhold per staff member (owners and managers always hold all of them). */
 export type PosConfigurablePermission = 'pos.price_override' | 'pos.discount' | 'pos.refund' | 'pos.cash_movement' | 'pos.close_session';
@@ -1118,12 +1119,126 @@ export interface SellerDetails {
   birthDate: string;
   idDocumentType: IdDocumentType;
   idDocumentNumber: string;
+  /** yyyy-MM-dd; required for new intakes (an expired document is refused). */
+  idExpiryDate?: string | null;
+  /** ICAO code as in the MRZ, e.g. "D", "TUR". */
+  nationality?: string | null;
+  idIssuingAuthority?: string | null;
+  idIssuingCountry?: string | null;
+  /** ISO 3166-1 alpha-2 of the address; null = Germany. */
+  country?: string | null;
 }
+
+export type SellerCaptureMethod = 'Manual' | 'Mrz' | 'SelfCheckIn';
 
 export interface ReceiveIntakeRequest {
   quoteId: string;
   imei: string;
   seller: SellerDetails;
+  /** The machine-readable zone the data was taken from (verified again by the API). */
+  mrz?: string | null;
+  /** A submitted QR self check-in (single use). */
+  checkInId?: string | null;
+}
+
+/** The seller as shown to the employee (document number masked). */
+export interface SellerCard {
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string | null;
+  nationality: string | null;
+  idDocumentType: IdDocumentType;
+  idDocumentNumberMasked: string;
+  idExpiryDate: string | null;
+  idIssuingAuthority: string | null;
+  idIssuingCountry: string | null;
+}
+
+export interface IntakeSignature {
+  id: string;
+  purpose: 'Purchase' | 'CheckInDeclaration';
+  source: 'Counter' | 'SelfCheckIn';
+  signedAt: string;
+  paidMinor: number | null;
+  paymentMethod: IntakePaymentMethod | null;
+  /** Still matches the intake and the signed amount/method (purchase). */
+  valid: boolean;
+  hasImage: boolean;
+  bindingHash: string;
+  declarationVersion: string;
+}
+
+export interface SignIntakeRequest {
+  paidAmount: number;
+  paymentMethod: IntakePaymentMethod;
+  /** PNG data URL or base64. */
+  image: string;
+}
+
+export interface SellerSuggestion {
+  latestIntakeId: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string | null;
+  nationality: string | null;
+  lastIntakeAt: string;
+  intakeCount: number;
+}
+
+export interface PayoutRegister {
+  id: string;
+  name: string;
+  openSessionId: string | null;
+  expectedCashMinor: number | null;
+}
+
+export interface PayoutRegisters {
+  /** The organization uses the POS module: cash purchases are paid from a till. */
+  tillRequired: boolean;
+  registers: PayoutRegister[];
+}
+
+export type CheckInStatus = 'Open' | 'Submitted' | 'Consumed' | 'Expired';
+
+export interface CheckInCreated {
+  id: string;
+  token: string;
+  path: string;
+  expiresAt: string;
+}
+
+export interface CheckIn {
+  id: string;
+  status: CheckInStatus;
+  createdAt: string;
+  expiresAt: string;
+  submittedAt: string | null;
+  seller: SellerDetails | null;
+  hasSignature: boolean;
+  signedAt: string | null;
+  intakeId: string | null;
+}
+
+export interface PublicCheckIn {
+  shopName: string;
+  expiresAt: string;
+  status: 'Open' | 'Submitted';
+  minimumAge: number;
+  declaration: string;
+}
+
+export interface PublicCheckInRequest {
+  seller: SellerDetails;
+  signature: string | null;
+  consent: boolean;
 }
 
 export interface InspectIntakeRequest {
@@ -1139,6 +1254,8 @@ export interface CompleteIntakeRequest {
   paymentMethod: IntakePaymentMethod;
   /** Null = the organization's default warehouse. */
   warehouseId: string | null;
+  /** Till the cash is taken from (cash purchases of organizations using the POS module). */
+  registerId?: string | null;
 }
 
 export interface Intake {
@@ -1163,6 +1280,19 @@ export interface Intake {
   stockUnitId: string | null;
   completedAt: string | null;
   rejectionReason: string | null;
+  sellerAnonymizedAt?: string | null;
+  /** Null in the list and after anonymization. */
+  seller?: SellerCard | null;
+  captureMethod?: SellerCaptureMethod;
+  /** Latest purchase signature (completed: the one used for payment). */
+  signature?: IntakeSignature | null;
+  /** Declaration signed on the seller's phone during self check-in. */
+  checkInSignature?: IntakeSignature | null;
+  signatureRequired?: boolean;
+  cashMovementId?: string | null;
+  cashRegisterId?: string | null;
+  belegNumber?: string | null;
+  inspectedAt?: string | null;
 }
 
 // ---------------------------------------------------------------- POS (Kasse)
@@ -1253,6 +1383,9 @@ export interface SessionSummary {
   lastReceiptNumber: number | null;
   /** Sum of cash rounding of the session (0.05 € registers). */
   roundingMinor?: number;
+  /** Ankauf purchases paid out of this till (part of the withdrawals). */
+  ankaufCount?: number;
+  ankaufPayoutsMinor?: number;
 }
 
 export interface CashSession {
@@ -1812,4 +1945,105 @@ export interface PosInvoice {
     vat: { rateBasisPoints: number; netMinor: number; vatMinor: number; grossMinor: number }[];
   };
   pdfUrl: string;
+}
+
+// ---------------------------------------------------------------- Tagesbericht (daily business report)
+
+export interface PosTaxFigure {
+  treatment: TaxTreatment;
+  vatRateBasisPoints: number;
+  grossMinor: number;
+  netMinor: number;
+  vatMinor: number;
+}
+
+export interface PosDayFigures {
+  saleCount: number;
+  stornoCount: number;
+  returnCount: number;
+  salesGrossMinor: number;
+  refundsGrossMinor: number;
+  totalGrossMinor: number;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  byTaxTreatment: PosTaxFigure[];
+  byPaymentMethod: { method: PosPaymentMethod; count: number; amountMinor: number }[];
+  depositsMinor: number;
+  withdrawalsMinor: number;
+  ankaufPayoutCount: number;
+  ankaufPayoutsMinor: number;
+  invoiceCount: number;
+  sessions: {
+    sessionId: string;
+    registerName: string;
+    status: 'Open' | 'Closed';
+    openedAt: string;
+    closedAt: string | null;
+    expectedCashMinor: number;
+    countedCashMinor: number | null;
+    differenceMinor: number | null;
+  }[];
+}
+
+export interface AnkaufDayFigures {
+  receivedCount: number;
+  completedCount: number;
+  rejectedCount: number;
+  paidTotalMinor: number;
+  byPaymentMethod: { method: IntakePaymentMethod; count: number; amountMinor: number }[];
+  devices: {
+    intakeId: string;
+    completedAt: string;
+    brand: string;
+    model: string;
+    storage: string | null;
+    imei: string;
+    condition: DeviceCondition | null;
+    paidMinor: number;
+    paymentMethod: IntakePaymentMethod;
+    paidFromTill: boolean;
+  }[];
+}
+
+export interface OrderDayEvent {
+  orderId: string;
+  number: string;
+  event: string;
+  status: string;
+  at: string;
+  grossMinor: number;
+}
+
+export interface DailyReport {
+  date: string;
+  timeZone: string;
+  from: string;
+  until: string;
+  generatedAt: string;
+  organizationName: string;
+  pos: PosDayFigures | null;
+  ankauf: AnkaufDayFigures | null;
+  purchases: {
+    placed: OrderDayEvent[];
+    placedGrossMinor: number;
+    received: OrderDayEvent[];
+    receivedGrossMinor: number;
+    paidCount: number;
+    paidMinor: number;
+    refundedCount: number;
+    refundedMinor: number;
+  } | null;
+  b2BSales: {
+    received: OrderDayEvent[];
+    receivedGrossMinor: number;
+    shipped: OrderDayEvent[];
+    shippedGrossMinor: number;
+    completed: OrderDayEvent[];
+    completedGrossMinor: number;
+    paidCount: number;
+    paidMinor: number;
+    refundedCount: number;
+    refundedMinor: number;
+  } | null;
+  totals: { soldMinor: number; boughtMinor: number };
 }

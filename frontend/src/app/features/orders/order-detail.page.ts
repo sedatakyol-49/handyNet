@@ -1,3 +1,4 @@
+import { OrderTimelineComponent } from './order-timeline';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -23,7 +24,7 @@ const PAYMENT_REFETCH_DELAY_MS = 5000;
 
 @Component({
   selector: 'hn-order-detail-page',
-  imports: [FormsModule, RouterLink, OrderShippingComponent, OrderPaymentComponent, OrderDisputeComponent, ...UI],
+  imports: [FormsModule, RouterLink, OrderShippingComponent, OrderPaymentComponent, OrderDisputeComponent, OrderTimelineComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './order-detail.page.html',
 })

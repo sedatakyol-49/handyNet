@@ -30,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/angebote', labelKey: 'nav.offers', module: 'B2BSales', section: 'sales' },
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
+  { path: '/app/berichte/tagesbericht', labelKey: 'nav.dailyReport', permission: 'reports.read', always: true, section: 'main' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
   { path: '/app/administration', labelKey: 'admin.tabs.organizations', adminOnly: true, exact: true, alsoActive: ['/app/administration/unternehmen'], section: 'platform' },
   { path: '/app/administration/benutzer', labelKey: 'admin.tabs.users', adminOnly: true, section: 'platform' },

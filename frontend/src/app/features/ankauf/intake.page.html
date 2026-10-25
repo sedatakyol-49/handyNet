@@ -1,20 +1,29 @@
-<nav class="mb-2 text-sm"><a class="hn-link" routerLink="/app/ankauf/ankaeufe">← {{ 'ankauf.intake.backToList' | t }}</a></nav>
+@if (links.registerId; as rid) {
+  <hn-pos-subnav [registerId]="rid" />
+}
+<nav class="hn-no-print mb-2 text-sm"><a class="hn-link" [routerLink]="links.intakes">← {{ 'ankauf.intake.backToList' | t }}</a></nav>
 <hn-page-header [title]="'ankauf.intake.title' | t" [description]="'ankauf.intake.subtitle' | t">
   @if (intake(); as i) {
     <span data-testid="intake-status"><hn-status-badge [status]="i.status" kind="intakeStatus" /></span>
   }
 </hn-page-header>
 
-<ol class="mb-4 flex flex-wrap gap-2 text-sm" [attr.aria-label]="'ankauf.intake.steps' | t" data-testid="intake-steps">
-  @for (s of steps; track s; let n = $index) {
+<!-- ======================================================= wizard steps -->
+<ol class="hn-no-print mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4" [attr.aria-label]="'ankauf.intake.steps' | t" data-testid="intake-steps">
+  @for (s of steps; track s; let n = $index; let last = $last) {
     @let state = stepState()[s];
-    <li class="flex items-center gap-2 rounded-md border px-3 py-1.5"
-      [class]="state === 'current' ? 'border-accent-600 bg-accent-50 text-accent-800 font-semibold'
-        : state === 'done' ? 'border-slate-200 bg-white text-slate-700'
-        : 'border-slate-200 bg-white text-slate-400'"
+    <li class="relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors"
+      [class]="state === 'current' ? 'border-accent-600 bg-accent-50 shadow-[inset_0_0_0_1px_var(--color-accent-600)]'
+        : state === 'done' ? 'border-emerald-200 bg-emerald-50/60'
+        : 'border-slate-200 bg-white'"
       [attr.aria-current]="state === 'current' ? 'step' : null" [attr.data-step]="s" [attr.data-state]="state">
-      <span class="grid size-5 place-items-center rounded-full border border-current text-[11px]" aria-hidden="true">{{ state === 'done' ? '✓' : n + 1 }}</span>
-      {{ 'ankauf.intake.step.' + s | t }}
+      <span class="grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold"
+        [class]="state === 'done' ? 'bg-emerald-600 text-white' : state === 'current' ? 'bg-accent-600 text-white' : state === 'skipped' ? 'bg-slate-100 text-slate-400 line-through' : 'bg-slate-100 text-slate-500'"
+        aria-hidden="true">{{ state === 'done' ? '✓' : n + 1 }}</span>
+      <span class="min-w-0">
+        <span class="block truncate font-semibold" [class.text-slate-400]="state === 'todo' || state === 'skipped'">{{ 'ankauf.intake.step.' + s | t }}</span>
+        <span class="block truncate text-xs text-slate-500">{{ 'ankauf.wizard.' + s | t }}</span>
+      </span>
       <span class="sr-only">({{ 'ankauf.intake.stepState.' + state | t }})</span>
     </li>
   }
@@ -23,106 +32,182 @@
 <hn-banner class="mb-3" [error]="intakeQuery.error()" />
 
 @if (isNew()) {
-  <!-- ======================================================= Step 1: receive (seller + IMEI) -->
+  <!-- ======================================================= Step 1: seller + device -->
   <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-    <section class="hn-card p-4" aria-labelledby="in-receive-heading">
-      <h2 id="in-receive-heading" class="mb-3 text-sm">{{ 'ankauf.intake.receiveTitle' | t }}</h2>
-
-      <hn-banner class="mb-3" [error]="quotes.error()" />
+    <div class="min-w-0 space-y-4">
+      <hn-banner [error]="quotes.error()" />
       @if (!quotes.loading() && quotes.value() && !quote()) {
-        <hn-banner class="mb-3" [text]="'ankauf.intake.quoteMissing' | t" data-testid="intake-quote-missing" />
+        <hn-banner [text]="'ankauf.intake.quoteMissing' | t" data-testid="intake-quote-missing" />
       } @else if (quote() && !quoteUsable()) {
-        <hn-banner class="mb-3" tone="warning" [text]="'ankauf.intake.quoteExpired' | t" data-testid="intake-quote-expired" />
+        <hn-banner tone="warning" [text]="'ankauf.intake.quoteExpired' | t" data-testid="intake-quote-expired" />
       }
 
-      @if (imeiInStock()) {
-        <hn-banner class="mb-3" tone="danger" [heading]="'ankauf.intake.imeiInStockHeading' | t" [text]="'ankauf.intake.imeiInStockText' | t"
-          data-testid="intake-imei-in-stock" />
-      } @else {
-        <hn-banner class="mb-3" [text]="errorFor('receive')" data-testid="intake-receive-error" />
-      }
-
-      <hn-banner class="mb-4" tone="info" [heading]="'ankauf.intake.privacyHeading' | t" [text]="'ankauf.intake.privacyText' | t" data-testid="intake-privacy" />
-
-      <form class="space-y-4" (ngSubmit)="receive()" novalidate>
-        <fieldset class="space-y-3">
-          <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.intake.seller' | t }}</legend>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <hn-field [label]="'ankauf.intake.firstName' | t" for="in-first" [required]="true" [errors]="sellerError('firstName')">
-              <input hnInput id="in-first" name="firstName" autocomplete="off" [maxlength]="max.firstName" [(ngModel)]="seller.firstName"
-                [attr.aria-invalid]="!!sellerError('firstName')" [attr.aria-describedby]="sellerError('firstName') ? 'in-first-error' : null" data-testid="in-first" />
-            </hn-field>
-            <hn-field [label]="'ankauf.intake.lastName' | t" for="in-last" [required]="true" [errors]="sellerError('lastName')">
-              <input hnInput id="in-last" name="lastName" autocomplete="off" [maxlength]="max.lastName" [(ngModel)]="seller.lastName"
-                [attr.aria-invalid]="!!sellerError('lastName')" [attr.aria-describedby]="sellerError('lastName') ? 'in-last-error' : null" data-testid="in-last" />
-            </hn-field>
+      <!-- capture methods -->
+      <section class="hn-card overflow-hidden" aria-labelledby="in-capture-heading" data-testid="intake-capture">
+        <div class="border-b border-slate-200 px-4 pt-3">
+          <h2 id="in-capture-heading" class="text-sm">{{ 'ankauf.capture.title' | t }}</h2>
+          <p class="mb-2 text-xs text-slate-600">{{ 'ankauf.capture.subtitle' | t }}</p>
+          <div class="-mb-px flex gap-1 overflow-x-auto" role="tablist" [attr.aria-label]="'ankauf.capture.title' | t">
+            @for (tab of ['mrz', 'checkin', 'returning', 'manual']; track tab) {
+              <button type="button" role="tab" [id]="'in-tab-' + tab" [attr.aria-selected]="captureTab() === tab" [attr.aria-controls]="'in-panel-' + tab"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-[3px] px-3 text-sm font-medium transition-colors"
+                [class]="captureTab() === tab ? 'border-accent-600 text-accent-800' : 'border-transparent text-slate-600 hover:text-slate-900'"
+                (click)="captureTab.set($any(tab))" [attr.data-testid]="'in-tab-' + tab">
+                <span aria-hidden="true">{{ tab === 'mrz' ? '▤' : tab === 'checkin' ? '⌗' : tab === 'returning' ? '↺' : '✎' }}</span>
+                {{ 'ankauf.capture.tabs.' + tab | t }}
+              </button>
+            }
           </div>
-          <hn-field [label]="'ankauf.intake.street' | t" for="in-street" [required]="true" [errors]="sellerError('street')">
-            <input hnInput id="in-street" name="street" autocomplete="off" [maxlength]="max.street" [(ngModel)]="seller.street"
-              [attr.aria-invalid]="!!sellerError('street')" [attr.aria-describedby]="sellerError('street') ? 'in-street-error' : null" data-testid="in-street" />
-          </hn-field>
-          <div class="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-            <hn-field [label]="'ankauf.intake.postalCode' | t" for="in-zip" [required]="true" [errors]="sellerError('postalCode')">
-              <input hnInput id="in-zip" name="postalCode" autocomplete="off" inputmode="numeric" [maxlength]="max.postalCode" [(ngModel)]="seller.postalCode"
-                [attr.aria-invalid]="!!sellerError('postalCode')" [attr.aria-describedby]="sellerError('postalCode') ? 'in-zip-error' : null" data-testid="in-zip" />
-            </hn-field>
-            <hn-field [label]="'ankauf.intake.city' | t" for="in-city" [required]="true" [errors]="sellerError('city')">
-              <input hnInput id="in-city" name="city" autocomplete="off" [maxlength]="max.city" [(ngModel)]="seller.city"
-                [attr.aria-invalid]="!!sellerError('city')" [attr.aria-describedby]="sellerError('city') ? 'in-city-error' : null" data-testid="in-city" />
-            </hn-field>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-3">
-            <hn-field [label]="'ankauf.intake.birthDate' | t" for="in-birth" [required]="true" [hint]="'ankauf.intake.birthDateHint' | t" [errors]="sellerError('birthDate')">
-              <input hnInput id="in-birth" name="birthDate" type="date" min="1900-01-01" [max]="birthDateMax" [(ngModel)]="seller.birthDate"
-                [attr.aria-invalid]="!!sellerError('birthDate')" [attr.aria-describedby]="sellerError('birthDate') ? 'in-birth-error' : 'in-birth-hint'" data-testid="in-birth" />
-            </hn-field>
-            <hn-field [label]="'ankauf.intake.idDocumentType' | t" for="in-idtype" [required]="true" [errors]="sellerError('idDocumentType')">
-              <select hnSelect id="in-idtype" name="idDocumentType" [(ngModel)]="seller.idDocumentType"
-                [attr.aria-invalid]="!!sellerError('idDocumentType')" [attr.aria-describedby]="sellerError('idDocumentType') ? 'in-idtype-error' : null" data-testid="in-idtype">
-                <option [ngValue]="null">{{ 'ankauf.intake.choose' | t }}</option>
-                @for (t of idTypes; track t) {
-                  <option [ngValue]="t">{{ t | tEnum: 'idDocumentType' }}</option>
-                }
-              </select>
-            </hn-field>
-            <hn-field [label]="'ankauf.intake.idDocumentNumber' | t" for="in-idno" [required]="true" [errors]="sellerError('idDocumentNumber')">
-              <input hnInput id="in-idno" name="idDocumentNumber" autocomplete="off" class="hn-mono" [maxlength]="max.idDocumentNumber" [(ngModel)]="seller.idDocumentNumber"
-                [attr.aria-invalid]="!!sellerError('idDocumentNumber')" [attr.aria-describedby]="sellerError('idDocumentNumber') ? 'in-idno-error' : null" data-testid="in-idno" />
-            </hn-field>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.intake.device' | t }}</legend>
-          <hn-field class="sm:w-80" [label]="'ankauf.imei' | t" for="in-imei" [required]="true"
-            [hint]="(quote()?.imei ? 'ankauf.intake.imeiFromQuote' : 'ankauf.intake.imeiHint') | t" [errors]="sellerError('imei')">
-            <input hnInput id="in-imei" name="imei" inputmode="numeric" autocomplete="off" maxlength="20" class="hn-mono" [(ngModel)]="seller.imei"
-              [readonly]="!!quote()?.imei"
-              [attr.aria-invalid]="!!sellerError('imei')" [attr.aria-describedby]="sellerError('imei') ? 'in-imei-error' : 'in-imei-hint'" data-testid="in-imei" />
-          </hn-field>
-        </fieldset>
-
-        <div class="flex justify-end gap-2">
-          <a hnButton routerLink="/app/ankauf">{{ 'common.cancel' | t }}</a>
-          <button hnButton variant="primary" type="submit" [loading]="busy() === 'receive'" [disabled]="!!busy() || !quoteUsable()" data-testid="in-receive">
-            {{ 'ankauf.intake.receive' | t }}
-          </button>
         </div>
-      </form>
-    </section>
+        <div class="p-4" role="tabpanel" [id]="'in-panel-' + captureTab()" [attr.aria-labelledby]="'in-tab-' + captureTab()">
+          @switch (captureTab()) {
+            @case ('mrz') {
+              <hn-mrz-input (captured)="onMrz($event)" />
+            }
+            @case ('checkin') {
+              <hn-checkin-panel (taken)="onCheckIn($event)" />
+            }
+            @case ('returning') {
+              <hn-seller-search (picked)="onReturning($event)" />
+            }
+            @case ('manual') {
+              <p class="text-sm text-slate-600">{{ 'ankauf.capture.manualHint' | t }}</p>
+            }
+          }
+          @if (captureSource(); as src) {
+            <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800" data-testid="intake-capture-source">
+              ✓ {{ 'ankauf.capture.from.' + src | t }}
+            </p>
+          }
+        </div>
+      </section>
 
-    <aside aria-labelledby="in-quote-heading">
-      <div class="hn-card" data-testid="intake-quote">
+      <!-- seller form -->
+      <section class="hn-card p-4" aria-labelledby="in-receive-heading">
+        <h2 id="in-receive-heading" class="mb-3 text-sm">{{ 'ankauf.intake.receiveTitle' | t }}</h2>
+
+        @if (imeiInStock()) {
+          <hn-banner class="mb-3" tone="danger" [heading]="'ankauf.intake.imeiInStockHeading' | t" [text]="'ankauf.intake.imeiInStockText' | t"
+            data-testid="intake-imei-in-stock" />
+        } @else {
+          <hn-banner class="mb-3" [text]="errorFor('receive')" data-testid="intake-receive-error" />
+        }
+        <hn-banner class="mb-4" tone="info" [heading]="'ankauf.intake.privacyHeading' | t" [text]="'ankauf.intake.privacyText' | t" data-testid="intake-privacy" />
+
+        <form class="space-y-5" (ngSubmit)="receive()" novalidate>
+          <fieldset class="space-y-3">
+            <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.seller.person' | t }}</legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <hn-field [label]="'ankauf.intake.firstName' | t" for="in-first" [required]="true" [errors]="sellerError('firstName')">
+                <input hnInput id="in-first" name="firstName" autocomplete="off" [maxlength]="max.firstName" [(ngModel)]="seller.firstName"
+                  [attr.aria-invalid]="!!sellerError('firstName')" data-testid="in-first" />
+              </hn-field>
+              <hn-field [label]="'ankauf.intake.lastName' | t" for="in-last" [required]="true" [errors]="sellerError('lastName')">
+                <input hnInput id="in-last" name="lastName" autocomplete="off" [maxlength]="max.lastName" [(ngModel)]="seller.lastName"
+                  [attr.aria-invalid]="!!sellerError('lastName')" data-testid="in-last" />
+              </hn-field>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <hn-field [label]="'ankauf.intake.birthDate' | t" for="in-birth" [required]="true" [hint]="'ankauf.intake.birthDateHint' | t" [errors]="sellerError('birthDate')">
+                <input hnInput id="in-birth" name="birthDate" type="date" min="1900-01-01" [max]="birthDateMax" [(ngModel)]="seller.birthDate"
+                  [attr.aria-invalid]="!!sellerError('birthDate')" data-testid="in-birth" />
+              </hn-field>
+              <hn-field [label]="'ankauf.seller.nationality' | t" for="in-nationality" [hint]="'ankauf.seller.nationalityHint' | t" [errors]="sellerError('nationality')">
+                <input hnInput id="in-nationality" name="nationality" autocomplete="off" maxlength="3" class="uppercase" [(ngModel)]="seller.nationality"
+                  [attr.aria-invalid]="!!sellerError('nationality')" data-testid="in-nationality" />
+              </hn-field>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-3">
+            <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.seller.address' | t }}</legend>
+            <hn-field [label]="'ankauf.intake.street' | t" for="in-street" [required]="true" [errors]="sellerError('street')">
+              <input hnInput id="in-street" name="street" autocomplete="off" [maxlength]="max.street" [(ngModel)]="seller.street"
+                [attr.aria-invalid]="!!sellerError('street')" data-testid="in-street" />
+            </hn-field>
+            <div class="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_6rem]">
+              <hn-field [label]="'ankauf.intake.postalCode' | t" for="in-zip" [required]="true" [errors]="sellerError('postalCode')">
+                <input hnInput id="in-zip" name="postalCode" autocomplete="off" inputmode="numeric" [maxlength]="max.postalCode" [(ngModel)]="seller.postalCode"
+                  [attr.aria-invalid]="!!sellerError('postalCode')" data-testid="in-zip" />
+              </hn-field>
+              <hn-field [label]="'ankauf.intake.city' | t" for="in-city" [required]="true" [errors]="sellerError('city')">
+                <input hnInput id="in-city" name="city" autocomplete="off" [maxlength]="max.city" [(ngModel)]="seller.city"
+                  [attr.aria-invalid]="!!sellerError('city')" data-testid="in-city" />
+              </hn-field>
+              <hn-field [label]="'ankauf.seller.country' | t" for="in-country" [errors]="sellerError('country')">
+                <input hnInput id="in-country" name="country" autocomplete="off" maxlength="2" class="uppercase" placeholder="DE" [(ngModel)]="seller.country"
+                  [attr.aria-invalid]="!!sellerError('country')" data-testid="in-country" />
+              </hn-field>
+            </div>
+          </fieldset>
+
+          <fieldset class="space-y-3">
+            <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.seller.document' | t }}</legend>
+            <div class="grid gap-3 sm:grid-cols-3">
+              <hn-field [label]="'ankauf.intake.idDocumentType' | t" for="in-idtype" [required]="true" [errors]="sellerError('idDocumentType')">
+                <select hnSelect id="in-idtype" name="idDocumentType" [(ngModel)]="seller.idDocumentType" (ngModelChange)="documentEdited()"
+                  [attr.aria-invalid]="!!sellerError('idDocumentType')" data-testid="in-idtype">
+                  <option [ngValue]="null">{{ 'ankauf.intake.choose' | t }}</option>
+                  @for (t of idTypes; track t) {
+                    <option [ngValue]="t">{{ t | tEnum: 'idDocumentType' }}</option>
+                  }
+                </select>
+              </hn-field>
+              <hn-field [label]="'ankauf.intake.idDocumentNumber' | t" for="in-idno" [required]="true" [errors]="sellerError('idDocumentNumber')">
+                <input hnInput id="in-idno" name="idDocumentNumber" autocomplete="off" class="hn-mono uppercase" [maxlength]="max.idDocumentNumber"
+                  [(ngModel)]="seller.idDocumentNumber" (ngModelChange)="documentEdited()" [attr.aria-invalid]="!!sellerError('idDocumentNumber')" data-testid="in-idno" />
+              </hn-field>
+              <hn-field [label]="'ankauf.seller.expiry' | t" for="in-expiry" [required]="true" [hint]="'ankauf.seller.expiryHint' | t" [errors]="sellerError('idExpiryDate')">
+                <input hnInput id="in-expiry" name="idExpiryDate" type="date" [min]="todayIso" max="2099-12-31" [(ngModel)]="seller.idExpiryDate" (ngModelChange)="documentEdited()"
+                  [attr.aria-invalid]="!!sellerError('idExpiryDate')" data-testid="in-expiry" />
+              </hn-field>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <hn-field [label]="'ankauf.seller.authority' | t" for="in-authority" [hint]="'ankauf.seller.authorityHint' | t" [errors]="sellerError('idIssuingAuthority')">
+                <input hnInput id="in-authority" name="idIssuingAuthority" autocomplete="off" [maxlength]="max.idIssuingAuthority" [(ngModel)]="seller.idIssuingAuthority"
+                  data-testid="in-authority" />
+              </hn-field>
+              <hn-field [label]="'ankauf.seller.issuingCountry' | t" for="in-issuing" [errors]="sellerError('idIssuingCountry')">
+                <input hnInput id="in-issuing" name="idIssuingCountry" autocomplete="off" maxlength="3" class="uppercase" [(ngModel)]="seller.idIssuingCountry"
+                  [attr.aria-invalid]="!!sellerError('idIssuingCountry')" data-testid="in-issuing" />
+              </hn-field>
+            </div>
+            <p class="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <span aria-hidden="true">⚠</span>{{ 'ankauf.seller.verifyHint' | t }}
+            </p>
+          </fieldset>
+
+          <fieldset>
+            <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'ankauf.intake.device' | t }}</legend>
+            <hn-field class="sm:w-80" [label]="'ankauf.imei' | t" for="in-imei" [required]="true"
+              [hint]="(quote()?.imei ? 'ankauf.intake.imeiFromQuote' : 'ankauf.intake.imeiHint') | t" [errors]="sellerError('imei')">
+              <input hnInput id="in-imei" name="imei" inputmode="numeric" autocomplete="off" maxlength="20" class="hn-mono" [(ngModel)]="seller.imei"
+                [readonly]="!!quote()?.imei" [attr.aria-invalid]="!!sellerError('imei')" data-testid="in-imei" />
+            </hn-field>
+          </fieldset>
+
+          <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+            <a hnButton [routerLink]="links.quotes">{{ 'common.cancel' | t }}</a>
+            <button hnButton variant="primary" type="submit" [loading]="busy() === 'receive'" [disabled]="!!busy() || !quoteUsable()" data-testid="in-receive">
+              {{ 'ankauf.intake.receive' | t }} →
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <aside class="min-w-0 xl:sticky xl:top-4 xl:self-start" aria-labelledby="in-quote-heading">
+      <div class="hn-card overflow-hidden" data-testid="intake-quote">
         <h2 id="in-quote-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'ankauf.intake.quoteTitle' | t }}</h2>
         @if (quote(); as q) {
+          <div class="bg-gradient-to-br from-accent-50 to-white px-4 py-4">
+            <p class="text-base font-semibold">{{ label(q) }}</p>
+            <p class="text-xs text-slate-600">{{ q.condition | tEnum: 'deviceCondition' }}@for (d of q.defects; track d) { · {{ d | tEnum: 'deviceDefect' }} }</p>
+            <p class="mt-3 text-xs text-slate-500">{{ 'ankauf.platformOffer' | t }}</p>
+            <p class="text-2xl font-bold tabular-nums">{{ q.platformOfferMinor | money }}</p>
+          </div>
           <dl class="divide-y divide-slate-100 px-4 py-2 text-sm">
-            <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.model' | t }}</dt><dd class="text-end font-medium">{{ label(q) }}</dd></div>
-            <div class="flex justify-between gap-3 py-1.5">
-              <dt>{{ 'ankauf.condition' | t }}</dt>
-              <dd class="text-end">{{ q.condition | tEnum: 'deviceCondition' }}@for (d of q.defects; track d) { · {{ d | tEnum: 'deviceDefect' }} }</dd>
-            </div>
             <div class="flex justify-between gap-3 py-1.5"><dt>IMEI</dt><dd class="hn-mono">{{ q.imei ?? '–' }}</dd></div>
-            <div class="flex justify-between gap-3 py-1.5"><dt class="font-medium">{{ 'ankauf.platformOffer' | t }}</dt><dd class="tabular-nums font-semibold">{{ q.platformOfferMinor | money }}</dd></div>
             <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.maxConsumerPrice' | t }}</dt><dd class="tabular-nums">{{ q.maxConsumerPriceMinor | money }}</dd></div>
             <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.validUntilColumn' | t }}</dt><dd>{{ q.validUntil | hnDate }}</dd></div>
           </dl>
@@ -137,24 +222,41 @@
     <div class="min-w-0 space-y-4">
       <!-- ======================================================= closed states -->
       @if (i.status === 'Completed') {
-        <section class="hn-card border-emerald-300 p-4" aria-labelledby="in-done-heading" data-testid="intake-completed">
-          <h2 id="in-done-heading" class="mb-2 text-sm text-emerald-800">{{ 'ankauf.intake.completedTitle' | t }}</h2>
-          <p class="text-sm">
-            {{ 'ankauf.intake.completedText' | t: { amount: (i.paidMinor | money), method: (i.paymentMethod | tEnum: 'intakePaymentMethod'), date: (i.completedAt | hnDate) } }}
-          </p>
-          <p class="mt-1 text-xs text-slate-600">{{ 'ankauf.intake.marginScheme' | t }}</p>
-          <div class="mt-3">
-            <button hnButton type="button" [loading]="busy() === 'beleg'" [disabled]="!!busy()" (click)="downloadBeleg(i)" data-testid="intake-beleg">
-              {{ 'ankauf.intake.belegDownload' | t }}
-            </button>
+        <section class="hn-card overflow-hidden border-emerald-300" aria-labelledby="in-done-heading" data-testid="intake-completed">
+          <div class="flex flex-wrap items-center gap-3 bg-emerald-50 px-4 py-3">
+            <span class="grid size-10 place-items-center rounded-full bg-emerald-600 text-lg text-white" aria-hidden="true">✓</span>
+            <div class="min-w-0">
+              <h2 id="in-done-heading" class="text-sm text-emerald-900">{{ 'ankauf.intake.completedTitle' | t }}</h2>
+              <p class="text-sm">
+                {{ 'ankauf.intake.completedText' | t: { amount: (i.paidMinor | money), method: (i.paymentMethod | tEnum: 'intakePaymentMethod'), date: (i.completedAt | hnDate) } }}
+              </p>
+            </div>
+          </div>
+          <div class="space-y-3 px-4 py-3">
+            @if (i.cashRegisterId) {
+              <p class="text-sm" data-testid="intake-till">{{ 'ankauf.pay.fromTill' | t }}</p>
+            }
+            <p class="text-xs text-slate-600">{{ 'ankauf.intake.marginScheme' | t }}</p>
+            <div class="flex flex-wrap gap-2">
+              <button hnButton variant="primary" type="button" [loading]="busy() === 'beleg'" [disabled]="!!busy()" (click)="downloadBeleg(i)" data-testid="intake-beleg">
+                {{ 'ankauf.intake.belegDownload' | t }}
+              </button>
+              <button hnButton type="button" (click)="showBeleg.set(!showBeleg())" [attr.aria-expanded]="showBeleg()" data-testid="intake-beleg-view">
+                {{ (showBeleg() ? 'ankauf.beleg.hide' : 'ankauf.beleg.show') | t }}
+              </button>
+              <button hnButton type="button" (click)="printBeleg()" data-testid="intake-beleg-print">{{ 'ankauf.beleg.print' | t }}</button>
+            </div>
             @if (errorFor('beleg'); as err) {
-              <p class="mt-2 text-sm text-red-700" role="alert" data-testid="intake-beleg-error">{{ err }}</p>
+              <p class="text-sm text-red-700" role="alert" data-testid="intake-beleg-error">{{ err }}</p>
+            }
+            @if (canSeeStock()) {
+              <p><a class="hn-link text-sm font-medium" [routerLink]="links.stock" data-testid="intake-stock-link">{{ 'ankauf.intake.toStock' | t }} →</a></p>
             }
           </div>
-          @if (canSeeStock()) {
-            <p class="mt-3"><a class="hn-link text-sm font-medium" routerLink="/app/lager" data-testid="intake-stock-link">{{ 'ankauf.intake.toStock' | t }} →</a></p>
-          }
         </section>
+        @if (showBeleg()) {
+          <hn-beleg-print [intake]="i" [dealer]="session.membership()?.organizationName ?? ''" />
+        }
       } @else if (i.status === 'Rejected') {
         <section class="hn-card p-4" aria-labelledby="in-rejected-heading" data-testid="intake-rejected">
           <h2 id="in-rejected-heading" class="mb-2 text-sm">{{ 'ankauf.intake.rejectedTitle' | t }}</h2>
@@ -168,13 +270,16 @@
         <section class="hn-card p-4" aria-labelledby="in-inspect-heading" data-testid="intake-inspect">
           <h2 id="in-inspect-heading" class="mb-1 text-sm">{{ (i.status === 'Inspected' ? 'ankauf.intake.reinspectTitle' : 'ankauf.intake.inspectTitle') | t }}</h2>
           <p class="mb-3 text-xs text-slate-600">{{ 'ankauf.intake.inspectHint' | t }}</p>
+          @if (i.signature && i.status === 'Inspected') {
+            <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{{ 'ankauf.signature.reinspectWarning' | t }}</p>
+          }
           <hn-banner class="mb-3" [text]="errorFor('inspect')" />
           <form class="space-y-4" (ngSubmit)="saveInspection(i)" novalidate>
             <fieldset [attr.aria-describedby]="inspectError('condition') ? 'in-condition-error' : null">
-              <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.condition' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
-              <div class="flex flex-wrap gap-x-4 gap-y-2">
+              <legend class="mb-2 text-xs font-medium text-slate-700">{{ 'ankauf.condition' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 @for (c of conditions; track c) {
-                  <label class="flex items-center gap-1.5 text-sm">
+                  <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm transition-colors hover:border-accent-600 has-[:checked]:border-accent-600 has-[:checked]:bg-accent-50 has-[:checked]:font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-600">
                     <input type="radio" name="in-condition" [value]="c" [(ngModel)]="inspect.condition" [attr.data-condition]="c" />
                     {{ c | tEnum: 'deviceCondition' }}
                   </label>
@@ -185,10 +290,10 @@
               }
             </fieldset>
             <fieldset>
-              <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.defects' | t }}</legend>
-              <div class="grid gap-1.5 sm:grid-cols-2">
+              <legend class="mb-2 text-xs font-medium text-slate-700">{{ 'ankauf.defects' | t }}</legend>
+              <div class="flex flex-wrap gap-2">
                 @for (d of defects; track d) {
-                  <label class="flex items-center gap-1.5 text-sm">
+                  <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm transition-colors hover:border-red-400 has-[:checked]:border-red-500 has-[:checked]:bg-red-50 has-[:checked]:text-red-900 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-600">
                     <input type="checkbox" class="hn-checkbox" [name]="'in-defect-' + d" [(ngModel)]="inspect.defects[d]" [attr.data-defect]="d" />
                     {{ d | tEnum: 'deviceDefect' }}
                   </label>
@@ -216,9 +321,9 @@
         </section>
       }
 
-      <!-- ======================================================= offer comparison -->
+      <!-- ======================================================= offer comparison / price breakdown -->
       @if (i.inspectedOfferMinor !== null) {
-        <section class="hn-card" aria-labelledby="in-offer-heading" data-testid="intake-offer">
+        <section class="hn-card overflow-hidden" aria-labelledby="in-offer-heading" data-testid="intake-offer">
           <h2 id="in-offer-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'ankauf.intake.offerTitle' | t }}</h2>
           <div class="grid grid-cols-1 gap-px bg-slate-200 sm:grid-cols-3">
             <div class="bg-white px-4 py-3">
@@ -227,7 +332,7 @@
             </div>
             <div class="bg-accent-50 px-4 py-3">
               <p class="text-xs text-slate-600">{{ 'ankauf.intake.inspectedOffer' | t }}</p>
-              <p class="text-lg font-semibold tabular-nums" data-testid="intake-inspected-offer">{{ i.inspectedOfferMinor | money }}</p>
+              <p class="text-2xl font-bold tabular-nums" data-testid="intake-inspected-offer">{{ i.inspectedOfferMinor | money }}</p>
             </div>
             <div class="bg-white px-4 py-3">
               <p class="text-xs text-slate-500">{{ 'ankauf.intake.difference' | t }}</p>
@@ -256,11 +361,90 @@
         </section>
       }
 
-      <!-- ======================================================= Step 3: complete -->
-      @if (actions().complete) {
+      <!-- ======================================================= Step 3: price + signature -->
+      @if (actions().sign) {
+        <section class="hn-card p-4" aria-labelledby="in-sign-heading" data-testid="intake-sign">
+          <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 id="in-sign-heading" class="text-sm">{{ 'ankauf.signature.title' | t }}</h2>
+              <p class="text-xs text-slate-600">{{ 'ankauf.intake.completeHint' | t: { offer: (i.inspectedOfferMinor | money) } }}</p>
+            </div>
+            @switch (sigState()) {
+              @case ('valid') {
+                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800" data-testid="intake-signature-state" data-state="valid">✓ {{ 'ankauf.signature.valid' | t }}</span>
+              }
+              @case ('stale') {
+                <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900" data-testid="intake-signature-state" data-state="stale">{{ 'ankauf.signature.stale' | t }}</span>
+              }
+            }
+          </div>
+
+          @if (sigState() === 'valid' && i.signature; as s) {
+            <div class="grid gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]" data-testid="intake-signed">
+              <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1">
+                <dt class="text-slate-600">{{ 'ankauf.intake.paidAmount' | t }}</dt>
+                <dd class="font-semibold tabular-nums" data-testid="intake-signed-amount">{{ s.paidMinor | money }}</dd>
+                <dt class="text-slate-600">{{ 'ankauf.intake.paymentMethod' | t }}</dt>
+                <dd>{{ s.paymentMethod | tEnum: 'intakePaymentMethod' }}</dd>
+                <dt class="text-slate-600">{{ 'ankauf.signature.signedAt' | t }}</dt>
+                <dd>{{ s.signedAt | hnDate }}</dd>
+                <dt class="text-slate-600">{{ 'ankauf.signature.checksum' | t }}</dt>
+                <dd class="hn-mono text-xs" dir="ltr">{{ s.bindingHash.slice(0, 16).toUpperCase() }}</dd>
+              </dl>
+              <button hnButton size="sm" type="button" class="self-start" (click)="resign()" data-testid="intake-resign">{{ 'ankauf.signature.again' | t }}</button>
+            </div>
+          } @else {
+            @if (sigState() === 'stale') {
+              <hn-banner class="mb-3" tone="warning" [text]="'ankauf.signature.staleText' | t" data-testid="intake-signature-stale" />
+            }
+            <hn-banner class="mb-3" [text]="errorFor('sign')" />
+            <form class="space-y-4" (ngSubmit)="sign(i)" novalidate>
+              <div class="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
+                <hn-field [label]="'ankauf.intake.paidAmount' | t" for="in-paid" [required]="true" [hint]="'ankauf.intake.paidAmountHint' | t"
+                  [errors]="paidError() ? (paidError()! | t: { offer: (i.inspectedOfferMinor | money) }) : null">
+                  <div class="flex items-center gap-1">
+                    <input hnInput id="in-paid" name="paid" inputmode="decimal" class="text-end text-lg font-semibold" [(ngModel)]="paid.amount"
+                      [attr.aria-invalid]="!!paidError()" data-testid="in-paid" />
+                    <span class="text-sm text-slate-500" aria-hidden="true">€</span>
+                  </div>
+                </hn-field>
+                <fieldset>
+                  <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.intake.paymentMethod' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+                  <div class="grid grid-cols-2 gap-2 pt-0.5">
+                    @for (m of paymentMethods; track m) {
+                      <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm transition-colors hover:border-accent-600 has-[:checked]:border-accent-600 has-[:checked]:bg-accent-50 has-[:checked]:font-semibold">
+                        <input type="radio" name="in-method" [value]="m" [(ngModel)]="paid.method" [attr.data-method]="m" />
+                        <span aria-hidden="true">{{ m === 'Cash' ? '€' : '⇄' }}</span>{{ m | tEnum: 'intakePaymentMethod' }}
+                      </label>
+                    }
+                  </div>
+                </fieldset>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p class="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">{{ 'ankauf.signature.declarationTitle' | t }}</p>
+                <p class="text-xs leading-relaxed text-slate-700" lang="de" data-testid="intake-declaration">{{ declaration }}</p>
+                <p class="mt-2 text-xs text-slate-600">{{ 'ankauf.signature.confirmPrice' | t }}</p>
+              </div>
+              <hn-signature-pad testId="intake-signature-pad" (changed)="signatureImage.set($event); signatureError.set(null)" />
+              @if (signatureError(); as e) {
+                <p class="text-xs text-red-700" role="alert">{{ e | t }}</p>
+              }
+              <div class="flex justify-end">
+                <button hnButton variant="primary" type="submit" [loading]="busy() === 'sign'" [disabled]="!!busy()" data-testid="in-sign">{{ 'ankauf.signature.save' | t }}</button>
+              </div>
+            </form>
+          }
+          @if (i.checkInSignature; as cs) {
+            <p class="mt-3 text-xs text-slate-600" data-testid="intake-checkin-signature">{{ 'ankauf.signature.checkInSigned' | t: { date: (cs.signedAt | hnDate) } }}</p>
+          }
+        </section>
+      }
+
+      <!-- ======================================================= Step 4: payout + stock -->
+      @if (actions().complete && (sigState() === 'valid' || i.signatureRequired === false)) {
         <section class="hn-card p-4" aria-labelledby="in-complete-heading" data-testid="intake-complete">
           <h2 id="in-complete-heading" class="mb-1 text-sm">{{ 'ankauf.intake.completeTitle' | t }}</h2>
-          <p class="mb-3 text-xs text-slate-600">{{ 'ankauf.intake.completeHint' | t: { offer: (i.inspectedOfferMinor | money) } }}</p>
+          <p class="mb-3 text-xs text-slate-600">{{ 'ankauf.pay.hint' | t }}</p>
           @if (dialog() !== 'complete') {
             <hn-banner class="mb-3" [text]="errorFor('complete')" />
           }
@@ -268,27 +452,43 @@
             <hn-banner class="mb-3" tone="info" [text]="'ankauf.intake.noInventoryModule' | t" />
           }
           <form class="space-y-4" (ngSubmit)="askComplete(i)" novalidate>
-            <div class="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
-              <hn-field [label]="'ankauf.intake.paidAmount' | t" for="in-paid" [required]="true" [hint]="'ankauf.intake.paidAmountHint' | t"
-                [errors]="paidError() ? (paidError()! | t: { offer: (i.inspectedOfferMinor | money) }) : null">
-                <div class="flex items-center gap-1">
-                  <input hnInput id="in-paid" name="paid" inputmode="decimal" class="text-end" [(ngModel)]="paid.amount"
-                    [attr.aria-invalid]="!!paidError()" [attr.aria-describedby]="paidError() ? 'in-paid-error' : 'in-paid-hint'" data-testid="in-paid" />
-                  <span class="text-sm text-slate-500" aria-hidden="true">€</span>
-                </div>
-              </hn-field>
-              <fieldset>
-                <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.intake.paymentMethod' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
-                <div class="flex flex-wrap gap-x-4 gap-y-2 pt-1.5">
+            @if (i.signatureRequired === false && sigState() !== 'valid') {
+              <div class="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
+                <hn-field [label]="'ankauf.intake.paidAmount' | t" for="in-paid-nosig" [required]="true">
+                  <input hnInput id="in-paid-nosig" name="paidNoSig" inputmode="decimal" class="text-end" [(ngModel)]="paid.amount" />
+                </hn-field>
+                <fieldset>
+                  <legend class="mb-1 text-xs font-medium text-slate-700">{{ 'ankauf.intake.paymentMethod' | t }}</legend>
                   @for (m of paymentMethods; track m) {
-                    <label class="flex items-center gap-1.5 text-sm">
-                      <input type="radio" name="in-method" [value]="m" [(ngModel)]="paid.method" [attr.data-method]="m" />
-                      {{ m | tEnum: 'intakePaymentMethod' }}
+                    <label class="me-4 inline-flex items-center gap-1.5 text-sm"><input type="radio" name="in-method-nosig" [value]="m" [(ngModel)]="paid.method" />{{ m | tEnum: 'intakePaymentMethod' }}</label>
+                  }
+                </fieldset>
+              </div>
+            }
+            @let method = i.signature?.valid ? i.signature!.paymentMethod : paid.method;
+            @if (method === 'Cash' && tillRequired()) {
+              <fieldset data-testid="in-tills">
+                <legend class="mb-2 text-xs font-medium text-slate-700">{{ 'ankauf.pay.register' | t }} <span class="text-red-700" aria-hidden="true">*</span></legend>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  @for (r of registers(); track r.id) {
+                    <label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors has-[:checked]:border-accent-600 has-[:checked]:bg-accent-50"
+                      [class]="r.openSessionId ? 'hover:border-accent-600' : 'cursor-not-allowed opacity-60'">
+                      <input type="radio" name="in-register" [value]="r.id" [(ngModel)]="paid.registerId" [disabled]="!r.openSessionId" [attr.data-register]="r.name" />
+                      <span class="min-w-0 flex-1">
+                        <span class="block font-semibold">{{ r.name }}</span>
+                        <span class="block text-xs text-slate-600">
+                          @if (r.openSessionId) { {{ 'ankauf.pay.expectedCash' | t: { amount: (r.expectedCashMinor | money) } }} } @else { {{ 'ankauf.pay.noSession' | t }} }
+                        </span>
+                      </span>
                     </label>
+                  } @empty {
+                    <p class="text-sm text-slate-600">{{ 'ankauf.pay.noRegisters' | t }}</p>
                   }
                 </div>
               </fieldset>
-            </div>
+            } @else if (method === 'BankTransfer') {
+              <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{{ 'ankauf.pay.transferHint' | t }}</p>
+            }
             @if (hasInventory()) {
               <hn-field class="sm:w-80" [label]="'ankauf.intake.warehouse' | t" for="in-warehouse" [hint]="'ankauf.intake.warehouseHint' | t">
                 <select hnSelect id="in-warehouse" name="warehouse" [(ngModel)]="paid.warehouseId" data-testid="in-warehouse">
@@ -299,6 +499,9 @@
                 </select>
               </hn-field>
             }
+            @if (payoutError(); as e) {
+              <p class="text-sm text-red-700" role="alert" data-testid="in-payout-error">{{ e | t }}</p>
+            }
             <div class="flex justify-end">
               <button hnButton variant="primary" type="submit" [disabled]="!!busy()" data-testid="in-complete">{{ 'ankauf.intake.complete' | t }}</button>
             </div>
@@ -307,22 +510,25 @@
       }
 
       @if (actions().reject) {
-        <div class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-4 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
           <p class="text-xs text-slate-600">{{ 'ankauf.intake.rejectHint' | t }}</p>
           <button hnButton variant="danger" size="sm" type="button" [disabled]="!!busy()" (click)="openReject()" data-testid="in-reject">{{ 'ankauf.intake.reject' | t }}</button>
         </div>
       }
     </div>
 
-    <!-- ======================================================= summary -->
-    <aside class="min-w-0" aria-labelledby="in-summary-heading">
-      <div class="hn-card" data-testid="intake-summary">
-        <h2 id="in-summary-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ label(i) }}</h2>
+    <!-- ======================================================= side: device, seller, timeline -->
+    <aside class="min-w-0 space-y-4 xl:sticky xl:top-4 xl:self-start" aria-label="{{ 'ankauf.intake.summary' | t }}">
+      <div class="hn-card overflow-hidden" data-testid="intake-summary">
+        <div class="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
+          <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-900 text-lg text-white" aria-hidden="true">▯</span>
+          <div class="min-w-0">
+            <h2 class="truncate text-sm font-semibold">{{ label(i) }}</h2>
+            <p class="hn-mono text-xs text-slate-600" data-testid="intake-imei">{{ i.imei }}</p>
+          </div>
+        </div>
         <dl class="divide-y divide-slate-100 px-4 py-2 text-sm">
           <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'common.status' | t }}</dt><dd><hn-status-badge [status]="i.status" kind="intakeStatus" /></dd></div>
-          <div class="flex justify-between gap-3 py-1.5"><dt>IMEI</dt><dd class="hn-mono" data-testid="intake-imei">{{ i.imei }}</dd></div>
-          <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.intake.seller' | t }}</dt><dd class="text-end" data-testid="intake-seller">{{ i.sellerName }}</dd></div>
-          <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.intake.receivedAt' | t }}</dt><dd>{{ i.receivedAt | hnDate }}</dd></div>
           @if (quote(); as q) {
             <div class="flex justify-between gap-3 py-1.5">
               <dt>{{ 'ankauf.intake.quotedFindings' | t }}</dt>
@@ -337,6 +543,26 @@
           }
         </dl>
       </div>
+
+      <hn-seller-card [seller]="i.seller" [name]="i.sellerName" [capture]="i.captureMethod" [anonymizedAt]="i.sellerAnonymizedAt" />
+
+      <section class="hn-card px-4 py-3" aria-labelledby="in-timeline-heading" data-testid="intake-timeline">
+        <h2 id="in-timeline-heading" class="mb-2 text-sm">{{ 'ankauf.timeline.title' | t }}</h2>
+        <ol class="relative ms-2 space-y-3 border-s border-slate-200 ps-4 text-sm">
+          <li><span class="absolute -start-1.5 mt-1.5 size-3 rounded-full bg-emerald-500" aria-hidden="true"></span>{{ 'ankauf.timeline.received' | t }} <span class="block text-xs text-slate-500">{{ i.receivedAt | hnDate }}</span></li>
+          @if (i.inspectedAt) {
+            <li><span class="absolute -start-1.5 mt-1.5 size-3 rounded-full bg-emerald-500" aria-hidden="true"></span>{{ 'ankauf.timeline.inspected' | t }} <span class="block text-xs text-slate-500">{{ i.inspectedAt | hnDate }}</span></li>
+          }
+          @if (i.signature; as s) {
+            <li><span class="absolute -start-1.5 mt-1.5 size-3 rounded-full" [class]="s.valid ? 'bg-emerald-500' : 'bg-amber-500'" aria-hidden="true"></span>{{ 'ankauf.timeline.signed' | t }} <span class="block text-xs text-slate-500">{{ s.signedAt | hnDate }}</span></li>
+          }
+          @if (i.status === 'Completed') {
+            <li><span class="absolute -start-1.5 mt-1.5 size-3 rounded-full bg-emerald-500" aria-hidden="true"></span>{{ 'ankauf.timeline.completed' | t }} <span class="block text-xs text-slate-500">{{ i.completedAt | hnDate }}</span></li>
+          } @else if (i.status === 'Rejected') {
+            <li><span class="absolute -start-1.5 mt-1.5 size-3 rounded-full bg-red-500" aria-hidden="true"></span>{{ 'ankauf.timeline.rejected' | t }} <span class="block text-xs text-slate-500">{{ i.completedAt | hnDate }}</span></li>
+          }
+        </ol>
+      </section>
     </aside>
   </div>
 
@@ -351,10 +577,16 @@
           <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.intake.seller' | t }}</dt><dd class="text-end">{{ i.sellerName }}</dd></div>
           <div class="flex justify-between gap-3 py-1.5"><dt class="font-medium">{{ 'ankauf.intake.paidAmount' | t }}</dt><dd class="tabular-nums font-semibold" data-testid="intake-confirm-amount">{{ p.minor | money }}</dd></div>
           <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.intake.paymentMethod' | t }}</dt><dd>{{ p.method | tEnum: 'intakePaymentMethod' }}</dd></div>
+          @if (p.registerId) {
+            <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.pay.register' | t }}</dt><dd class="text-end" data-testid="intake-confirm-register">{{ registerName(p.registerId) }}</dd></div>
+          }
           @if (hasInventory()) {
             <div class="flex justify-between gap-3 py-1.5"><dt>{{ 'ankauf.intake.warehouse' | t }}</dt><dd class="text-end">{{ warehouseName(p.warehouseId) }}</dd></div>
           }
         </dl>
+        @if (p.registerId) {
+          <hn-banner tone="warning" [text]="'ankauf.pay.confirmTill' | t: { amount: (p.minor | money), register: registerName(p.registerId) }" />
+        }
         <hn-banner tone="info" [text]="'ankauf.intake.confirmStock' | t" />
         <hn-banner [text]="errorFor('complete')" />
         @if (imeiInStock()) {
@@ -375,7 +607,7 @@
       <p>{{ 'ankauf.intake.rejectText' | t }}</p>
       <hn-field [label]="'ankauf.intake.reason' | t" for="in-reason" [required]="true" [errors]="reasonError() ? (reasonError()! | t) : null">
         <textarea hnInput id="in-reason" name="reason" rows="3" [maxlength]="max.reason" [(ngModel)]="reason"
-          [attr.aria-invalid]="!!reasonError()" [attr.aria-describedby]="reasonError() ? 'in-reason-error' : null" data-testid="in-reason"></textarea>
+          [attr.aria-invalid]="!!reasonError()" data-testid="in-reason"></textarea>
       </hn-field>
       <hn-banner [text]="errorFor('reject')" />
       <div class="flex justify-end gap-2">
@@ -385,5 +617,9 @@
     </form>
   </hn-dialog>
 } @else if (intakeQuery.loading()) {
-  <p class="text-sm text-slate-500">{{ 'common.loading' | t }}</p>
+  <div class="space-y-3" aria-busy="true">
+    <div class="h-24 animate-pulse rounded-xl bg-slate-100"></div>
+    <div class="h-48 animate-pulse rounded-xl bg-slate-100"></div>
+    <p class="sr-only">{{ 'common.loading' | t }}</p>
+  </div>
 }

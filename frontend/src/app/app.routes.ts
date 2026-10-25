@@ -32,6 +32,11 @@ export const routes: Routes = [
     path: 'beleg/:token',
     loadComponent: () => import('./features/pos/public-receipt.page').then((m) => m.PublicReceiptPage),
   },
+  // Public Ankauf self check-in (QR at the counter, short-lived single-use link); no login.
+  {
+    path: 'checkin/:token',
+    loadComponent: () => import('./features/ankauf/public-checkin.page').then((m) => m.PublicCheckInPage),
+  },
   {
     path: 'app',
     canActivate: [authGuard],
@@ -129,6 +134,11 @@ export const routes: Routes = [
         canActivate: [accessGuard('Ankauf', 'inventory.manage')],
         loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
       },
+      {
+        path: 'berichte/tagesbericht',
+        canActivate: [accessGuard(undefined, 'reports.read')],
+        loadComponent: () => import('./features/reports/daily-report.page').then((m) => m.DailyReportPage),
+      },
       // The POS moved to the standalone app under /kasse (old bookmarks keep working).
       { path: 'kasse', pathMatch: 'full', redirectTo: '/kasse' },
       { path: 'kasse/belege/:id', redirectTo: '/kasse/belege/:id' },
@@ -221,6 +231,32 @@ export const routes: Routes = [
           { path: 'belege/:id', loadComponent: () => import('./features/pos/receipt-detail.page').then((m) => m.PosReceiptDetailPage) },
           { path: 'sitzungen/:id', loadComponent: () => import('./features/pos/session.page').then((m) => m.PosSessionPage) },
           { path: 'berichte', loadComponent: () => import('./features/pos/report.page').then((m) => m.PosReportPage) },
+          {
+            path: 'berichte/tag',
+            canActivate: [accessGuard(undefined, 'reports.read')],
+            loadComponent: () => import('./features/reports/daily-report.page').then((m) => m.DailyReportPage),
+          },
+          // Ankauf inside the POS app (Petrol design; the register is preselected for cash payouts).
+          {
+            path: ':registerId/ankauf',
+            canActivate: [accessGuard('Ankauf')],
+            loadComponent: () => import('./features/ankauf/ankauf.page').then((m) => m.AnkaufPage),
+          },
+          {
+            path: ':registerId/ankauf/ankaeufe',
+            canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+            loadComponent: () => import('./features/ankauf/intakes.page').then((m) => m.IntakesPage),
+          },
+          {
+            path: ':registerId/ankauf/ankaeufe/neu/:quoteId',
+            canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+            loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
+          },
+          {
+            path: ':registerId/ankauf/ankaeufe/:id',
+            canActivate: [accessGuard('Ankauf', 'inventory.manage')],
+            loadComponent: () => import('./features/ankauf/intake.page').then((m) => m.IntakePage),
+          },
           { path: ':registerId', loadComponent: () => import('./features/pos/till.page').then((m) => m.TillPage) },
           { path: ':registerId/belege', loadComponent: () => import('./features/pos/receipts.page').then((m) => m.PosReceiptsPage) },
           { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },

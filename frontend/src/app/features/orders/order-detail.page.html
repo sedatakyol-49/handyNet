@@ -25,6 +25,14 @@
     <hn-banner class="mb-3" [error]="actionError()" />
   }
 
+  <section class="hn-card mb-4 px-4 py-4" aria-labelledby="timeline-heading">
+    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+      <h2 id="timeline-heading" class="text-sm">{{ 'orders.timeline.title' | t }}</h2>
+      <p class="text-sm"><span class="text-slate-500">{{ 'common.gross' | t }}:</span> <span class="text-lg font-bold tabular-nums">{{ o.grossTotalMinor | money: o.currency }}</span></p>
+    </div>
+    <hn-order-timeline [order]="o" />
+  </section>
+
   <div class="grid gap-4 lg:grid-cols-3">
     <section class="hn-card overflow-hidden lg:col-span-2" aria-labelledby="lines-heading">
       <h2 id="lines-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'orders.positions' | t }}</h2>

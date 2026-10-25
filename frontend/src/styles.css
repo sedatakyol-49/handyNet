@@ -602,3 +602,36 @@
     height: auto !important;
   }
 }
+
+/*
+ * A4 documents printed from the browser (Ankaufbeleg view, Tagesbericht): only the element marked .hn-print-a4 is
+ * printed, on A4 pages (named page, so the 80 mm receipt layout above stays the default).
+ */
+@media print {
+  @page a4 {
+    size: A4;
+    margin: 14mm;
+  }
+  body:has(.hn-print-a4) {
+    background: #fff;
+  }
+  body:has(.hn-print-a4) * {
+    visibility: hidden;
+  }
+  body:has(.hn-print-a4) .hn-print-a4,
+  body:has(.hn-print-a4) .hn-print-a4 * {
+    visibility: visible;
+  }
+  body:has(.hn-print-a4) .hn-print-a4 {
+    page: a4;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    color: #000;
+  }
+}

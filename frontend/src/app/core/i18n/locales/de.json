@@ -72,7 +72,8 @@
     "ankauf": "Ankauf",
     "intakes": "Ankäufe",
     "pos": "Kasse",
-    "invoices": "Rechnungen"
+    "invoices": "Rechnungen",
+    "dailyReport": "Tagesbericht"
   },
   "auth": {
     "email": "E-Mail-Adresse",
@@ -538,7 +539,31 @@
       "user.display_name_unchanged": "Der Anzeigename ist unverändert.",
       "auth.reset_recently_sent": "Soeben wurde bereits ein Link gesendet. Bitte warten Sie eine Minute.",
       "reason.too_long": "Die Begründung darf höchstens 1000 Zeichen lang sein.",
-      "admin.tenant_header": "Die Administration wird ohne Unternehmenskontext aufgerufen. Bitte laden Sie die Seite neu."
+      "admin.tenant_header": "Die Administration wird ohne Unternehmenskontext aufgerufen. Bitte laden Sie die Seite neu.",
+      "ankauf.mrz_format": "Die maschinenlesbare Zone ist unvollständig oder ungültig.",
+      "ankauf.mrz_check_digit": "Eine Prüfziffer der maschinenlesbaren Zone stimmt nicht. Bitte erneut scannen.",
+      "ankauf.mrz_mismatch": "Ausweisnummer, Ausweisart, Geburts- oder Ablaufdatum weichen von der maschinenlesbaren Zone ab.",
+      "ankauf.id_expired": "Der Ausweis ist abgelaufen. Ein abgelaufenes Dokument darf nicht akzeptiert werden.",
+      "ankauf.id_expiry_required": "Bitte das Ablaufdatum des Ausweises angeben.",
+      "ankauf.id_number": "Die Ausweisnummer darf nur Buchstaben und Ziffern enthalten.",
+      "ankauf.country_code": "Bitte einen gültigen Ländercode angeben (z. B. D, DE, TUR).",
+      "ankauf.seller_birth_date": "Das Geburtsdatum ist nicht plausibel.",
+      "ankauf.signature_image": "Die Unterschrift fehlt oder ist kein gültiges Bild.",
+      "ankauf.signature_required": "Der Kunde muss den Ankauf erst unterschreiben (Eigentumserklärung und Preis).",
+      "ankauf.signature_invalid": "Die Unterschrift passt nicht mehr zu Daten, Betrag oder Zahlungsart. Bitte neu unterschreiben lassen.",
+      "ankauf.signature_not_found": "Unterschrift nicht gefunden.",
+      "ankauf.register_required": "Bitte die Kasse wählen, aus der bar ausgezahlt wird.",
+      "ankauf.already_paid": "Dieser Ankauf wurde bereits aus einer Kasse bezahlt.",
+      "ankauf.checkin_not_found": "Die Selbsterfassung wurde nicht gefunden.",
+      "ankauf.checkin_used": "Diese Selbsterfassung wurde bereits für einen Ankauf verwendet.",
+      "ankauf.checkin_not_submitted": "Der Kunde hat die Selbsterfassung noch nicht abgeschickt.",
+      "ankauf.checkin_expired": "Die Selbsterfassung ist abgelaufen. Bitte einen neuen QR-Code anzeigen.",
+      "ankauf.checkin_already_submitted": "Die Angaben wurden bereits gesendet.",
+      "ankauf.checkin_link_invalid": "Dieser Link existiert nicht oder ist abgelaufen.",
+      "pos.reason_code_reserved": "Dieser Grund wird automatisch gebucht und kann nicht gewählt werden.",
+      "pos.payout_exists": "Dieser Ankauf wurde bereits aus einer Kasse ausgezahlt.",
+      "reports.date_in_future": "Der Tag liegt in der Zukunft.",
+      "reports.date_invalid": "Das Datum ist nicht plausibel."
     }
   },
   "dashboard": {
@@ -720,7 +745,19 @@
     "deliveredAt": "Zugestellt am",
     "inspectionEndsAt": "Prüffrist bis",
     "completedAt": "Abgeschlossen am",
-    "shipWithoutShipmentHint": "Ohne Sendung über SEHA als versendet markieren (kein Etikett, keine Sendungsverfolgung)."
+    "shipWithoutShipmentHint": "Ohne Sendung über SEHA als versendet markieren (kein Etikett, keine Sendungsverfolgung).",
+    "timeline": {
+      "title": "Bestellverlauf",
+      "label": "Schritte der Bestellung",
+      "placed": "Bestellt",
+      "confirmed": "Bestätigt",
+      "shipped": "Versendet",
+      "delivered": "Zugestellt",
+      "completed": "Abgeschlossen"
+    },
+    "positionsCount": "{count} Positionen",
+    "emptyPurchases": "Bestellungen auf dem Marktplatz erscheinen hier mit ihrem Status.",
+    "emptySales": "Bestellungen anderer Händler bei Ihnen erscheinen hier."
   },
   "offers": {
     "title": "Angebote",
@@ -1834,7 +1871,8 @@
       "step": {
         "receive": "Annahme",
         "inspect": "Prüfung",
-        "complete": "Bezahlung & Einlagerung"
+        "complete": "Auszahlung",
+        "sign": "Unterschrift"
       },
       "stepState": {
         "done": "erledigt",
@@ -1927,9 +1965,14 @@
         "amountPositive": "Der Betrag muss größer als 0 sein.",
         "amountAboveOffer": "Der Betrag darf das geprüfte Angebot ({offer}) nicht übersteigen.",
         "notInspected": "Bitte das Gerät zuerst prüfen.",
-        "reasonRequired": "Bitte einen Grund angeben."
+        "reasonRequired": "Bitte einen Grund angeben.",
+        "idExpired": "Der Ausweis ist abgelaufen. Ein abgelaufenes Dokument darf nicht akzeptiert werden.",
+        "date": "Bitte ein gültiges Datum eingeben.",
+        "countryCode": "Bitte einen Ländercode wie D, DE oder TUR eingeben.",
+        "idNumber": "Nur Buchstaben und Ziffern (2–30 Zeichen)."
       },
-      "belegDownload": "Ankaufbeleg (PDF)"
+      "belegDownload": "Ankaufbeleg (PDF)",
+      "summary": "Zusammenfassung"
     },
     "intakes": {
       "title": "Ankäufe",
@@ -1938,7 +1981,171 @@
       "open": "Öffnen",
       "empty": "Noch keine Ankäufe.",
       "emptyText": "Einen Ankauf starten Sie aus einem vorläufigen Angebot unter „Ankauf“.",
-      "limit": "Es werden die letzten 100 Ankäufe angezeigt."
+      "limit": "Es werden die letzten 100 Ankäufe angezeigt.",
+      "new": "Neuer Ankauf",
+      "statOpen": "Offen",
+      "statCompleted": "Abgeschlossen",
+      "statPaid": "Ausgezahlt gesamt",
+      "statRejected": "Abgelehnt"
+    },
+    "wizard": {
+      "receive": "Kunde und Ausweis",
+      "inspect": "Gerät prüfen",
+      "sign": "Preis und Unterschrift",
+      "complete": "Bezahlen und einlagern"
+    },
+    "capture": {
+      "title": "Kundendaten erfassen",
+      "subtitle": "Ausweis scannen, Kunden per QR-Code selbst erfassen lassen oder Stammkunden übernehmen – und immer mit dem Ausweis vergleichen.",
+      "manualHint": "Daten unten von Hand eintragen und mit dem vorgelegten Ausweis abgleichen.",
+      "tabs": {
+        "mrz": "Ausweis scannen",
+        "checkin": "QR-Selbsterfassung",
+        "returning": "Stammkunde",
+        "manual": "Manuell"
+      },
+      "from": {
+        "Mrz": "Aus der maschinenlesbaren Zone übernommen – Prüfziffern korrekt",
+        "SelfCheckIn": "Vom Kunden per QR-Code eingegeben – bitte mit dem Ausweis vergleichen",
+        "Returning": "Stammkunde übernommen – Ausweis bitte neu erfassen"
+      },
+      "Manual": "Manuell erfasst",
+      "Mrz": "Ausweis gescannt",
+      "SelfCheckIn": "QR-Selbsterfassung"
+    },
+    "mrz": {
+      "label": "Maschinenlesbare Zone (MRZ)",
+      "hint": "Feld anklicken und den Ausweis durch den Dokumentenscanner ziehen – oder die 2–3 Zeilen einfügen.",
+      "step1": "Rückseite des Personalausweises oder Datenseite des Passes nehmen",
+      "step2": "Scanner bereit machen (Feld fokussiert) und scannen",
+      "step3": "Daten werden geprüft und eingetragen – Adresse ergänzen",
+      "waiting": "Warte auf Scan …",
+      "reading": "Wird gelesen …",
+      "valid": "MRZ gültig",
+      "applied": "Name, Geburtsdatum und Ausweis wurden eingetragen.",
+      "filled": "Daten aus dem Ausweis übernommen.",
+      "transliterated": "Namen in der MRZ sind ohne Umlaute (Ä → AE, ß → SS): Schreibweise mit dem Ausweis vergleichen.",
+      "checkDigit": "Prüfziffer falsch ({field}) – bitte erneut scannen.",
+      "format": "Keine vollständige MRZ (3 × 30 oder 2 × 44 Zeichen).",
+      "date": "Ein Datum in der MRZ ist ungültig.",
+      "ready": "Scanner bereit",
+      "fields": {
+        "documentNumber": "Ausweisnummer",
+        "birthDate": "Geburtsdatum",
+        "expiryDate": "Ablaufdatum",
+        "personalNumber": "persönliche Nummer",
+        "composite": "Gesamtprüfziffer"
+      }
+    },
+    "checkin": {
+      "intro": "Der Kunde scannt einen QR-Code mit dem eigenen Handy und trägt seine Daten selbst ein. Kein Konto nötig; der Link gilt nur kurz und nur einmal.",
+      "start": "QR-Code anzeigen",
+      "qrLabel": "QR-Code zur Selbsterfassung",
+      "scan": "Bitte mit der Handykamera scannen",
+      "scanHint": "Die Angaben erscheinen hier, sobald der Kunde sie abschickt.",
+      "waiting": "Warte auf den Kunden …",
+      "showLink": "Link anzeigen",
+      "submittedHeading": "Der Kunde hat seine Daten geschickt",
+      "verify": "Bitte jede Angabe mit dem vorgelegten Ausweis vergleichen, bevor Sie sie übernehmen.",
+      "phoneSignature": "Unterschrift auf dem Handy",
+      "take": "Geprüft – Daten übernehmen",
+      "taken": "Daten aus der Selbsterfassung übernommen.",
+      "discard": "Verwerfen",
+      "used": "Diese Selbsterfassung wurde bereits verwendet.",
+      "expired": "Der Link ist abgelaufen.",
+      "again": "Neuen QR-Code anzeigen"
+    },
+    "returning": {
+      "search": "Stammkunde suchen",
+      "hint": "Nur Kunden Ihres Unternehmens. Der Ausweis wird bei jedem Ankauf neu erfasst.",
+      "placeholder": "Name, z. B. Mustermann",
+      "results": "Gefundene Kunden",
+      "count": "{count} Ankäufe",
+      "none": "Kein Kunde gefunden.",
+      "typeMore": "Mindestens 2 Buchstaben eingeben.",
+      "taken": "Stammkunde übernommen – bitte Ausweis erfassen."
+    },
+    "seller": {
+      "title": "Verkäufer/in (Privatperson)",
+      "person": "Person",
+      "address": "Anschrift",
+      "country": "Land",
+      "document": "Ausweisdokument",
+      "nationality": "Staatsangehörigkeit",
+      "nationalityHint": "Code wie im Ausweis, z. B. D oder TUR",
+      "expiry": "Gültig bis",
+      "expiryHint": "Abgelaufene Ausweise werden nicht akzeptiert.",
+      "authority": "Ausstellende Behörde",
+      "authorityHint": "Optional, steht auf dem Ausweis (z. B. Stadt Köln)",
+      "issuingCountry": "Ausstellender Staat",
+      "issuedBy": "Ausgestellt von",
+      "verifyHint": "Ausweis im Original vorlegen lassen und Foto, Name und Gültigkeit prüfen. Eine Ausweiskopie wird nicht gespeichert.",
+      "expiresSoon": "läuft bald ab",
+      "anonymized": "Die Daten wurden am {date} nach Ablauf der Aufbewahrungsfrist anonymisiert."
+    },
+    "signature": {
+      "title": "Preis bestätigen und unterschreiben",
+      "declarationTitle": "Eigentumserklärung",
+      "confirmPrice": "Mit der Unterschrift bestätigt der Kunde diese Erklärung sowie Betrag und Zahlungsart.",
+      "padLabel": "Unterschriftsfeld",
+      "placeholder": "Hier unterschreiben",
+      "hint": "Mit Finger, Stift oder Maus unterschreiben.",
+      "clear": "Löschen",
+      "missing": "Bitte unterschreiben lassen.",
+      "save": "Unterschrift speichern",
+      "saved": "Unterschrift gespeichert.",
+      "valid": "Unterschrieben",
+      "stale": "Neue Unterschrift nötig",
+      "staleText": "Nach der Unterschrift wurden Daten, Betrag oder Zahlungsart geändert. Die alte Unterschrift gilt nicht mehr.",
+      "signedAt": "Unterschrieben am",
+      "checksum": "Prüfsumme",
+      "again": "Neu unterschreiben",
+      "reinspectWarning": "Eine neue Prüfung ändert die unterschriebenen Daten: Der Kunde muss danach neu unterschreiben.",
+      "checkInSigned": "Der Kunde hat seine Angaben am {date} auf dem eigenen Handy unterschrieben."
+    },
+    "pay": {
+      "hint": "Bar aus der Kasse oder per Überweisung; das Gerät wird danach eingelagert.",
+      "register": "Kasse für die Auszahlung",
+      "expectedCash": "Soll-Bestand {amount}",
+      "noSession": "Keine offene Kassensitzung",
+      "noRegisters": "Keine aktive Kasse vorhanden.",
+      "registerRequired": "Bitte die Kasse wählen, aus der bar ausgezahlt wird.",
+      "noOpenSession": "Diese Kasse hat keine offene Sitzung. Bitte zuerst die Kasse öffnen.",
+      "notEnoughCash": "In dieser Kasse ist nicht genug Bargeld für die Auszahlung.",
+      "signFirst": "Der Kunde muss genau diesen Betrag und diese Zahlungsart zuerst unterschreiben.",
+      "transferHint": "Überweisung: Es wird kein Bargeld aus der Kasse genommen.",
+      "confirmTill": "{amount} werden als Ankauf aus der Kasse „{register}“ entnommen (Kassenbewegung, TSE-signiert).",
+      "paidFromTill": "Ausgezahlt aus „{register}“, Gerät eingelagert.",
+      "fromTill": "Bar aus der Kasse ausgezahlt (Kassenbewegung „Ankauf“, im Z-Bericht ausgewiesen)."
+    },
+    "beleg": {
+      "show": "Beleg anzeigen",
+      "hide": "Beleg ausblenden",
+      "print": "Beleg drucken"
+    },
+    "timeline": {
+      "title": "Verlauf",
+      "received": "Angenommen",
+      "inspected": "Geprüft",
+      "signed": "Unterschrieben",
+      "completed": "Bezahlt und eingelagert",
+      "rejected": "Abgelehnt"
+    },
+    "public": {
+      "kicker": "Ankauf – Selbsterfassung",
+      "intro": "Bitte geben Sie Ihre Daten wie im Ausweis ein. Verkäufer müssen mindestens {age} Jahre alt sein. Die Mitarbeiter prüfen die Angaben mit Ihrem Ausweis.",
+      "validUntil": "Dieser Link gilt bis {time}.",
+      "signTitle": "Unterschrift (optional)",
+      "consent": "Ich bin einverstanden, dass das Geschäft meine Angaben für diesen Ankauf und die gesetzliche Aufzeichnungspflicht verarbeitet.",
+      "consentRequired": "Bitte bestätigen Sie den Hinweis.",
+      "submit": "Daten absenden",
+      "privacy": "Die Daten sind nur für dieses Geschäft sichtbar. Es wird kein Konto angelegt und kein Ausweisfoto gespeichert.",
+      "doneTitle": "Danke!",
+      "doneText": "Ihre Angaben sind angekommen. Bitte zeigen Sie an der Kasse Ihren Ausweis vor.",
+      "missingTitle": "Link ungültig",
+      "missing": "Dieser Link existiert nicht oder ist abgelaufen. Bitte an der Kasse einen neuen QR-Code anfordern.",
+      "alreadyTitle": "Bereits gesendet",
+      "already": "Ihre Angaben sind bereits angekommen. Bitte wenden Sie sich an die Mitarbeiter."
     }
   },
   "intakeStatus": {
@@ -2001,7 +2208,9 @@
       "noSession": "Keine offene Sitzung",
       "prices": "Preise",
       "reports": "Berichte",
-      "sessionReport": "Sitzungsbericht"
+      "sessionReport": "Sitzungsbericht",
+      "ankauf": "Ankauf",
+      "dailyReport": "Tagesbericht"
     },
     "launch": {
       "title": "Kasse (Ladenverkauf)",
@@ -2077,7 +2286,8 @@
       "till": "Verkauf",
       "receipts": "Belege",
       "sessions": "Sitzungen",
-      "prices": "Preise"
+      "prices": "Preise",
+      "ankauf": "Ankauf"
     },
     "registers": {
       "title": "Kasse",
@@ -2380,7 +2590,12 @@
       "openedBy": "Geöffnet von {name}",
       "closedBy": "Abgeschlossen von {name}",
       "openingCount": "Zählung bei Öffnung",
-      "closingCount": "Zählung bei Abschluss"
+      "closingCount": "Zählung bei Abschluss",
+      "ankauf": "Ankäufe aus der Kasse",
+      "ankaufCount": "Anzahl Ankäufe (bar)",
+      "ankaufCash": "Bar ausgezahlt",
+      "ankaufNote": "Ankäufe per Überweisung berühren die Kasse nicht; sie stehen im Tagesbericht.",
+      "ofWhichAnkauf": "davon Ankäufe"
     },
     "cashCount": {
       "label": "Zählung nach Stückelung",
@@ -2469,7 +2684,8 @@
       "BankDeposit": "Bankeinzahlung",
       "Expense": "Ausgabe",
       "OwnerWithdrawal": "Privatentnahme",
-      "OtherWithdrawal": "Sonstige Entnahme"
+      "OtherWithdrawal": "Sonstige Entnahme",
+      "Ankauf": "Ankauf"
     },
     "report": {
       "title": "Verkaufsbericht",
@@ -2989,6 +3205,49 @@
       "taxNumber": "Die Steuernummer hat 10 bis 13 Ziffern, getrennt durch / oder Leerzeichen.",
       "phone": "Bitte eine Telefonnummer mit Ziffern, Leerzeichen, ( ) / - und optional führendem + eingeben.",
       "website": "Bitte die vollständige Adresse mit https:// oder http:// angeben."
+    }
+  },
+  "reports": {
+    "daily": {
+      "title": "Tagesbericht",
+      "subtitle": "Was Ihr Unternehmen an einem Tag verkauft und eingekauft hat.",
+      "print": "Drucken",
+      "date": "Tag",
+      "previous": "Vorheriger Tag",
+      "next": "Nächster Tag",
+      "today": "Heute",
+      "generated": "erstellt {time}",
+      "sold": "Verkauft",
+      "soldHint": "Kassenumsatz brutto (nach Erstattungen) + erhaltene Zahlungen aus B2B-Verkäufen",
+      "bought": "Eingekauft",
+      "boughtHint": "Ankäufe von Privat (ausgezahlt) + bezahlte B2B-Einkäufe",
+      "pos": "Kasse",
+      "sales": "Verkäufe ({count})",
+      "refunds": "Storno und Rückgaben ({count})",
+      "invoices": "Ausgestellte Rechnungen",
+      "ankaufPayouts": "davon Ankäufe ({count})",
+      "register": "Kasse",
+      "ankauf": "Ankauf von Privat",
+      "ankaufSummary": "{completed} abgeschlossen · {received} angenommen · {rejected} abgelehnt",
+      "ankaufTotal": "Ausgezahlt gesamt",
+      "time": "Zeit",
+      "fromTill": "aus der Kasse",
+      "purchases": "Einkauf (B2B-Marktplatz)",
+      "placed": "Bestellt ({count})",
+      "goodsReceived": "Ware erhalten ({count})",
+      "paid": "Bezahlt ({count})",
+      "b2bSales": "Verkauf (B2B-Marktplatz)",
+      "ordersIn": "Bestellungen eingegangen ({count})",
+      "shipped": "Versendet ({count})",
+      "completed": "Abgeschlossen ({count})",
+      "paymentsIn": "Zahlungen erhalten ({count})",
+      "event": {
+        "Placed": "bestellt",
+        "Delivered": "Ware erhalten"
+      },
+      "emptyTitle": "Keine Bereiche aktiv",
+      "empty": "Für Ihr Unternehmen ist kein Modul mit Umsätzen aktiv (Kasse, Ankauf, Marktplatz).",
+      "note": "Kalendertag nach Ortszeit ({zone}). Brutto-Beträge; Umsatzsteuer nach Steuerart wie im Z-Bericht. Keine steuerliche Auswertung."
     }
   }
 }

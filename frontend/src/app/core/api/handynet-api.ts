@@ -41,6 +41,14 @@ import {
   InspectIntakeRequest,
   Intake,
   ReceiveIntakeRequest,
+  CheckIn,
+  CheckInCreated,
+  DailyReport,
+  PayoutRegisters,
+  PublicCheckIn,
+  PublicCheckInRequest,
+  SellerSuggestion,
+  SignIntakeRequest,
   EntryDecision,
   Policy,
   PolicySettings,
@@ -694,6 +702,60 @@ export class AnkaufApi {
   /** Ankaufbeleg PDF of a completed intake (409 `ankauf.not_completed` otherwise). */
   beleg(id: string): Observable<Blob> {
     return this.http.get(`${this.url}/intakes/${id}/beleg`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+
+  /** The seller signs the agreed amount and payment method (bound by hash to the intake data). */
+  signIntake(id: string, body: SignIntakeRequest): Observable<Intake> {
+    return this.http.post<Intake>(`${this.url}/intakes/${id}/signature`, body);
+  }
+
+  /** Signature PNG (fetched with the auth headers). */
+  signatureImage(intakeId: string, signatureId: string): Observable<Blob> {
+    return this.http.get(`${this.url}/intakes/${intakeId}/signatures/${signatureId}/image`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+
+  /** Returning sellers of the organization (name search, ≥ 2 characters; no ID data). */
+  sellers(search: string): Observable<SellerSuggestion[]> {
+    return this.http.get<SellerSuggestion[]>(`${this.url}/sellers`, { params: queryParams({ search }) });
+  }
+
+  /** Tills for a cash payout (with open session and expected cash). */
+  payoutRegisters(): Observable<PayoutRegisters> {
+    return this.http.get<PayoutRegisters>(`${this.url}/payout-registers`);
+  }
+
+  // ---- QR self check-in
+  createCheckIn(): Observable<CheckInCreated> {
+    return this.http.post<CheckInCreated>(`${this.url}/checkins`, {});
+  }
+
+  checkIn(id: string): Observable<CheckIn> {
+    return this.http.get<CheckIn>(`${this.url}/checkins/${id}`);
+  }
+
+  checkInSignature(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/checkins/${id}/signature`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+
+  /** Public (anonymous) self check-in form. */
+  publicCheckIn(token: string): Observable<PublicCheckIn> {
+    return this.http.get<PublicCheckIn>(`${this.base}/api/public/ankauf/checkins/${encodeURIComponent(token)}`);
+  }
+
+  submitPublicCheckIn(token: string, body: PublicCheckInRequest): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/public/ankauf/checkins/${encodeURIComponent(token)}`, body);
+  }
+}
+
+/** Business reports across modules (permission `reports.read`). */
+@Injectable({ providedIn: 'root' })
+export class ReportsApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+
+  /** Tagesbericht for a calendar day (Europe/Berlin; default today). */
+  daily(date: string | null): Observable<DailyReport> {
+    return this.http.get<DailyReport>(`${this.base}/api/reports/daily`, { params: queryParams({ date: date ?? undefined }) });
   }
 }
 

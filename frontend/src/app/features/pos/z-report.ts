@@ -88,6 +88,17 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
         </table>
       </div>
 
+      @if (z.ankaufCount) {
+        <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.ankauf' | t }}</h3>
+        <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1" data-testid="z-ankauf">
+          <dt>{{ 'pos.z.ankaufCount' | t }}</dt>
+          <dd class="text-end tabular-nums" data-testid="z-ankauf-count">{{ z.ankaufCount }}</dd>
+          <dt>{{ 'pos.z.ankaufCash' | t }}</dt>
+          <dd class="text-end tabular-nums" data-testid="z-ankauf-total">{{ -(z.ankaufPayoutsMinor ?? 0) | signedMoney }}</dd>
+        </dl>
+        <p class="mt-1 text-xs text-slate-500">{{ 'pos.z.ankaufNote' | t }}</p>
+      }
+
       <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.cash' | t }}</h3>
       <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1" data-testid="z-cash">
         <dt>{{ 'pos.z.opening' | t }}</dt>
@@ -102,6 +113,10 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
         <dd class="text-end tabular-nums">{{ z.depositsMinor | signedMoney }}</dd>
         <dt>{{ 'pos.z.withdrawals' | t }}</dt>
         <dd class="text-end tabular-nums">{{ -z.withdrawalsMinor | signedMoney }}</dd>
+        @if (z.ankaufPayoutsMinor) {
+          <dt class="ps-3 text-slate-600">{{ 'pos.z.ofWhichAnkauf' | t }}</dt>
+          <dd class="text-end tabular-nums text-slate-600">{{ -z.ankaufPayoutsMinor | signedMoney }}</dd>
+        }
         <dt class="border-t border-slate-200 pt-1 font-semibold">{{ 'pos.z.expected' | t }}</dt>
         <dd class="border-t border-slate-200 pt-1 text-end font-semibold tabular-nums" data-testid="z-expected">{{ s.expectedCashMinor | money }}</dd>
         @if (s.countedCashMinor !== null) {

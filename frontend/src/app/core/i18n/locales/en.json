@@ -72,7 +72,8 @@
     "ankauf": "Buyback",
     "intakes": "Purchases",
     "pos": "Till",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "dailyReport": "Daily report"
   },
   "auth": {
     "email": "Email address",
@@ -538,7 +539,31 @@
       "user.display_name_unchanged": "The display name is unchanged.",
       "auth.reset_recently_sent": "A link was sent just now. Please wait a minute.",
       "reason.too_long": "The reason may have at most 1000 characters.",
-      "admin.tenant_header": "The administration is called without a company context. Please reload the page."
+      "admin.tenant_header": "The administration is called without a company context. Please reload the page.",
+      "ankauf.mrz_format": "The machine-readable zone is incomplete or invalid.",
+      "ankauf.mrz_check_digit": "A check digit of the machine-readable zone is wrong. Please scan again.",
+      "ankauf.mrz_mismatch": "Document number, type, date of birth or expiry date differ from the machine-readable zone.",
+      "ankauf.id_expired": "The ID document has expired. An expired document must not be accepted.",
+      "ankauf.id_expiry_required": "Please enter the expiry date of the ID document.",
+      "ankauf.id_number": "The document number may contain letters and digits only.",
+      "ankauf.country_code": "Please enter a valid country code (e.g. D, DE, TUR).",
+      "ankauf.seller_birth_date": "The date of birth is not plausible.",
+      "ankauf.signature_image": "The signature is missing or not a valid image.",
+      "ankauf.signature_required": "The customer must sign the purchase first (declaration of ownership and price).",
+      "ankauf.signature_invalid": "The signature no longer matches the data, amount or payment method. Please have it signed again.",
+      "ankauf.signature_not_found": "Signature not found.",
+      "ankauf.register_required": "Please choose the till the cash is taken from.",
+      "ankauf.already_paid": "This purchase was already paid out of a till.",
+      "ankauf.checkin_not_found": "The self check-in was not found.",
+      "ankauf.checkin_used": "This self check-in was already used for a purchase.",
+      "ankauf.checkin_not_submitted": "The customer has not submitted the self check-in yet.",
+      "ankauf.checkin_expired": "The self check-in has expired. Please show a new QR code.",
+      "ankauf.checkin_already_submitted": "The data was already sent.",
+      "ankauf.checkin_link_invalid": "This link does not exist or has expired.",
+      "pos.reason_code_reserved": "This reason is recorded automatically and cannot be chosen.",
+      "pos.payout_exists": "This purchase was already paid out of a till.",
+      "reports.date_in_future": "The day lies in the future.",
+      "reports.date_invalid": "The date is not plausible."
     }
   },
   "dashboard": {
@@ -720,7 +745,19 @@
     "deliveredAt": "Delivered on",
     "inspectionEndsAt": "Inspection until",
     "completedAt": "Completed on",
-    "shipWithoutShipmentHint": "Mark as shipped without a SEHA shipment (no label, no tracking)."
+    "shipWithoutShipmentHint": "Mark as shipped without a SEHA shipment (no label, no tracking).",
+    "timeline": {
+      "title": "Order progress",
+      "label": "Order steps",
+      "placed": "Placed",
+      "confirmed": "Confirmed",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "completed": "Completed"
+    },
+    "positionsCount": "{count} items",
+    "emptyPurchases": "Orders on the marketplace appear here with their status.",
+    "emptySales": "Orders other dealers place with you appear here."
   },
   "offers": {
     "title": "Offers",
@@ -1834,7 +1871,8 @@
       "step": {
         "receive": "Receipt",
         "inspect": "Inspection",
-        "complete": "Payment & stock"
+        "complete": "Payout",
+        "sign": "Signature"
       },
       "stepState": {
         "done": "done",
@@ -1927,9 +1965,14 @@
         "amountPositive": "The amount must be greater than 0.",
         "amountAboveOffer": "The amount must not exceed the inspected offer ({offer}).",
         "notInspected": "Please inspect the device first.",
-        "reasonRequired": "Please enter a reason."
+        "reasonRequired": "Please enter a reason.",
+        "idExpired": "The ID document has expired. An expired document must not be accepted.",
+        "date": "Please enter a valid date.",
+        "countryCode": "Please enter a country code such as D, DE or TUR.",
+        "idNumber": "Letters and digits only (2–30 characters)."
       },
-      "belegDownload": "Purchase receipt (PDF)"
+      "belegDownload": "Purchase receipt (PDF)",
+      "summary": "Summary"
     },
     "intakes": {
       "title": "Purchases",
@@ -1938,7 +1981,171 @@
       "open": "Open",
       "empty": "No purchases yet.",
       "emptyText": "Start a purchase from a preliminary quote under \"Buyback\".",
-      "limit": "The latest 100 purchases are shown."
+      "limit": "The latest 100 purchases are shown.",
+      "new": "New purchase",
+      "statOpen": "Open",
+      "statCompleted": "Completed",
+      "statPaid": "Paid in total",
+      "statRejected": "Rejected"
+    },
+    "wizard": {
+      "receive": "Customer and ID",
+      "inspect": "Check the device",
+      "sign": "Price and signature",
+      "complete": "Pay and stock"
+    },
+    "capture": {
+      "title": "Capture customer data",
+      "subtitle": "Scan the ID, let the customer check in via QR code or reuse a returning customer – and always compare with the ID.",
+      "manualHint": "Enter the data below by hand and compare it with the ID presented.",
+      "tabs": {
+        "mrz": "Scan ID",
+        "checkin": "QR self check-in",
+        "returning": "Returning customer",
+        "manual": "Manual"
+      },
+      "from": {
+        "Mrz": "Taken from the machine-readable zone – check digits correct",
+        "SelfCheckIn": "Entered by the customer via QR code – please compare with the ID",
+        "Returning": "Returning customer reused – please capture the ID again"
+      },
+      "Manual": "Entered manually",
+      "Mrz": "ID scanned",
+      "SelfCheckIn": "QR self check-in"
+    },
+    "mrz": {
+      "label": "Machine-readable zone (MRZ)",
+      "hint": "Click the field and pass the ID through the document scanner – or paste the 2–3 lines.",
+      "step1": "Take the back of the ID card or the data page of the passport",
+      "step2": "Get the scanner ready (field focused) and scan",
+      "step3": "The data is checked and filled in – add the address",
+      "waiting": "Waiting for a scan …",
+      "reading": "Reading …",
+      "valid": "MRZ valid",
+      "applied": "Name, date of birth and ID were filled in.",
+      "filled": "Data taken from the ID.",
+      "transliterated": "Names in the MRZ have no umlauts (Ä → AE, ß → SS): compare the spelling with the ID.",
+      "checkDigit": "Wrong check digit ({field}) – please scan again.",
+      "format": "Not a complete MRZ (3 × 30 or 2 × 44 characters).",
+      "date": "A date in the MRZ is invalid.",
+      "ready": "Scanner ready",
+      "fields": {
+        "documentNumber": "document number",
+        "birthDate": "date of birth",
+        "expiryDate": "expiry date",
+        "personalNumber": "personal number",
+        "composite": "overall check digit"
+      }
+    },
+    "checkin": {
+      "intro": "The customer scans a QR code with their own phone and enters their data. No account needed; the link is short-lived and single-use.",
+      "start": "Show QR code",
+      "qrLabel": "QR code for self check-in",
+      "scan": "Please scan with the phone camera",
+      "scanHint": "The data appears here as soon as the customer submits it.",
+      "waiting": "Waiting for the customer …",
+      "showLink": "Show link",
+      "submittedHeading": "The customer has sent their data",
+      "verify": "Please compare every entry with the ID presented before taking it over.",
+      "phoneSignature": "Signature on the phone",
+      "take": "Checked – take over the data",
+      "taken": "Data from the self check-in taken over.",
+      "discard": "Discard",
+      "used": "This self check-in has already been used.",
+      "expired": "The link has expired.",
+      "again": "Show a new QR code"
+    },
+    "returning": {
+      "search": "Find a returning customer",
+      "hint": "Only customers of your company. The ID is captured again for every purchase.",
+      "placeholder": "Name, e.g. Smith",
+      "results": "Customers found",
+      "count": "{count} purchases",
+      "none": "No customer found.",
+      "typeMore": "Type at least 2 letters.",
+      "taken": "Returning customer taken over – please capture the ID."
+    },
+    "seller": {
+      "title": "Seller (private person)",
+      "person": "Personal details",
+      "address": "Address",
+      "country": "Country",
+      "document": "ID document",
+      "nationality": "Nationality",
+      "nationalityHint": "Code as on the ID, e.g. D or TUR",
+      "expiry": "Valid until",
+      "expiryHint": "Expired IDs are not accepted.",
+      "authority": "Issuing authority",
+      "authorityHint": "Optional, printed on the ID (e.g. City of Cologne)",
+      "issuingCountry": "Issuing state",
+      "issuedBy": "Issued by",
+      "verifyHint": "Have the original ID presented and check photo, name and validity. No copy of the ID is stored.",
+      "expiresSoon": "expires soon",
+      "anonymized": "The data was anonymized on {date} after the retention period."
+    },
+    "signature": {
+      "title": "Confirm the price and sign",
+      "declarationTitle": "Declaration of ownership",
+      "confirmPrice": "By signing, the customer confirms this declaration as well as the amount and payment method.",
+      "padLabel": "Signature field",
+      "placeholder": "Sign here",
+      "hint": "Sign with a finger, pen or mouse.",
+      "clear": "Clear",
+      "missing": "Please have the customer sign.",
+      "save": "Save signature",
+      "saved": "Signature saved.",
+      "valid": "Signed",
+      "stale": "New signature needed",
+      "staleText": "Data, amount or payment method changed after signing. The old signature is no longer valid.",
+      "signedAt": "Signed on",
+      "checksum": "Checksum",
+      "again": "Sign again",
+      "reinspectWarning": "A new inspection changes the signed data: the customer must sign again afterwards.",
+      "checkInSigned": "The customer signed their data on their own phone on {date}."
+    },
+    "pay": {
+      "hint": "Cash from the till or by bank transfer; the device is then put into stock.",
+      "register": "Till for the payout",
+      "expectedCash": "Expected cash {amount}",
+      "noSession": "No open cash session",
+      "noRegisters": "No active till.",
+      "registerRequired": "Please choose the till the cash is taken from.",
+      "noOpenSession": "This till has no open session. Please open the till first.",
+      "notEnoughCash": "There is not enough cash in this till for the payout.",
+      "signFirst": "The customer must first sign exactly this amount and payment method.",
+      "transferHint": "Bank transfer: no cash is taken from the till.",
+      "confirmTill": "{amount} will be taken from the till “{register}” as a purchase (cash movement, signed by the TSE).",
+      "paidFromTill": "Paid out from “{register}”, device in stock.",
+      "fromTill": "Paid in cash from the till (cash movement “Ankauf”, shown in the Z report)."
+    },
+    "beleg": {
+      "show": "Show receipt",
+      "hide": "Hide receipt",
+      "print": "Print receipt"
+    },
+    "timeline": {
+      "title": "History",
+      "received": "Received",
+      "inspected": "Inspected",
+      "signed": "Signed",
+      "completed": "Paid and stocked",
+      "rejected": "Rejected"
+    },
+    "public": {
+      "kicker": "Buyback – self check-in",
+      "intro": "Please enter your data as on your ID. Sellers must be at least {age} years old. The staff check the data against your ID.",
+      "validUntil": "This link is valid until {time}.",
+      "signTitle": "Signature (optional)",
+      "consent": "I agree that the shop processes my data for this purchase and the legal record-keeping duty.",
+      "consentRequired": "Please confirm the notice.",
+      "submit": "Send data",
+      "privacy": "The data is visible only to this shop. No account is created and no ID photo is stored.",
+      "doneTitle": "Thank you!",
+      "doneText": "Your data has arrived. Please show your ID at the counter.",
+      "missingTitle": "Link invalid",
+      "missing": "This link does not exist or has expired. Please ask for a new QR code at the counter.",
+      "alreadyTitle": "Already sent",
+      "already": "Your data has already arrived. Please speak to the staff."
     }
   },
   "intakeStatus": {
@@ -2001,7 +2208,9 @@
       "noSession": "No open session",
       "prices": "Prices",
       "reports": "Reports",
-      "sessionReport": "Session report"
+      "sessionReport": "Session report",
+      "ankauf": "Buyback",
+      "dailyReport": "Daily report"
     },
     "launch": {
       "title": "POS (in-store sales)",
@@ -2077,7 +2286,8 @@
       "till": "Sale",
       "receipts": "Receipts",
       "sessions": "Sessions",
-      "prices": "Prices"
+      "prices": "Prices",
+      "ankauf": "Buyback"
     },
     "registers": {
       "title": "Till",
@@ -2380,7 +2590,12 @@
       "openedBy": "Opened by {name}",
       "closedBy": "Closed by {name}",
       "openingCount": "Count at opening",
-      "closingCount": "Count at closing"
+      "closingCount": "Count at closing",
+      "ankauf": "Purchases paid from the till",
+      "ankaufCount": "Number of purchases (cash)",
+      "ankaufCash": "Paid out in cash",
+      "ankaufNote": "Purchases by bank transfer do not touch the till; they are listed in the daily report.",
+      "ofWhichAnkauf": "of which purchases"
     },
     "cashCount": {
       "label": "Count by denomination",
@@ -2469,7 +2684,8 @@
       "BankDeposit": "Bank deposit",
       "Expense": "Expense",
       "OwnerWithdrawal": "Owner withdrawal",
-      "OtherWithdrawal": "Other withdrawal"
+      "OtherWithdrawal": "Other withdrawal",
+      "Ankauf": "Buyback payout"
     },
     "report": {
       "title": "Sales report",
@@ -2989,6 +3205,49 @@
       "taxNumber": "The tax number has 10 to 13 digits, separated by / or spaces.",
       "phone": "Please enter a phone number with digits, spaces, ( ) / - and an optional leading +.",
       "website": "Please enter the full address with https:// or http://."
+    }
+  },
+  "reports": {
+    "daily": {
+      "title": "Daily report",
+      "subtitle": "What your company sold and bought on one day.",
+      "print": "Print",
+      "date": "Day",
+      "previous": "Previous day",
+      "next": "Next day",
+      "today": "Today",
+      "generated": "generated {time}",
+      "sold": "Sold",
+      "soldHint": "Till revenue gross (after refunds) + payments received for B2B sales",
+      "bought": "Bought",
+      "boughtHint": "Purchases from private sellers (paid) + paid B2B purchases",
+      "pos": "Till",
+      "sales": "Sales ({count})",
+      "refunds": "Cancellations and returns ({count})",
+      "invoices": "Invoices issued",
+      "ankaufPayouts": "of which purchases ({count})",
+      "register": "Till",
+      "ankauf": "Purchases from private sellers",
+      "ankaufSummary": "{completed} completed · {received} received · {rejected} rejected",
+      "ankaufTotal": "Paid in total",
+      "time": "Time",
+      "fromTill": "from the till",
+      "purchases": "Purchasing (B2B marketplace)",
+      "placed": "Ordered ({count})",
+      "goodsReceived": "Goods received ({count})",
+      "paid": "Paid ({count})",
+      "b2bSales": "Sales (B2B marketplace)",
+      "ordersIn": "Orders received ({count})",
+      "shipped": "Shipped ({count})",
+      "completed": "Completed ({count})",
+      "paymentsIn": "Payments received ({count})",
+      "event": {
+        "Placed": "placed",
+        "Delivered": "goods received"
+      },
+      "emptyTitle": "No areas active",
+      "empty": "No module with revenue is active for your company (till, buyback, marketplace).",
+      "note": "Calendar day in local time ({zone}). Gross amounts; VAT by treatment as in the Z report. Not a tax evaluation."
     }
   }
 }

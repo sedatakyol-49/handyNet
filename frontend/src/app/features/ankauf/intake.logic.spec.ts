@@ -2,6 +2,14 @@ import { Intake } from '../../core/api/models';
 import {
   SellerForm,
   ageOn,
+  applyMrz,
+  applySuggestion,
+  daysUntilExpiry,
+  defaultPayoutRegister,
+  emptySellerForm,
+  matchesSignature,
+  signatureState,
+  validatePayout,
   defaultPaidMinor,
   inspectFormFrom,
   intakeActions,
@@ -61,6 +69,11 @@ const seller = (over: Partial<SellerForm> = {}): SellerForm => ({
   birthDate: '1990-01-01',
   idDocumentType: 'IdCard',
   idDocumentNumber: 'L01X00T47',
+  idExpiryDate: '2030-01-31',
+  nationality: '',
+  idIssuingAuthority: '',
+  idIssuingCountry: '',
+  country: '',
   imei: '49-015420-323751-8',
   ...over,
 });
@@ -82,6 +95,11 @@ describe('validateReceiveForm', () => {
         birthDate: '1990-01-01',
         idDocumentType: 'IdCard',
         idDocumentNumber: 'L01X00T47',
+        idExpiryDate: '2030-01-31',
+        nationality: null,
+        idIssuingAuthority: null,
+        idIssuingCountry: null,
+        country: null,
       },
     });
   });
@@ -90,12 +108,12 @@ describe('validateReceiveForm', () => {
     const v = validateReceiveForm(
       'q1',
       null,
-      { firstName: '', lastName: ' ', street: '', postalCode: '', city: '', birthDate: '', idDocumentType: null, idDocumentNumber: '', imei: '' },
+      { ...emptySellerForm(), lastName: ' ' },
       ON,
     );
     expect(v.request).toBeNull();
     expect(Object.keys(v.errors).sort()).toEqual(
-      ['birthDate', 'city', 'firstName', 'idDocumentNumber', 'idDocumentType', 'imei', 'lastName', 'postalCode', 'street'].sort(),
+      ['birthDate', 'city', 'firstName', 'idDocumentNumber', 'idDocumentType', 'idExpiryDate', 'imei', 'lastName', 'postalCode', 'street'].sort(),
     );
     expect(v.errors.idDocumentType).toBe('ankauf.intake.validation.idDocumentType');
   });
@@ -189,19 +207,22 @@ describe('paid amount', () => {
 
 describe('steps and actions by status', () => {
   it('derives the step states', () => {
-    expect(stepStates(null)).toEqual({ receive: 'current', inspect: 'todo', complete: 'todo' });
-    expect(stepStates({ status: 'Received', inspectedOfferMinor: null })).toEqual({ receive: 'done', inspect: 'current', complete: 'todo' });
-    expect(stepStates({ status: 'Inspected', inspectedOfferMinor: 100 })).toEqual({ receive: 'done', inspect: 'done', complete: 'current' });
-    expect(stepStates({ status: 'Completed', inspectedOfferMinor: 100 })).toEqual({ receive: 'done', inspect: 'done', complete: 'done' });
-    expect(stepStates({ status: 'Rejected', inspectedOfferMinor: null })).toEqual({ receive: 'done', inspect: 'skipped', complete: 'skipped' });
-    expect(stepStates({ status: 'Rejected', inspectedOfferMinor: 100 })).toEqual({ receive: 'done', inspect: 'done', complete: 'skipped' });
+    expect(stepStates(null)).toEqual({ receive: 'current', inspect: 'todo', sign: 'todo', complete: 'todo' });
+    expect(stepStates({ status: 'Received', inspectedOfferMinor: null })).toEqual({ receive: 'done', inspect: 'current', sign: 'todo', complete: 'todo' });
+    expect(stepStates({ status: 'Inspected', inspectedOfferMinor: 100 })).toEqual({ receive: 'done', inspect: 'done', sign: 'current', complete: 'todo' });
+    expect(stepStates({ status: 'Inspected', inspectedOfferMinor: 100, signature: { valid: false } })).toMatchObject({ sign: 'current' });
+    expect(stepStates({ status: 'Inspected', inspectedOfferMinor: 100, signature: { valid: true } })).toMatchObject({ sign: 'done', complete: 'current' });
+    expect(stepStates({ status: 'Inspected', inspectedOfferMinor: 100, signatureRequired: false })).toMatchObject({ sign: 'skipped', complete: 'current' });
+    expect(stepStates({ status: 'Completed', inspectedOfferMinor: 100, signature: { valid: true } })).toEqual({ receive: 'done', inspect: 'done', sign: 'done', complete: 'done' });
+    expect(stepStates({ status: 'Rejected', inspectedOfferMinor: null })).toEqual({ receive: 'done', inspect: 'skipped', sign: 'skipped', complete: 'skipped' });
+    expect(stepStates({ status: 'Rejected', inspectedOfferMinor: 100 })).toEqual({ receive: 'done', inspect: 'done', sign: 'skipped', complete: 'skipped' });
   });
 
   it('allows actions like the API state machine', () => {
-    expect(intakeActions('Received')).toEqual({ inspect: true, complete: false, reject: true });
-    expect(intakeActions('Inspected')).toEqual({ inspect: true, complete: true, reject: true });
-    expect(intakeActions('Completed')).toEqual({ inspect: false, complete: false, reject: false });
-    expect(intakeActions('Rejected')).toEqual({ inspect: false, complete: false, reject: false });
+    expect(intakeActions('Received')).toEqual({ inspect: true, sign: false, complete: false, reject: true });
+    expect(intakeActions('Inspected')).toEqual({ inspect: true, sign: true, complete: true, reject: true });
+    expect(intakeActions('Completed')).toEqual({ inspect: false, sign: false, complete: false, reject: false });
+    expect(intakeActions('Rejected')).toEqual({ inspect: false, sign: false, complete: false, reject: false });
   });
 
   it('requires a rejection reason', () => {
@@ -216,5 +237,61 @@ describe('steps and actions by status', () => {
     expect(map.get('q1')?.id).toBe('b');
     expect(map.get('q2')?.id).toBe('c');
     expect(map.has('q3')).toBe(false);
+  });
+});
+
+describe('seller capture', () => {
+  it('refuses expired ID documents and checks country codes', () => {
+    expect(validateReceiveForm('q1', null, seller({ idExpiryDate: '2026-10-14' }), ON).errors.idExpiryDate).toBe('ankauf.intake.validation.idExpired');
+    expect(validateReceiveForm('q1', null, seller({ idExpiryDate: '2026-10-15' }), ON).errors.idExpiryDate).toBeUndefined();
+    expect(validateReceiveForm('q1', null, seller({ nationality: 'D1' }), ON).errors.nationality).toBe('ankauf.intake.validation.countryCode');
+    expect(validateReceiveForm('q1', null, seller({ nationality: 'd<<', country: 'de' }), ON).request?.seller).toMatchObject({ nationality: 'D', country: null });
+    expect(validateReceiveForm('q1', null, seller(), ON, { mrz: 'X', checkInId: 'c1' }).request).toMatchObject({ mrz: 'X', checkInId: 'c1' });
+    expect(daysUntilExpiry('2026-10-20', ON)).toBe(5);
+    expect(daysUntilExpiry('', ON)).toBeNull();
+  });
+
+  it('fills the form from the MRZ and keeps the address', () => {
+    const f = applyMrz(seller({ street: 'Weg 9' }), {
+      format: 'TD3', documentCode: 'P', documentType: 'Passport', issuingState: 'D', documentNumber: 'C01X00T47', surname: 'MUSTERMANN',
+      givenNames: 'ERIKA', nationality: 'D', birthDate: '1964-08-12', sex: 'F', expiryDate: '2027-02-28',
+    });
+    expect(f).toMatchObject({ firstName: 'Erika', lastName: 'Mustermann', street: 'Weg 9', idDocumentType: 'Passport', idDocumentNumber: 'C01X00T47', idExpiryDate: '2027-02-28' });
+  });
+
+  it('reuses a returning seller without the old ID document', () => {
+    const f = applySuggestion(seller(), {
+      latestIntakeId: 'i', firstName: 'Ali', lastName: 'Kaya', birthDate: '1980-01-01', street: 'A 1', postalCode: '10115', city: 'Berlin', country: null,
+      nationality: 'TUR', lastIntakeAt: '', intakeCount: 2,
+    });
+    expect(f).toMatchObject({ firstName: 'Ali', nationality: 'TUR', idDocumentNumber: '', idExpiryDate: '', idDocumentType: null });
+  });
+});
+
+describe('signature and payout', () => {
+  const sig = (valid: boolean) =>
+    ({ signature: { id: 's', purpose: 'Purchase', source: 'Counter', signedAt: '', paidMinor: 200_00, paymentMethod: 'Cash', valid, hasImage: true, bindingHash: 'h', declarationVersion: 'v' } }) as Pick<Intake, 'signature'>;
+
+  it('knows whether the signature still matches', () => {
+    expect(signatureState({ signature: null })).toBe('none');
+    expect(signatureState(sig(false))).toBe('stale');
+    expect(matchesSignature(sig(true), 200_00, 'Cash')).toBe(true);
+    expect(matchesSignature(sig(true), 199_99, 'Cash')).toBe(false);
+    expect(matchesSignature(sig(true), 200_00, 'BankTransfer')).toBe(false);
+  });
+
+  it('needs an open till with enough cash for cash purchases', () => {
+    const regs = [
+      { id: 'a', name: 'A', openSessionId: 's', expectedCashMinor: 300_00 },
+      { id: 'b', name: 'B', openSessionId: null, expectedCashMinor: null },
+    ];
+    expect(validatePayout('BankTransfer', true, null, regs, 100)).toBeNull();
+    expect(validatePayout('Cash', false, null, regs, 100)).toBeNull();
+    expect(validatePayout('Cash', true, null, regs, 100)).toBe('ankauf.pay.registerRequired');
+    expect(validatePayout('Cash', true, 'b', regs, 100)).toBe('ankauf.pay.noOpenSession');
+    expect(validatePayout('Cash', true, 'a', regs, 300_01)).toBe('ankauf.pay.notEnoughCash');
+    expect(validatePayout('Cash', true, 'a', regs, 300_00)).toBeNull();
+    expect(defaultPayoutRegister(regs, null)).toBe('a');
+    expect(defaultPayoutRegister(regs, 'b')).toBe('b');
   });
 });
