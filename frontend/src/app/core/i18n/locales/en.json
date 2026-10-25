@@ -73,7 +73,9 @@
     "intakes": "Purchases",
     "pos": "Till",
     "invoices": "Invoices",
-    "company": "Company"
+    "company": "Company",
+    "salesDocuments": "Invoices & quotations",
+    "overdueInvoices": "{count} overdue invoices"
   },
   "auth": {
     "email": "Email address",
@@ -547,7 +549,53 @@
       "company.logo_not_found": "The company has no logo.",
       "company.logo_concurrent": "The logo was changed at the same time. Please try again.",
       "company.logo_already_removed": "The logo has already been removed.",
-      "image.too_small": "The image is too small (at least 16 pixels per side)."
+      "image.too_small": "The image is too small (at least 16 pixels per side).",
+      "pos.sales_invoice_paid": "The invoice is already paid.",
+      "pos.payment_exceeds_open": "The amount is higher than what is outstanding on the invoice.",
+      "pos.cash_payment_at_till": "Cash received in the shop is collected at the till.",
+      "pos.sales_invoice_cancelled": "The invoice was cancelled.",
+      "pos.sales_invoice_issued": "Issued invoices cannot be changed – correct them with a credit note.",
+      "pos.sales_invoice_not_issued": "This is only possible once the invoice is issued.",
+      "pos.sales_invoice_discarded": "The draft was discarded.",
+      "pos.sales_invoice_not_found": "Invoice not found.",
+      "pos.quotation_not_found": "Quotation not found.",
+      "pos.quotation_not_editable": "Accepted, rejected or converted quotations cannot be changed – duplicate it instead.",
+      "pos.quotation_converted": "The quotation was already converted into an invoice.",
+      "pos.quotation_rejected": "Reopen a rejected quotation first.",
+      "pos.quotation_status": "This status change is not possible.",
+      "pos.quotation_valid_until": "The validity date must be between the quotation date and one year after it.",
+      "pos.reverse_charge_lines": "With reverse charge all lines must be at 0 % VAT; § 25a devices are not possible.",
+      "pos.reverse_charge_vat_id": "Reverse charge needs the customer’s VAT ID.",
+      "pos.sales_warehouse_required": "Choose the warehouse the goods are taken from.",
+      "pos.sales_empty": "Please add at least one line.",
+      "pos.sales_total_not_positive": "The invoice total must be above 0.",
+      "pos.unit_not_found": "This device is not in your stock.",
+      "pos.sales_unit_changed": "A device changed (e.g. sold in the meantime). Please enter the line again.",
+      "pos.sales_email_missing": "Please enter an email address (the customer has none).",
+      "pos.sales_email_invalid": "The email address is not valid.",
+      "pos.sales_email_limit": "This document was already emailed too often.",
+      "pos.sales_customer_required": "Please choose or create a customer.",
+      "pos.payment_date": "The payment date is implausible.",
+      "pos.payment_reference": "The reference is too long (max. 200 characters).",
+      "pos.payment_state": "Unknown payment state.",
+      "pos.payment_term_days": "The payment term must be between 0 and 365 days.",
+      "pos.quotation_number": "Invalid quotation number.",
+      "pos.sales_customer_country": "The country must be a two-letter ISO code (e.g. DE).",
+      "pos.sales_customer_field_length": "A customer field is too long.",
+      "pos.sales_customer_name": "The customer name is missing.",
+      "pos.sales_customer_vat_id": "The VAT ID is not valid.",
+      "pos.sales_description": "Each line needs a description (max. 300 characters).",
+      "pos.sales_discount": "The discount must be between 0 and the line amount.",
+      "pos.sales_invoice_kind": "Unknown invoice kind.",
+      "pos.sales_invoice_status": "Unknown invoice status.",
+      "pos.sales_line_note": "The line note is too long (max. 500 characters).",
+      "pos.sales_notes": "The notes are too long (max. 2,000 characters).",
+      "pos.sales_quantity": "The quantity must be a whole number from 1 to 100,000.",
+      "pos.sales_too_many_lines": "At most 200 lines.",
+      "pos.sales_unit_line": "A device (IMEI) is charged singly with its product.",
+      "pos.sales_unit_price": "The price must be between 0 and 1,000,000.00 €.",
+      "pos.sales_vat_rate": "The VAT rate must be 19 %, 7 % or 0 %.",
+      "pos.z_number": "Invalid Z number."
     }
   },
   "dashboard": {
@@ -2013,11 +2061,13 @@
   "receiptKind": {
     "Sale": "Sale",
     "Storno": "Cancellation",
-    "Return": "Return"
+    "Return": "Return",
+    "InvoicePayment": "Invoice payment"
   },
   "taxTreatment": {
     "Standard19": "Standard taxation",
-    "Margin25a": "Margin scheme (§ 25a UStG)"
+    "Margin25a": "Margin scheme (§ 25a UStG)",
+    "NotTaxable": "Not taxable (invoice payment)"
   },
   "posSessionStatus": {
     "Open": "Session open",
@@ -2051,7 +2101,9 @@
       "noSession": "No open session",
       "prices": "Prices",
       "reports": "Reports",
-      "sessionReport": "Session report"
+      "sessionReport": "Session report",
+      "quotations": "Quotations",
+      "invoices": "Invoices"
     },
     "launch": {
       "title": "POS (in-store sales)",
@@ -2127,7 +2179,9 @@
       "till": "Sale",
       "receipts": "Receipts",
       "sessions": "Sessions",
-      "prices": "Prices"
+      "prices": "Prices",
+      "quotations": "Quotations",
+      "invoices": "Invoices"
     },
     "registers": {
       "title": "Till",
@@ -2402,7 +2456,8 @@
       "closed": "Closed",
       "empty": "No sessions.",
       "manage": "Manage",
-      "zReport": "Z report"
+      "zReport": "Z report",
+      "zNumber": "Z no."
     },
     "z": {
       "title": "Z report (end of day)",
@@ -2430,7 +2485,8 @@
       "openedBy": "Opened by {name}",
       "closedBy": "Closed by {name}",
       "openingCount": "Count at opening",
-      "closingCount": "Count at closing"
+      "closingCount": "Count at closing",
+      "number": "Z no. {number}"
     },
     "cashCount": {
       "label": "Count by denomination",
@@ -3159,6 +3215,213 @@
         "read": "The image could not be read.",
         "dimensions": "The image has too many pixels (at most 12,000 per side)."
       }
+    }
+  },
+  "sales": {
+    "switch": "Quotations or invoices",
+    "quotations": {
+      "title": "Quotations",
+      "description": "Price proposals for customers – validity, email and conversion into an invoice.",
+      "new": "New quotation"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "Invoices without the till (e.g. wholesale) and invoices for till sales – one consecutive number series.",
+      "new": "New invoice",
+      "draft": "Draft",
+      "fromReceipt": "for a till receipt",
+      "creditNote": "Credit note"
+    },
+    "list": {
+      "search": "Search",
+      "searchPlaceholder": "Number, customer or company",
+      "status": "Status",
+      "payment": "Payment",
+      "all": "All",
+      "overdueOnly": "Overdue only",
+      "apply": "Apply",
+      "reset": "Reset",
+      "empty": "No entries found."
+    },
+    "quotationStatus": {
+      "Draft": "Draft",
+      "Sent": "Sent",
+      "Accepted": "Accepted",
+      "Rejected": "Rejected",
+      "Expired": "Expired"
+    },
+    "invoiceStatus": {
+      "Draft": "Draft",
+      "Issued": "Issued",
+      "Discarded": "Discarded"
+    },
+    "badge": {
+      "Draft": "Draft",
+      "Discarded": "Discarded",
+      "CreditNote": "Credit note",
+      "Cancelled": "Cancelled",
+      "Overdue": "Overdue",
+      "Open": "Open",
+      "PartiallyPaid": "Partially paid",
+      "Paid": "Paid"
+    },
+    "priceMode": {
+      "Gross": "Gross prices",
+      "Net": "Net prices"
+    },
+    "paymentMethod": {
+      "BankTransfer": "Bank transfer",
+      "Card": "Card",
+      "Cash": "Cash",
+      "Other": "Other"
+    },
+    "fields": {
+      "number": "Number",
+      "customer": "Customer",
+      "date": "Date",
+      "validUntil": "Valid until",
+      "invoiceDate": "Invoice date",
+      "serviceDate": "Delivery/service date",
+      "dueDate": "Due on",
+      "paymentTermDays": "Payment term (days)",
+      "priceMode": "Price entry",
+      "warehouse": "Warehouse (goods taken from)",
+      "reverseCharge": "Reverse charge (§ 13b UStG)",
+      "description": "Description",
+      "quantity": "Quantity",
+      "discount": "Discount",
+      "vat": "VAT",
+      "vatId": "VAT ID",
+      "amount": "Amount",
+      "note": "Line note",
+      "notes": "Notes (printed on the document)",
+      "total": "Total",
+      "totals": "Totals",
+      "paid": "Paid",
+      "open": "Outstanding"
+    },
+    "totals": {
+      "net": "Net ({rate})",
+      "vat": "VAT {rate}",
+      "margin": "Margin scheme (§ 25a)"
+    },
+    "form": {
+      "new": {
+        "quotation": "New quotation",
+        "invoice": "New invoice"
+      },
+      "edit": {
+        "quotation": "Edit quotation",
+        "invoice": "Edit invoice draft"
+      },
+      "chooseCustomer": "Choose or create customer",
+      "changeCustomer": "Change customer",
+      "noCustomer": "No customer chosen yet.",
+      "customerRequired": "Please choose or create a customer.",
+      "addressMissing": "The invoice needs the name and full address (street, postal code, city). Complete the customer before issuing.",
+      "vatIdMissing": "Business customer without VAT ID: required for intra-EU supplies and reverse charge.",
+      "lines": "Lines",
+      "scan": "Scan or type an EAN or IMEI",
+      "add": "Add",
+      "searchProduct": "Search product",
+      "addFree": "Free text line",
+      "noLines": "No lines yet. Scan, search a product or add free text.",
+      "freeLine": "Free text (no stock)",
+      "marginLine": "Margin scheme § 25a – no VAT shown",
+      "unitGross": "Unit price gross",
+      "unitNet": "Unit price net",
+      "finalPrice": "Final price (§ 25a)",
+      "discountHint": "Amount or e.g. \"10 %\"",
+      "notePlaceholder": "Line note (optional)",
+      "removeLine": "Remove line {n}",
+      "settings": "Settings",
+      "serviceDateHint": "Empty = invoice date.",
+      "reverseChargeWarning": "Use only after review by your tax adviser: the invoice is issued without VAT and carries the note \"Steuerschuldnerschaft des Leistungsempfängers\". All lines are set to 0 %.",
+      "marginHint": "Margin-scheme devices (§ 25a UStG) are charged without VAT shown.",
+      "scanImei": "This product is stocked as devices with IMEI: please scan the IMEI.",
+      "deviceTwice": "This device is already in the list.",
+      "fixLines": "Please correct the marked lines.",
+      "termInvalid": "The payment term must be between 0 and 365 days.",
+      "saved": "Saved.",
+      "errors": {
+        "required": "Description missing.",
+        "quantity": "Quantity: whole number from 1 to 100,000.",
+        "deviceQuantity": "A device (IMEI) always has quantity 1.",
+        "amount": "Amount in euros with at most two decimals (e.g. 12.50).",
+        "discountTooHigh": "The discount exceeds the line amount."
+      }
+    },
+    "picker": {
+      "title": "Search product",
+      "search": "Brand, name, EAN or model",
+      "find": "Find",
+      "includeOutOfStock": "Also show items without stock",
+      "available": "{count} available",
+      "serialized": "sell by IMEI",
+      "empty": "No matching products in stock."
+    },
+    "detail": {
+      "back": "Back to list",
+      "quotation": "Quotation",
+      "invoice": "Invoice",
+      "creditNoteTitle": "Credit note",
+      "actions": "Actions",
+      "edit": "Edit",
+      "pdf": "Download PDF",
+      "print": "Print",
+      "email": "Send by email",
+      "emailAddress": "Email address",
+      "emailHint": "Leave empty to send to the customer’s email address. The PDF is attached.",
+      "send": "Send",
+      "emailSent": "Email to {to} is being sent.",
+      "duplicate": "Duplicate",
+      "duplicated": "Copy created.",
+      "convert": "Convert to invoice",
+      "converted": "Invoice draft created.",
+      "convertedTo": "Converted to invoice {number}",
+      "openInvoice": "Open invoice",
+      "fromQuotation": "From quotation {number}",
+      "markSent": "Mark as sent",
+      "markAccepted": "Accepted",
+      "markRejected": "Rejected",
+      "reopen": "Reopen",
+      "issue": "Issue invoice",
+      "issueTitle": "Issue the invoice?",
+      "issueText": "The invoice gets the next consecutive invoice number, becomes unchangeable and the goods are taken out of the chosen warehouse (devices count as sold). Afterwards corrections are only possible with a credit note.",
+      "issued": "Invoice {number} issued.",
+      "discard": "Discard draft",
+      "discardConfirm": "Discard the draft? It stays stored but no longer appears in the list.",
+      "recordPayment": "Record payment",
+      "method": "Payment method",
+      "cashAtTill": "Record cash received in the shop with \"Collect at the till\" (receipt with TSE).",
+      "paidOn": "Payment date",
+      "reference": "Reference (optional)",
+      "paymentRecorded": "Payment recorded.",
+      "payments": "Payments",
+      "noPayments": "No payments yet.",
+      "receipt": "Till receipt no. {number}",
+      "collect": "Collect at the till",
+      "collectText": "A till receipt for the payment is created and signed by the TSE. The goods were already taken out of stock with the invoice.",
+      "collectAmount": "Amount applied to the invoice",
+      "tendered": "Tendered (cash)",
+      "change": "Change: {amount}",
+      "collectConfirm": "Collect",
+      "collectNeedsSession": "To collect at the till, the cash session must be open.",
+      "collectAmountInvalid": "The amount must be above 0 and at most the outstanding amount.",
+      "tenderedTooLow": "The tendered amount is not enough.",
+      "collected": "Collected – till receipt no. {number}.",
+      "creditNote": "Create credit note",
+      "creditNoteText": "The credit note cancels the whole invoice (negative amounts, next invoice number) and puts the goods back into stock. Payments already received must be refunded separately.",
+      "reason": "Reason",
+      "creditNoteConfirm": "Issue credit note",
+      "creditNoteIssued": "Credit note {number} issued.",
+      "creditNoteFor": "Cancels invoice {number}",
+      "cancelledBy": "Cancelled by {number}",
+      "refundRequired": "Credit notes need the \"refunds\" right (pos.refund)."
+    },
+    "warnings": {
+      "customer_vat_id_missing": "Business customer without VAT ID – required for intra-EU supplies or reverse charge.",
+      "reverse_charge_check": "Reverse charge is set: please check with your tax adviser before issuing."
     }
   }
 }

@@ -86,6 +86,13 @@ public sealed class PosInvoice : IAuditable
     [PersonalData]
     public InvoiceCustomer Customer { get; private set; } = null!;
 
+    /// <summary>Customer name and company for lists and search: generated columns from the customer jsonb (never written by code).</summary>
+    [PersonalData]
+    public string? CustomerName { get; private set; }
+
+    [PersonalData]
+    public string? CustomerCompany { get; private set; }
+
     [PersonalData]
     public PosInvoiceDocument Document { get; private set; } = null!;
     public long TotalNetMinor { get; private set; }

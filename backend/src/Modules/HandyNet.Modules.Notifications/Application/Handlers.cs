@@ -167,3 +167,17 @@ internal sealed class OrganizationVerifiedHandler(EmailQueue queue, IOptions<Not
             EmailTemplates.OrganizationVerified(name, options.Value.PublicBaseUrl.TrimEnd('/') + "/app"), ct);
     }
 }
+
+/// <summary>Quotation or invoice requested by email: one email with the PDF per request (idempotent per outbox message).</summary>
+internal sealed class SalesDocumentEmailRequestedHandler(HandyNetDbContext db, IClock clock) : IOutboxHandler
+{
+    public string EventType => typeof(HandyNet.Modules.Pos.Contracts.SalesDocumentEmailRequested).FullName!;
+
+    public async Task HandleAsync(Guid messageId, string payload, CancellationToken ct)
+    {
+        if (await db.Set<EmailMessage>().AsNoTracking().AnyAsync(e => e.SourceId == messageId, ct))
+            return;
+        var e = JsonSerializer.Deserialize<HandyNet.Modules.Pos.Contracts.SalesDocumentEmailRequested>(payload)!;
+        db.Add(EmailMessage.Queue(messageId, SalesDocumentTemplate.Template, e.Recipient, null, SalesDocumentTemplate.Render(e), clock.UtcNow));
+    }
+}

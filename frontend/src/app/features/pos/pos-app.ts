@@ -130,6 +130,8 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid]" (click)="closeMenu()" data-testid="pos-menu-sell">{{ 'pos.app.sell' | t }}</a>
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'belege']" (click)="closeMenu()" data-testid="pos-menu-receipts">{{ 'pos.app.receipts' | t }}</a>
                 <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'sitzungen']" (click)="closeMenu()" data-testid="pos-menu-sessions">{{ 'pos.app.sessions' | t }}</a>
+                <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'angebote']" (click)="closeMenu()" data-testid="pos-menu-quotations">{{ 'pos.app.quotations' | t }}</a>
+                <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'rechnungen']" (click)="closeMenu()" data-testid="pos-menu-invoices">{{ 'pos.app.invoices' | t }}</a>
                 @if (ctx.session(); as s) {
                   @if (rights().cashMovement || rights().closeSession) {
                     <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse/sitzungen', s.id]" (click)="closeMenu()" data-testid="pos-menu-cash">{{ 'pos.app.cashAndClosing' | t }}</a>

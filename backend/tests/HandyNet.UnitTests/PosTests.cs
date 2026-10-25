@@ -242,7 +242,7 @@ public class PosSessionTests
         Assert.Equal(standard.GrossMinor, standard.NetMinor + standard.VatMinor);
         Assert.Equal(12_77, summary.ByTaxTreatment.Single(t => t.Treatment == TaxTreatment.Margin25a).VatMinor);
 
-        var closed = session.Close(summary, 395_00, "Kasse gezählt", Guid.NewGuid(), Now);
+        var closed = session.Close(summary, 395_00, "Kasse gezählt", Guid.NewGuid(), Now, 1);
         Assert.True(closed.IsSuccess);
         Assert.Equal(-4_50, session.DifferenceMinor); // 4.50 € missing
         Assert.Equal(CashSessionStatus.Closed, session.Status);
@@ -258,10 +258,10 @@ public class PosSessionTests
         Assert.Equal("pos.amount", CashMovement.Record(session, CashMovementKind.Deposit, 0, "x", 50_00, Guid.NewGuid(), Now).Error?.Code);
 
         var summary = SessionCalculator.Summarize(50_00, [], []);
-        Assert.Equal("pos.counted_cash", session.Close(summary, -1, null, Guid.NewGuid(), Now).Error?.Code);
-        Assert.True(session.Close(summary, 50_00, null, Guid.NewGuid(), Now).IsSuccess);
+        Assert.Equal("pos.counted_cash", session.Close(summary, -1, null, Guid.NewGuid(), Now, 1).Error?.Code);
+        Assert.True(session.Close(summary, 50_00, null, Guid.NewGuid(), Now, 1).IsSuccess);
         Assert.Equal(0, session.DifferenceMinor);
-        Assert.Equal("pos.session_closed", session.Close(summary, 50_00, null, Guid.NewGuid(), Now).Error?.Code);
+        Assert.Equal("pos.session_closed", session.Close(summary, 50_00, null, Guid.NewGuid(), Now, 1).Error?.Code);
         Assert.Equal("pos.session_closed", CashMovement.Record(session, CashMovementKind.Deposit, 1_00, "x", 0, Guid.NewGuid(), Now).Error?.Code);
 
         Assert.Equal("pos.opening_cash", CashSession.Open(Org, NewRegister(), -1, Guid.NewGuid(), Now).Error?.Code);

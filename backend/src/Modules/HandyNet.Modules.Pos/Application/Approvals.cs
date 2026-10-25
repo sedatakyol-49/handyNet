@@ -117,7 +117,8 @@ internal sealed class ApprovalService(
     /// Uses the presented approval (if any) for the record written in the current transaction; the row is locked, so a
     /// concurrent second use fails and its transaction must roll back.
     /// </summary>
-    public async Task<Error?> ConsumeAsync(PosActor actor, ApprovalUse use, Guid? receiptId, Guid? cashMovementId, Guid? sessionId, CancellationToken ct)
+    public async Task<Error?> ConsumeAsync(PosActor actor, ApprovalUse use, Guid? receiptId, Guid? cashMovementId, Guid? sessionId, CancellationToken ct,
+        Guid? salesInvoiceId = null)
     {
         if (actor.Approval is not { } presented)
             return null;
@@ -125,7 +126,7 @@ internal sealed class ApprovalService(
             .FromSql($"SELECT *, xmin FROM pos.approvals WHERE id = {presented.Id} AND organization_id = {OrganizationId} FOR UPDATE").ToListAsync(ct);
         if (rows.FirstOrDefault() is not { } approval)
             return Error.Conflict("pos.approval_used", "This approval was already used or has expired. Ask for a new approval.");
-        var used = approval.MarkUsed(use, receiptId, cashMovementId, sessionId, clock.UtcNow);
+        var used = approval.MarkUsed(use, receiptId, cashMovementId, sessionId, clock.UtcNow, salesInvoiceId);
         if (!used.IsSuccess)
             return used.Error;
         await db.SaveChangesAsync(ct);

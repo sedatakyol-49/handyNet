@@ -122,11 +122,11 @@ are out of scope for phone shops unless requested.
 - 🟡 **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
   e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order. Backend ✅ history filters
   (number, dates, amount, cashier, customer, payment method, kind), refunds from an order (existing returns), recorded
-  reprints with copy number. ✅ invoice for a POS sale (§14 UStG fields, gapless `RE-YYYY-nnnnnn` per organization, immutable, §25a without VAT + note, PDF; 2026-10-18), ✅ e-receipt. Open: ⬜ invoice correction for later returns, ⬜ ship-later, ⬜ quotations; ✅ UI (filter bar, reprint "Kopie n").
+  reprints with copy number. ✅ invoice for a POS sale (§14 UStG fields, gapless `RE-YYYY-nnnnnn` per organization, immutable, §25a without VAT + note, PDF; 2026-10-18), ✅ e-receipt. Open: ⬜ invoice correction for later returns, ⬜ ship-later; ✅ quotations and sales invoices outside the till (2026-10-25, ADR-0015: AN-YYYY-nnnn quotations with statuses, PDF, email, duplicate, convert; invoices in the one gapless RE series shared with POS-sale invoices, stock and IMEI deducted on issue, immutable, credit notes with stock back, payments, cash at the till as a signed InvoicePayment receipt, overdue list; POS app and back office "Rechnungen & Angebote"); ✅ UI (filter bar, reprint "Kopie n").
 - 🟡 **F. Session & cash**: opening count with denominations, cash in/out with reasons, closing control with
   differences, session report, all-orders analytics, product/cashier/payment reports. Backend ✅ denominations at
   opening/closing (stored, total = opening/counted cash), predefined + free-text reasons, closing difference, sales
-  report by product/cashier/payment method per session or date range. ✅ UI (denomination counting, reasons, report page). Open: ⬜ export (CSV/PDF).
+  report by product/cashier/payment method per session or date range. ✅ UI (denomination counting, reasons, report page). ✅ gapless Z number per register at closing (DSFinV-K Z_NR; Z-report, sessions list; existing closings backfilled; 2026-10-25, ADR-0015). Open: ⬜ export (CSV/PDF).
 - ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).

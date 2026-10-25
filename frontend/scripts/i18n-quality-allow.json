@@ -3,6 +3,7 @@
   "words": ["Service", "Pack", "Ticket", "Marketplace", "Mollie"],
   "*": ["quality.ServicePack"],
   "en": [
+    "sales.list.status",
     "pos.invoice.fields.name",
     "moderation.offers.visibility",
     "moderation.offers.moderation",

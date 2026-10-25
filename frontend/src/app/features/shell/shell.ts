@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
+import { filter, firstValueFrom } from 'rxjs';
+import { SalesApi } from '../../core/api/handynet-api';
 import { AuthService } from '../../core/auth/auth.service';
 import { StorageService } from '../../core/storage.service';
 import { SessionStore } from '../../core/auth/session.store';
@@ -31,6 +32,9 @@ export class ShellComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly storage = inject(StorageService);
+  private readonly sales = inject(SalesApi);
+  /** Overdue sales invoices (badge of "Rechnungen & Angebote"); refreshed on navigation. */
+  protected readonly overdueInvoices = signal(0);
 
   protected readonly navOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
@@ -64,8 +68,22 @@ export class ShellComponent {
         this.userMenuOpen.set(false);
         this.currentPath.set(pathOf((e as NavigationEnd).urlAfterRedirects));
         this.expandSectionOf(this.currentPath());
+        void this.refreshOverdue();
       });
     this.expandSectionOf(this.currentPath());
+    void this.refreshOverdue();
+  }
+
+  private async refreshOverdue(): Promise<void> {
+    if (!this.visibleItems().some((i) => i.badge === 'overdueInvoices')) {
+      this.overdueInvoices.set(0);
+      return;
+    }
+    try {
+      this.overdueInvoices.set((await firstValueFrom(this.sales.summary())).overdueCount);
+    } catch {
+      this.overdueInvoices.set(0);
+    }
   }
 
   /** Active through `alsoActive` (e.g. a company detail page under the companies entry). */

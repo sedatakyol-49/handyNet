@@ -14,6 +14,12 @@ public enum TaxTreatment
     /// (sales price − purchase price), and the VAT must not be shown separately on the receipt.
     /// </summary>
     Margin25a,
+
+    /// <summary>
+    /// Not taxable at the till (DSFinV-K USt-Schlüssel 5, 0 %): the settlement of an invoice paid at the till
+    /// ("Forderungsauflösung"). The VAT was charged on the invoice; the payment receipt carries none. Such lines have no product.
+    /// </summary>
+    NotTaxable,
 }
 
 /// <summary>
@@ -44,12 +50,28 @@ public static class VatCalculator
     public static long VatFor(TaxTreatment treatment, long grossMinor, long? purchasePriceMinor) => treatment switch
     {
         TaxTreatment.Standard19 => StandardVatFromGross(grossMinor),
+        TaxTreatment.NotTaxable => 0,
         TaxTreatment.Margin25a => MarginVat(grossMinor, purchasePriceMinor
                                                        ?? throw new ArgumentNullException(nameof(purchasePriceMinor), "§25a needs the purchase price.")),
         _ => throw new ArgumentOutOfRangeException(nameof(treatment)),
     };
 
-    public static int RateFor(TaxTreatment treatment) => StandardRateBasisPoints; // both schemes use the standard rate (on price or margin)
+    /// <summary>Standard and §25a lines use the standard rate (on the price or on the margin); not taxable lines 0 %.</summary>
+    public static int RateFor(TaxTreatment treatment) => treatment == TaxTreatment.NotTaxable ? 0 : StandardRateBasisPoints;
+
+    /// <summary>VAT contained in a gross amount at any rate: gross − round(gross × 10000 / (10000 + rate)), half away from zero.</summary>
+    public static long VatFromGross(long grossMinor, int rateBasisPoints)
+    {
+        if (rateBasisPoints == 0)
+            return 0;
+        var magnitude = Math.Abs(grossMinor);
+        var net = (long)decimal.Round(magnitude * 10_000m / (10_000m + rateBasisPoints), 0, MidpointRounding.AwayFromZero);
+        return Math.Sign(grossMinor) * (magnitude - net);
+    }
+
+    /// <summary>VAT on a net amount: round(net × rate / 10000), half away from zero, sign-symmetric.</summary>
+    public static long VatOnNet(long netMinor, int rateBasisPoints) =>
+        Math.Sign(netMinor) * (long)decimal.Round(Math.Abs(netMinor) * (decimal)rateBasisPoints / 10_000m, 0, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Share of <paramref name="total"/> for the first <paramref name="part"/> of <paramref name="of"/> units, rounded half away from

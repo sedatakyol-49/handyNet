@@ -18,6 +18,9 @@ public sealed class Register : IAuditable
     public string Name { get; private set; } = null!;
     public Guid WarehouseId { get; private set; }
     public long NextReceiptNumber { get; private set; }
+
+    /// <summary>Next Z number (daily closing), taken with a row-locking UPDATE at closing like receipt numbers; never written by code.</summary>
+    public long NextZNumber { get; private set; }
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public uint Version { get; private set; }
@@ -52,6 +55,7 @@ public sealed class Register : IAuditable
             Name = name.Trim(),
             WarehouseId = warehouseId,
             NextReceiptNumber = 1,
+            NextZNumber = 1,
             IsActive = true,
             CreatedAt = now,
         };

@@ -89,6 +89,10 @@ export const routes: Routes = [
         canActivate: [accessGuard('B2BSales')],
         loadComponent: () => import('./features/offers/offers.page').then((m) => m.OffersPage),
       },
+      // Verkauf: quotations and invoices outside the till (module Pos, pos.sell).
+      { path: 'verkauf', pathMatch: 'full', redirectTo: 'verkauf/rechnungen' },
+      ...salesRoutes('verkauf/angebote', 'quotation', false).map((r) => ({ ...r, canActivate: [accessGuard('Pos', 'pos.sell')] })),
+      ...salesRoutes('verkauf/rechnungen', 'invoice', false).map((r) => ({ ...r, canActivate: [accessGuard('Pos', 'pos.sell')] })),
       {
         path: 'lager',
         canActivate: [accessGuard('Inventory')],
@@ -225,6 +229,9 @@ export const routes: Routes = [
           { path: 'belege/:id', loadComponent: () => import('./features/pos/receipt-detail.page').then((m) => m.PosReceiptDetailPage) },
           { path: 'sitzungen/:id', loadComponent: () => import('./features/pos/session.page').then((m) => m.PosSessionPage) },
           { path: 'berichte', loadComponent: () => import('./features/pos/report.page').then((m) => m.PosReportPage) },
+          // Quotations and invoices outside the till (shared with the back office, ADR-0014).
+          ...salesRoutes(':registerId/angebote', 'quotation', true),
+          ...salesRoutes(':registerId/rechnungen', 'invoice', true),
           { path: ':registerId', loadComponent: () => import('./features/pos/till.page').then((m) => m.TillPage) },
           { path: ':registerId/belege', loadComponent: () => import('./features/pos/receipts.page').then((m) => m.PosReceiptsPage) },
           { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },
@@ -235,3 +242,15 @@ export const routes: Routes = [
   },
   { path: '**', redirectTo: 'app' },
 ];
+
+/** List, new, detail and edit routes of quotations or invoices (POS app or back office). */
+function salesRoutes(base: string, doc: 'quotation' | 'invoice', pos: boolean): Routes {
+  const kind = doc === 'quotation' ? 'quotations' : 'invoices';
+  const pages = () => import('./features/sales/sales-pages');
+  return [
+    { path: base, data: { kind }, loadComponent: () => pages().then((m) => (pos ? m.PosSalesListPage : m.SalesListPage)) },
+    { path: `${base}/neu`, data: { doc }, loadComponent: () => pages().then((m) => (pos ? m.PosSalesFormPage : m.SalesFormPage)) },
+    { path: `${base}/:id`, data: { doc }, loadComponent: () => pages().then((m) => (pos ? m.PosSalesDetailPage : m.SalesDetailPage)) },
+    { path: `${base}/:id/bearbeiten`, data: { doc }, loadComponent: () => pages().then((m) => (pos ? m.PosSalesFormPage : m.SalesFormPage)) },
+  ];
+}

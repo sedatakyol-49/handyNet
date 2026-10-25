@@ -41,7 +41,9 @@ public sealed record SessionSummary(
     long ExpectedCashMinor,
     long? FirstReceiptNumber,
     long? LastReceiptNumber,
-    long RoundingMinor = 0);
+    long RoundingMinor = 0,
+    int InvoicePaymentCount = 0,
+    long InvoicePaymentsMinor = 0);
 
 public static class SessionCalculator
 {
@@ -82,7 +84,9 @@ public static class SessionCalculator
             checked(openingCashMinor + cash + deposits - withdrawals),
             receipts.Count == 0 ? null : receipts.Min(r => r.Number),
             receipts.Count == 0 ? null : receipts.Max(r => r.Number),
-            receipts.Sum(r => r.RoundingMinor));
+            receipts.Sum(r => r.RoundingMinor),
+            receipts.Count(r => r.Kind == ReceiptKind.InvoicePayment),
+            receipts.Where(r => r.Kind == ReceiptKind.InvoicePayment).Sum(r => r.TotalGrossMinor));
     }
 }
 
@@ -104,6 +108,12 @@ public sealed class CashSession : IAuditable
     public DateTimeOffset OpenedAt { get; private set; }
     public Guid OpenedBy { get; private set; }
     public long OpeningCashMinor { get; private set; }
+
+    /// <summary>
+    /// Z number (DSFinV-K Z_NR): sequential and gapless per register, taken from the register when the session is closed (DB-enforced).
+    /// Null while open.
+    /// </summary>
+    public long? ZNumber { get; private set; }
     public DateTimeOffset? ClosedAt { get; private set; }
     public Guid? ClosedBy { get; private set; }
     public long? ExpectedCashMinor { get; private set; }
@@ -145,7 +155,7 @@ public sealed class CashSession : IAuditable
         };
     }
 
-    public Result Close(SessionSummary summary, long countedCashMinor, string? note, Guid userId, DateTimeOffset now,
+    public Result Close(SessionSummary summary, long countedCashMinor, string? note, Guid userId, DateTimeOffset now, long zNumber,
         IReadOnlyList<DenominationCount>? denominations = null)
     {
         if (Status != CashSessionStatus.Open)
@@ -159,7 +169,10 @@ public sealed class CashSession : IAuditable
         if (summary.OpeningCashMinor != OpeningCashMinor)
             return Error.Conflict("pos.summary_mismatch", "The summary does not belong to this session.");
 
+        if (zNumber < 1)
+            return Error.Validation("pos.z_number", "Z numbers start at 1.");
         Status = CashSessionStatus.Closed;
+        ZNumber = zNumber;
         ClosedAt = now;
         ClosedBy = userId;
         Summary = summary;

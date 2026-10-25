@@ -28,6 +28,15 @@ public sealed class EmailMessage
 
     /// <summary>Optional HTML alternative of <see cref="Body"/> (e-receipts).</summary>
     public string? HtmlBody { get; private set; }
+
+    /// <summary>Optional attachment (quotation/invoice PDF); the content is dropped once the email was delivered or gave up.</summary>
+    public string? AttachmentName { get; private set; }
+    public string? AttachmentContentType { get; private set; }
+    public byte[]? AttachmentContent { get; private set; }
+
+    public EmailAttachment? Attachment => AttachmentName is not null && AttachmentContent is not null
+        ? new EmailAttachment(AttachmentName, AttachmentContentType ?? "application/octet-stream", AttachmentContent)
+        : null;
     public EmailStatus Status { get; private set; }
     public int Attempts { get; private set; }
     public DateTimeOffset NextAttemptAt { get; private set; }
@@ -46,6 +55,9 @@ public sealed class EmailMessage
         Subject = content.Subject,
         Body = content.Body,
         HtmlBody = content.Html,
+        AttachmentName = content.Attachment?.FileName,
+        AttachmentContentType = content.Attachment?.ContentType,
+        AttachmentContent = content.Attachment?.Content,
         Status = EmailStatus.Pending,
         NextAttemptAt = now,
         CreatedAt = now,
@@ -67,6 +79,7 @@ public sealed class EmailMessage
         Attempts++;
         LastError = null;
         RedactIfSecret();
+        AttachmentContent = null;
     }
 
     public void MarkAttemptFailed(string error, DateTimeOffset now)
@@ -77,6 +90,7 @@ public sealed class EmailMessage
         {
             Status = EmailStatus.Failed;
             RedactIfSecret();
+        AttachmentContent = null;
             return;
         }
 
@@ -98,4 +112,6 @@ public sealed class EmailMessage
 }
 
 /// <summary>Html: optional HTML alternative (sent as multipart/alternative with the plain text).</summary>
-public sealed record RenderedEmail(string Subject, string Body, string? Html = null);
+public sealed record RenderedEmail(string Subject, string Body, string? Html = null, EmailAttachment? Attachment = null);
+
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Content);
