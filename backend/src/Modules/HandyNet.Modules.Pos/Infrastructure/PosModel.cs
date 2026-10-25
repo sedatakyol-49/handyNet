@@ -529,5 +529,7 @@ public sealed class PosModel : IModuleModel
             b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         });
+
+        PrinterProfileModel.Configure(modelBuilder);
     }
 }

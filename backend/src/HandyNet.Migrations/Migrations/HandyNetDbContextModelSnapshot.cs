@@ -3860,6 +3860,157 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PrinterProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AutoPrint")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_print");
+
+                    b.Property<int?>("BaudRate")
+                        .HasColumnType("integer")
+                        .HasColumnName("baud_rate");
+
+                    b.Property<string>("BridgeUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("bridge_url");
+
+                    b.Property<int>("CharsPerLine")
+                        .HasColumnType("integer")
+                        .HasColumnName("chars_per_line");
+
+                    b.Property<string>("Codepage")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("codepage");
+
+                    b.Property<string>("Connection")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("connection");
+
+                    b.Property<int>("Copies")
+                        .HasColumnType("integer")
+                        .HasColumnName("copies");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("CutPaper")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cut_paper");
+
+                    b.Property<string>("EposDeviceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("epos_device_id");
+
+                    b.Property<string>("Host")
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)")
+                        .HasColumnName("host");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("OpenDrawerOnCash")
+                        .HasColumnType("boolean")
+                        .HasColumnName("open_drawer_on_cash");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("PaperWidthMm")
+                        .HasColumnType("integer")
+                        .HasColumnName("paper_width_mm");
+
+                    b.Property<int?>("Port")
+                        .HasColumnType("integer")
+                        .HasColumnName("port");
+
+                    b.Property<bool>("PrintQr")
+                        .HasColumnType("boolean")
+                        .HasColumnName("print_qr");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("UsbProductId")
+                        .HasColumnType("integer")
+                        .HasColumnName("usb_product_id");
+
+                    b.Property<int?>("UsbVendorId")
+                        .HasColumnType("integer")
+                        .HasColumnName("usb_vendor_id");
+
+                    b.Property<bool>("UseHttps")
+                        .HasColumnType("boolean")
+                        .HasColumnName("use_https");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_printer_profiles");
+
+                    b.HasIndex("RegisterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_printer_profiles_one_default")
+                        .HasFilter("is_default");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_printer_profiles_organization_id_register_id");
+
+                    b.HasIndex("RegisterId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_printer_profiles_register_id_name");
+
+                    b.ToTable("printer_profiles", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_printer_profiles_bridge", "connection <> 'EscPosBridge' OR bridge_url IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_printer_profiles_chars", "chars_per_line BETWEEN 24 AND 64");
+
+                            t.HasCheckConstraint("ck_printer_profiles_codepage", "codepage IN ('Cp858', 'Pc437')");
+
+                            t.HasCheckConstraint("ck_printer_profiles_connection", "connection IN ('Browser', 'EpsonEpos', 'StarWebPrnt', 'EscPosBridge', 'WebUsb', 'WebSerial')");
+
+                            t.HasCheckConstraint("ck_printer_profiles_copies", "copies BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("ck_printer_profiles_network", "connection NOT IN ('EpsonEpos', 'StarWebPrnt', 'EscPosBridge') OR host IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_printer_profiles_paper", "paper_width_mm IN (58, 80)");
+
+                            t.HasCheckConstraint("ck_printer_profiles_port", "port IS NULL OR port BETWEEN 1 AND 65535");
+
+                            t.HasCheckConstraint("ck_printer_profiles_usb", "(usb_vendor_id IS NULL OR usb_vendor_id BETWEEN 0 AND 65535) AND (usb_product_id IS NULL OR usb_product_id BETWEEN 0 AND 65535)");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Quotation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6320,6 +6471,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_prices_products_product_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PrinterProfile", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_printer_profiles_registers_organization_id_register_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Quotation", b =>
