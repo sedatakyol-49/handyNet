@@ -1301,8 +1301,8 @@ export interface Intake {
 
 export type PosPaymentMethod = 'Cash' | 'Card';
 export const POS_PAYMENT_METHODS: PosPaymentMethod[] = ['Cash', 'Card'];
-export type ReceiptKind = 'Sale' | 'Storno' | 'Return';
-export type TaxTreatment = 'Standard19' | 'Margin25a';
+export type ReceiptKind = 'Sale' | 'Storno' | 'Return' | 'InvoicePayment';
+export type TaxTreatment = 'Standard19' | 'Margin25a' | 'NotTaxable';
 export type CashMovementKind = 'Deposit' | 'Withdrawal';
 
 export interface PosRegister {
@@ -1385,6 +1385,9 @@ export interface SessionSummary {
   lastReceiptNumber: number | null;
   /** Sum of cash rounding of the session (0.05 € registers). */
   roundingMinor?: number;
+  /** Payments on sales invoices collected at the till (not taxable here; the invoice carries the VAT). */
+  invoicePaymentCount?: number;
+  invoicePaymentsMinor?: number;
   /** Ankauf purchases paid out of this till (part of the withdrawals). */
   ankaufCount?: number;
   ankaufPayoutsMinor?: number;
@@ -1413,6 +1416,8 @@ export interface CashSession {
   closingDenominations?: DenominationCount[] | null;
   /** Manager approval used for the closing, if any. */
   closingApproval?: PosApprovalInfo | null;
+  /** Gapless Z number of the register (DSFinV-K Z_NR), assigned at closing; null while open. */
+  zNumber?: number | null;
 }
 
 /** Where the till's price comes from: own POS price, own marketplace offer (net + 19 %), or none (cashier types it). */
@@ -1604,7 +1609,8 @@ export interface ReturnRequest {
 
 export interface ReceiptLine {
   lineNumber: number;
-  productId: string;
+  /** Null on the line of an invoice payment receipt. */
+  productId: string | null;
   stockUnitId: string | null;
   imei: string | null;
   description: string;
@@ -2050,6 +2056,246 @@ export interface DailyReport {
     refundedMinor: number;
   } | null;
   totals: { soldMinor: number; boughtMinor: number };
+}
+
+// ---------------------------------------------------------------- Quotations and sales invoices (POS, ADR-0015)
+
+export type PriceMode = 'Gross' | 'Net';
+/** Stored statuses plus the derived "Expired" (open quotation past its validity date). */
+export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Expired';
+export type SalesInvoiceKind = 'Invoice' | 'CreditNote';
+export type SalesInvoiceStatus = 'Draft' | 'Issued' | 'Discarded';
+export type InvoicePaymentMethod = 'BankTransfer' | 'Card' | 'Cash' | 'Other';
+export type InvoicePaymentState = 'Open' | 'PartiallyPaid' | 'Paid';
+export const SALES_VAT_RATES = [1900, 700, 0] as const;
+
+export interface SalesCustomer {
+  customerId: string | null;
+  name: string;
+  company: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  countryCode: string | null;
+  vatId: string | null;
+}
+
+/** A stored line: amountMinor = unit price × quantity − discount, in the document's price mode (negative on credit notes). */
+export interface SalesLine {
+  position: number;
+  productId: string | null;
+  stockUnitId: string | null;
+  imei: string | null;
+  description: string;
+  note: string | null;
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor: number;
+  amountMinor: number;
+  vatRateBasisPoints: number;
+  margin25a: boolean;
+}
+
+export interface SalesVat {
+  rateBasisPoints: number;
+  netMinor: number;
+  vatMinor: number;
+  grossMinor: number;
+}
+
+export interface SalesLineRequest {
+  productId?: string | null;
+  imei?: string | null;
+  description?: string | null;
+  note?: string | null;
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor?: number | null;
+  vatRateBasisPoints?: number | null;
+}
+
+export interface SalesCustomerRequest {
+  name: string;
+  company?: string | null;
+  street?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  countryCode?: string | null;
+  vatId?: string | null;
+}
+
+export interface QuotationRequest {
+  customerId?: string | null;
+  customer?: SalesCustomerRequest | null;
+  validUntil?: string | null;
+  priceMode?: PriceMode | null;
+  lines: SalesLineRequest[];
+  notes?: string | null;
+}
+
+export interface SalesInvoiceRequest {
+  customerId?: string | null;
+  customer?: SalesCustomerRequest | null;
+  serviceDate?: string | null;
+  paymentTermDays?: number | null;
+  priceMode?: PriceMode | null;
+  reverseCharge?: boolean | null;
+  warehouseId?: string | null;
+  lines: SalesLineRequest[];
+  notes?: string | null;
+}
+
+interface SalesTotalsFields {
+  vat: SalesVat[];
+  marginGrossMinor: number;
+  totalNetMinor: number;
+  totalVatMinor: number;
+  totalGrossMinor: number;
+}
+
+export interface Quotation extends SalesTotalsFields {
+  id: string;
+  number: string;
+  status: QuotationStatus;
+  storedStatus: Exclude<QuotationStatus, 'Expired'>;
+  editable: boolean;
+  customerId: string | null;
+  customer: SalesCustomer;
+  issueDate: string;
+  validUntil: string;
+  priceMode: PriceMode;
+  lines: SalesLine[];
+  notes: string | null;
+  convertedInvoiceId: string | null;
+  convertedInvoiceNumber: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  createdBy: string;
+  createdByName: string | null;
+  updatedAt: string;
+  pdfUrl: string;
+}
+
+export interface QuotationSummary {
+  id: string;
+  number: string;
+  status: QuotationStatus;
+  customerName: string;
+  customerCompany: string | null;
+  issueDate: string;
+  validUntil: string;
+  totalGrossMinor: number;
+  convertedInvoiceId: string | null;
+}
+
+export interface InvoicePayment {
+  id: string;
+  method: InvoicePaymentMethod;
+  amountMinor: number;
+  paidOn: string;
+  receiptId: string | null;
+  receiptNumber: number | null;
+  reference: string | null;
+  createdAt: string;
+  createdBy: string;
+  createdByName: string | null;
+}
+
+export interface SalesInvoice extends SalesTotalsFields {
+  id: string;
+  kind: SalesInvoiceKind;
+  status: SalesInvoiceStatus;
+  number: string | null;
+  customerId: string | null;
+  customer: SalesCustomer | null;
+  invoiceDate: string | null;
+  serviceDate: string | null;
+  paymentTermDays: number;
+  dueDate: string | null;
+  priceMode: PriceMode;
+  reverseCharge: boolean;
+  warehouseId: string | null;
+  quotationId: string | null;
+  quotationNumber: string | null;
+  originalInvoiceId: string | null;
+  originalNumber: string | null;
+  creditNoteId: string | null;
+  creditNoteNumber: string | null;
+  reason: string | null;
+  notes: string | null;
+  lines: SalesLine[];
+  paidMinor: number;
+  openMinor: number;
+  paymentState: InvoicePaymentState | null;
+  overdue: boolean;
+  cancelled: boolean;
+  payments: InvoicePayment[];
+  issuedAt: string | null;
+  createdAt: string;
+  createdBy: string;
+  createdByName: string | null;
+  pdfUrl: string;
+  /** Draft hints: "customer_vat_id_missing", "reverse_charge_check". */
+  warnings: string[];
+}
+
+/** One row of the invoice list. Origin "Receipt" = invoice for a POS sale (read only, paid at the till). */
+export interface InvoiceListItem {
+  id: string;
+  origin: 'Sale' | 'Receipt';
+  kind: SalesInvoiceKind;
+  status: SalesInvoiceStatus;
+  number: string | null;
+  customerName: string | null;
+  customerCompany: string | null;
+  invoiceDate: string | null;
+  dueDate: string | null;
+  totalGrossMinor: number;
+  paidMinor: number;
+  paymentState: InvoicePaymentState | null;
+  overdue: boolean;
+  cancelled: boolean;
+  receiptId: string | null;
+}
+
+export interface SalesInvoiceSummary {
+  overdueCount: number;
+  overdueMinor: number;
+  openCount: number;
+  openMinor: number;
+  draftCount: number;
+}
+
+export interface SalesQuery {
+  search?: string | null;
+  status?: string | null;
+  customerId?: string | null;
+  from?: string | null;
+  to?: string | null;
+  kind?: string | null;
+  paymentState?: string | null;
+  overdue?: boolean | null;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SalesWarehouse {
+  id: string;
+  code: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export interface SalesEmailResult {
+  id: string;
+  recipientMasked: string;
+  requestedAt: string;
+}
+
+export interface CollectInvoiceResult {
+  receipt: Receipt;
+  invoiceId: string;
+  replayed: boolean;
 }
 
 // ---- Company profile of the tenant (Unternehmen / Firmendaten, ADR-0014) ------------------------------------------------

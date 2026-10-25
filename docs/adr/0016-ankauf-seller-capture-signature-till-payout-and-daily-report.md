@@ -1,4 +1,4 @@
-# ADR-0015: Ankauf seller capture (MRZ, QR self check-in), on-screen signature, till payout and the daily report
+# ADR-0016: Ankauf seller capture (MRZ, QR self check-in), on-screen signature, till payout and the daily report
 
 - Status: Accepted (no legal compliance claimed — see "For legal review")
 - Date: 2026-10-25

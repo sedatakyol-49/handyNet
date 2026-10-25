@@ -12,7 +12,7 @@ using Npgsql;
 
 namespace HandyNet.IntegrationTests;
 
-/// <summary>ADR-0015: seller capture (MRZ, returning sellers, QR self check-in), signature binding, till payout and reports.</summary>
+/// <summary>ADR-0016: seller capture (MRZ, returning sellers, QR self check-in), signature binding, till payout and reports.</summary>
 public sealed partial class AnkaufTests
 {
     // German specimen passport "Erika Mustermann" (valid until 28.02.2027).

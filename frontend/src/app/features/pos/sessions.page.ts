@@ -21,6 +21,7 @@ import { PosSubnavComponent } from './pos-subnav';
       <table class="hn-table" data-testid="pos-sessions">
         <thead>
           <tr>
+            <th scope="col">{{ 'pos.sessions.zNumber' | t }}</th>
             <th scope="col">{{ 'pos.sessions.opened' | t }}</th>
             <th scope="col">{{ 'pos.sessions.closed' | t }}</th>
             <th scope="col">{{ 'common.status' | t }}</th>
@@ -33,6 +34,7 @@ import { PosSubnavComponent } from './pos-subnav';
         <tbody>
           @for (s of sessions.value()?.items ?? []; track s.id) {
             <tr>
+              <td class="tabular-nums" data-testid="pos-session-z">{{ s.zNumber ?? '–' }}</td>
               <td class="text-xs whitespace-nowrap">{{ s.openedAt | hnDate }}</td>
               <td class="text-xs whitespace-nowrap">{{ s.closedAt | hnDate }}</td>
               <td><hn-status-badge [status]="s.status" kind="posSessionStatus" [tone]="s.status === 'Open' ? 'success' : 'neutral'" /></td>
@@ -42,7 +44,7 @@ import { PosSubnavComponent } from './pos-subnav';
               <td class="text-end"><a class="hn-link inline-flex min-h-11 items-center" [routerLink]="['/kasse/sitzungen', s.id]">{{ (s.status === 'Open' ? 'pos.sessions.manage' : 'pos.sessions.zReport') | t }}</a></td>
             </tr>
           } @empty {
-            <tr><td colspan="7" class="py-8 text-center text-sm text-slate-500">{{ 'pos.sessions.empty' | t }}</td></tr>
+            <tr><td colspan="8" class="py-8 text-center text-sm text-slate-500">{{ 'pos.sessions.empty' | t }}</td></tr>
           }
         </tbody>
       </table>

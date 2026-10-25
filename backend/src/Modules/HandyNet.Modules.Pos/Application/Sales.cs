@@ -54,7 +54,7 @@ public sealed record ReturnRequest(IReadOnlyList<ReturnLineRequest> Lines, Payme
 
 public sealed record ReceiptLineDto(
     int LineNumber,
-    Guid ProductId,
+    Guid? ProductId,
     Guid? StockUnitId,
     string? Imei,
     string Description,
@@ -180,7 +180,7 @@ internal sealed class ReturnValidator : AbstractValidator<ReturnRequest>
     }
 }
 
-internal sealed class SaleService(
+internal sealed partial class SaleService(
     HandyNetDbContext db,
     ITenantContext tenant,
     IInventory inventory,
@@ -554,7 +554,7 @@ internal sealed class SaleService(
         {
             var restocked = line.StockUnitId is { } unitId
                 ? await inventory.StageReturnUnitAsync(unitId, reference, ct)
-                : await inventory.StageReturnAsync(original.WarehouseId, line.ProductId, -line.Quantity, reference, ct);
+                : await inventory.StageReturnAsync(original.WarehouseId, line.ProductId!.Value, -line.Quantity, reference, ct);
             if (!restocked.IsSuccess)
                 return restocked.Error!;
         }

@@ -111,8 +111,8 @@ public class PosCashCountTests
         var session = CashSession.Open(org, register, 10_00, Guid.NewGuid(), now, [new DenominationCount(500, 2)]).Value;
         var summary = SessionCalculator.Summarize(10_00, [], []);
         Assert.Equal("pos.denominations_mismatch",
-            session.Close(summary, 10_00, null, Guid.NewGuid(), now, [new DenominationCount(500, 1)]).Error?.Code);
-        Assert.True(session.Close(summary, 9_00, null, Guid.NewGuid(), now, [new DenominationCount(500, 1), new DenominationCount(200, 2)]).IsSuccess);
+            session.Close(summary, 10_00, null, Guid.NewGuid(), now, 1, [new DenominationCount(500, 1)]).Error?.Code);
+        Assert.True(session.Close(summary, 9_00, null, Guid.NewGuid(), now, 1, [new DenominationCount(500, 1), new DenominationCount(200, 2)]).IsSuccess);
         Assert.Equal((10_00L, 9_00L, -1_00L), (session.ExpectedCashMinor!.Value, session.CountedCashMinor!.Value, session.DifferenceMinor!.Value));
         Assert.Equal(2, session.ClosingDenominations!.Count);
         Assert.Equal(2, session.OpeningDenominations!.Single().Count);

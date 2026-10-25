@@ -45,11 +45,11 @@ internal sealed class DsfinvkExportService(
         var seller = await organizations.GetLegalDetailsAsync(organizationId, ct)
                      ?? throw new InvalidOperationException("Organization of the current tenant not found.");
 
-        // Z_NR: the closing number of the register (1, 2, … in closing order over the register's whole history).
+        // Z_NR: the gapless Z number of the register, assigned at closing (DB-enforced; older closings backfilled in closing order).
         var closed = await db.Set<CashSession>().AsNoTracking()
             .Where(s => s.RegisterId == registerId && s.Status == CashSessionStatus.Closed)
-            .OrderBy(s => s.ClosedAt).ThenBy(s => s.Id).ToListAsync(ct);
-        var zNumbers = closed.Select((s, i) => (s.Id, Number: i + 1L)).ToDictionary(x => x.Id, x => x.Number);
+            .OrderBy(s => s.ZNumber).ToListAsync(ct);
+        var zNumbers = closed.ToDictionary(s => s.Id, s => s.ZNumber!.Value);
         var sessions = closed.Where(s => BusinessDay(s.ClosedAt!.Value) >= from && BusinessDay(s.ClosedAt.Value) <= to).ToList();
         var sessionIds = sessions.Select(s => s.Id).ToList();
 
@@ -82,7 +82,7 @@ internal sealed class DsfinvkExportService(
             tables["vat"].Add([.. Key(), 1, "19.00", "Regelsteuersatz"]);
 
             foreach (var group in sessionReceipts.SelectMany(r => r.Lines).GroupBy(l => (Key: VatKey(l), l.TaxTreatment)))
-                tables["businesscases"].Add([.. Key(), "Umsatz", group.Key.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "",
+                tables["businesscases"].Add([.. Key(), BusinessCase(group.Key.TaxTreatment), group.Key.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "",
                     "", group.Key.Key, Money(group.Sum(l => l.LineGrossMinor)), Money(group.Sum(l => l.NetMinor)), Money(group.Sum(l => l.VatMinor))]);
             foreach (var group in movements.Where(m => m.SessionId == session.Id).GroupBy(BusinessCase))
             {
@@ -135,9 +135,9 @@ internal sealed class DsfinvkExportService(
 
                 foreach (var line in receipt.Lines.OrderBy(l => l.LineNumber))
                 {
-                    tables["lines"].Add([.. BonKey(), line.LineNumber, "", Description(line), kasse, "Umsatz",
+                    tables["lines"].Add([.. BonKey(), line.LineNumber, "", Description(line), kasse, BusinessCase(line.TaxTreatment),
                         line.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "", 0, receipt.Kind == ReceiptKind.Storno ? 1 : 0,
-                        "", line.ProductId.ToString(), "", "", "", Quantity(line.Quantity), "1", "Stück", Money(line.UnitPriceMinor)]);
+                        "", line.ProductId?.ToString() ?? "", "", "", "", Quantity(line.Quantity), "1", "Stück", Money(line.UnitPriceMinor)]);
                     tables["lines_vat"].Add([.. BonKey(), line.LineNumber, VatKey(line), Money(line.LineGrossMinor), Money(line.NetMinor), Money(line.VatMinor)]);
                 }
             }
@@ -210,8 +210,12 @@ internal sealed class DsfinvkExportService(
     {
         ReceiptKind.Storno => "Storno",
         ReceiptKind.Return => "Rückgabe",
+        ReceiptKind.InvoicePayment => "Forderungsauflösung",
         _ => "Verkauf",
     };
+
+    /// <summary>GV_TYP: an invoice paid at the till settles a receivable ("Forderungsaufloesung", not taxable); everything else is turnover.</summary>
+    private static string BusinessCase(TaxTreatment treatment) => treatment == TaxTreatment.NotTaxable ? "Forderungsaufloesung" : "Umsatz";
 
     private static string Description(ReceiptLine line) => line.Imei is { } imei ? $"{line.Description} (IMEI {imei})" : line.Description;
 

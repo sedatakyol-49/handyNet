@@ -19,7 +19,7 @@ public sealed record CashPayoutResult(Guid CashMovementId, Guid SessionId, Guid 
 public sealed record PayoutRegister(Guid Id, string Name, Guid? OpenSessionId, long? ExpectedCashMinor);
 
 /// <summary>
-/// Payouts from a till for other modules (Ankauf → Pos, ADR-0015). The call joins the caller's open database transaction, so
+/// Payouts from a till for other modules (Ankauf → Pos, ADR-0016). The call joins the caller's open database transaction, so
 /// "intake paid + stocked" and "cash taken from the drawer" commit together or not at all. The payout is a cash withdrawal
 /// with a system reason code, needs an open cash session, the POS module and the right <c>pos.cash_movement</c>, cannot exceed
 /// the expected cash, and is signed by the fiscal layer as <c>SonstigerVorgang</c> like any cash movement.

@@ -91,7 +91,7 @@ payouts. **No claim of legal completeness** — the template needs review by a t
 
 ## Decision — Ankauf seller-data retention
 
-> **Update 2026-10-25 (ADR-0015):** anonymization also removes the new seller fields (omitted from the JSON) and the signature images of the intake; unused self check-ins lose their personal data 24 h after expiry, independently of the retention years.
+> **Update 2026-10-25 (ADR-0016):** anonymization also removes the new seller fields (omitted from the JSON) and the signature images of the intake; unused self check-ins lose their personal data 24 h after expiry, independently of the retention years.
 
 - `Ankauf:SellerDataRetentionYears` (int, 1–30). **Default null = disabled** because the legal period is not confirmed;
   the API logs a warning at startup in Production while it is disabled.

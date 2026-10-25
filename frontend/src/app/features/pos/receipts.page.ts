@@ -166,7 +166,7 @@ export class PosReceiptsPage {
   protected readonly page = signal(1);
   protected readonly scopes: SalesScope[] = ['session', 'register', 'all'];
   protected readonly methods = POS_PAYMENT_METHODS;
-  protected readonly kinds: ReceiptKind[] = ['Sale', 'Return', 'Storno'];
+  protected readonly kinds: ReceiptKind[] = ['Sale', 'Return', 'Storno', 'InvoicePayment'];
   protected readonly pickCustomer = signal(false);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });

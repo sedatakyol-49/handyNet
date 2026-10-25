@@ -8,7 +8,7 @@ export interface NavItem {
   /** Visible regardless of verification state (not a module page). */
   always?: boolean;
   adminOnly?: boolean;
-  badge?: 'cart';
+  badge?: 'cart' | 'overdueInvoices';
   /** Active only on exactly this path (not on child paths that have their own entry). */
   exact?: boolean;
   /** Further path prefixes that also mark this entry active (e.g. detail pages under another path). */
@@ -28,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/finanzen', labelKey: 'nav.finance', module: 'B2BSales', permission: 'orders.fulfil', exact: true, section: 'sales' },
   { path: '/app/finanzen/rechnungen', labelKey: 'nav.invoices', module: 'B2BSales', permission: 'orders.fulfil', section: 'sales' },
   { path: '/app/angebote', labelKey: 'nav.offers', module: 'B2BSales', section: 'sales' },
+  { path: '/app/verkauf/rechnungen', labelKey: 'nav.salesDocuments', module: 'Pos', permission: 'pos.sell', badge: 'overdueInvoices', alsoActive: ['/app/verkauf'], section: 'sales' },
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
   { path: '/app/berichte/tagesbericht', labelKey: 'nav.dailyReport', permission: 'reports.read', always: true, section: 'main' },

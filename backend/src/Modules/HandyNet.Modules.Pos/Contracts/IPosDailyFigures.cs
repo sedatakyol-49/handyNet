@@ -9,7 +9,9 @@ public sealed record PosSessionFigure(Guid SessionId, string RegisterName, strin
 
 /// <summary>
 /// The current organization's till figures for a period (receipts by creation time). Amounts in cents, signed (refunds negative).
-/// VAT per treatment is the stored receipt VAT (for §25a lines the margin VAT; never per product, ADR-0008).
+/// VAT per treatment is the stored receipt VAT (for §25a lines the margin VAT; never per product, ADR-0008). Sales figures
+/// cover sale, Storno and return receipts; payments of sales invoices at the till (receipt kind InvoicePayment) are counted
+/// separately (the invoice carries the revenue). Sales invoices: issued in the period, net of credit notes (gross).
 /// </summary>
 public sealed record PosDayFigures(
     int SaleCount,
@@ -27,7 +29,11 @@ public sealed record PosDayFigures(
     int AnkaufPayoutCount,
     long AnkaufPayoutsMinor,
     int InvoiceCount,
-    IReadOnlyList<PosSessionFigure> Sessions);
+    IReadOnlyList<PosSessionFigure> Sessions,
+    int InvoicePaymentCount = 0,
+    long InvoicePaymentsMinor = 0,
+    int SalesInvoiceCount = 0,
+    long SalesInvoicesGrossMinor = 0);
 
 /// <summary>Read API of the POS module for the daily business report (Reporting module).</summary>
 public interface IPosDailyFigures

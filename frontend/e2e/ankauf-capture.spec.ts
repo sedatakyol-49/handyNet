@@ -2,7 +2,7 @@ import { Page, expect, test } from '@playwright/test';
 import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, drawSignature, hasAdmin, login, logout, publishAnkaufList, randomImei } from './support/handynet';
 
 /**
- * Ankauf with seller capture, signature and till payout (ADR-0015):
+ * Ankauf with seller capture, signature and till payout (ADR-0016):
  * 1. MRZ paste (German specimen passport, as a keyboard-wedge scanner would type it) fills the seller form; the seller
  *    signs price + declaration on screen; the cash is taken from the open till; the Z-report (interim) shows the Ankauf
  *    section and the Tagesbericht lists the purchase.

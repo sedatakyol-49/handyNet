@@ -82,8 +82,13 @@ internal sealed class PosDailyFigures(HandyNetDbContext db, ITenantContext tenan
         var org = tenant.RequiredOrganizationId;
         var fromUtc = from.ToUniversalTime();
         var untilUtc = until.ToUniversalTime();
-        var receipts = await db.Set<Receipt>().AsNoTracking().Include(r => r.Lines).Include(r => r.Payments)
+        var all = await db.Set<Receipt>().AsNoTracking().Include(r => r.Lines).Include(r => r.Payments)
             .Where(r => r.OrganizationId == org && r.CreatedAt >= fromUtc && r.CreatedAt < untilUtc).AsSplitQuery().ToListAsync(ct);
+        var receipts = all.Where(r => r.Kind != ReceiptKind.InvoicePayment).ToList();
+        var invoicePayments = all.Where(r => r.Kind == ReceiptKind.InvoicePayment).ToList();
+        var salesInvoices = await db.Set<SalesInvoice>().AsNoTracking()
+            .Where(i => i.OrganizationId == org && i.IssuedAt >= fromUtc && i.IssuedAt < untilUtc)
+            .Select(i => new { i.Kind, i.TotalGrossMinor }).ToListAsync(ct);
         var movements = await (from m in db.Set<CashMovement>().AsNoTracking()
                                where m.OrganizationId == org && m.CreatedAt >= fromUtc && m.CreatedAt < untilUtc
                                select m).ToListAsync(ct);
@@ -114,7 +119,7 @@ internal sealed class PosDailyFigures(HandyNetDbContext db, ITenantContext tenan
             receipts.Count(r => r.Kind == ReceiptKind.Storno),
             receipts.Count(r => r.Kind == ReceiptKind.Return),
             receipts.Where(r => r.Kind == ReceiptKind.Sale).Sum(r => r.TotalGrossMinor),
-            receipts.Where(r => r.Kind != ReceiptKind.Sale).Sum(r => r.TotalGrossMinor),
+            receipts.Where(r => r.Kind is ReceiptKind.Storno or ReceiptKind.Return).Sum(r => r.TotalGrossMinor),
             gross,
             gross - vat,
             vat,
@@ -130,6 +135,10 @@ internal sealed class PosDailyFigures(HandyNetDbContext db, ITenantContext tenan
             ankauf.Count,
             ankauf.Sum(m => m.AmountMinor),
             invoices,
-            sessionFigures);
+            sessionFigures,
+            invoicePayments.Count,
+            invoicePayments.Sum(r => r.TotalGrossMinor),
+            salesInvoices.Count(i => i.Kind == SalesInvoiceKind.Invoice),
+            salesInvoices.Sum(i => i.TotalGrossMinor));
     }
 }

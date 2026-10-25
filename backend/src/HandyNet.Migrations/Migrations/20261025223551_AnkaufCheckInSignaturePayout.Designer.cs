@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261025095221_AnkaufCheckInSignaturePayout")]
+    [Migration("20261025223551_AnkaufCheckInSignaturePayout")]
     partial class AnkaufCheckInSignaturePayout
     {
         /// <inheritdoc />
@@ -2724,6 +2724,20 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<byte[]>("AttachmentContent")
+                        .HasColumnType("bytea")
+                        .HasColumnName("attachment_content");
+
+                    b.Property<string>("AttachmentContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("attachment_content_type");
+
+                    b.Property<string>("AttachmentName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("attachment_name");
+
                     b.Property<int>("Attempts")
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
@@ -3323,6 +3337,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
+                    b.Property<long?>("ZNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("z_number");
+
                     b.HasKey("Id")
                         .HasName("pk_cash_sessions");
 
@@ -3334,6 +3352,11 @@ namespace HandyNet.Migrations.Migrations
                         .HasDatabaseName("ux_cash_sessions_one_open_per_register")
                         .HasFilter("status = 'Open'");
 
+                    b.HasIndex("RegisterId", "ZNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cash_sessions_z_number")
+                        .HasFilter("z_number IS NOT NULL");
+
                     b.HasIndex("OrganizationId", "RegisterId", "OpenedAt")
                         .HasDatabaseName("ix_cash_sessions_organization_id_register_id_opened_at");
 
@@ -3342,6 +3365,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_cash_sessions_closed", "status = 'Open' OR (closed_at IS NOT NULL AND closed_by IS NOT NULL AND summary IS NOT NULL AND counted_cash_minor >= 0 AND expected_cash_minor IS NOT NULL AND difference_minor = counted_cash_minor - expected_cash_minor)");
 
                             t.HasCheckConstraint("ck_cash_sessions_opening", "opening_cash_minor >= 0");
+
+                            t.HasCheckConstraint("ck_cash_sessions_z_number", "(status = 'Open' AND z_number IS NULL) OR (status = 'Closed' AND z_number >= 1)");
                         });
                 });
 
@@ -3835,6 +3860,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("requested_by_user_id");
 
+                    b.Property<Guid?>("SalesInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_invoice_id");
+
                     b.Property<Guid?>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -3869,6 +3898,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasDatabaseName("ix_approvals_receipt_id")
                         .HasFilter("receipt_id IS NOT NULL");
 
+                    b.HasIndex("SalesInvoiceId")
+                        .HasDatabaseName("ix_approvals_sales_invoice_id")
+                        .HasFilter("sales_invoice_id IS NOT NULL");
+
                     b.HasIndex("SessionId")
                         .HasDatabaseName("ix_approvals_session_id")
                         .HasFilter("session_id IS NOT NULL");
@@ -3883,6 +3916,9 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("OrganizationId", "RegisterId")
                         .HasDatabaseName("ix_approvals_organization_id_register_id");
 
+                    b.HasIndex("OrganizationId", "SalesInvoiceId")
+                        .HasDatabaseName("ix_approvals_organization_id_sales_invoice_id");
+
                     b.HasIndex("OrganizationId", "SessionId")
                         .HasDatabaseName("ix_approvals_organization_id_session_id");
 
@@ -3894,7 +3930,7 @@ namespace HandyNet.Migrations.Migrations
 
                             t.HasCheckConstraint("ck_approvals_times", "expires_at > created_at");
 
-                            t.HasCheckConstraint("ck_approvals_use", "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL) OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id) = 1)");
+                            t.HasCheckConstraint("ck_approvals_use", "(used_at IS NULL AND used_for IS NULL AND receipt_id IS NULL AND cash_movement_id IS NULL AND session_id IS NULL AND sales_invoice_id IS NULL) OR (used_at IS NOT NULL AND used_for IS NOT NULL AND num_nonnulls(receipt_id, cash_movement_id, session_id, sales_invoice_id) = 1)");
                         });
                 });
 
@@ -3909,6 +3945,18 @@ namespace HandyNet.Migrations.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("customer");
+
+                    b.Property<string>("CustomerCompany")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_company")
+                        .HasComputedColumnSql("customer ->> 'company'", true);
+
+                    b.Property<string>("CustomerName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_name")
+                        .HasComputedColumnSql("customer ->> 'name'", true);
 
                     b.Property<string>("Document")
                         .IsRequired()
@@ -4047,6 +4095,188 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("prices", "pos", t =>
                         {
                             t.HasCheckConstraint("ck_prices_price", "price_minor IS NULL OR price_minor > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Quotation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ConvertedInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("converted_invoice_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Customer")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("customer");
+
+                    b.Property<string>("CustomerCompany")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_company")
+                        .HasComputedColumnSql("customer ->> 'company'", true);
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("CustomerName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_name")
+                        .HasComputedColumnSql("customer ->> 'name'", true);
+
+                    b.Property<DateOnly>("IssueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("issue_date");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("lines");
+
+                    b.Property<long>("MarginGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("margin_gross_minor");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("PriceMode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("price_mode");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.Property<string>("Vat")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("vat");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quotations");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_quotations_organization_id_id");
+
+                    b.HasIndex("OrganizationId", "ConvertedInvoiceId")
+                        .HasDatabaseName("ix_quotations_organization_id_converted_invoice_id");
+
+                    b.HasIndex("OrganizationId", "CustomerId")
+                        .HasDatabaseName("ix_quotations_organization_id_customer_id")
+                        .HasFilter("customer_id IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "IssueDate")
+                        .HasDatabaseName("ix_quotations_organization_id_issue_date");
+
+                    b.HasIndex("OrganizationId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotations_organization_id_number");
+
+                    b.HasIndex("OrganizationId", "Year", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotations_organization_id_year_sequence_number");
+
+                    b.ToTable("quotations", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_quotations_converted", "converted_invoice_id IS NULL OR status = 'Accepted'");
+
+                            t.HasCheckConstraint("ck_quotations_number", "sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'AN-' || year::text || '-' || CASE WHEN sequence_number < 10000 THEN lpad(sequence_number::text, 4, '0') ELSE sequence_number::text END");
+
+                            t.HasCheckConstraint("ck_quotations_totals", "total_net_minor + total_vat_minor = total_gross_minor AND total_gross_minor >= 0");
+
+                            t.HasCheckConstraint("ck_quotations_valid_until", "valid_until >= issue_date");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.QuotationSequence", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<long>("NextNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_number");
+
+                    b.HasKey("OrganizationId", "Year")
+                        .HasName("pk_quotation_sequences");
+
+                    b.ToTable("quotation_sequences", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_quotation_sequences_next", "next_number >= 2");
                         });
                 });
 
@@ -4213,6 +4443,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("rounding_minor");
 
+                    b.Property<Guid?>("SalesInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_invoice_id");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
@@ -4244,6 +4478,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasDatabaseName("ux_receipts_one_storno")
                         .HasFilter("kind = 'Storno'");
 
+                    b.HasIndex("SalesInvoiceId")
+                        .HasDatabaseName("ix_receipts_sales_invoice_id")
+                        .HasFilter("sales_invoice_id IS NOT NULL");
+
                     b.HasIndex("OrganizationId", "CreatedAt")
                         .HasDatabaseName("ix_receipts_organization_id_created_at");
 
@@ -4262,6 +4500,9 @@ namespace HandyNet.Migrations.Migrations
                     b.HasIndex("OrganizationId", "RegisterId")
                         .HasDatabaseName("ix_receipts_organization_id_register_id");
 
+                    b.HasIndex("OrganizationId", "SalesInvoiceId")
+                        .HasDatabaseName("ix_receipts_organization_id_sales_invoice_id");
+
                     b.HasIndex("OrganizationId", "SessionId")
                         .HasDatabaseName("ix_receipts_organization_id_session_id");
 
@@ -4277,7 +4518,7 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("receipts", "pos", t =>
                         {
-                            t.HasCheckConstraint("ck_receipts_kind", "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL) OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL)");
+                            t.HasCheckConstraint("ck_receipts_kind", "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NULL) OR (kind = 'InvoicePayment' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NOT NULL) OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL AND sales_invoice_id IS NULL)");
 
                             t.HasCheckConstraint("ck_receipts_number", "number >= 1");
 
@@ -4372,7 +4613,7 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("original_line_number");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
 
@@ -4426,6 +4667,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_receipt_lines_amounts", "line_gross_minor = unit_price_minor * quantity - discount_minor AND net_minor + vat_minor = line_gross_minor");
 
                             t.HasCheckConstraint("ck_receipt_lines_margin", "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_receipt_lines_product", "(product_id IS NOT NULL AND tax_treatment <> 'NotTaxable') OR (product_id IS NULL AND tax_treatment = 'NotTaxable' AND stock_unit_id IS NULL AND vat_minor = 0)");
 
                             t.HasCheckConstraint("ck_receipt_lines_quantity", "quantity <> 0 AND unit_price_minor > 0");
                         });
@@ -4592,6 +4835,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("next_receipt_number");
 
+                    b.Property<long>("NextZNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("next_z_number");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
@@ -4624,6 +4871,332 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_registers_auto_lock", "auto_lock_minutes BETWEEN 1 AND 240");
 
                             t.HasCheckConstraint("ck_registers_next_number", "next_receipt_number >= 1");
+
+                            t.HasCheckConstraint("ck_registers_next_z_number", "next_z_number >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SalesDocumentEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("document_id");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("document_type");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_document_emails");
+
+                    b.HasIndex("OrganizationId", "DocumentType", "DocumentId")
+                        .HasDatabaseName("ix_sales_document_emails_organization_id_document_type_documen");
+
+                    b.ToTable("sales_document_emails", "pos");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SalesInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Customer")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("customer");
+
+                    b.Property<string>("CustomerCompany")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_company")
+                        .HasComputedColumnSql("customer ->> 'company'", true);
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("CustomerName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasColumnName("customer_name")
+                        .HasComputedColumnSql("customer ->> 'name'", true);
+
+                    b.Property<string>("Document")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<DateOnly?>("InvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("invoice_date");
+
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<Guid?>("IssuedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("issued_by");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("lines");
+
+                    b.Property<string>("MarginDetails")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("margin_details");
+
+                    b.Property<long>("MarginGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("margin_gross_minor");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Number")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("number");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid?>("OriginalInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("original_invoice_id");
+
+                    b.Property<int>("PaymentTermDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_term_days");
+
+                    b.Property<string>("PriceMode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("price_mode");
+
+                    b.Property<Guid?>("QuotationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quotation_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<bool>("ReverseCharge")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reverse_charge");
+
+                    b.Property<long?>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<DateOnly?>("ServiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("service_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TotalGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_gross_minor");
+
+                    b.Property<long>("TotalNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_net_minor");
+
+                    b.Property<long>("TotalVatMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_vat_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Vat")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("vat");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_invoices");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_sales_invoice_organization_id_id");
+
+                    b.HasIndex("OriginalInvoiceId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_sales_invoices_one_credit_note")
+                        .HasFilter("original_invoice_id IS NOT NULL");
+
+                    b.HasIndex("QuotationId")
+                        .HasDatabaseName("ix_sales_invoices_quotation_id")
+                        .HasFilter("quotation_id IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "CustomerId")
+                        .HasDatabaseName("ix_sales_invoices_organization_id_customer_id")
+                        .HasFilter("customer_id IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_invoices_organization_id_number")
+                        .HasFilter("number IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "OriginalInvoiceId")
+                        .HasDatabaseName("ix_sales_invoices_organization_id_original_invoice_id");
+
+                    b.HasIndex("OrganizationId", "WarehouseId")
+                        .HasDatabaseName("ix_sales_invoices_organization_id_warehouse_id");
+
+                    b.HasIndex("OrganizationId", "Status", "DueDate")
+                        .HasDatabaseName("ix_sales_invoices_organization_id_status_due_date");
+
+                    b.HasIndex("OrganizationId", "Year", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_invoices_organization_id_year_sequence_number")
+                        .HasFilter("sequence_number IS NOT NULL");
+
+                    b.ToTable("sales_invoices", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_sales_invoices_number", "(status IN ('Draft', 'Discarded') AND number IS NULL AND year IS NULL AND sequence_number IS NULL AND issued_at IS NULL AND document IS NULL) OR (status = 'Issued' AND sequence_number >= 1 AND year BETWEEN 2000 AND 9999 AND number = 'RE-' || year::text || '-' || lpad(sequence_number::text, 6, '0') AND invoice_date IS NOT NULL AND due_date IS NOT NULL AND service_date IS NOT NULL AND customer IS NOT NULL AND document IS NOT NULL AND issued_at IS NOT NULL AND issued_by IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_sales_invoices_terms", "payment_term_days BETWEEN 0 AND 365 AND (due_date IS NULL OR due_date >= invoice_date)");
+
+                            t.HasCheckConstraint("ck_sales_invoices_totals", "total_net_minor + total_vat_minor = total_gross_minor AND ((kind = 'Invoice' AND original_invoice_id IS NULL AND total_gross_minor >= 0 AND total_vat_minor >= 0 AND (status <> 'Issued' OR total_gross_minor > 0)) OR (kind = 'CreditNote' AND status = 'Issued' AND original_invoice_id IS NOT NULL AND total_gross_minor < 0 AND total_vat_minor <= 0 AND reason IS NOT NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SalesInvoicePayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("method");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateOnly>("PaidOn")
+                        .HasColumnType("date")
+                        .HasColumnName("paid_on");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reference");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_invoice_payments");
+
+                    b.HasIndex("ReceiptId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_invoice_payments_receipt_id")
+                        .HasFilter("receipt_id IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "InvoiceId")
+                        .HasDatabaseName("ix_sales_invoice_payments_organization_id_invoice_id");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_sales_invoice_payments_organization_id_receipt_id");
+
+                    b.ToTable("sales_invoice_payments", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_sales_invoice_payments_amount", "amount_minor > 0");
+
+                            t.HasCheckConstraint("ck_sales_invoice_payments_cash", "method <> 'Cash' OR receipt_id IS NOT NULL");
                         });
                 });
 
@@ -5973,6 +6546,13 @@ namespace HandyNet.Migrations.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_approvals_registers_organization_id_register_id");
 
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SalesInvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_approvals_sales_invoice_organization_id_sales_invoice_id");
+
                     b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId", "SessionId")
@@ -6002,6 +6582,23 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_prices_products_product_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Quotation", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ConvertedInvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_quotations_sales_invoice_organization_id_converted_invoice_");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_quotations_customers_organization_id_customer_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.Receipt", b =>
                 {
                     b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
@@ -6025,6 +6622,13 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_receipts_registers_organization_id_register_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "SalesInvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipts_sales_invoice_organization_id_sales_invoice_id");
 
                     b.HasOne("HandyNet.Modules.Pos.Domain.CashSession", null)
                         .WithMany()
@@ -6060,7 +6664,6 @@ namespace HandyNet.Migrations.Migrations
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_receipt_lines_products_product_id");
 
                     b.HasOne("HandyNet.Modules.Inventory.Domain.StockUnit", null)
@@ -6120,6 +6723,48 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_registers_warehouses_organization_id_warehouse_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SalesInvoice", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_invoices_customers_organization_id_customer_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "OriginalInvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_invoices_sales_invoices_organization_id_original_invo");
+
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "WarehouseId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_invoices_warehouses_organization_id_warehouse_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SalesInvoicePayment", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.SalesInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "InvoiceId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_invoice_payments_sales_invoices_organization_id_invoi");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_invoice_payments_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.SimulatedTseTransaction", b =>

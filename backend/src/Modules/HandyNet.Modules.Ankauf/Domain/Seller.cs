@@ -31,7 +31,7 @@ public enum SellerCaptureMethod
 
 /// <summary>
 /// Who sold the device. Personal data: kept only as long as legal record-keeping requires (ADR-0009) and anonymized afterwards.
-/// The optional members were added later (ADR-0015); they are omitted from the stored JSON while null, so older intakes and
+/// The optional members were added later (ADR-0016); they are omitted from the stored JSON while null, so older intakes and
 /// the anonymized placeholder (checked by the database) keep their exact form.
 /// </summary>
 public sealed record SellerDetails(
@@ -75,7 +75,7 @@ public sealed record SellerDetails(
 
 }
 
-/// <summary>Rules for the seller's identity at the time of purchase (ADR-0007, ADR-0015).</summary>
+/// <summary>Rules for the seller's identity at the time of purchase (ADR-0007, ADR-0016).</summary>
 public static partial class SellerRules
 {
     public const int MinimumAge = 18;

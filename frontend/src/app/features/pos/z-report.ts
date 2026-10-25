@@ -16,7 +16,7 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
     @let s = session();
     @let z = s.summary;
     <article class="pos-card p-4 text-sm" [class.hn-print-area]="printable()" aria-labelledby="z-heading" data-testid="z-report">
-      <h2 id="z-heading" class="mb-1 text-base">{{ (s.status === 'Closed' ? 'pos.z.title' : 'pos.z.interimTitle') | t }}</h2>
+      <h2 id="z-heading" class="mb-1 text-base">{{ (s.status === 'Closed' ? 'pos.z.title' : 'pos.z.interimTitle') | t }}@if (s.zNumber) {<span data-testid="z-number"> · {{ 'pos.z.number' | t: { number: s.zNumber } }}</span>}</h2>
       <p class="mb-3 text-xs text-slate-600">
         {{ s.registerName }} · {{ s.openedAt | hnDate }} – {{ s.closedAt ? (s.closedAt | hnDate) : ('pos.z.stillOpen' | t) }}
       </p>
@@ -40,6 +40,10 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
         <dd class="text-end tabular-nums text-slate-600">{{ z.returnCount }}</dd>
         <dt class="ps-3 text-slate-600">{{ 'receiptKind.Storno' | t }}</dt>
         <dd class="text-end tabular-nums text-slate-600">{{ z.stornoCount }}</dd>
+        @if (z.invoicePaymentCount) {
+          <dt class="ps-3 text-slate-600">{{ 'receiptKind.InvoicePayment' | t }}</dt>
+          <dd class="text-end tabular-nums text-slate-600" data-testid="z-invoice-payments">{{ z.invoicePaymentCount }} · {{ (z.invoicePaymentsMinor ?? 0) | money }}</dd>
+        }
       </dl>
 
       <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.revenue' | t }}</h3>

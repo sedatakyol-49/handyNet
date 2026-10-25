@@ -23,6 +23,7 @@ public static class NotificationsModule
         services.AddScoped<IOutboxHandler, EmailVerificationRequestedHandler>();
         services.AddScoped<IOutboxHandler, PasswordResetRequestedHandler>();
         services.AddScoped<IOutboxHandler, ReceiptEmailRequestedHandler>();
+        services.AddScoped<IOutboxHandler, SalesDocumentEmailRequestedHandler>();
 
         if (string.IsNullOrWhiteSpace(configuration[$"{NotificationOptions.Section}:Smtp:Host"]))
             services.AddSingleton<IEmailSender, LoggingEmailSender>();

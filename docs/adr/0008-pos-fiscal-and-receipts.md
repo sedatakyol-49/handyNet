@@ -200,6 +200,10 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
 
 ### Invoices for POS sales (Rechnung, §14 UStG)
 
+> **Update 2026-10-25:** [ADR-0015](0015-quotations-sales-invoices-and-z-numbers.md) adds quotations and sales invoices outside the
+> till. Both kinds of invoices share this one gapless series per organization and year (triggers check both tables), and
+> closings get a gapless Z number.
+
 - `POST /api/pos/sales/{id}/invoice` {customer | null = the receipt's customer} issues one invoice per sale receipt
   (repeat = the same invoice, 200). Refused for refund receipts, cancelled or (partly) returned sales (a correction invoice
   is not supported yet), without the seller's VAT id, and without the customer's name and full address.
@@ -223,7 +227,7 @@ a DSFinV-K export; used devices bought from private persons are taxed under the 
 
 ## Consequences
 
-> **Update 2026-10-25 (ADR-0015):** system cash-movement reason `Ankauf` (payout to a private seller via `ICashPayouts`, not selectable manually); the Z-report shows Ankauf count and cash paid out.
+> **Update 2026-10-25 (ADR-0016):** system cash-movement reason `Ankauf` (payout to a private seller via `ICashPayouts`, not selectable manually); the Z-report shows Ankauf count and cash paid out.
 
 - The till cannot be used in production until a certified TSE adapter exists. A real adapter must also handle TSE
   outages (KassenSichV allows selling with a "TSE ausgefallen" mark) — the current interface returns `Result` so that

@@ -167,6 +167,16 @@ public sealed class CapturingEmailSender : IEmailSender
     /// <summary>HTML alternatives of sent emails (e-receipts), by recipient and subject.</summary>
     public ConcurrentQueue<(string To, string Subject, string Html)> SentHtml { get; } = new();
 
+    /// <summary>Attachments of sent emails (quotation / invoice PDFs).</summary>
+    public ConcurrentQueue<(string To, string Subject, string FileName, string ContentType, byte[] Content)> SentAttachments { get; } = new();
+
+    public Task SendAsync(string to, string subject, string body, string? htmlBody, HandyNet.Modules.Notifications.Domain.EmailAttachment attachment,
+        CancellationToken ct)
+    {
+        SentAttachments.Enqueue((to, subject, attachment.FileName, attachment.ContentType, attachment.Content));
+        return SendAsync(to, subject, body, htmlBody, ct);
+    }
+
     public Task SendAsync(string to, string subject, string body, CancellationToken ct)
     {
         Sent.Enqueue((to, subject, body));

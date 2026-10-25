@@ -103,6 +103,19 @@ import {
   BulkModerationResult,
   OwnModeration,
   SellerModerationResult,
+  CollectInvoiceResult,
+  InvoiceListItem,
+  InvoicePaymentMethod,
+  PosPaymentMethod,
+  Quotation,
+  QuotationRequest,
+  QuotationSummary,
+  SalesEmailResult,
+  SalesInvoice,
+  SalesInvoiceRequest,
+  SalesInvoiceSummary,
+  SalesQuery,
+  SalesWarehouse,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -1041,5 +1054,122 @@ export class AdminInvoicesApi {
   /** All documents with the given billing month across sellers, ordered by number. */
   forMonth(month: string): Observable<InvoiceSummary[]> {
     return this.http.get<InvoiceSummary[]>(this.url, { params: queryParams({ month }) });
+  }
+}
+
+/**
+ * Quotations and sales invoices outside the till (module Pos, `pos.sell`; credit notes `pos.refund` or a manager approval).
+ * Invoices share the organization's single gapless series with invoices for POS sales.
+ */
+@Injectable({ providedIn: 'root' })
+export class SalesApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/pos`;
+
+  warehouses(): Observable<SalesWarehouse[]> {
+    return this.http.get<SalesWarehouse[]>(`${this.url}/sales-warehouses`);
+  }
+
+  products(warehouseId: string, q: { search?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number }): Observable<Paged<PosProduct>> {
+    return this.http.get<Paged<PosProduct>>(`${this.url}/warehouses/${warehouseId}/products`, { params: queryParams(q) });
+  }
+
+  /** EAN or IMEI; without a register the stock figures are omitted. */
+  lookup(code: string, registerId?: string | null): Observable<PosLookup> {
+    return this.http.get<PosLookup>(`${this.url}/lookup`, { params: queryParams({ code, registerId }) });
+  }
+
+  // ---- quotations
+  quotations(q: SalesQuery): Observable<Paged<QuotationSummary>> {
+    return this.http.get<Paged<QuotationSummary>>(`${this.url}/quotations`, { params: queryParams(q) });
+  }
+
+  quotation(id: string): Observable<Quotation> {
+    return this.http.get<Quotation>(`${this.url}/quotations/${id}`);
+  }
+
+  createQuotation(body: QuotationRequest): Observable<Quotation> {
+    return this.http.post<Quotation>(`${this.url}/quotations`, body);
+  }
+
+  updateQuotation(id: string, body: QuotationRequest): Observable<Quotation> {
+    return this.http.put<Quotation>(`${this.url}/quotations/${id}`, body);
+  }
+
+  setQuotationStatus(id: string, status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected'): Observable<Quotation> {
+    return this.http.post<Quotation>(`${this.url}/quotations/${id}/status`, { status });
+  }
+
+  duplicateQuotation(id: string): Observable<Quotation> {
+    return this.http.post<Quotation>(`${this.url}/quotations/${id}/duplicate`, {});
+  }
+
+  /** Invoice draft from the quotation (201), or the existing one (200). */
+  convertQuotation(id: string): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/quotations/${id}/convert`, {});
+  }
+
+  emailQuotation(id: string, email: string | null): Observable<SalesEmailResult> {
+    return this.http.post<SalesEmailResult>(`${this.url}/quotations/${id}/email`, { email });
+  }
+
+  quotationPdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/quotations/${id}/pdf`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
+  }
+
+  // ---- invoices
+  invoices(q: SalesQuery): Observable<Paged<InvoiceListItem>> {
+    return this.http.get<Paged<InvoiceListItem>>(`${this.url}/sales-invoices`, { params: queryParams(q) });
+  }
+
+  summary(): Observable<SalesInvoiceSummary> {
+    return this.http.get<SalesInvoiceSummary>(`${this.url}/sales-invoices/summary`);
+  }
+
+  invoice(id: string): Observable<SalesInvoice> {
+    return this.http.get<SalesInvoice>(`${this.url}/sales-invoices/${id}`);
+  }
+
+  createInvoice(body: SalesInvoiceRequest): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices`, body);
+  }
+
+  updateInvoice(id: string, body: SalesInvoiceRequest): Observable<SalesInvoice> {
+    return this.http.put<SalesInvoice>(`${this.url}/sales-invoices/${id}`, body);
+  }
+
+  discardInvoice(id: string): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/discard`, {});
+  }
+
+  duplicateInvoice(id: string): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/duplicate`, {});
+  }
+
+  /** Idempotent: issuing an issued invoice returns it. */
+  issueInvoice(id: string): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/issue`, {});
+  }
+
+  recordPayment(id: string, body: { method: Exclude<InvoicePaymentMethod, 'Cash'>; amountMinor: number; paidOn?: string | null; reference?: string | null }): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/payments`, body);
+  }
+
+  /** "An der Kasse kassieren": a signed POS receipt over the amount; reuse the key when retrying the same attempt. */
+  collect(id: string, body: { registerId: string; amountMinor: number | null; payments: { method: PosPaymentMethod; amountMinor: number }[] }, idempotencyKey: string): Observable<CollectInvoiceResult> {
+    return this.http.post<CollectInvoiceResult>(`${this.url}/sales-invoices/${id}/collect`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
+  }
+
+  creditNote(id: string, body: { reason: string; registerId?: string | null }): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/credit-note`, body);
+  }
+
+  emailInvoice(id: string, email: string | null): Observable<SalesEmailResult> {
+    return this.http.post<SalesEmailResult>(`${this.url}/sales-invoices/${id}/email`, { email });
+  }
+
+  invoicePdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/sales-invoices/${id}/pdf`, { responseType: 'blob' }).pipe(catchError(parseBlobError));
   }
 }
