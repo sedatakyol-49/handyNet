@@ -325,6 +325,16 @@ Backend rules: `../docs/adr/0011-file-storage-and-product-images.md` and the Imp
   wizard (lookup result and after saving) and on Angebote ("Bilder"). Upload with preview (button or drop files),
   reorder by drag & drop or the earlier/later buttons, "Als Hauptbild", remove with inline confirmation. Image URLs are
   relative to the API base (`CatalogApi.imageUrl`).
+- **Lager product panel** (`features/inventory/product-panel`, ADR-0017): a stock row (click, Enter/Space on the focused
+  row, or "Details") opens a dialog with tabs (arrow keys, mirrored in RTL): **Bilder** (image manager when the product
+  detail says `canEdit`, else the read-only gallery), **Artikeldaten** (form → `PUT /api/catalog/products/{id}` with
+  `version`; categories with another stock mode are disabled; `product.ean_taken` / `product.identity_taken` show at
+  the field, `concurrency` offers "Neu laden"; unsaved changes ask before closing), **Preise & Angebot** (EK of the
+  latest goods receipt from the movements; own POS price with module Pos — `pos.sell` views, `pos.manage` edits; own
+  offer with module B2BSales — `offers.manage` edits or creates it for the row's warehouse, gross preview in integer
+  cents) and **Bestand** (`/api/inventory/stock?productId=` per warehouse, last 20 movements with EK, Korrigieren with
+  `inventory.manage`). A product of another company shows images and data read-only with the shared-catalog hint.
+  Section rules are pure and unit-tested in `product-panel.logic.ts`.
 - **Marktplatz**: no add-product action (products enter only via Lager or import). Filters in the URL: `q`,
   `category`, `brand`, `sellerId` (Verkäufer, multi-select with name + city and counts), `quality`, `condition`,
   `min`/`max` (net VK range, e.g. `19.90`), `days`, `model` (passend für), `images=1`, `stock=0`, `sort`, `page`.

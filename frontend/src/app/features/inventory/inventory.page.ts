@@ -10,10 +10,11 @@ import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { ManualEntryDialogComponent } from './manual-entry/manual-entry.dialog';
+import { ProductPanelComponent } from './product-panel/product-panel';
 
 @Component({
   selector: 'hn-inventory-page',
-  imports: [FormsModule, ...UI, ManualEntryDialogComponent],
+  imports: [FormsModule, ...UI, ManualEntryDialogComponent, ProductPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory.page.html',
 })
@@ -86,6 +87,43 @@ export class InventoryPage {
     return row.warehouseId + ':' + row.productId;
   }
 
+  // Product panel (Bilder, Artikeldaten, Preise & Angebot, Bestand) for one stock row
+  protected readonly panelRow = signal<StockRow | null>(null);
+  /** Bumped after a stock correction so the open panel re-reads its stock and movements. */
+  protected readonly panelRefresh = signal(0);
+
+  protected openPanel(row: StockRow): void {
+    this.activeRow.set(this.rowKey(row));
+    this.panelRow.set(row);
+  }
+
+  /** Row click opens the panel, except clicks on the row's own buttons. */
+  protected onRowClick(event: MouseEvent, row: StockRow): void {
+    if ((event.target as HTMLElement | null)?.closest('button, a, input, select, textarea')) return;
+    this.openPanel(row);
+  }
+
+  protected onRowKey(event: KeyboardEvent, row: StockRow): void {
+    if (event.target !== event.currentTarget) return; // keys inside the row's buttons
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openPanel(row);
+    }
+  }
+
+  protected onPanelChanged(): void {
+    this.stock.reload();
+  }
+
+  protected adjustFromPanel(row: StockRow): void {
+    this.openAdjust(row);
+  }
+
+  protected movementsFromPanel(row: StockRow): void {
+    this.panelRow.set(null);
+    this.showMovements(row);
+  }
+
   protected showMovements(row: StockRow): void {
     this.activeRow.set(this.rowKey(row));
     this.movementProduct.set({ id: row.productId, label: `${row.brand} ${row.productName}` });
@@ -126,6 +164,7 @@ export class InventoryPage {
       this.toast.success(this.i18n.t('inventory.adjusted'));
       this.adjusting.set(null);
       this.stock.reload();
+      this.panelRefresh.update((n) => n + 1);
     } catch (e) {
       this.adjustProblem.set(toApiProblem(e));
     } finally {

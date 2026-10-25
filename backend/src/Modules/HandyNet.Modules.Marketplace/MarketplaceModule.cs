@@ -31,8 +31,9 @@ public static class MarketplaceModule
     {
         var offers = app.MapGroup("/api/offers").WithTags("Offers").RequireModule(PlatformModule.B2BSales);
 
-        offers.MapGet("/", async (string? search, string? status, int? page, int? pageSize, OfferService service, CancellationToken ct) =>
-            Results.Ok(await service.ListOwnAsync(search, status, page, pageSize, ct)));
+        // productId: the own offers of one product (Lager product panel).
+        offers.MapGet("/", async (string? search, string? status, Guid? productId, int? page, int? pageSize, OfferService service, CancellationToken ct) =>
+            Results.Ok(await service.ListOwnAsync(search, status, page, pageSize, ct, productId)));
 
         // Platform block of the whole organization as a seller (offers list banner).
         offers.MapGet("/moderation", async (OfferService service, CancellationToken ct) =>
