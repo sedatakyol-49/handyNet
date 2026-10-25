@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HandyNet.Migrations.Migrations
 {
     [DbContext(typeof(HandyNetDbContext))]
-    [Migration("20261025223959_PosPrinterProfiles")]
+    [Migration("20261025230605_PosPrinterProfiles")]
     partial class PosPrinterProfiles
     {
         /// <inheritdoc />
