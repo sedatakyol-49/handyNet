@@ -56,7 +56,47 @@
 }
 <hn-banner class="mb-3" [error]="organizations.error()" />
 
-<hn-table [loading]="organizations.loading()">
+<!-- phone: cards; md+: table -->
+<ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="admin-cards">
+  @for (o of organizations.value()?.items ?? []; track o.id) {
+    <li class="hn-card flex flex-col gap-1 p-4" [attr.data-org-card]="o.name">
+      <div class="flex items-start justify-between gap-2">
+        <a class="hn-link font-medium" [routerLink]="['/app/administration/unternehmen', o.id]" data-testid="admin-card-open"><bdi>{{ o.name }}</bdi></a>
+        <hn-status-badge [status]="o.status" kind="orgStatus" />
+      </div>
+      <span class="text-xs text-slate-500"><bdi>{{ o.legalName }}</bdi> · <bdi>{{ o.city }}</bdi></span>
+      @if (o.statusReason) {
+        <span class="text-xs text-slate-500"><bdi>{{ o.statusReason }}</bdi></span>
+      }
+      <div class="flex flex-wrap gap-1">
+        @for (m of o.modules; track m) {
+          <hn-status-badge [status]="m" kind="module" tone="neutral" />
+        }
+      </div>
+      <p class="text-xs text-slate-500">{{ 'adminMgmt.companies.members' | t }}: {{ o.memberCount }} · {{ o.createdAt | hnDate }}</p>
+      <div class="mt-1 flex flex-wrap gap-2">
+        @if (o.status === 'PendingVerification' || o.status === 'Suspended') {
+          <button hnButton size="sm" variant="primary" type="button" [loading]="busyId() === o.id" [disabled]="!!busyId()" (click)="verify(o)">{{ (o.status === 'Suspended' ? 'adminMgmt.status.reactivate' : 'admin.verify') | t }}</button>
+        }
+        @if (o.status === 'PendingVerification') {
+          <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'reject')">{{ 'admin.reject' | t }}</button>
+        }
+        @if (o.status === 'Verified') {
+          <button hnButton size="sm" variant="ghost" type="button" [disabled]="!!busyId()" (click)="openReason(o, 'suspend')">{{ 'admin.suspend' | t }}</button>
+        }
+        <button hnButton size="sm" type="button" [disabled]="!!busyId()" (click)="openModules(o)">{{ 'admin.modules' | t }}</button>
+      </div>
+    </li>
+  } @empty {
+    @if (!organizations.loading()) {
+      <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'admin.empty' | t" [text]="hasFilters() ? ('adminMgmt.emptyFiltered' | t) : null" /></div></li>
+    }
+  }
+</ul>
+<div class="md:hidden">
+  <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="organizations.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+</div>
+<hn-table class="hidden md:block" [loading]="organizations.loading()">
   <table class="hn-table" data-testid="admin-table">
     <thead>
       <tr>

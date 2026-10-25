@@ -17,7 +17,31 @@ import { PosSubnavComponent } from './pos-subnav';
       <button hnButton type="button" class="min-h-11" [loading]="sessions.loading()" (click)="sessions.reload()">{{ 'common.refresh' | t }}</button>
     </hn-page-header>
     <hn-banner class="mb-3" [error]="sessions.error()" />
-    <hn-table [loading]="sessions.loading()">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="pos-sessions-cards">
+      @for (s of sessions.value()?.items ?? []; track s.id) {
+        <li class="hn-card flex flex-col gap-1 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <span class="font-semibold tabular-nums">{{ 'pos.sessions.zNumber' | t }} {{ s.zNumber ?? '–' }}</span>
+            <hn-status-badge [status]="s.status" kind="posSessionStatus" [tone]="s.status === 'Open' ? 'success' : 'neutral'" />
+          </div>
+          <p class="text-xs text-slate-500">{{ s.openedAt | hnDate }} – {{ s.closedAt | hnDate }}</p>
+          <p class="text-sm">{{ s.summary.receiptCount }} · <span class="font-semibold tabular-nums">{{ s.summary.totalGrossMinor | money }}</span></p>
+          @if (s.differenceMinor !== null) {
+            <p class="text-sm tabular-nums" [class.text-red-700]="(s.differenceMinor ?? 0) < 0">{{ 'pos.z.difference' | t }}: {{ s.differenceMinor | signedMoney }}</p>
+          }
+          <a class="hn-link inline-flex min-h-11 items-center" [routerLink]="['/kasse/sitzungen', s.id]">{{ (s.status === 'Open' ? 'pos.sessions.manage' : 'pos.sessions.zReport') | t }}</a>
+        </li>
+      } @empty {
+        @if (!sessions.loading()) {
+          <li class="py-8 text-center text-sm text-slate-500 sm:col-span-2">{{ 'pos.sessions.empty' | t }}</li>
+        }
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="sessions.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+    </div>
+    <hn-table class="hidden md:block" [loading]="sessions.loading()">
       <table class="hn-table" data-testid="pos-sessions">
         <thead>
           <tr>

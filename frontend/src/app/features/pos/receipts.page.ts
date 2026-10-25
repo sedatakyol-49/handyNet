@@ -110,7 +110,29 @@ import {
     </form>
 
     <hn-banner class="mb-3" [error]="receipts.error()" />
-    <hn-table [loading]="receipts.loading()">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="pos-receipts-cards">
+      @for (r of receipts.value()?.items ?? []; track r.id) {
+        <li class="hn-card flex flex-col gap-1 p-4" [attr.data-receipt-card]="r.number">
+          <div class="flex items-start justify-between gap-2">
+            <span class="font-semibold tabular-nums">{{ r.number }}</span>
+            <hn-status-badge [status]="r.kind" kind="receiptKind" [tone]="r.kind === 'Sale' ? 'success' : r.kind === 'Storno' ? 'danger' : 'warning'" />
+          </div>
+          <p class="text-xs text-slate-500">{{ r.createdAt | hnDate }} · {{ r.createdByName ?? '–' }}</p>
+          @if (r.customerName) { <p class="truncate text-sm">{{ r.customerName }}</p> }
+          <div class="flex items-end justify-between gap-2">
+            <span class="text-lg font-bold tabular-nums"><bdi dir="ltr" [class.text-red-700]="r.totalGrossMinor < 0">{{ r.totalGrossMinor | money }}</bdi></span>
+            <a class="hn-link inline-flex min-h-11 items-center" [routerLink]="['/kasse/belege', r.id]">{{ 'pos.receipts.open' | t }}</a>
+          </div>
+        </li>
+      } @empty {
+        <li class="py-8 text-center text-sm text-slate-500 sm:col-span-2">{{ (activeCount() ? 'pos.receipts.noMatch' : 'pos.receipts.empty') | t }}</li>
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="receipts.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+    </div>
+    <hn-table class="hidden md:block" [loading]="receipts.loading()">
       <table class="hn-table" data-testid="pos-receipts">
         <thead>
           <tr>
