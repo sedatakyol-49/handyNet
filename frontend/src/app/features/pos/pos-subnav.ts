@@ -19,7 +19,7 @@ import { PosContext } from './pos-context';
     <nav class="flex flex-wrap items-center gap-1 border-b border-pos-line text-sm" [attr.aria-label]="'pos.subnav.label' | t">
       @for (tab of visibleTabs(); track tab.id) {
         <a [routerLink]="['/kasse', registerId(), ...tab.path]" routerLinkActive="border-pos-accent text-pos-accent-text font-semibold"
-          [routerLinkActiveOptions]="{ exact: true }" #rla="routerLinkActive" [attr.aria-current]="rla.isActive ? 'page' : null"
+          [routerLinkActiveOptions]="{ exact: tab.id === 'till' }" #rla="routerLinkActive" [attr.aria-current]="rla.isActive ? 'page' : null"
           class="-mb-px inline-flex min-h-11 items-center border-b-[3px] border-transparent px-3.5 font-medium text-pos-muted hover:text-pos-ink" [attr.data-testid]="'pos-tab-' + tab.id">
           {{ tab.label | t }}
         </a>
@@ -37,6 +37,8 @@ export class PosSubnavComponent {
     { id: 'till', path: [] as string[], label: 'pos.subnav.till', manage: false },
     { id: 'receipts', path: ['belege'], label: 'pos.subnav.receipts', manage: false },
     { id: 'sessions', path: ['sitzungen'], label: 'pos.subnav.sessions', manage: false },
+    { id: 'quotations', path: ['angebote'], label: 'pos.subnav.quotations', manage: false },
+    { id: 'invoices', path: ['rechnungen'], label: 'pos.subnav.invoices', manage: false },
     { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
   ];
   /** Price maintenance only with `pos.manage`. */

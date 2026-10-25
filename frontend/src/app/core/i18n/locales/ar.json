@@ -72,7 +72,9 @@
     "ankauf": "إعادة الشراء",
     "intakes": "عمليات إعادة الشراء",
     "pos": "الصندوق",
-    "invoices": "الفواتير"
+    "invoices": "الفواتير",
+    "salesDocuments": "الفواتير وعروض الأسعار",
+    "overdueInvoices": "{count} فواتير متأخرة"
   },
   "auth": {
     "email": "البريد الإلكتروني",
@@ -538,7 +540,53 @@
       "user.display_name_unchanged": "الاسم المعروض لم يتغير.",
       "auth.reset_recently_sent": "تم إرسال رابط للتو. يرجى الانتظار دقيقة.",
       "reason.too_long": "يمكن أن يتكون المبرر من 1000 حرف كحد أقصى.",
-      "admin.tenant_header": "يجب استدعاء الإدارة بدون سياق شركة. يرجى إعادة تحميل الصفحة."
+      "admin.tenant_header": "يجب استدعاء الإدارة بدون سياق شركة. يرجى إعادة تحميل الصفحة.",
+      "pos.sales_invoice_paid": "الفاتورة مدفوعة بالفعل.",
+      "pos.payment_exceeds_open": "المبلغ أعلى من المتبقي على الفاتورة.",
+      "pos.cash_payment_at_till": "تُحصَّل المدفوعات النقدية في المتجر عبر الصندوق.",
+      "pos.sales_invoice_cancelled": "تم إلغاء الفاتورة.",
+      "pos.sales_invoice_issued": "لا يمكن تعديل الفواتير الصادرة – صحّحها بفاتورة إلغاء.",
+      "pos.sales_invoice_not_issued": "هذا ممكن فقط بعد إصدار الفاتورة.",
+      "pos.sales_invoice_discarded": "تم إهمال المسودة.",
+      "pos.sales_invoice_not_found": "الفاتورة غير موجودة.",
+      "pos.quotation_not_found": "عرض السعر غير موجود.",
+      "pos.quotation_not_editable": "لا يمكن تعديل العروض المقبولة أو المرفوضة أو المحوّلة – قم بتكرارها.",
+      "pos.quotation_converted": "تم تحويل عرض السعر إلى فاتورة بالفعل.",
+      "pos.quotation_rejected": "أعد فتح عرض السعر المرفوض أولاً.",
+      "pos.quotation_status": "تغيير الحالة هذا غير ممكن.",
+      "pos.quotation_valid_until": "يجب أن يكون تاريخ الصلاحية بين تاريخ العرض وسنة بعده.",
+      "pos.reverse_charge_lines": "مع التحويل العكسي يجب أن تكون كل البنود بنسبة 0 %؛ أجهزة § 25a غير ممكنة.",
+      "pos.reverse_charge_vat_id": "يتطلب التحويل العكسي الرقم الضريبي للعميل.",
+      "pos.sales_warehouse_required": "اختر المستودع الذي تُسحب منه البضاعة.",
+      "pos.sales_empty": "يرجى إضافة بند واحد على الأقل.",
+      "pos.sales_total_not_positive": "يجب أن يكون مجموع الفاتورة أكبر من 0.",
+      "pos.unit_not_found": "هذا الجهاز ليس في مخزونك.",
+      "pos.sales_unit_changed": "تغيّر جهاز (مثلاً بيع في هذه الأثناء). يرجى إدخال البند من جديد.",
+      "pos.sales_email_missing": "يرجى إدخال بريد إلكتروني (لا يملك العميل بريداً).",
+      "pos.sales_email_invalid": "عنوان البريد الإلكتروني غير صالح.",
+      "pos.sales_email_limit": "تم إرسال هذا المستند بالبريد مرات كثيرة.",
+      "pos.sales_customer_required": "يرجى اختيار عميل أو إنشاؤه.",
+      "pos.payment_date": "تاريخ الدفع غير منطقي.",
+      "pos.payment_reference": "المرجع طويل جداً (200 حرف كحد أقصى).",
+      "pos.payment_state": "حالة دفع غير معروفة.",
+      "pos.payment_term_days": "يجب أن تكون مهلة الدفع بين 0 و365 يوماً.",
+      "pos.quotation_number": "رقم عرض سعر غير صالح.",
+      "pos.sales_customer_country": "يجب أن يكون البلد رمز ISO من حرفين (مثل DE).",
+      "pos.sales_customer_field_length": "أحد حقول العميل طويل جداً.",
+      "pos.sales_customer_name": "اسم العميل مفقود.",
+      "pos.sales_customer_vat_id": "الرقم الضريبي غير صالح.",
+      "pos.sales_description": "يحتاج كل بند إلى وصف (300 حرف كحد أقصى).",
+      "pos.sales_discount": "يجب أن يكون الخصم بين 0 ومبلغ البند.",
+      "pos.sales_invoice_kind": "نوع فاتورة غير معروف.",
+      "pos.sales_invoice_status": "حالة فاتورة غير معروفة.",
+      "pos.sales_line_note": "ملاحظة البند طويلة جداً (500 حرف كحد أقصى).",
+      "pos.sales_notes": "الملاحظات طويلة جداً (2,000 حرف كحد أقصى).",
+      "pos.sales_quantity": "يجب أن تكون الكمية عدداً صحيحاً من 1 إلى 100,000.",
+      "pos.sales_too_many_lines": "200 بند كحد أقصى.",
+      "pos.sales_unit_line": "يُحتسب الجهاز (IMEI) منفرداً مع منتجه.",
+      "pos.sales_unit_price": "يجب أن يكون السعر بين 0 و1,000,000.00 €.",
+      "pos.sales_vat_rate": "يجب أن تكون نسبة الضريبة 19 % أو 7 % أو 0 %.",
+      "pos.z_number": "رقم Z غير صالح."
     }
   },
   "dashboard": {
@@ -1963,11 +2011,13 @@
   "receiptKind": {
     "Sale": "بيع",
     "Storno": "إلغاء",
-    "Return": "إرجاع"
+    "Return": "إرجاع",
+    "InvoicePayment": "دفع فاتورة"
   },
   "taxTreatment": {
     "Standard19": "الضريبة العادية",
-    "Margin25a": "ضريبة الهامش (§ 25a UStG)"
+    "Margin25a": "ضريبة الهامش (§ 25a UStG)",
+    "NotTaxable": "غير خاضع للضريبة (دفع فاتورة)"
   },
   "posSessionStatus": {
     "Open": "الجلسة مفتوحة",
@@ -2001,7 +2051,9 @@
       "noSession": "لا توجد جلسة مفتوحة",
       "prices": "الأسعار",
       "reports": "التقارير",
-      "sessionReport": "تقرير الجلسة"
+      "sessionReport": "تقرير الجلسة",
+      "quotations": "عروض الأسعار",
+      "invoices": "الفواتير"
     },
     "launch": {
       "title": "نقطة البيع (البيع في المتجر)",
@@ -2077,7 +2129,9 @@
       "till": "البيع",
       "receipts": "الإيصالات",
       "sessions": "الجلسات",
-      "prices": "الأسعار"
+      "prices": "الأسعار",
+      "quotations": "عروض الأسعار",
+      "invoices": "الفواتير"
     },
     "registers": {
       "title": "الصندوق",
@@ -2352,7 +2406,8 @@
       "closed": "الإغلاق",
       "empty": "لا توجد جلسات.",
       "manage": "إدارة",
-      "zReport": "تقرير Z"
+      "zReport": "تقرير Z",
+      "zNumber": "رقم Z"
     },
     "z": {
       "title": "تقرير Z (إغلاق اليوم)",
@@ -2380,7 +2435,8 @@
       "openedBy": "فتحها: {name}",
       "closedBy": "أغلقها: {name}",
       "openingCount": "العدّ عند الفتح",
-      "closingCount": "العدّ عند الإغلاق"
+      "closingCount": "العدّ عند الإغلاق",
+      "number": "رقم Z {number}"
     },
     "cashCount": {
       "label": "العدّ حسب الفئة",
@@ -2989,6 +3045,213 @@
       "taxNumber": "يتكون الرقم الضريبي من 10 إلى 13 رقمًا، مفصولة بـ / أو مسافات.",
       "phone": "يرجى إدخال رقم هاتف بأرقام ومسافات و( ) / - و+ اختيارية في البداية.",
       "website": "يرجى إدخال العنوان الكامل مع https:// أو http://."
+    }
+  },
+  "sales": {
+    "switch": "عروض الأسعار أو الفواتير",
+    "quotations": {
+      "title": "عروض الأسعار",
+      "description": "عروض أسعار للعملاء – الصلاحية والإرسال بالبريد الإلكتروني والتحويل إلى فاتورة.",
+      "new": "عرض سعر جديد"
+    },
+    "invoices": {
+      "title": "الفواتير",
+      "description": "فواتير بدون صندوق البيع (مثل البيع بالجملة) وفواتير مبيعات الصندوق – تسلسل أرقام واحد متصل.",
+      "new": "فاتورة جديدة",
+      "draft": "مسودة",
+      "fromReceipt": "لإيصال الصندوق",
+      "creditNote": "فاتورة إلغاء"
+    },
+    "list": {
+      "search": "بحث",
+      "searchPlaceholder": "الرقم أو العميل أو الشركة",
+      "status": "الحالة",
+      "payment": "الدفع",
+      "all": "الكل",
+      "overdueOnly": "المتأخرة فقط",
+      "apply": "تطبيق",
+      "reset": "إعادة تعيين",
+      "empty": "لم يتم العثور على إدخالات."
+    },
+    "quotationStatus": {
+      "Draft": "مسودة",
+      "Sent": "مُرسل",
+      "Accepted": "مقبول",
+      "Rejected": "مرفوض",
+      "Expired": "منتهي الصلاحية"
+    },
+    "invoiceStatus": {
+      "Draft": "مسودة",
+      "Issued": "صادرة",
+      "Discarded": "مُهملة"
+    },
+    "badge": {
+      "Draft": "مسودة",
+      "Discarded": "مُهملة",
+      "CreditNote": "فاتورة إلغاء",
+      "Cancelled": "ملغاة",
+      "Overdue": "متأخرة",
+      "Open": "غير مدفوعة",
+      "PartiallyPaid": "مدفوعة جزئياً",
+      "Paid": "مدفوعة"
+    },
+    "priceMode": {
+      "Gross": "أسعار إجمالية",
+      "Net": "أسعار صافية"
+    },
+    "paymentMethod": {
+      "BankTransfer": "تحويل بنكي",
+      "Card": "بطاقة",
+      "Cash": "نقداً",
+      "Other": "أخرى"
+    },
+    "fields": {
+      "number": "الرقم",
+      "customer": "العميل",
+      "date": "التاريخ",
+      "validUntil": "صالح حتى",
+      "invoiceDate": "تاريخ الفاتورة",
+      "serviceDate": "تاريخ التسليم/الخدمة",
+      "dueDate": "تاريخ الاستحقاق",
+      "paymentTermDays": "مهلة الدفع (أيام)",
+      "priceMode": "إدخال الأسعار",
+      "warehouse": "المستودع (سحب البضاعة)",
+      "reverseCharge": "التحويل العكسي للضريبة (§ 13b UStG)",
+      "description": "الوصف",
+      "quantity": "الكمية",
+      "discount": "الخصم",
+      "vat": "ضريبة القيمة المضافة",
+      "vatId": "رقم التعريف الضريبي",
+      "amount": "المبلغ",
+      "note": "ملاحظة البند",
+      "notes": "ملاحظات (تظهر على المستند)",
+      "total": "المجموع",
+      "totals": "المجاميع",
+      "paid": "المدفوع",
+      "open": "المتبقي"
+    },
+    "totals": {
+      "net": "الصافي ({rate})",
+      "vat": "الضريبة {rate}",
+      "margin": "نظام هامش الربح (§ 25a)"
+    },
+    "form": {
+      "new": {
+        "quotation": "عرض سعر جديد",
+        "invoice": "فاتورة جديدة"
+      },
+      "edit": {
+        "quotation": "تعديل عرض السعر",
+        "invoice": "تعديل مسودة الفاتورة"
+      },
+      "chooseCustomer": "اختر عميلاً أو أنشئه",
+      "changeCustomer": "تغيير العميل",
+      "noCustomer": "لم يتم اختيار عميل بعد.",
+      "customerRequired": "يرجى اختيار عميل أو إنشاؤه.",
+      "addressMissing": "تحتاج الفاتورة إلى الاسم والعنوان الكامل (الشارع، الرمز البريدي، المدينة). أكمل بيانات العميل قبل الإصدار.",
+      "vatIdMissing": "عميل تجاري بدون رقم ضريبي: مطلوب للتوريدات داخل الاتحاد الأوروبي والتحويل العكسي.",
+      "lines": "البنود",
+      "scan": "امسح أو أدخل رمز EAN أو IMEI",
+      "add": "إضافة",
+      "searchProduct": "البحث عن منتج",
+      "addFree": "بند بنص حر",
+      "noLines": "لا توجد بنود بعد. امسح أو ابحث عن منتج أو أضف نصاً حراً.",
+      "freeLine": "نص حر (بدون مخزون)",
+      "marginLine": "نظام الهامش § 25a – لا تظهر الضريبة",
+      "unitGross": "سعر الوحدة إجمالي",
+      "unitNet": "سعر الوحدة صافٍ",
+      "finalPrice": "السعر النهائي (§ 25a)",
+      "discountHint": "مبلغ أو مثلاً \"10 %\"",
+      "notePlaceholder": "ملاحظة البند (اختياري)",
+      "removeLine": "إزالة البند {n}",
+      "settings": "الإعدادات",
+      "serviceDateHint": "فارغ = تاريخ الفاتورة.",
+      "reverseChargeWarning": "استخدمه فقط بعد مراجعة مستشارك الضريبي: تصدر الفاتورة بدون ضريبة وتحمل عبارة \"Steuerschuldnerschaft des Leistungsempfängers\". تُضبط كل البنود على 0 %.",
+      "marginHint": "تُحتسب الأجهزة الخاضعة لنظام الهامش (§ 25a UStG) دون إظهار الضريبة.",
+      "scanImei": "هذا المنتج مخزّن كأجهزة برقم IMEI: يرجى مسح رقم IMEI.",
+      "deviceTwice": "هذا الجهاز موجود بالفعل في القائمة.",
+      "fixLines": "يرجى تصحيح البنود المحددة.",
+      "termInvalid": "يجب أن تكون مهلة الدفع بين 0 و365 يوماً.",
+      "saved": "تم الحفظ.",
+      "errors": {
+        "required": "الوصف مفقود.",
+        "quantity": "الكمية: عدد صحيح من 1 إلى 100,000.",
+        "deviceQuantity": "الجهاز (IMEI) كميته دائماً 1.",
+        "amount": "مبلغ باليورو بخانتين عشريتين كحد أقصى (مثلاً 12.50).",
+        "discountTooHigh": "الخصم أعلى من مبلغ البند."
+      }
+    },
+    "picker": {
+      "title": "البحث عن منتج",
+      "search": "العلامة أو الاسم أو EAN أو الطراز",
+      "find": "بحث",
+      "includeOutOfStock": "عرض الأصناف غير المتوفرة أيضاً",
+      "available": "{count} متاح",
+      "serialized": "يُباع برقم IMEI",
+      "empty": "لا توجد منتجات مطابقة في المستودع."
+    },
+    "detail": {
+      "back": "العودة إلى القائمة",
+      "quotation": "عرض سعر",
+      "invoice": "فاتورة",
+      "creditNoteTitle": "فاتورة إلغاء",
+      "actions": "الإجراءات",
+      "edit": "تعديل",
+      "pdf": "تنزيل PDF",
+      "print": "طباعة",
+      "email": "إرسال بالبريد الإلكتروني",
+      "emailAddress": "عنوان البريد الإلكتروني",
+      "emailHint": "اتركه فارغاً للإرسال إلى بريد العميل. يُرفق ملف PDF.",
+      "send": "إرسال",
+      "emailSent": "يتم إرسال البريد إلى {to}.",
+      "duplicate": "تكرار",
+      "duplicated": "تم إنشاء نسخة.",
+      "convert": "تحويل إلى فاتورة",
+      "converted": "تم إنشاء مسودة الفاتورة.",
+      "convertedTo": "تم التحويل إلى الفاتورة {number}",
+      "openInvoice": "فتح الفاتورة",
+      "fromQuotation": "من عرض السعر {number}",
+      "markSent": "وضع علامة كمُرسل",
+      "markAccepted": "مقبول",
+      "markRejected": "مرفوض",
+      "reopen": "إعادة فتح",
+      "issue": "إصدار الفاتورة",
+      "issueTitle": "إصدار الفاتورة؟",
+      "issueText": "تحصل الفاتورة على الرقم التالي في التسلسل وتصبح غير قابلة للتعديل وتُسحب البضاعة من المستودع المختار (تُعد الأجهزة مباعة). بعد ذلك لا يمكن التصحيح إلا بفاتورة إلغاء.",
+      "issued": "تم إصدار الفاتورة {number}.",
+      "discard": "إهمال المسودة",
+      "discardConfirm": "إهمال المسودة؟ تبقى محفوظة لكنها لن تظهر في القائمة.",
+      "recordPayment": "تسجيل دفعة",
+      "method": "طريقة الدفع",
+      "cashAtTill": "سجّل المدفوعات النقدية في المتجر عبر \"التحصيل في الصندوق\" (إيصال مع TSE).",
+      "paidOn": "تاريخ الدفع",
+      "reference": "المرجع (اختياري)",
+      "paymentRecorded": "تم تسجيل الدفعة.",
+      "payments": "المدفوعات",
+      "noPayments": "لا توجد مدفوعات بعد.",
+      "receipt": "إيصال الصندوق رقم {number}",
+      "collect": "التحصيل في الصندوق",
+      "collectText": "يتم إنشاء إيصال صندوق للدفعة ويوقّع من TSE. تم سحب البضاعة من المخزون مع الفاتورة.",
+      "collectAmount": "المبلغ المحتسب على الفاتورة",
+      "tendered": "المبلغ المسلَّم (نقداً)",
+      "change": "الباقي: {amount}",
+      "collectConfirm": "تحصيل",
+      "collectNeedsSession": "للتحصيل في الصندوق يجب أن تكون جلسة الصندوق مفتوحة.",
+      "collectAmountInvalid": "يجب أن يكون المبلغ أكبر من 0 ولا يتجاوز المتبقي.",
+      "tenderedTooLow": "المبلغ المسلَّم غير كافٍ.",
+      "collected": "تم التحصيل – إيصال الصندوق رقم {number}.",
+      "creditNote": "إنشاء فاتورة إلغاء",
+      "creditNoteText": "تلغي فاتورة الإلغاء الفاتورة بالكامل (مبالغ سالبة، الرقم التالي) وتعيد البضاعة إلى المخزون. يجب رد المدفوعات المستلمة بشكل منفصل.",
+      "reason": "السبب",
+      "creditNoteConfirm": "إصدار فاتورة الإلغاء",
+      "creditNoteIssued": "تم إصدار فاتورة الإلغاء {number}.",
+      "creditNoteFor": "إلغاء للفاتورة {number}",
+      "cancelledBy": "أُلغيت بواسطة {number}",
+      "refundRequired": "تتطلب فواتير الإلغاء صلاحية \"الاسترداد\" (pos.refund)."
+    },
+    "warnings": {
+      "customer_vat_id_missing": "عميل تجاري بدون رقم ضريبي – مطلوب للتوريدات داخل الاتحاد الأوروبي أو التحويل العكسي.",
+      "reverse_charge_check": "التحويل العكسي مفعّل: يرجى التحقق مع مستشارك الضريبي قبل الإصدار."
     }
   }
 }
