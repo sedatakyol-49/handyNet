@@ -37,7 +37,10 @@ organizations. Leaking one tenant's stock, prices or orders to another is a crit
      and `marketplace.admin_offer_counts(ids)` return only register names and offer counts and refuse tenant sessions;
      `tenancy.admin_remove_membership` is the only path that deletes a membership (active platform admin, reason, audited).
 5. Identity/tenancy/catalog tables are not tenant-owned (users, memberships, organizations, canonical products)
-   and are protected by application authorization instead.
+   and are protected by application authorization instead. Since ADR-0014 (migration `CompanyProfileAndLogo`)
+   `tenancy.organizations` additionally has RLS for writes: readable by everyone, but a tenant session may UPDATE only
+   its own row (`id = infra.current_org()`); company logos (`tenancy.organization_logos`) are tenant-owned (read all,
+   write own, no DELETE).
 
 ## Consequences
 

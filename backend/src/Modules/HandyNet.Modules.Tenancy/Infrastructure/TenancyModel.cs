@@ -14,7 +14,14 @@ public sealed class TenancyModel : IModuleModel
         modelBuilder.Entity<Organization>(b =>
         {
             b.ToTable("organizations", Schema, t =>
-                t.HasCheckConstraint("ck_organizations_has_capability", "is_wholesaler OR is_retailer OR is_repair_provider"));
+            {
+                t.HasCheckConstraint("ck_organizations_has_capability", "is_wholesaler OR is_retailer OR is_repair_provider");
+                // Company data maintained by the tenant (ADR-0014); the domain checks the IBAN checksum, the database the shape.
+                t.HasCheckConstraint("ck_organizations_payment_terms", "payment_terms_days BETWEEN 0 AND 365");
+                t.HasCheckConstraint("ck_organizations_iban", "iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'");
+                t.HasCheckConstraint("ck_organizations_bic", "bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'");
+                t.HasCheckConstraint("ck_organizations_bank_needs_iban", "iban IS NOT NULL OR (bic IS NULL AND bank_name IS NULL)");
+            });
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(200).IsRequired();
             b.Property(x => x.LegalName).HasMaxLength(300).IsRequired();
@@ -29,6 +36,14 @@ public sealed class TenancyModel : IModuleModel
             b.Property(x => x.ContactEmail).HasMaxLength(Organization.MaxContactEmailLength);
             b.Property(x => x.ContactPhone).HasMaxLength(Organization.MaxContactPhoneLength);
             b.Property(x => x.Website).HasMaxLength(Organization.MaxWebsiteLength);
+            b.Property(x => x.ReceiptHeader).HasMaxLength(CompanyProfileRules.MaxReceiptHeaderLength);
+            b.Property(x => x.ReceiptFooter).HasMaxLength(CompanyProfileRules.MaxReceiptFooterLength);
+            b.Property(x => x.BankName).HasMaxLength(CompanyProfileRules.MaxBankNameLength);
+            b.Property(x => x.Iban).HasMaxLength(CompanyProfileRules.MaxIbanLength);
+            b.Property(x => x.Bic).HasMaxLength(CompanyProfileRules.MaxBicLength);
+            b.Property(x => x.ManagingDirector).HasMaxLength(CompanyProfileRules.MaxManagingDirectorLength);
+            b.Property(x => x.RegisterCourt).HasMaxLength(CompanyProfileRules.MaxRegisterCourtLength);
+            b.Property(x => x.RegisterNumber).HasMaxLength(CompanyProfileRules.MaxRegisterNumberLength);
             b.Property(x => x.Version).IsRowVersion();
             b.HasIndex(x => x.VatId).IsUnique().HasFilter("vat_id IS NOT NULL");
             b.HasIndex(x => x.Status);
@@ -39,6 +54,7 @@ public sealed class TenancyModel : IModuleModel
             b.HasMany(x => x.StatusChanges).WithOne().HasForeignKey(c => c.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             b.Navigation(x => x.StatusChanges).UsePropertyAccessMode(PropertyAccessMode.Field);
             b.Ignore(x => x.Profile);
+            b.Ignore(x => x.CompanyProfile);
             b.Ignore(x => x.DomainEvents);
         });
 
@@ -53,8 +69,28 @@ public sealed class TenancyModel : IModuleModel
             b.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(30);
             b.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(30);
             b.Property(x => x.Reason).HasMaxLength(1000);
+            b.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30).HasDefaultValue(OrganizationHistoryKind.StatusChange)
+                .HasSentinel((OrganizationHistoryKind)(-1));
             b.HasIndex(x => new { x.OrganizationId, x.ChangedAt });
             b.HasOne<User>().WithMany().HasForeignKey(x => x.ChangedBy).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Company logo (ADR-0014): tenant-owned (RLS: everyone reads — logos are public on e-receipts —, only the own
+        // organization inserts/updates; no DELETE). One active logo per organization.
+        modelBuilder.Entity<OrganizationLogo>(b =>
+        {
+            b.ToTable("organization_logos", Schema, t =>
+                t.HasCheckConstraint("ck_organization_logos_removed", "(removed_at IS NULL) = (removed_by IS NULL)"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever();
+            b.Property(x => x.ScreenStorageKey).HasMaxLength(400);
+            b.Property(x => x.PrintStorageKey).HasMaxLength(400);
+            b.Property(x => x.Sha256).HasMaxLength(64).IsFixedLength();
+            b.Property(x => x.OriginalFormat).HasConversion<string>().HasMaxLength(10);
+            b.HasIndex(x => x.OrganizationId).IsUnique().HasFilter("removed_at IS NULL").HasDatabaseName("ux_organization_logos_active");
+            b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.UploadedBy).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<User>().WithMany().HasForeignKey(x => x.RemovedBy).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OrganizationModule>(b =>

@@ -12,11 +12,14 @@ internal static class SalesDocumentPdf
 {
     private const double LabelWidth = 160;
 
-    public static byte[] Render(SalesDocument d)
+    /// <param name="letterhead">Logo and footer lines of the issuing company (current company profile).</param>
+    public static byte[] Render(SalesDocument d, DocumentLetterhead? letterhead = null)
     {
         var e = PosInvoice.Euro;
         var seller = d.Seller;
-        var pdf = new SimplePdf { Title = $"{d.Title} {d.Number}", Footer = $"{d.Title} {d.Number} · {seller.LegalName}" };
+        letterhead ??= DocumentLetterhead.None;
+        var pdf = new SimplePdf { Title = $"{d.Title} {d.Number}", Footer = $"{d.Title} {d.Number} · {seller.LegalName}", FooterLines = letterhead.FooterLines };
+        letterhead.ApplyLogo(pdf);
 
         pdf.Text(string.Join(" · ", new[] { seller.LegalName, seller.Street, $"{seller.PostalCode} {seller.City}" }), 8).Space(14);
         var c = d.Customer;

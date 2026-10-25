@@ -318,7 +318,7 @@ public sealed class PosModel : IModuleModel
         });
     }
 
-    /// <summary>Quotations, sales invoices outside the till, their payments and emails (ADR-0014).</summary>
+    /// <summary>Quotations, sales invoices outside the till, their payments and emails (ADR-0015).</summary>
     private static void ConfigureSalesDocuments(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Quotation>(b =>

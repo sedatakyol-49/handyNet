@@ -32,6 +32,8 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
+  // Every member (also of a not yet verified company) sees the company data; editing needs organization.manage.
+  { path: '/app/unternehmen', labelKey: 'nav.company', section: 'settings' },
   { path: '/app/administration', labelKey: 'admin.tabs.organizations', adminOnly: true, exact: true, alsoActive: ['/app/administration/unternehmen'], section: 'platform' },
   { path: '/app/administration/benutzer', labelKey: 'admin.tabs.users', adminOnly: true, section: 'platform' },
   { path: '/app/administration/marktplatz', labelKey: 'admin.tabs.moderation', adminOnly: true, section: 'platform' },

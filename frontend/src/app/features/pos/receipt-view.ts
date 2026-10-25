@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { ReceiptDocument } from '../../core/api/models';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { OrganizationApi } from '../../core/api/handynet-api';
+import { ReceiptBranding, ReceiptDocument } from '../../core/api/models';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
+import { receiptLines } from '../company/company.logic';
 import { UI } from '../../shared/ui';
 import { hasTseBlock, shortSignature } from './fiscal.logic';
 import { QrCodeComponent } from './qr-code';
@@ -28,6 +31,12 @@ import { QrCodeComponent } from './qr-code';
         </p>
       }
       <header class="mb-2 text-center">
+        @if (logo(); as url) {
+          <img [src]="url" [alt]="d.seller.name" class="hn-receipt-logo mx-auto mb-1" data-testid="receipt-logo" />
+        }
+        @for (l of headerLines(); track $index) {
+          <p class="min-h-[1em]" data-testid="receipt-header-text">{{ l }}</p>
+        }
         <p class="text-sm font-bold">{{ d.seller.name }}</p>
         @if (d.seller.legalName && d.seller.legalName !== d.seller.name) {
           <p>{{ d.seller.legalName }}</p>
@@ -200,6 +209,13 @@ import { QrCodeComponent } from './qr-code';
           }
         </section>
       }
+      @if (footerLines().length) {
+        <footer class="mt-2 border-t border-dashed border-slate-400 pt-1 text-center" data-testid="receipt-footer-text">
+          @for (l of footerLines(); track $index) {
+            <p class="min-h-[1em]">{{ l }}</p>
+          }
+        </footer>
+      }
     </article>
   `,
 })
@@ -209,6 +225,20 @@ export class ReceiptViewComponent {
   readonly cashier = input<string | null>(null);
   /** Copy number of a recorded reprint ("Kopie n"); null for the original. */
   readonly copy = input<number | null>(null);
+  /**
+   * Logo and receipt texts of the issuing company. Undefined = the signed-in company's current profile (receipts inside
+   * the app); the public e-receipt passes what the API returned for the receipt's company (null = none).
+   */
+  readonly branding = input<ReceiptBranding | null | undefined>(undefined);
+  private readonly api = inject(OrganizationApi);
+  private readonly own = inject(CompanyBrandingStore);
+  private readonly effectiveBranding = computed(() => {
+    const b = this.branding();
+    return b === undefined ? this.own.receiptBranding() : b;
+  });
+  protected readonly logo = computed(() => this.api.assetUrl(this.effectiveBranding()?.logoUrl));
+  protected readonly headerLines = computed(() => receiptLines(this.effectiveBranding()?.receiptHeader));
+  protected readonly footerLines = computed(() => receiptLines(this.effectiveBranding()?.receiptFooter));
   /** Notes printed below the totals; the fiscal notice is shown prominently at the top instead of repeated here. */
   protected readonly tseBlock = computed(() => hasTseBlock(this.doc().fiscal));
   protected readonly signature = computed(() => shortSignature(this.doc().fiscal.signature));

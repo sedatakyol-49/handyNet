@@ -15,6 +15,7 @@ import { posErrorText } from './pos-error';
 import { PosApi } from '../../core/api/handynet-api';
 import { POS_CONFIGURABLE_PERMISSIONS, PosCashierOption } from '../../core/api/models';
 import { ToastService } from '../../core/ui-state/toast.service';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 
 /**
  * Standalone, full-screen POS app (route `/kasse`, outside the back-office shell): a minimal top bar with register,
@@ -39,6 +40,11 @@ import { ToastService } from '../../core/ui-state/toast.service';
     <header class="hn-no-print flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-pos-line bg-pos-panel px-2 sm:gap-x-3.5 sm:px-3.5" data-testid="pos-topbar">
       <a routerLink="/kasse" class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-0.5 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
         <span class="grid size-[30px] place-items-center rounded-lg bg-pos-accent text-xs font-extrabold text-pos-accent-ink" aria-hidden="true">SH</span>
+        @if (branding.logoUrl(); as logo) {
+          <span class="flex h-9 items-center rounded-md bg-white px-1.5 ring-1 ring-pos-line" data-testid="pos-topbar-logo">
+            <img [src]="logo" alt="" class="h-7 w-auto max-w-[6.5rem] object-contain" />
+          </span>
+        }
         @if (!ctx.registerId()) {
           <span class="text-sm">{{ 'pos.app.title' | t }}</span>
         }
@@ -191,6 +197,8 @@ import { ToastService } from '../../core/ui-state/toast.service';
 })
 export class PosAppComponent {
   protected readonly ctx = inject(PosContext);
+  /** Company logo next to the SEHA mark (on a white plate so it reads on the dark theme too). */
+  protected readonly branding = inject(CompanyBrandingStore);
   protected readonly session = inject(SessionStore);
   protected readonly i18n = inject(I18nService);
   private readonly router = inject(Router);

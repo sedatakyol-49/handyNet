@@ -316,7 +316,7 @@ public static class PosModule
             .RequireRateLimiting(PublicReceiptRateLimitPolicy);
     }
 
-    // ---- quotations and sales invoices outside the till (ADR-0014): everyone with pos.sell; credit notes need pos.refund ------
+    // ---- quotations and sales invoices outside the till (ADR-0015): everyone with pos.sell; credit notes need pos.refund ------
     private static void MapSalesDocumentEndpoints(RouteGroupBuilder sell)
     {
         sell.MapGet("/sales-warehouses", async (SalesInvoiceService service, CancellationToken ct) => Results.Ok(await service.WarehousesAsync(ct)));

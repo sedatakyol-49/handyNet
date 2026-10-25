@@ -3,6 +3,9 @@
   <ItemGroup>
     <!-- Apache-2.0. Used only when FileStorage:Provider = S3 (any S3-compatible endpoint). -->
     <PackageReference Include="AWSSDK.S3" />
+    <!-- MIT. Shared image codec (IImageCodec: company logos, images for PDFs); Linux (Docker) needs NoDependencies. -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
   </ItemGroup>
 
   <ItemGroup>

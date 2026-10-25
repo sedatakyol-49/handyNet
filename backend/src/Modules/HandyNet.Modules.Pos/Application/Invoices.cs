@@ -40,7 +40,8 @@ internal sealed class CreateInvoiceValidator : AbstractValidator<CreateInvoiceRe
 /// Invoices for POS sales: one per sale receipt, numbered gapless per organization and year (counter row locked until
 /// commit, enforced by triggers), immutable, PDF rendered from the stored document. Issuing again returns the invoice.
 /// </summary>
-internal sealed class PosInvoiceService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IOrganizationDirectory organizations, IClock clock)
+internal sealed class PosInvoiceService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IOrganizationDirectory organizations,
+    IOrganizationBranding branding, IClock clock)
 {
     private static readonly TimeZoneInfo Berlin = FindBerlin();
 
@@ -95,7 +96,8 @@ internal sealed class PosInvoiceService(HandyNetDbContext db, ITenantContext ten
         var invoice = await db.Set<PosInvoice>().AsNoTracking().FirstOrDefaultAsync(i => i.Id == invoiceId && i.OrganizationId == OrganizationId, ct);
         if (invoice is null)
             return Error.NotFound("pos.invoice_not_found", "Invoice not found.");
-        return new InvoiceFile($"{invoice.Number}.pdf", PosInvoicePdf.Render(invoice.Document));
+        var letterhead = (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).Letterhead;
+        return new InvoiceFile($"{invoice.Number}.pdf", PosInvoicePdf.Render(invoice.Document, letterhead));
     }
 
     /// <summary>Takes the next number of the organization's single invoice series (shared with sales invoices and credit notes).</summary>
@@ -132,12 +134,16 @@ internal static class PosInvoicePdf
 {
     private const double LabelWidth = 150;
 
-    public static byte[] Render(PosInvoiceDocument d)
+    /// <param name="letterhead">Logo and footer lines of the issuing company (its current company profile, ADR-0014).</param>
+    public static byte[] Render(PosInvoiceDocument d, DocumentLetterhead? letterhead = null)
     {
+        letterhead ??= DocumentLetterhead.None;
         var e = PosInvoice.Euro;
         var seller = d.Seller;
         var sellerLine = string.Join(" · ", new[] { seller.LegalName, seller.Street, $"{seller.PostalCode} {seller.City}" });
-        var pdf = new SimplePdf { Title = $"{d.Title} {d.Number}", Footer = $"{d.Title} {d.Number} · {seller.LegalName}" };
+        var pdf = new SimplePdf { Title = $"{d.Title} {d.Number}", Footer = $"{d.Title} {d.Number} · {seller.LegalName}",
+            FooterLines = letterhead.FooterLines };
+        letterhead.ApplyLogo(pdf);
 
         pdf.Text(sellerLine, 8).Space(14);
         if (d.Customer.Company is { } company)

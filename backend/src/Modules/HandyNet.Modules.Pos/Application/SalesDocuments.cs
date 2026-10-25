@@ -6,6 +6,7 @@ using HandyNet.Modules.Pos.Domain;
 using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
+using HandyNet.SharedKernel.Documents;
 using HandyNet.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -395,6 +396,7 @@ internal sealed class QuotationService(
     PosActor actor,
     SalesInputResolver resolver,
     IOrganizationDirectory organizations,
+    IOrganizationBranding branding,
     IUserAccounts users,
     IClock clock)
 {
@@ -518,7 +520,7 @@ internal sealed class QuotationService(
         if (quotation.ConvertedInvoiceId is { } existing)
             return (await invoices.GetAsync(existing, ct)).Map(i => new SalesInvoiceResult(i, Existing: true));
 
-        var details = new SalesInvoiceDetails(quotation.Customer, null, SalesInvoice.DefaultPaymentTermDays, quotation.PriceMode, false,
+        var details = new SalesInvoiceDetails(quotation.Customer, null, await invoices.DefaultPaymentTermsAsync(ct), quotation.PriceMode, false,
             await invoices.DefaultWarehouseAsync(ct), ToInputs(quotation.Lines), quotation.Notes);
         var invoice = SalesInvoice.CreateDraft(OrganizationId, details, quotation.Id, actor.UserId, clock.UtcNow);
         if (!invoice.IsSuccess)
@@ -544,7 +546,7 @@ internal sealed class QuotationService(
         var document = quotation.ToDocument(await SellerAsync(ct));
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"sales-email:" + id}, 0))", ct);
         var sent = await db.Set<SalesDocumentEmail>().CountAsync(e => e.DocumentId == id, ct);
-        var created = SalesDocumentEmail.Request(OrganizationId, SalesDocumentType.Quotation, id, document, email.Value, sent, SalesDocumentPdf.Render(document),
+        var created = SalesDocumentEmail.Request(OrganizationId, SalesDocumentType.Quotation, id, document, email.Value, sent, SalesDocumentPdf.Render(document, await LetterheadAsync(ct)),
             actor.UserId, clock.UtcNow);
         if (!created.IsSuccess)
             return created.Error!;
@@ -560,7 +562,7 @@ internal sealed class QuotationService(
         var quotation = await db.Set<Quotation>().AsNoTracking().FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == OrganizationId, ct);
         if (quotation is null)
             return NotFound();
-        return new InvoiceFile($"{quotation.Number}.pdf", SalesDocumentPdf.Render(quotation.ToDocument(await SellerAsync(ct))));
+        return new InvoiceFile($"{quotation.Number}.pdf", SalesDocumentPdf.Render(quotation.ToDocument(await SellerAsync(ct)), await LetterheadAsync(ct)));
     }
 
     internal static List<SalesLineInput> ToInputs(IEnumerable<SalesLine> lines) =>
@@ -580,6 +582,8 @@ internal sealed class QuotationService(
     }
 
     private async Task<SellerInfo> SellerAsync(CancellationToken ct) => await SalesEmails.SellerAsync(organizations, OrganizationId, ct);
+
+    private async Task<DocumentLetterhead> LetterheadAsync(CancellationToken ct) => (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).Letterhead;
 
     private Task<Quotation?> FindAsync(Guid id, CancellationToken ct) =>
         db.Set<Quotation>().FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == OrganizationId, ct);
@@ -642,11 +646,18 @@ internal sealed class SalesInvoiceService(
     SalesInputResolver resolver,
     IInventory inventory,
     IOrganizationDirectory organizations,
+    IOrganizationBranding branding,
     IUserAccounts users,
     ApprovalService approvals,
     IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
+
+    /// <summary>Payment term of the company profile (Zahlungsziel), otherwise 14 days.</summary>
+    public async Task<int> DefaultPaymentTermsAsync(CancellationToken ct) =>
+        (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).PaymentTermsDays ?? SalesInvoice.DefaultPaymentTermDays;
+
+    private async Task<DocumentLetterhead> LetterheadAsync(CancellationToken ct) => (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).Letterhead;
 
     public async Task<Guid?> DefaultWarehouseAsync(CancellationToken ct) =>
         (await inventory.GetWarehousesAsync(ct)).FirstOrDefault()?.Id;
@@ -877,7 +888,7 @@ internal sealed class SalesInvoiceService(
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"sales-email:" + id}, 0))", ct);
         var sent = await db.Set<SalesDocumentEmail>().CountAsync(e => e.DocumentId == id, ct);
         var created = SalesDocumentEmail.Request(OrganizationId, SalesDocumentType.Invoice, id, invoice.Document, email.Value, sent,
-            SalesDocumentPdf.Render(invoice.Document), actor.UserId, clock.UtcNow);
+            SalesDocumentPdf.Render(invoice.Document, await LetterheadAsync(ct)), actor.UserId, clock.UtcNow);
         if (!created.IsSuccess)
             return created.Error!;
         db.Add(created.Value);
@@ -893,14 +904,14 @@ internal sealed class SalesInvoiceService(
         if (invoice is null)
             return NotFound();
         if (invoice.Document is { } document)
-            return new InvoiceFile($"{document.Number}.pdf", SalesDocumentPdf.Render(document));
+            return new InvoiceFile($"{document.Number}.pdf", SalesDocumentPdf.Render(document, await LetterheadAsync(ct)));
         var seller = await SalesEmails.SellerAsync(organizations, OrganizationId, ct);
         var today = BerlinTime.Today(clock.UtcNow);
         var preview = new SalesDocument("Invoice", "Rechnung (Entwurf)", "ENTWURF", today, invoice.ServiceDate ?? today,
             today.AddDays(invoice.PaymentTermDays), null, seller, invoice.Customer ?? new SalesCustomer(null, "–", null, null, null, null, null, null),
             invoice.PriceMode, invoice.Lines, invoice.Vat, invoice.MarginGrossMinor, invoice.TotalNetMinor, invoice.TotalVatMinor, invoice.TotalGrossMinor,
             null, ["Entwurf – keine gültige Rechnung."], invoice.Notes);
-        return new InvoiceFile("Rechnung-Entwurf.pdf", SalesDocumentPdf.Render(preview));
+        return new InvoiceFile("Rechnung-Entwurf.pdf", SalesDocumentPdf.Render(preview, await LetterheadAsync(ct)));
     }
 
     public async Task<Result<SalesInvoiceDto>> GetAsync(Guid id, CancellationToken ct)
@@ -1087,7 +1098,7 @@ internal sealed class SalesInvoiceService(
         if (warehouse is { } w && !await inventory.IsOwnWarehouseAsync(w, ct))
             return Error.NotFound("warehouse.not_found", "Warehouse not found.");
         warehouse ??= await DefaultWarehouseAsync(ct);
-        return new SalesInvoiceDetails(customer.Value, request.ServiceDate, request.PaymentTermDays ?? SalesInvoice.DefaultPaymentTermDays,
+        return new SalesInvoiceDetails(customer.Value, request.ServiceDate, request.PaymentTermDays ?? await DefaultPaymentTermsAsync(ct),
             request.PriceMode ?? PriceMode.Gross, request.ReverseCharge ?? false, warehouse, lines.Value, request.Notes);
     }
 

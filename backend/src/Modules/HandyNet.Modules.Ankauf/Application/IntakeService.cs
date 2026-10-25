@@ -77,6 +77,7 @@ internal sealed class IntakeService(
     IProductCatalog catalog,
     IInventory inventory,
     IOrganizationDirectory organizations,
+    IOrganizationBranding branding,
     IClock clock)
 {
     private Guid OrganizationId => tenant.RequiredOrganizationId;
@@ -216,7 +217,8 @@ internal sealed class IntakeService(
             Ankaufbeleg.GermanTimeZone);
         if (!content.IsSuccess)
             return content.Error!;
-        return new BelegFile($"{content.Value.DocumentNumber}.pdf", AnkaufbelegPdf.Render(content.Value));
+        var letterhead = (await branding.GetDocumentBrandingAsync(OrganizationId, ct)).Letterhead;
+        return new BelegFile($"{content.Value.DocumentNumber}.pdf", AnkaufbelegPdf.Render(content.Value, letterhead));
     }
 
     private async Task<(Intake? Intake, Quote? Quote)> LoadAsync(Guid id, CancellationToken ct, bool tracking = true)

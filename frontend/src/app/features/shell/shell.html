@@ -19,6 +19,12 @@
     <span class="grid size-7 place-items-center rounded bg-slate-900 text-xs font-bold text-white" aria-hidden="true">SH</span>
     <span class="hidden sm:inline">SEHA</span>
   </a>
+  @if (branding.logoUrl(); as logo) {
+    <a routerLink="/app/unternehmen" class="me-1 flex h-9 shrink-0 items-center rounded px-1 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-accent-600"
+      [attr.aria-label]="'company.logo.topbarLabel' | t: { name: session.membership()?.organizationName ?? '' }" data-testid="shell-company-logo">
+      <img [src]="logo" alt="" class="h-7 w-auto max-w-[6rem] object-contain" />
+    </a>
+  }
 
   @if (session.memberships().length > 0) {
     <label for="org-switcher" class="sr-only">{{ 'shell.organization' | t }}</label>

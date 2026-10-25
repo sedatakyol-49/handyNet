@@ -5,6 +5,9 @@ import { API_BASE_URL } from './api-config';
 import { queryParams } from './http-params';
 import {
   CashMovement,
+  CompanyLogo,
+  CompanyProfile,
+  UpdateCompanyProfileRequest,
   CashMovementReason,
   CashMovementRequest,
   CashSession,
@@ -166,6 +169,32 @@ export class OrganizationApi {
   /** Per-cashier POS rights of a staff member (`organization.manage`; 409 `staff.pos_rights_role` for owners/managers). */
   setPosRights(userId: string, body: PosRightsRequest): Observable<StaffMember> {
     return this.http.put<StaffMember>(`${this.base}/api/organization/staff/${userId}/pos-rights`, body);
+  }
+
+  /** Own company profile (every member; `canEdit` for organization.manage). */
+  profile(): Observable<CompanyProfile> {
+    return this.http.get<CompanyProfile>(`${this.base}/api/organization/profile`);
+  }
+
+  /** 409 `concurrency` when someone else saved in between; 422 `validation.failed` with field errors. */
+  updateProfile(body: UpdateCompanyProfileRequest): Observable<CompanyProfile> {
+    return this.http.put<CompanyProfile>(`${this.base}/api/organization/profile`, body);
+  }
+
+  /** PNG/JPEG/WebP up to 2 MB (checked by content), re-encoded by the API. */
+  uploadLogo(file: Blob, fileName: string): Observable<CompanyLogo> {
+    const form = new FormData();
+    form.append('file', file, fileName);
+    return this.http.post<CompanyLogo>(`${this.base}/api/organization/logo`, form);
+  }
+
+  removeLogo(): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/organization/logo`);
+  }
+
+  /** Absolute URL for an <img> (logo URLs are public, relative to the API). */
+  assetUrl(relative: string | null | undefined): string | null {
+    return relative ? `${this.base}${relative}` : null;
   }
 }
 

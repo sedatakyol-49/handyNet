@@ -8,9 +8,12 @@ internal static class AnkaufbelegPdf
 {
     private const double LabelWidth = 140;
 
-    public static byte[] Render(AnkaufbelegContent content)
+    /// <param name="letterhead">Logo and footer lines of the dealer (its current company profile, ADR-0014).</param>
+    public static byte[] Render(AnkaufbelegContent content, DocumentLetterhead? letterhead = null)
     {
-        var pdf = new SimplePdf { Title = $"{content.Title} {content.DocumentNumber}", Footer = content.Footer };
+        letterhead ??= DocumentLetterhead.None;
+        var pdf = new SimplePdf { Title = $"{content.Title} {content.DocumentNumber}", Footer = content.Footer, FooterLines = letterhead.FooterLines };
+        letterhead.ApplyLogo(pdf);
 
         pdf.Text(content.Title, 20, PdfFont.Bold)
             .Text(content.Subtitle, 10)

@@ -17,7 +17,7 @@ namespace HandyNet.IntegrationTests;
 
 /// <summary>
 /// Quotations, sales invoices outside the till (shared gapless invoice series, stock, IMEI, credit notes, payments, cash at
-/// the till) and gapless Z numbers — real PostgreSQL, RLS on (ADR-0014).
+/// the till) and gapless Z numbers — real PostgreSQL, RLS on (ADR-0015).
 /// </summary>
 [Collection(HandyNetCollection.Name)]
 public sealed class PosSalesDocumentsTests(HandyNetFixture fixture)
@@ -654,7 +654,7 @@ public sealed class PosSalesDocumentsTests(HandyNetFixture fixture)
         try
         {
             await using (var db = DatabaseMigrator.CreateContext(connection))
-                await db.GetService<IMigrator>().MigrateAsync("20261020232511_PlatformAdministration");
+                await db.GetService<IMigrator>().MigrateAsync("20261023190450_CompanyProfileAndLogo");
 
             var user = Guid.NewGuid();
             var org = Guid.NewGuid();

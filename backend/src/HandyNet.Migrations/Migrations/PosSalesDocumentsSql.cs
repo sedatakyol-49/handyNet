@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HandyNet.Migrations.Migrations;
 
 /// <summary>
-/// Raw SQL of the migration <c>PosSalesDocumentsAndZNumber</c> (ADR-0014): gapless Z numbers per register, quotations, sales
+/// Raw SQL of the migration <c>PosSalesDocumentsAndZNumber</c> (ADR-0015): gapless Z numbers per register, quotations, sales
 /// invoices sharing the organization's single gapless invoice series with invoices for POS sales, credit notes, append-only
 /// invoice payments (cash only through a till receipt), document emails — grants, Row-Level Security and triggers.
 /// </summary>
