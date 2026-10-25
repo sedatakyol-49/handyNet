@@ -66,7 +66,32 @@ import { EMPTY_USER_FILTERS, UserFilters, userBadges, userQuery } from './admin-
     </form>
 
     <hn-banner class="mb-3" [error]="users.error()" />
-    <hn-table [loading]="users.loading()">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="users-cards">
+      @for (u of users.value()?.items ?? []; track u.id) {
+        <li class="hn-card flex flex-col gap-1 p-4">
+          <a class="hn-link font-medium" [routerLink]="['/app/administration/benutzer', u.id]" data-testid="users-card-open"><bdi>{{ u.displayName }}</bdi></a>
+          <span class="truncate text-xs text-slate-500" dir="ltr"><bdi>{{ u.email }}</bdi></span>
+          <div class="flex flex-wrap gap-1">
+            @for (b of badges(u); track b.key) {
+              <hn-status-badge [status]="b.key" kind="adminMgmt.userBadge" [tone]="b.tone" />
+            }
+          </div>
+          <p class="text-xs text-slate-500">{{ 'adminMgmt.users.lastLogin' | t }}: {{ u.lastLoginAt ? (u.lastLoginAt | hnDate) : ('adminMgmt.users.never' | t) }}</p>
+          @for (m of u.memberships; track m.organizationId) {
+            <p class="text-xs"><bdi>{{ m.organizationName }}</bdi> <span class="text-slate-500">({{ m.role | tEnum: 'role' }})</span></p>
+          }
+        </li>
+      } @empty {
+        @if (!users.loading()) {
+          <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'adminMgmt.users.empty' | t" [text]="hasFilters() ? ('adminMgmt.emptyFiltered' | t) : null" /></div></li>
+        }
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="users.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+    </div>
+    <hn-table class="hidden md:block" [loading]="users.loading()">
       <table class="hn-table" data-testid="users-table">
         <thead>
           <tr>

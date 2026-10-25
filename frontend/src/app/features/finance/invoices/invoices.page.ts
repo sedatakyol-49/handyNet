@@ -27,7 +27,35 @@ import { formatBillingMonth, formatDateOnly } from './invoice.logic';
     <p class="mb-3 max-w-3xl text-xs text-slate-600">{{ 'invoices.hint' | t }}</p>
     <hn-banner class="mb-3" [error]="invoices.error()" />
 
-    <hn-table [loading]="invoices.loading()">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="invoices-cards">
+      @for (i of invoices.value()?.items ?? []; track i.id) {
+        <li class="hn-card flex flex-col gap-1 p-4" [attr.data-invoice-number]="i.number">
+          <div class="flex items-start justify-between gap-2">
+            <a class="hn-link hn-mono text-xs font-semibold" [routerLink]="['/app/finanzen/rechnungen', i.id]" [attr.aria-label]="'invoices.openLabel' | t: { number: i.number }"><bdi>{{ i.number }}</bdi></a>
+            <hn-status-badge [status]="i.kind" kind="invoiceKind" [tone]="i.kind === 'CreditNote' ? 'warning' : 'neutral'" />
+          </div>
+          @if (i.referencedInvoiceNumber) {
+            <p class="text-xs text-slate-500">{{ 'invoices.corrects' | t: { number: i.referencedInvoiceNumber } }}</p>
+          }
+          <p class="text-xs text-slate-500">{{ month(i.billingMonth) }} · {{ date(i.issueDate) }}</p>
+          <div class="mt-1 flex items-end justify-between gap-2">
+            <span class="text-lg font-bold tabular-nums"><bdi dir="ltr">{{ i.totalGrossMinor | money: i.currency }}</bdi></span>
+            <button hnButton size="sm" type="button" [loading]="pdf.busyId() === i.id" [disabled]="!!pdf.busyId()" (click)="pdf.download(i)"
+              [attr.aria-label]="'invoices.downloadPdfLabel' | t: { number: i.number }" data-testid="invoice-card-pdf">{{ 'invoices.pdf' | t }}</button>
+          </div>
+        </li>
+      } @empty {
+        @if (!invoices.loading()) {
+          <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'invoices.empty' | t" [text]="'invoices.emptyText' | t" /></div></li>
+        }
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="invoices.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+    </div>
+
+    <hn-table class="hidden md:block" [loading]="invoices.loading()">
       <table class="hn-table" data-testid="invoices-table">
         <thead>
           <tr>

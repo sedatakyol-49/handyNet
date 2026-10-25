@@ -23,7 +23,7 @@ interface AdminTab {
   host: { class: 'block mb-4' },
   template: `
     <nav
-      class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+      class="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0"
       [attr.aria-label]="'admin.tabs.label' | t"
       data-testid="admin-tabs"
     >

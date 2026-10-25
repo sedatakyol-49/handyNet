@@ -29,7 +29,37 @@
 @if (tab() === 'stock') {
   <div id="panel-stock" role="tabpanel" aria-labelledby="tab-stock">
     <hn-banner class="mb-3" [error]="stock.error()" />
-    <hn-table [loading]="stock.loading()" [scrollY]="true">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="stock-cards">
+      @for (s of stock.value()?.items ?? []; track s.warehouseId + s.productId) {
+        <li class="hn-card flex flex-col gap-1 p-4" [class.hn-row-selected]="activeRow() === rowKey(s)">
+          <p class="font-medium">{{ s.brand }} {{ s.productName }}</p>
+          <p class="hn-mono text-xs text-slate-600">{{ s.ean ?? s.mpn ?? '–' }} · {{ warehouseCode(s.warehouseId) }}</p>
+          <p class="text-sm tabular-nums">
+            {{ 'inventory.onHand' | t }} {{ s.onHand }} · {{ 'inventory.reserved' | t }} {{ s.reserved }} ·
+            <span class="font-semibold" [class.text-red-700]="s.available <= 0">{{ 'inventory.available' | t }} {{ s.available }}</span>
+          </p>
+          <div class="mt-1 flex flex-wrap gap-2">
+            <button hnButton size="sm" type="button" (click)="openPanel(s)" data-testid="stock-card-details"
+              [attr.aria-label]="('inventory.panel.details' | t) + ': ' + s.brand + ' ' + s.productName">{{ 'inventory.panel.details' | t }}</button>
+            @if (canManage) {
+              <button hnButton size="sm" type="button" (click)="openAdjust(s)"
+                [attr.aria-label]="('inventory.adjust' | t) + ': ' + s.brand + ' ' + s.productName">{{ 'inventory.adjust' | t }}</button>
+            }
+            <button hnButton size="sm" type="button" (click)="showMovements(s)"
+              [attr.aria-label]="('inventory.movements' | t) + ': ' + s.brand + ' ' + s.productName">{{ 'inventory.movements' | t }}</button>
+          </div>
+        </li>
+      } @empty {
+        @if (!stock.loading()) {
+          <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'inventory.empty' | t" [text]="'inventory.emptyText' | t" /></div></li>
+        }
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="stockPage()" [pageSize]="pageSize" [totalCount]="stock.value()?.totalCount ?? 0" (pageChange)="stockPage.set($event)" />
+    </div>
+    <hn-table class="hidden md:block" [loading]="stock.loading()" [scrollY]="true">
       <table class="hn-table" data-testid="stock-table">
         <thead>
           <tr>
