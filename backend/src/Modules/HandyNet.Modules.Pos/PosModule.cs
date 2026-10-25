@@ -71,6 +71,9 @@ public static class PosModule
         services.AddScoped<ApprovalService>();
         services.AddScoped<EReceiptService>();
         services.AddScoped<PosInvoiceService>();
+        services.AddScoped<SalesInputResolver>();
+        services.AddScoped<QuotationService>();
+        services.AddScoped<SalesInvoiceService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -205,6 +208,7 @@ public static class PosModule
 
         MapCashierEndpoints(pos, sell);
         MapDocumentEndpoints(app, sell);
+        MapSalesDocumentEndpoints(sell);
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
@@ -310,6 +314,86 @@ public static class PosModule
             .WithTags("POS")
             .AllowAnonymous()
             .RequireRateLimiting(PublicReceiptRateLimitPolicy);
+    }
+
+    // ---- quotations and sales invoices outside the till (ADR-0015): everyone with pos.sell; credit notes need pos.refund ------
+    private static void MapSalesDocumentEndpoints(RouteGroupBuilder sell)
+    {
+        sell.MapGet("/sales-warehouses", async (SalesInvoiceService service, CancellationToken ct) => Results.Ok(await service.WarehousesAsync(ct)));
+
+        sell.MapGet("/warehouses/{id:guid}/products", async (Guid id, string? search, string? category, bool? includeOutOfStock, int? page, int? pageSize,
+                ProductService service, CancellationToken ct) =>
+            (await service.ListInWarehouseAsync(id, search, category, includeOutOfStock ?? false, page, pageSize, ct)).ToHttp(Results.Ok));
+
+        var quotations = sell.MapGroup("/quotations");
+        quotations.MapGet("", async ([AsParameters] SalesQuery query, QuotationService service, CancellationToken ct) =>
+            (await service.ListAsync(query, ct)).ToHttp(Results.Ok));
+        quotations.MapPost("", async (QuotationRequest request, IValidator<QuotationRequest> validator, QuotationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.CreateAsync(request, ct)).ToHttp(q => Results.Created($"/api/pos/quotations/{q.Id}", q)));
+        quotations.MapGet("/{id:guid}", async (Guid id, QuotationService service, CancellationToken ct) => (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
+        quotations.MapPut("/{id:guid}", async (Guid id, QuotationRequest request, IValidator<QuotationRequest> validator, QuotationService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.UpdateAsync(id, request, ct)).ToHttp(Results.Ok));
+        quotations.MapPost("/{id:guid}/status", async (Guid id, QuotationStatusRequest request, IValidator<QuotationStatusRequest> validator,
+                QuotationService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.SetStatusAsync(id, request, ct)).ToHttp(Results.Ok));
+        quotations.MapPost("/{id:guid}/duplicate", async (Guid id, QuotationService service, CancellationToken ct) =>
+            (await service.DuplicateAsync(id, ct)).ToHttp(q => Results.Created($"/api/pos/quotations/{q.Id}", q)));
+        quotations.MapPost("/{id:guid}/convert", async (Guid id, QuotationService service, SalesInvoiceService invoices, CancellationToken ct) =>
+            (await service.ConvertAsync(id, invoices, ct)).ToHttp(r => r.Existing
+                ? Results.Ok(r.Invoice)
+                : Results.Created($"/api/pos/sales-invoices/{r.Invoice.Id}", r.Invoice)));
+        quotations.MapPost("/{id:guid}/email", async (Guid id, SalesEmailRequest request, IValidator<SalesEmailRequest> validator, QuotationService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.EmailAsync(id, request, ct)).ToHttp(r => Results.Accepted(null, r)));
+        quotations.MapGet("/{id:guid}/pdf", async (Guid id, QuotationService service, CancellationToken ct) =>
+            (await service.PdfAsync(id, ct)).ToHttp(f => Results.File(f.Content, "application/pdf", f.FileName)));
+
+        var invoices = sell.MapGroup("/sales-invoices");
+        invoices.MapGet("", async ([AsParameters] SalesQuery query, SalesInvoiceService service, CancellationToken ct) =>
+            (await service.ListAsync(query, ct)).ToHttp(Results.Ok));
+        invoices.MapGet("/summary", async (SalesInvoiceService service, CancellationToken ct) => Results.Ok(await service.SummaryAsync(ct)));
+        invoices.MapPost("", async (SalesInvoiceRequest request, IValidator<SalesInvoiceRequest> validator, SalesInvoiceService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.CreateAsync(request, ct)).ToHttp(i => Results.Created($"/api/pos/sales-invoices/{i.Id}", i)));
+        invoices.MapGet("/{id:guid}", async (Guid id, SalesInvoiceService service, CancellationToken ct) => (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
+        invoices.MapPut("/{id:guid}", async (Guid id, SalesInvoiceRequest request, IValidator<SalesInvoiceRequest> validator, SalesInvoiceService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.UpdateAsync(id, request, ct)).ToHttp(Results.Ok));
+        invoices.MapPost("/{id:guid}/discard", async (Guid id, SalesInvoiceService service, CancellationToken ct) =>
+            (await service.DiscardAsync(id, ct)).ToHttp(Results.Ok));
+        invoices.MapPost("/{id:guid}/duplicate", async (Guid id, SalesInvoiceService service, CancellationToken ct) =>
+            (await service.DuplicateAsync(id, ct)).ToHttp(i => Results.Created($"/api/pos/sales-invoices/{i.Id}", i)));
+        // Issue is idempotent: issuing an issued invoice returns it (200).
+        invoices.MapPost("/{id:guid}/issue", async (Guid id, SalesInvoiceService service, CancellationToken ct) =>
+            (await service.IssueAsync(id, ct)).ToHttp(r => r.Existing ? Results.Ok(r.Invoice) : Results.Created($"/api/pos/sales-invoices/{id}", r.Invoice)));
+        invoices.MapPost("/{id:guid}/payments", async (Guid id, InvoicePaymentRequest request, IValidator<InvoicePaymentRequest> validator,
+                SalesInvoiceService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.RecordPaymentAsync(id, request, ct)).ToHttp(i => Results.Created($"/api/pos/sales-invoices/{id}", i)));
+        invoices.MapPost("/{id:guid}/collect", async (Guid id, CollectInvoiceRequest request, [FromHeader(Name = IdempotencyHeader)] string? idempotencyKey,
+                IValidator<CollectInvoiceRequest> validator, SaleService sales, SalesInvoiceService service, CancellationToken ct) =>
+            {
+                if (InvalidKey(idempotencyKey) is { } problem)
+                    return problem;
+                return await validator.ProblemIfInvalidAsync(request, ct)
+                       ?? (await sales.CollectInvoiceAsync(id, request, idempotencyKey!.Trim(), service, ct)).ToHttp(r => r.Replayed
+                           ? Results.Ok(r)
+                           : Results.Created($"/api/pos/sales/{r.Receipt.Id}", r));
+            });
+        invoices.MapPost("/{id:guid}/credit-note", async (Guid id, CreditNoteRequest request, IValidator<CreditNoteRequest> validator,
+                SalesInvoiceService service, CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.CreditNoteAsync(id, request, ct)).ToHttp(r => r.Existing
+                ? Results.Ok(r.Invoice)
+                : Results.Created($"/api/pos/sales-invoices/{r.Invoice.Id}", r.Invoice)))
+            .RequirePosPermission(Permissions.PosRefund);
+        invoices.MapPost("/{id:guid}/email", async (Guid id, SalesEmailRequest request, IValidator<SalesEmailRequest> validator, SalesInvoiceService service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct) ?? (await service.EmailAsync(id, request, ct)).ToHttp(r => Results.Accepted(null, r)));
+        invoices.MapGet("/{id:guid}/pdf", async (Guid id, SalesInvoiceService service, CancellationToken ct) =>
+            (await service.PdfAsync(id, ct)).ToHttp(f => Results.File(f.Content, "application/pdf", f.FileName)));
     }
 
     private static IResult? InvalidKey(string? key) =>

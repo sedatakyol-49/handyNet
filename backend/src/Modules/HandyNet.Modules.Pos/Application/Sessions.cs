@@ -57,7 +57,8 @@ public sealed record SessionDto(
     IReadOnlyList<CashMovementDto> Movements,
     IReadOnlyList<DenominationCount>? OpeningDenominations,
     IReadOnlyList<DenominationCount>? ClosingDenominations,
-    ApprovalInfoDto? ClosingApproval = null);
+    ApprovalInfoDto? ClosingApproval = null,
+    long? ZNumber = null);
 
 internal static class PosLimits
 {
@@ -143,6 +144,18 @@ internal static class PosSql
                 $"SELECT id AS \"Value\" FROM pos.cash_sessions WHERE register_id = {registerId} AND status = 'Open' FOR SHARE").ToListAsync(ct);
         return rows.Count == 0 ? null : rows[0];
     }
+
+    /// <summary>
+    /// Takes the register's next Z number (daily closing) in one row-locking UPDATE, like receipt numbers: gapless (a rollback returns
+    /// it; a deferred trigger fails a commit that took a number without closing a session with it). Null if not the tenant's register.
+    /// </summary>
+    public static async Task<long?> AllocateZNumberAsync(HandyNetDbContext db, Guid registerId, CancellationToken ct) =>
+        (await db.Database.SqlQuery<long>($"""
+                UPDATE pos.registers SET next_z_number = next_z_number + 1
+                WHERE id = {registerId}
+                RETURNING next_z_number - 1 AS "Value"
+                """).ToListAsync(ct))
+        .Cast<long?>().FirstOrDefault();
 
     public static async Task<long> ExpectedCashAsync(HandyNetDbContext db, CashSession session, CancellationToken ct)
     {
@@ -350,12 +363,15 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
             return Error.NotFound("pos.session_not_found", "Cash session not found.");
         if (actor.CheckRegister(registerId.Value) is { } otherRegister)
             return otherRegister;
+        // Z number first (register row lock, same order as sales and refunds: register → session), then the session.
+        if (await PosSql.AllocateZNumberAsync(db, registerId.Value, ct) is not { } zNumber)
+            return Error.NotFound("pos.register_not_found", "Register not found.");
         if (await PosSql.LockOpenSessionAsync(db, registerId.Value, exclusive: true, ct) != sessionId)
             return Error.Conflict("pos.session_closed", "The cash session is already closed.");
 
         var session = await db.Set<CashSession>().FirstAsync(s => s.Id == sessionId, ct);
         var summary = await SummarizeAsync(session, ct);
-        var closed = session.Close(summary, count.Value.AmountMinor, request.Note, actor.UserId, clock.UtcNow, count.Value.Counts);
+        var closed = session.Close(summary, count.Value.AmountMinor, request.Note, actor.UserId, clock.UtcNow, zNumber, count.Value.Counts);
         if (!closed.IsSuccess)
             return closed.Error!;
         if (await approvals.LockAsync(actor, ct) is { } closingApproval)
@@ -399,7 +415,7 @@ internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant
         return new SessionDto(s.Id, s.RegisterId, registerName, s.Status.ToString(), s.OpenedAt, s.OpenedBy, NameOf(s.OpenedBy), s.OpeningCashMinor,
             s.ClosedAt, s.ClosedBy, NameOf(s.ClosedBy), s.ExpectedCashMinor ?? summary.ExpectedCashMinor, s.CountedCashMinor, s.DifferenceMinor,
             s.ClosingNote, summary, movements.Select(m => ToDto(m, NameOf(m.CreatedBy), movementApprovals.GetValueOrDefault(m.Id))).ToList(), s.OpeningDenominations,
-            s.ClosingDenominations, closingApproval);
+            s.ClosingDenominations, closingApproval, s.ZNumber);
     }
 
     public static IReadOnlyList<CashMovementReasonDto> Reasons() =>

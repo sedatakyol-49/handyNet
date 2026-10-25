@@ -73,7 +73,9 @@
     "intakes": "Recompras",
     "pos": "Caja",
     "invoices": "Facturas",
-    "company": "Empresa"
+    "company": "Empresa",
+    "salesDocuments": "Facturas y presupuestos",
+    "overdueInvoices": "{count} facturas vencidas"
   },
   "auth": {
     "email": "Correo electrónico",
@@ -543,7 +545,53 @@
       "company.logo_not_found": "La empresa no tiene logotipo.",
       "company.logo_concurrent": "El logotipo se modificó al mismo tiempo. Inténtelo de nuevo.",
       "company.logo_already_removed": "El logotipo ya se ha eliminado.",
-      "image.too_small": "La imagen es demasiado pequeña (al menos 16 píxeles por lado)."
+      "image.too_small": "La imagen es demasiado pequeña (al menos 16 píxeles por lado).",
+      "pos.sales_invoice_paid": "La factura ya está pagada.",
+      "pos.payment_exceeds_open": "El importe supera lo pendiente de la factura.",
+      "pos.cash_payment_at_till": "El efectivo en tienda se cobra en caja.",
+      "pos.sales_invoice_cancelled": "La factura fue anulada.",
+      "pos.sales_invoice_issued": "Las facturas emitidas no se pueden modificar: corríjalas con una rectificativa.",
+      "pos.sales_invoice_not_issued": "Solo es posible una vez emitida la factura.",
+      "pos.sales_invoice_discarded": "El borrador fue descartado.",
+      "pos.sales_invoice_not_found": "Factura no encontrada.",
+      "pos.quotation_not_found": "Presupuesto no encontrado.",
+      "pos.quotation_not_editable": "Los presupuestos aceptados, rechazados o convertidos no se pueden modificar: duplíquelo.",
+      "pos.quotation_converted": "El presupuesto ya se convirtió en factura.",
+      "pos.quotation_rejected": "Reabra primero el presupuesto rechazado.",
+      "pos.quotation_status": "Este cambio de estado no es posible.",
+      "pos.quotation_valid_until": "La fecha de validez debe estar entre la del presupuesto y un año después.",
+      "pos.reverse_charge_lines": "Con inversión del sujeto pasivo todas las líneas deben ir al 0 %; no se admiten dispositivos § 25a.",
+      "pos.reverse_charge_vat_id": "La inversión del sujeto pasivo requiere el NIF-IVA del cliente.",
+      "pos.sales_warehouse_required": "Elija el almacén del que sale la mercancía.",
+      "pos.sales_empty": "Añada al menos una línea.",
+      "pos.sales_total_not_positive": "El total de la factura debe ser mayor que 0.",
+      "pos.unit_not_found": "Este dispositivo no está en su stock.",
+      "pos.sales_unit_changed": "Un dispositivo cambió (p. ej. se vendió mientras tanto). Vuelva a introducir la línea.",
+      "pos.sales_email_missing": "Introduzca una dirección de correo (el cliente no tiene).",
+      "pos.sales_email_invalid": "La dirección de correo no es válida.",
+      "pos.sales_email_limit": "Este documento ya se envió por correo demasiadas veces.",
+      "pos.sales_customer_required": "Elija o cree un cliente.",
+      "pos.payment_date": "La fecha de pago no es plausible.",
+      "pos.payment_reference": "La referencia es demasiado larga (máx. 200 caracteres).",
+      "pos.payment_state": "Estado de pago desconocido.",
+      "pos.payment_term_days": "El plazo de pago debe estar entre 0 y 365 días.",
+      "pos.quotation_number": "Número de presupuesto no válido.",
+      "pos.sales_customer_country": "El país debe ser un código ISO de dos letras (p. ej. DE).",
+      "pos.sales_customer_field_length": "Un campo del cliente es demasiado largo.",
+      "pos.sales_customer_name": "Falta el nombre del cliente.",
+      "pos.sales_customer_vat_id": "El NIF-IVA no es válido.",
+      "pos.sales_description": "Cada línea necesita una descripción (máx. 300 caracteres).",
+      "pos.sales_discount": "El descuento debe estar entre 0 y el importe de la línea.",
+      "pos.sales_invoice_kind": "Tipo de factura desconocido.",
+      "pos.sales_invoice_status": "Estado de factura desconocido.",
+      "pos.sales_line_note": "La nota de la línea es demasiado larga (máx. 500 caracteres).",
+      "pos.sales_notes": "Las notas son demasiado largas (máx. 2.000 caracteres).",
+      "pos.sales_quantity": "La cantidad debe ser un entero de 1 a 100.000.",
+      "pos.sales_too_many_lines": "Como máximo 200 líneas.",
+      "pos.sales_unit_line": "Un dispositivo (IMEI) se factura por unidad con su producto.",
+      "pos.sales_unit_price": "El precio debe estar entre 0 y 1.000.000,00 €.",
+      "pos.sales_vat_rate": "El tipo de IVA debe ser 19 %, 7 % o 0 %.",
+      "pos.z_number": "Número Z no válido."
     }
   },
   "dashboard": {
@@ -1968,11 +2016,13 @@
   "receiptKind": {
     "Sale": "Venta",
     "Storno": "Anulación",
-    "Return": "Devolución"
+    "Return": "Devolución",
+    "InvoicePayment": "Pago de factura"
   },
   "taxTreatment": {
     "Standard19": "Tributación general",
-    "Margin25a": "Régimen de margen (§ 25a UStG)"
+    "Margin25a": "Régimen de margen (§ 25a UStG)",
+    "NotTaxable": "No sujeto (pago de factura)"
   },
   "posSessionStatus": {
     "Open": "Sesión abierta",
@@ -2006,7 +2056,9 @@
       "noSession": "Ninguna sesión abierta",
       "prices": "Precios",
       "reports": "Informes",
-      "sessionReport": "Informe de sesión"
+      "sessionReport": "Informe de sesión",
+      "quotations": "Presupuestos",
+      "invoices": "Facturas"
     },
     "launch": {
       "title": "TPV (venta en tienda)",
@@ -2082,7 +2134,9 @@
       "till": "Venta",
       "receipts": "Tiques",
       "sessions": "Sesiones",
-      "prices": "Precios"
+      "prices": "Precios",
+      "quotations": "Presupuestos",
+      "invoices": "Facturas"
     },
     "registers": {
       "title": "Caja",
@@ -2357,7 +2411,8 @@
       "closed": "Cierre",
       "empty": "No hay sesiones.",
       "manage": "Gestionar",
-      "zReport": "Informe Z"
+      "zReport": "Informe Z",
+      "zNumber": "N.º Z"
     },
     "z": {
       "title": "Informe Z (cierre diario)",
@@ -2385,7 +2440,8 @@
       "openedBy": "Abierta por {name}",
       "closedBy": "Cerrada por {name}",
       "openingCount": "Recuento de apertura",
-      "closingCount": "Recuento de cierre"
+      "closingCount": "Recuento de cierre",
+      "number": "N.º Z {number}"
     },
     "cashCount": {
       "label": "Recuento por denominación",
@@ -3114,6 +3170,213 @@
         "read": "No se pudo leer la imagen.",
         "dimensions": "La imagen tiene demasiados píxeles (como máximo 12.000 por lado)."
       }
+    }
+  },
+  "sales": {
+    "switch": "Presupuestos o facturas",
+    "quotations": {
+      "title": "Presupuestos",
+      "description": "Propuestas de precio para clientes: validez, envío por correo y conversión en factura.",
+      "new": "Nuevo presupuesto"
+    },
+    "invoices": {
+      "title": "Facturas",
+      "description": "Facturas sin caja (p. ej. venta mayorista) y facturas de ventas en caja: una sola serie correlativa.",
+      "new": "Nueva factura",
+      "draft": "Borrador",
+      "fromReceipt": "de un ticket de caja",
+      "creditNote": "Factura rectificativa"
+    },
+    "list": {
+      "search": "Buscar",
+      "searchPlaceholder": "Número, cliente o empresa",
+      "status": "Estado",
+      "payment": "Pago",
+      "all": "Todos",
+      "overdueOnly": "Solo vencidas",
+      "apply": "Aplicar",
+      "reset": "Restablecer",
+      "empty": "No se encontraron entradas."
+    },
+    "quotationStatus": {
+      "Draft": "Borrador",
+      "Sent": "Enviado",
+      "Accepted": "Aceptado",
+      "Rejected": "Rechazado",
+      "Expired": "Caducado"
+    },
+    "invoiceStatus": {
+      "Draft": "Borrador",
+      "Issued": "Emitida",
+      "Discarded": "Descartada"
+    },
+    "badge": {
+      "Draft": "Borrador",
+      "Discarded": "Descartada",
+      "CreditNote": "Factura rectificativa",
+      "Cancelled": "Anulada",
+      "Overdue": "Vencida",
+      "Open": "Pendiente",
+      "PartiallyPaid": "Pagada parcialmente",
+      "Paid": "Pagada"
+    },
+    "priceMode": {
+      "Gross": "Precios brutos",
+      "Net": "Precios netos"
+    },
+    "paymentMethod": {
+      "BankTransfer": "Transferencia",
+      "Card": "Tarjeta",
+      "Cash": "Efectivo",
+      "Other": "Otro"
+    },
+    "fields": {
+      "number": "Número",
+      "customer": "Cliente",
+      "date": "Fecha",
+      "validUntil": "Válido hasta",
+      "invoiceDate": "Fecha de factura",
+      "serviceDate": "Fecha de entrega/servicio",
+      "dueDate": "Vence el",
+      "paymentTermDays": "Plazo de pago (días)",
+      "priceMode": "Introducción de precios",
+      "warehouse": "Almacén (salida de mercancía)",
+      "reverseCharge": "Inversión del sujeto pasivo (§ 13b UStG)",
+      "description": "Descripción",
+      "quantity": "Cantidad",
+      "discount": "Descuento",
+      "vat": "IVA",
+      "vatId": "NIF-IVA",
+      "amount": "Importe",
+      "note": "Nota de la línea",
+      "notes": "Notas (aparecen en el documento)",
+      "total": "Importe total",
+      "totals": "Totales",
+      "paid": "Pagado",
+      "open": "Pendiente"
+    },
+    "totals": {
+      "net": "Neto ({rate})",
+      "vat": "IVA {rate}",
+      "margin": "Régimen de margen (§ 25a)"
+    },
+    "form": {
+      "new": {
+        "quotation": "Nuevo presupuesto",
+        "invoice": "Nueva factura"
+      },
+      "edit": {
+        "quotation": "Editar presupuesto",
+        "invoice": "Editar borrador de factura"
+      },
+      "chooseCustomer": "Elegir o crear cliente",
+      "changeCustomer": "Cambiar cliente",
+      "noCustomer": "Aún no se ha elegido cliente.",
+      "customerRequired": "Elija o cree un cliente.",
+      "addressMissing": "La factura necesita el nombre y la dirección completa (calle, código postal, ciudad). Complete el cliente antes de emitir.",
+      "vatIdMissing": "Cliente empresa sin NIF-IVA: necesario para entregas intracomunitarias e inversión del sujeto pasivo.",
+      "lines": "Líneas",
+      "scan": "Escanee o escriba un EAN o IMEI",
+      "add": "Añadir",
+      "searchProduct": "Buscar producto",
+      "addFree": "Línea de texto libre",
+      "noLines": "Todavía no hay líneas. Escanee, busque un producto o añada texto libre.",
+      "freeLine": "Texto libre (sin stock)",
+      "marginLine": "Régimen de margen § 25a – sin IVA desglosado",
+      "unitGross": "Precio unitario bruto",
+      "unitNet": "Precio unitario neto",
+      "finalPrice": "Precio final (§ 25a)",
+      "discountHint": "Importe o p. ej. «10 %»",
+      "notePlaceholder": "Nota de la línea (opcional)",
+      "removeLine": "Eliminar línea {n}",
+      "settings": "Ajustes",
+      "serviceDateHint": "Vacío = fecha de factura.",
+      "reverseChargeWarning": "Úselo solo tras revisarlo con su asesor fiscal: la factura se emite sin IVA y lleva la nota «Steuerschuldnerschaft des Leistungsempfängers». Todas las líneas pasan al 0 %.",
+      "marginHint": "Los dispositivos en régimen de margen (§ 25a UStG) se facturan sin IVA desglosado.",
+      "scanImei": "Este producto está en stock como dispositivos con IMEI: escanee el IMEI.",
+      "deviceTwice": "Este dispositivo ya está en la lista.",
+      "fixLines": "Corrija las líneas marcadas.",
+      "termInvalid": "El plazo de pago debe estar entre 0 y 365 días.",
+      "saved": "Guardado.",
+      "errors": {
+        "required": "Falta la descripción.",
+        "quantity": "Cantidad: número entero de 1 a 100.000.",
+        "deviceQuantity": "Un dispositivo (IMEI) siempre tiene cantidad 1.",
+        "amount": "Importe en euros con dos decimales como máximo (p. ej. 12,50).",
+        "discountTooHigh": "El descuento supera el importe de la línea."
+      }
+    },
+    "picker": {
+      "title": "Buscar producto",
+      "search": "Marca, nombre, EAN o modelo",
+      "find": "Buscar",
+      "includeOutOfStock": "Mostrar también artículos sin stock",
+      "available": "{count} disponibles",
+      "serialized": "se vende por IMEI",
+      "empty": "No hay productos coincidentes en el almacén."
+    },
+    "detail": {
+      "back": "Volver a la lista",
+      "quotation": "Presupuesto",
+      "invoice": "Factura",
+      "creditNoteTitle": "Factura rectificativa",
+      "actions": "Acciones",
+      "edit": "Editar",
+      "pdf": "Descargar PDF",
+      "print": "Imprimir",
+      "email": "Enviar por correo",
+      "emailAddress": "Dirección de correo",
+      "emailHint": "Déjelo vacío para enviarlo al correo del cliente. Se adjunta el PDF.",
+      "send": "Enviar",
+      "emailSent": "Se está enviando el correo a {to}.",
+      "duplicate": "Duplicar",
+      "duplicated": "Copia creada.",
+      "convert": "Convertir en factura",
+      "converted": "Borrador de factura creado.",
+      "convertedTo": "Convertido en la factura {number}",
+      "openInvoice": "Abrir factura",
+      "fromQuotation": "Del presupuesto {number}",
+      "markSent": "Marcar como enviado",
+      "markAccepted": "Aceptado",
+      "markRejected": "Rechazado",
+      "reopen": "Reabrir",
+      "issue": "Emitir factura",
+      "issueTitle": "¿Emitir la factura?",
+      "issueText": "La factura recibe el siguiente número correlativo, deja de poder modificarse y la mercancía sale del almacén elegido (los dispositivos cuentan como vendidos). Después solo puede corregirse con una factura rectificativa.",
+      "issued": "Factura {number} emitida.",
+      "discard": "Descartar borrador",
+      "discardConfirm": "¿Descartar el borrador? Se conserva, pero ya no aparece en la lista.",
+      "recordPayment": "Registrar pago",
+      "method": "Forma de pago",
+      "cashAtTill": "Registre los cobros en efectivo en la tienda con «Cobrar en caja» (ticket con TSE).",
+      "paidOn": "Fecha de pago",
+      "reference": "Referencia (opcional)",
+      "paymentRecorded": "Pago registrado.",
+      "payments": "Pagos",
+      "noPayments": "Aún no hay pagos.",
+      "receipt": "Ticket de caja n.º {number}",
+      "collect": "Cobrar en caja",
+      "collectText": "Se crea un ticket de caja por el pago, firmado por la TSE. La mercancía ya salió del stock con la factura.",
+      "collectAmount": "Importe aplicado a la factura",
+      "tendered": "Entregado (efectivo)",
+      "change": "Cambio: {amount}",
+      "collectConfirm": "Cobrar",
+      "collectNeedsSession": "Para cobrar en caja, la sesión de caja debe estar abierta.",
+      "collectAmountInvalid": "El importe debe ser mayor que 0 y como máximo el pendiente.",
+      "tenderedTooLow": "El importe entregado no es suficiente.",
+      "collected": "Cobrado: ticket de caja n.º {number}.",
+      "creditNote": "Crear factura rectificativa",
+      "creditNoteText": "La factura rectificativa anula toda la factura (importes negativos, siguiente número) y devuelve la mercancía al stock. Los pagos ya recibidos se reembolsan aparte.",
+      "reason": "Motivo",
+      "creditNoteConfirm": "Emitir factura rectificativa",
+      "creditNoteIssued": "Factura rectificativa {number} emitida.",
+      "creditNoteFor": "Anula la factura {number}",
+      "cancelledBy": "Anulada por {number}",
+      "refundRequired": "Las facturas rectificativas requieren el permiso «devoluciones» (pos.refund)."
+    },
+    "warnings": {
+      "customer_vat_id_missing": "Cliente empresa sin NIF-IVA: necesario en entregas intracomunitarias o inversión del sujeto pasivo.",
+      "reverse_charge_check": "Inversión del sujeto pasivo activada: compruébelo con su asesor fiscal antes de emitir."
     }
   }
 }

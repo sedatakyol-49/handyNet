@@ -13,6 +13,12 @@ public enum ReceiptKind
 
     /// <summary>Customer returns selected lines/quantities of a sale.</summary>
     Return,
+
+    /// <summary>
+    /// Payment of a sales invoice at the till ("An der Kasse kassieren"): one not taxable line, no stock movement (the
+    /// invoice already moved the stock), signed like any receipt; references the invoice (<see cref="Receipt.SalesInvoiceId"/>).
+    /// </summary>
+    InvoicePayment,
 }
 
 /// <summary>Stored as text.</summary>
@@ -124,6 +130,9 @@ public sealed class Receipt
     public ReceiptKind Kind { get; private set; }
     public Guid? ReferencedReceiptId { get; private set; }
 
+    /// <summary>InvoicePayment receipts: the sales invoice paid at the till.</summary>
+    public Guid? SalesInvoiceId { get; private set; }
+
     /// <summary>Optional POS customer. Storno and return receipts carry the customer of the original sale.</summary>
     public Guid? CustomerId { get; private set; }
 
@@ -203,6 +212,25 @@ public sealed class Receipt
         if (receipt.TotalGrossMinor <= 0)
             return Error.Validation("pos.total_not_positive", "The receipt total must be positive.");
 
+        var settled = receipt.SettleSale(payments, cashRounding);
+        return settled.IsSuccess ? receipt : settled.Error!;
+    }
+
+    public const string InvoicePaymentPrefix = "Zahlung Rechnung ";
+
+    /// <summary>
+    /// Payment of a sales invoice at the till: one not taxable line ("Zahlung Rechnung RE-…") over the amount applied to the
+    /// invoice, settled like a sale (cash with change and rounding, card exact). No product, no stock.
+    /// </summary>
+    public static Result<Receipt> CreateInvoicePayment(ReceiptHeader header, Guid salesInvoiceId, string invoiceNumber, long amountMinor,
+        IReadOnlyList<PaymentInput> payments, bool cashRounding = false)
+    {
+        if (amountMinor <= 0)
+            return Error.Validation("pos.payment_amount", "The amount to collect must be positive.");
+        var receipt = New(header, ReceiptKind.InvoicePayment, null, null);
+        receipt.SalesInvoiceId = salesInvoiceId;
+        receipt._lines.Add(ReceiptLine.InvoicePayment(receipt, invoiceNumber, amountMinor));
+        receipt.SumLines();
         var settled = receipt.SettleSale(payments, cashRounding);
         return settled.IsSuccess ? receipt : settled.Error!;
     }
@@ -389,7 +417,9 @@ public sealed class ReceiptLine
     public Guid OrganizationId { get; private set; }
     public Guid ReceiptId { get; private set; }
     public int LineNumber { get; private set; }
-    public Guid ProductId { get; private set; }
+
+    /// <summary>Null only on the not taxable line of an invoice payment receipt.</summary>
+    public Guid? ProductId { get; private set; }
     public Guid? StockUnitId { get; private set; }
     public string? Imei { get; private set; }
     public string Description { get; private set; } = null!;
@@ -457,6 +487,23 @@ public sealed class ReceiptLine
             Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim(),
         };
     }
+
+    internal static ReceiptLine InvoicePayment(Receipt receipt, string invoiceNumber, long amountMinor) => new()
+    {
+        OrganizationId = receipt.OrganizationId,
+        ReceiptId = receipt.Id,
+        LineNumber = 1,
+        ProductId = null,
+        Description = Receipt.InvoicePaymentPrefix + invoiceNumber,
+        Quantity = 1,
+        UnitPriceMinor = amountMinor,
+        DiscountMinor = 0,
+        LineGrossMinor = amountMinor,
+        TaxTreatment = TaxTreatment.NotTaxable,
+        VatRateBasisPoints = 0,
+        VatMinor = 0,
+        NetMinor = amountMinor,
+    };
 
     /// <summary>
     /// Negative mirror of units (alreadyReturned+1 … alreadyReturned+quantity) of a sale line. Gross and VAT are allocated

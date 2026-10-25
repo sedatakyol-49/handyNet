@@ -11,6 +11,9 @@ public enum ApprovalUse
     Return,
     CashMovement,
     CloseSession,
+
+    /// <summary>Credit note (Stornorechnung) of a sales invoice, approved by PIN instead of the cashier's pos.refund right.</summary>
+    CreditNote,
 }
 
 /// <summary>
@@ -42,6 +45,7 @@ public sealed class PosApproval : IAuditable
     public Guid? ReceiptId { get; private set; }
     public Guid? CashMovementId { get; private set; }
     public Guid? SessionId { get; private set; }
+    public Guid? SalesInvoiceId { get; private set; }
 
     /// <summary>
     /// Rules: only POS rights a cashier can lack, at least one; the approver is an owner or manager holding them and not
@@ -79,17 +83,18 @@ public sealed class PosApproval : IAuditable
     public bool IsUsable(DateTimeOffset now) => UsedAt is null && ExpiresAt > now;
 
     /// <summary>Uses the approval once for the given record.</summary>
-    public Result MarkUsed(ApprovalUse use, Guid? receiptId, Guid? cashMovementId, Guid? sessionId, DateTimeOffset now)
+    public Result MarkUsed(ApprovalUse use, Guid? receiptId, Guid? cashMovementId, Guid? sessionId, DateTimeOffset now, Guid? salesInvoiceId = null)
     {
         if (!IsUsable(now))
             return Error.Conflict("pos.approval_used", "This approval was already used or has expired. Ask for a new approval.");
-        if ((receiptId is null ? 0 : 1) + (cashMovementId is null ? 0 : 1) + (sessionId is null ? 0 : 1) != 1)
+        if ((receiptId is null ? 0 : 1) + (cashMovementId is null ? 0 : 1) + (sessionId is null ? 0 : 1) + (salesInvoiceId is null ? 0 : 1) != 1)
             return Error.Validation("pos.approval_target", "An approval is used for exactly one receipt, cash movement or closing.");
         UsedAt = now;
         UsedFor = use;
         ReceiptId = receiptId;
         CashMovementId = cashMovementId;
         SessionId = sessionId;
+        SalesInvoiceId = salesInvoiceId;
         return Result.Success();
     }
 }

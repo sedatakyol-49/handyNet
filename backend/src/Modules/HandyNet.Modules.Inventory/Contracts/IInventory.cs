@@ -4,6 +4,8 @@ namespace HandyNet.Modules.Inventory.Contracts;
 
 public sealed record StockSnapshot(Guid WarehouseId, Guid ProductId, int OnHand, int Reserved);
 
+public sealed record WarehouseSnapshot(Guid Id, string Code, string Name, bool IsDefault);
+
 public sealed record StockTotal(Guid ProductId, int OnHand, int Reserved, int SerializedUnitsInStock)
 {
     public int Available => OnHand - Reserved;
@@ -16,6 +18,9 @@ public interface IInventory
     Task<Guid> GetOrStageDefaultWarehouseAsync(CancellationToken ct);
 
     Task<bool> IsOwnWarehouseAsync(Guid warehouseId, CancellationToken ct);
+
+    /// <summary>The tenant's warehouses (default first), e.g. to choose where an invoice takes its goods from.</summary>
+    Task<IReadOnlyList<WarehouseSnapshot>> GetWarehousesAsync(CancellationToken ct);
 
     Task<IReadOnlyDictionary<Guid, StockSnapshot>> GetLevelsAsync(Guid warehouseId, IReadOnlyCollection<Guid> productIds, CancellationToken ct);
 

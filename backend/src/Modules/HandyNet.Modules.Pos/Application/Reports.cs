@@ -71,10 +71,11 @@ internal sealed class ReportService(HandyNetDbContext db, ITenantContext tenant,
 
         var byProduct = await (from l in db.Set<ReceiptLine>()
                                join r in receipts on l.ReceiptId equals r.Id
+                               where l.ProductId != null
                                group l by l.ProductId into g
                                select new
                                {
-                                   ProductId = g.Key,
+                                   ProductId = g.Key!.Value,
                                    Description = g.Max(x => x.Description),
                                    Sold = g.Sum(x => x.Quantity > 0 ? x.Quantity : 0),
                                    Returned = g.Sum(x => x.Quantity < 0 ? -x.Quantity : 0),
@@ -88,7 +89,7 @@ internal sealed class ReportService(HandyNetDbContext db, ITenantContext tenant,
             {
                 UserId = g.Key,
                 Sales = g.Count(r => r.Kind == ReceiptKind.Sale),
-                Refunds = g.Count(r => r.Kind != ReceiptKind.Sale),
+                Refunds = g.Count(r => r.Kind == ReceiptKind.Storno || r.Kind == ReceiptKind.Return),
                 Gross = g.Sum(r => r.TotalGrossMinor),
             }).ToListAsync(ct);
 
