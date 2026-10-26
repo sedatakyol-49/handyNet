@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Marketplace.Domain;
 using HandyNet.Persistence;
@@ -81,8 +82,7 @@ internal sealed class BulkModerationRequestValidator : AbstractValidator<BulkMod
     public BulkModerationRequestValidator()
     {
         RuleFor(x => x.OfferIds).NotEmpty()
-            .Must(ids => ids is null || ids.Length <= OfferModeration.MaxBatchSize)
-            .WithMessage($"At most {OfferModeration.MaxBatchSize} offers per action.");
+            .MaxCount(ids => ids!.Length, OfferModeration.MaxBatchSize, $"At most {OfferModeration.MaxBatchSize} offers per action.");
         RuleForEach(x => x.OfferIds).NotEmpty();
         RuleFor(x => x.Reason).MaximumLength(OfferModeration.MaxReasonLength);
     }
@@ -96,7 +96,7 @@ internal sealed class AdminOfferQueryValidator : AbstractValidator<AdminOfferQue
         RuleFor(x => x.Brand).MaximumLength(100);
         RuleFor(x => x.Category).MaximumLength(100);
         RuleFor(x => x.Status).Must(s => string.IsNullOrWhiteSpace(s) || Enum.TryParse<OfferStatus>(s, true, out _))
-            .WithMessage("Unknown offer status.");
+            .WithMessage("Unknown offer status.").WithErrorCode("validation.offerStatus");
     }
 }
 

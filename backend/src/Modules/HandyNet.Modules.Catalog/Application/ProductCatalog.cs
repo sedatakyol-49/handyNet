@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Catalog.Contracts;
 using HandyNet.Modules.Catalog.Domain;
@@ -28,7 +29,7 @@ internal sealed class CreateProductValidator : AbstractValidator<CreateProductRe
         RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.").WithErrorCode("validation.quality");
         RuleFor(x => x.Mpn).MaximumLength(100);
         RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.Ean) || !string.IsNullOrWhiteSpace(x.Mpn))
-            .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.");
+            .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.").WithErrorCode("validation.identifier");
     }
 }
 
@@ -76,10 +77,9 @@ internal sealed class UpdateProductValidator : AbstractValidator<UpdateProductRe
         RuleFor(x => x.Mpn).MaximumLength(100);
         RuleFor(x => x.Version).NotNull();
         RuleFor(x => x.ModelName).MaximumLength(200);
-        RuleFor(x => x.CompatibleModels).Must(m => m is null || m.Length <= Product.MaxCompatibleModels)
-            .WithMessage($"At most {Product.MaxCompatibleModels} compatible models.");
+        RuleFor(x => x.CompatibleModels).MaxCount(m => m!.Length, Product.MaxCompatibleModels, $"At most {Product.MaxCompatibleModels} compatible models.");
         RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.Ean) || !string.IsNullOrWhiteSpace(x.Mpn))
-            .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.");
+            .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.").WithErrorCode("validation.identifier");
     }
 }
 

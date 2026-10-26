@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Pos.Domain;
@@ -26,7 +27,7 @@ internal sealed class ApprovalRequestValidator : AbstractValidator<ApprovalReque
     {
         RuleFor(x => x.ApproverUserId).NotEmpty();
         RuleFor(x => x.Pin).NotEmpty().MaximumLength(PinPolicy.MaxLength);
-        RuleFor(x => x.Permissions).NotEmpty().Must(p => p is null || p.Count <= Permissions.ConfigurablePos.Count);
+        RuleFor(x => x.Permissions).NotEmpty().MaxCount(p => p!.Count, Permissions.ConfigurablePos.Count, "Too many permissions.");
     }
 }
 

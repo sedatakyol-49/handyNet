@@ -132,7 +132,7 @@ internal sealed class SellerValidator : AbstractValidator<SellerDetails>
         RuleFor(x => x.City).NotEmpty().MaximumLength(SellerRules.MaxCityLength);
         RuleFor(x => x.IdDocumentType).IsInEnum();
         RuleFor(x => x.IdDocumentNumber).NotEmpty().MaximumLength(SellerRules.MaxDocumentNumberLength);
-        RuleFor(x => x.IdExpiryDate).NotNull().WithMessage("The expiry date of the ID document is required.");
+        RuleFor(x => x.IdExpiryDate).NotNull().WithMessage("The expiry date of the ID document is required.").WithErrorCode("validation.idExpiryRequired");
         RuleFor(x => x.Nationality).MaximumLength(3);
         RuleFor(x => x.IdIssuingCountry).MaximumLength(3);
         RuleFor(x => x.Country).MaximumLength(2);

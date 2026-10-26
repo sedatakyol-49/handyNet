@@ -81,37 +81,52 @@ internal sealed class UpdateCompanyProfileValidator : AbstractValidator<UpdateCo
 {
     public UpdateCompanyProfileValidator()
     {
-        RuleFor(x => x.Version).NotNull().WithMessage("Send the version the form was loaded with.");
+        RuleFor(x => x.Version).NotNull().WithMessage("Send the version the form was loaded with.").WithErrorCode("validation.versionRequired");
         RuleFor(x => x.Name).NotEmpty().MaximumLength(CompanyProfileRules.MaxNameLength);
         RuleFor(x => x.LegalName).NotEmpty().MaximumLength(CompanyProfileRules.MaxLegalNameLength);
         RuleFor(x => x.Street).NotEmpty().MaximumLength(CompanyProfileRules.MaxStreetLength);
         RuleFor(x => x.City).NotEmpty().MaximumLength(CompanyProfileRules.MaxCityLength);
         RuleFor(x => x.CountryCode).Matches("^[A-Za-z]{2}$").When(x => !string.IsNullOrWhiteSpace(x.CountryCode))
-            .WithMessage("The country is a two-letter ISO code.");
+            .WithMessage("The country is a two-letter ISO code.").WithErrorCode("validation.countryCode");
         RuleFor(x => x.PostalCode).NotEmpty().MaximumLength(10);
         RuleFor(x => x.PostalCode).Matches(@"^\d{5}$").When(x => IsGerman(x) && !string.IsNullOrWhiteSpace(x.PostalCode))
-            .WithMessage("German postal codes have five digits.");
-        RuleFor(x => x.VatId!).Must((x, vat) => CompanyProfileRules.IsValidVatId(vat, x.CountryCode ?? "DE")).MaximumLength(20)
-            .When(x => !string.IsNullOrWhiteSpace(x.VatId))
-            .WithMessage(x => IsGerman(x) ? "German VAT IDs are DE followed by nine digits." : "Enter the VAT ID with its two-letter country prefix.");
+            .WithMessage("German postal codes have five digits.").WithErrorCode("validation.postalCodeDe");
+        RuleFor(x => x.VatId!).MaximumLength(20).When(x => !string.IsNullOrWhiteSpace(x.VatId));
+        RuleFor(x => x.VatId!).Must((x, vat) => CompanyProfileRules.IsValidVatId(vat, x.CountryCode ?? "DE"))
+            .When(x => !string.IsNullOrWhiteSpace(x.VatId) && IsGerman(x))
+            .WithMessage("German VAT IDs are DE followed by nine digits.").WithErrorCode("validation.vatIdDe");
+        RuleFor(x => x.VatId!).Must((x, vat) => CompanyProfileRules.IsValidVatId(vat, x.CountryCode ?? "DE"))
+            .When(x => !string.IsNullOrWhiteSpace(x.VatId) && !IsGerman(x))
+            .WithMessage("Enter the VAT ID with its two-letter country prefix.").WithErrorCode("validation.vatIdEu");
         RuleFor(x => x.TaxNumber!).Must(OrganizationContactRules.IsTaxNumber).When(x => !string.IsNullOrWhiteSpace(x.TaxNumber))
-            .WithMessage("A tax number (Steuernummer) has 10 to 13 digits, optionally separated by / or spaces.");
+            .WithMessage("A tax number (Steuernummer) has 10 to 13 digits, optionally separated by / or spaces.").WithErrorCode("validation.taxNumber");
         RuleFor(x => x.ContactEmail!).EmailAddress().MaximumLength(Organization.MaxContactEmailLength).When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
         RuleFor(x => x.ContactPhone!).Matches(@"^\+?[0-9 ()/\-]{6,40}$").When(x => !string.IsNullOrWhiteSpace(x.ContactPhone))
-            .WithMessage("Enter a phone number with digits, spaces, ( ) / - and an optional leading +.");
-        RuleFor(x => x.Website!).Must(OrganizationContactRules.IsWebsite).MaximumLength(Organization.MaxWebsiteLength)
-            .When(x => !string.IsNullOrWhiteSpace(x.Website))
-            .WithMessage("The website must be a full address starting with https:// or http://.");
+            .WithMessage("Enter a phone number with digits, spaces, ( ) / - and an optional leading +.").WithErrorCode("validation.phone");
+        RuleFor(x => x.Website!).Must(OrganizationContactRules.IsWebsite)
+            .WithMessage("The website must be a full address starting with https:// or http://.").WithErrorCode("validation.website")
+            .MaximumLength(Organization.MaxWebsiteLength)
+            .When(x => !string.IsNullOrWhiteSpace(x.Website));
         RuleFor(x => x.ReceiptHeader).MaximumLength(CompanyProfileRules.MaxReceiptHeaderLength)
-            .Must(t => LineCount(t) <= CompanyProfileRules.MaxReceiptTextLines).WithMessage($"At most {CompanyProfileRules.MaxReceiptTextLines} lines.");
+            .Must((_, t, context) =>
+            {
+                context.MessageFormatter.AppendArgument("Max", CompanyProfileRules.MaxReceiptTextLines);
+                return LineCount(t) <= CompanyProfileRules.MaxReceiptTextLines;
+            })
+            .WithMessage($"At most {CompanyProfileRules.MaxReceiptTextLines} lines.").WithErrorCode("validation.maxLines");
         RuleFor(x => x.ReceiptFooter).MaximumLength(CompanyProfileRules.MaxReceiptFooterLength)
-            .Must(t => LineCount(t) <= CompanyProfileRules.MaxReceiptTextLines).WithMessage($"At most {CompanyProfileRules.MaxReceiptTextLines} lines.");
+            .Must((_, t, context) =>
+            {
+                context.MessageFormatter.AppendArgument("Max", CompanyProfileRules.MaxReceiptTextLines);
+                return LineCount(t) <= CompanyProfileRules.MaxReceiptTextLines;
+            })
+            .WithMessage($"At most {CompanyProfileRules.MaxReceiptTextLines} lines.").WithErrorCode("validation.maxLines");
         RuleFor(x => x.Iban!).Must(CompanyProfileRules.IsValidIban).When(x => !string.IsNullOrWhiteSpace(x.Iban))
-            .WithMessage("The IBAN is not valid (check digits or length).");
+            .WithMessage("The IBAN is not valid (check digits or length).").WithErrorCode("validation.iban");
         RuleFor(x => x.Iban).NotEmpty().When(x => !string.IsNullOrWhiteSpace(x.Bic) || !string.IsNullOrWhiteSpace(x.BankName))
-            .WithMessage("Enter the IBAN together with the bank name or BIC.");
+            .WithMessage("Enter the IBAN together with the bank name or BIC.").WithErrorCode("validation.ibanRequired");
         RuleFor(x => x.Bic!).Must(CompanyProfileRules.IsValidBic).When(x => !string.IsNullOrWhiteSpace(x.Bic))
-            .WithMessage("The BIC has 8 or 11 characters (e.g. COBADEFFXXX).");
+            .WithMessage("The BIC has 8 or 11 characters (e.g. COBADEFFXXX).").WithErrorCode("validation.bic");
         RuleFor(x => x.BankName).MaximumLength(CompanyProfileRules.MaxBankNameLength);
         RuleFor(x => x.ManagingDirector).MaximumLength(CompanyProfileRules.MaxManagingDirectorLength);
         RuleFor(x => x.RegisterCourt).MaximumLength(CompanyProfileRules.MaxRegisterCourtLength);

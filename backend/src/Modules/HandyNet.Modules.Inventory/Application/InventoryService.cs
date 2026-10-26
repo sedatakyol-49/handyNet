@@ -47,9 +47,9 @@ internal sealed class AdjustStockValidator : AbstractValidator<AdjustStockReques
         RuleFor(x => x.Delta).NotEqual(0).InclusiveBetween(-1_000_000, 1_000_000);
         RuleFor(x => x.Reason).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Type).Must(t => t is null or MovementType.Receipt or MovementType.Adjustment)
-            .WithMessage("Type must be Receipt or Adjustment.");
+            .WithMessage("Type must be Receipt or Adjustment.").WithErrorCode("validation.movementType");
         RuleFor(x => x.Delta).GreaterThan(0).When(x => x.Type == MovementType.Receipt)
-            .WithMessage("A receipt must increase stock.");
+            .WithMessage("A receipt must increase stock.").WithErrorCode("validation.receiptIncrease");
     }
 }
 

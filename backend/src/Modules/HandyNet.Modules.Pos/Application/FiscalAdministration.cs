@@ -97,17 +97,21 @@ internal sealed class FiscalConfigValidator : AbstractValidator<FiscalConfigRequ
         RuleFor(x => x.Mode).IsInEnum().When(x => x.Mode is not null);
         RuleFor(x => x.LatencyMs).InclusiveBetween(0, FiscalConfiguration.MaxLatencyMs).When(x => x.LatencyMs is not null);
         RuleFor(x => x.FailureRatePercent).InclusiveBetween(0, 100).When(x => x.FailureRatePercent is not null);
-        RuleFor(x => x.Algorithm).Must(a => a is null || KassenSichV.Algorithms.Contains(a))
-            .WithMessage($"Supported algorithms: {string.Join(", ", KassenSichV.Algorithms)}.");
+        RuleFor(x => x.Algorithm).Must((_, a, context) =>
+            {
+                context.MessageFormatter.AppendArgument("Values", string.Join(", ", KassenSichV.Algorithms));
+                return a is null || KassenSichV.Algorithms.Contains(a);
+            })
+            .WithMessage($"Supported algorithms: {string.Join(", ", KassenSichV.Algorithms)}.").WithErrorCode("validation.fiscalAlgorithm");
         RuleFor(x => x.ClientId).MaximumLength(FiscalConfiguration.MaxClientIdLength);
-        RuleFor(x => x.FiskalyEnvironment).Must(e => e is null or "Sandbox" or "Production").WithMessage("Sandbox or Production.");
+        RuleFor(x => x.FiskalyEnvironment).Must(e => e is null or "Sandbox" or "Production").WithMessage("Sandbox or Production.").WithErrorCode("validation.fiskalyEnvironment");
         RuleFor(x => x.FiskalyCredentialReference).MaximumLength(FiscalConfiguration.MaxReferenceLength);
         RuleFor(x => x.FiskalyApiKey).MaximumLength(200);
         RuleFor(x => x.FiskalyApiSecret).MaximumLength(500);
         RuleFor(x => x).Must(x => (x.FiskalyApiKey is null) == (x.FiskalyApiSecret is null))
-            .WithName("FiskalyApiSecret").WithMessage("Enter the fiskaly API key and secret together.");
+            .WithName("FiskalyApiSecret").WithMessage("Enter the fiskaly API key and secret together.").WithErrorCode("validation.fiskalyCredentialPair");
         RuleFor(x => x).Must(x => !(x.ClearFiskalyCredentials && x.FiskalyApiKey is not null))
-            .WithName("ClearFiskalyCredentials").WithMessage("Either clear the stored credentials or enter new ones.");
+            .WithName("ClearFiskalyCredentials").WithMessage("Either clear the stored credentials or enter new ones.").WithErrorCode("validation.fiskalyClearConflict");
     }
 }
 

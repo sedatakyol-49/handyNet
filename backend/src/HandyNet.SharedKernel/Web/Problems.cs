@@ -65,7 +65,7 @@ public static class Problems
     };
 
     private static readonly string[] ParamNames =
-        ["MaxLength", "MinLength", "ComparisonValue", "From", "To", "ExpectedPrecision", "ExpectedScale"];
+        ["MaxLength", "MinLength", "ComparisonValue", "From", "To", "ExpectedPrecision", "ExpectedScale", "Max", "Values"];
 
     private static object ToFieldError(FluentValidation.Results.ValidationFailure e)
     {
@@ -75,8 +75,10 @@ public static class Problems
         var parameters = new Dictionary<string, string>();
         if (code is not null && e.FormattedMessagePlaceholderValues is { } values)
             foreach (var name in ParamNames)
-                if (values.TryGetValue(name, out var v) && v is IFormattable f)
-                    parameters[char.ToLowerInvariant(name[0]) + name[1..]] = f.ToString(null, System.Globalization.CultureInfo.InvariantCulture);
+                if (values.TryGetValue(name, out var v) && v is IFormattable or string)
+                    parameters[char.ToLowerInvariant(name[0]) + name[1..]] = v is IFormattable f
+                        ? f.ToString(null, System.Globalization.CultureInfo.InvariantCulture)
+                        : (string)v;
         return new { code, @params = parameters };
     }
 }

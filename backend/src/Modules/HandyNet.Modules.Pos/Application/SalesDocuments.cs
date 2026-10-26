@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Catalog.Contracts;
 using HandyNet.Modules.Identity.Contracts;
@@ -188,15 +189,15 @@ internal sealed class SalesLineRequestValidator : AbstractValidator<SalesLineReq
     public SalesLineRequestValidator()
     {
         RuleFor(l => l).Must(l => l.ProductId is not null || !string.IsNullOrWhiteSpace(l.Imei) || !string.IsNullOrWhiteSpace(l.Description))
-            .WithName("Line").WithMessage("Each line needs a product, an IMEI or a description.");
+            .WithName("Line").WithMessage("Each line needs a product, an IMEI or a description.").WithErrorCode("validation.lineProductImeiOrDescription");
         RuleFor(l => l.Imei).Must(i => i is null || (i.Trim().Length == 15 && i.Trim().All(char.IsAsciiDigit))).WithMessage("IMEI must have 15 digits.").WithErrorCode("validation.imei");
         RuleFor(l => l.Quantity).InclusiveBetween(1, SalesCalculator.MaxQuantity);
-        RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.");
+        RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.").WithErrorCode("validation.imeiQuantity");
         RuleFor(l => l.UnitPriceMinor).InclusiveBetween(0, SalesCalculator.MaxAmountMinor);
         RuleFor(l => l.DiscountMinor).GreaterThanOrEqualTo(0).When(l => l.DiscountMinor is not null);
         RuleFor(l => l.Description).MaximumLength(SalesCalculator.MaxDescriptionLength);
         RuleFor(l => l.Note).MaximumLength(SalesCalculator.MaxNoteLength);
-        RuleFor(l => l.VatRateBasisPoints).Must(r => r is null || SalesCalculator.Rates.Contains(r.Value)).WithMessage("The VAT rate must be 1900, 700 or 0.");
+        RuleFor(l => l.VatRateBasisPoints).Must(r => r is null || SalesCalculator.Rates.Contains(r.Value)).WithMessage("The VAT rate must be 1900, 700 or 0.").WithErrorCode("validation.vatRate");
     }
 }
 
@@ -219,10 +220,10 @@ internal sealed class QuotationRequestValidator : AbstractValidator<QuotationReq
     public QuotationRequestValidator()
     {
         RuleFor(x => x).Must(x => x.CustomerId is not null || x.Customer is not null).WithName("Customer")
-            .WithMessage("Choose a customer or enter one.");
+            .WithMessage("Choose a customer or enter one.").WithErrorCode("validation.customerRequired");
         RuleFor(x => x.Customer!).SetValidator(new SalesCustomerRequestValidator()).When(x => x.Customer is not null);
         RuleFor(x => x.PriceMode).IsInEnum().When(x => x.PriceMode is not null);
-        RuleFor(x => x.Lines).NotNull().Must(l => l is null || l.Count <= SalesCalculator.MaxLines).WithMessage($"At most {SalesCalculator.MaxLines} lines.");
+        RuleFor(x => x.Lines).NotNull().MaxCount(l => l!.Count, SalesCalculator.MaxLines, $"At most {SalesCalculator.MaxLines} lines.");
         RuleForEach(x => x.Lines).SetValidator(new SalesLineRequestValidator());
         RuleFor(x => x.Notes).MaximumLength(Quotation.MaxNotesLength);
     }
@@ -240,7 +241,7 @@ internal sealed class SalesInvoiceRequestValidator : AbstractValidator<SalesInvo
         RuleFor(x => x.Customer!).SetValidator(new SalesCustomerRequestValidator()).When(x => x.Customer is not null);
         RuleFor(x => x.PriceMode).IsInEnum().When(x => x.PriceMode is not null);
         RuleFor(x => x.PaymentTermDays).InclusiveBetween(0, SalesInvoice.MaxPaymentTermDays).When(x => x.PaymentTermDays is not null);
-        RuleFor(x => x.Lines).NotNull().Must(l => l is null || l.Count <= SalesCalculator.MaxLines).WithMessage($"At most {SalesCalculator.MaxLines} lines.");
+        RuleFor(x => x.Lines).NotNull().MaxCount(l => l!.Count, SalesCalculator.MaxLines, $"At most {SalesCalculator.MaxLines} lines.");
         RuleForEach(x => x.Lines).SetValidator(new SalesLineRequestValidator());
         RuleFor(x => x.Notes).MaximumLength(SalesInvoice.MaxNotesLength);
     }
@@ -267,7 +268,7 @@ internal sealed class CollectInvoiceRequestValidator : AbstractValidator<Collect
     {
         RuleFor(x => x.RegisterId).NotEmpty();
         RuleFor(x => x.AmountMinor).InclusiveBetween(1, SalesCalculator.MaxAmountMinor).When(x => x.AmountMinor is not null);
-        RuleFor(x => x.Payments).NotEmpty().Must(p => p is null || p.Count <= 10).WithMessage("At most 10 payments.");
+        RuleFor(x => x.Payments).NotEmpty().MaxCount(p => p!.Count, 10, "At most 10 payments.");
         RuleForEach(x => x.Payments).ChildRules(p =>
         {
             p.RuleFor(x => x.Method).IsInEnum();
