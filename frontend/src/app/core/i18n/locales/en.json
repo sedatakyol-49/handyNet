@@ -207,6 +207,8 @@
     "notFound": "The record was not found.",
     "unexpected": "An unexpected error occurred.",
     "codes": {
+      "request.concurrent_conflict": "The data was changed by another request at the same time. Nothing was saved – please try again.",
+      "service.busy": "The service is busy right now. Nothing was saved – please try again in a moment.",
       "auth.invalid_credentials": "Email or password is incorrect.",
       "auth.locked_out": "Too many failed attempts. Please try again later.",
       "auth.current_password_invalid": "The current password is incorrect.",

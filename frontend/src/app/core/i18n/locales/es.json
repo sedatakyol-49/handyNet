@@ -207,6 +207,8 @@
     "notFound": "No se ha encontrado el registro.",
     "unexpected": "Se ha producido un error inesperado.",
     "codes": {
+      "request.concurrent_conflict": "Otra solicitud modificó los datos al mismo tiempo. No se guardó nada; inténtelo de nuevo.",
+      "service.busy": "El servicio está ocupado en este momento. No se guardó nada; inténtelo de nuevo en un momento.",
       "auth.invalid_credentials": "El correo electrónico o la contraseña no son correctos.",
       "auth.locked_out": "Demasiados intentos de inicio de sesión fallidos. Inténtelo de nuevo más tarde.",
       "auth.current_password_invalid": "La contraseña actual no es correcta.",

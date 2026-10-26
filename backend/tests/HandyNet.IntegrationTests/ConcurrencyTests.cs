@@ -45,6 +45,33 @@ public sealed class ConcurrencyTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task Concurrent_carts_with_the_same_items_in_opposite_order_never_deadlock()
+    {
+        // Each reservation row-locks the stock level until commit. Reserving in cart order made [A, B] and [B, A]
+        // deadlock (40P01 -> HTTP 500); reservations must lock in one global order.
+        const int attempts = 30;
+        var (supplier, shop) = await _scenario.SupplierAndShopAsync();
+        var (offerA, _) = await _scenario.PublishOfferAsync(supplier, shop, quantity: 1000);
+        var (offerB, _) = await _scenario.PublishOfferAsync(supplier, shop, quantity: 1000);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, attempts).Select(i =>
+        {
+            var lines = i % 2 == 0
+                ? new[] { new { offerId = offerA, quantity = 1 }, new { offerId = offerB, quantity = 1 } }
+                : new[] { new { offerId = offerB, quantity = 1 }, new { offerId = offerA, quantity = 1 } };
+            return shop.PostAsync("/api/orders", new { lines },
+                new Dictionary<string, string> { ["Idempotency-Key"] = $"cross-{i}" });
+        }));
+
+        Assert.All(results, r => Assert.True(r.Status == HttpStatusCode.Created, $"{(int)r.Status} {r.Code} {r.Body?.ToJsonString()}"));
+        foreach (var offerId in new[] { offerA, offerB })
+        {
+            var listing = (await shop.GetAsync($"/api/marketplace/offers/{offerId}")).Expect(HttpStatusCode.OK);
+            Assert.Equal(1000 - attempts, listing.Json["available"]!.GetValue<int>());
+        }
+    }
+
+    [Fact]
     public async Task Concurrent_retries_with_the_same_idempotency_key_create_one_order()
     {
         var (supplier, shop) = await _scenario.SupplierAndShopAsync();

@@ -21,7 +21,7 @@ Never in git. Locally: `dotnet user-secrets` (project `HandyNet.Api`). Container
 
 | Key | Purpose |
 |---|---|
-| `ConnectionStrings:HandyNet` | API connection as `handynet_app` |
+| `ConnectionStrings:HandyNet` | API connection as `handynet_app`. Set `Maximum Pool Size` so that (API instances × pool size) plus the migration and admin connections stays below PostgreSQL's `max_connections`. Otherwise the server refuses connections under load (53300), and the API answers 503 `service.busy` |
 | `ConnectionStrings:HandyNetMigrations` | owner connection for `migrate` |
 | `Jwt:SigningKey` | ≥ 32 random bytes |
 | `Bootstrap:AdminEmail` / `Bootstrap:AdminPassword` | creates/promotes the platform admin at startup (idempotent) |

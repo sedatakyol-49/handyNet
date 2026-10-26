@@ -86,6 +86,8 @@ builder.Services.Replace(ServiceDescriptor.Scoped<HandyNet.Modules.Pos.Contracts
 
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
+// Deadlock / serialization failure / lock timeout / exhausted pool: 409 or 503 with a code, never a bare 500.
+builder.Services.AddExceptionHandler<DbContentionExceptionHandler>();
 builder.Services.AddOpenApi();
 
 var jwt = builder.Configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();

@@ -25,7 +25,10 @@ public sealed class HandyNetFixture : IAsyncLifetime
 {
     public const string AdminEmail = "admin@test.handynet";
     public const string AdminPassword = "Admin-Passwort-123";
-    private const string AppLogin = "handynet_test_app";
+    // Unique per run, not a shared name: login roles are cluster-wide, and a shared role whose password every run
+    // resets breaks suites running concurrently on the same server (other worktrees, CI jobs) with 28P01 as soon as
+    // their connection pool opens a new connection, e.g. during the concurrency tests' request bursts.
+    private readonly string _appLogin = $"handynet_test_app_{Guid.NewGuid():N}"[..34];
 
     private PostgreSqlContainer? _container;
     private string _adminConnection = null!;
@@ -61,23 +64,21 @@ public sealed class HandyNetFixture : IAsyncLifetime
         {
             await owner.OpenAsync();
             await Execute(owner, $"""
-                DO $$ BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{AppLogin}') THEN
-                        CREATE ROLE {AppLogin} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '{appPassword}';
-                    ELSE
-                        ALTER ROLE {AppLogin} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '{appPassword}';
-                    END IF;
-                END $$;
-                GRANT handynet_app TO {AppLogin};
-                GRANT CONNECT ON DATABASE {_databaseName} TO {AppLogin};
+                CREATE ROLE {_appLogin} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '{appPassword}';
+                GRANT handynet_app TO {_appLogin};
+                GRANT CONNECT ON DATABASE {_databaseName} TO {_appLogin};
                 """);
         }
 
         AppConnectionString = new NpgsqlConnectionStringBuilder(_adminConnection)
         {
             Database = _databaseName,
-            Username = AppLogin,
+            Username = _appLogin,
             Password = appPassword,
+            // Several suites (worktrees, CI jobs) share one server. Npgsql's default of 100 lets one test host's request
+            // bursts take every connection slot (53300 for everyone else); with a bounded pool, bursts queue in the pool
+            // and still run up to 20 transactions concurrently, which is what the concurrency tests need.
+            MaxPoolSize = 20,
         }.ConnectionString;
 
         Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(web =>
@@ -122,6 +123,7 @@ public sealed class HandyNetFixture : IAsyncLifetime
         {
             await admin.OpenAsync();
             await Execute(admin, $"DROP DATABASE IF EXISTS {_databaseName} WITH (FORCE)");
+            await Execute(admin, $"DROP ROLE IF EXISTS {_appLogin}");
         }
         if (_container is not null)
             await _container.DisposeAsync();
