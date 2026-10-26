@@ -15,3 +15,4 @@ test-results/
 .artifacts*/
 .claude/worktrees/
 App_Data/
+.env.prod

@@ -2,3 +2,7 @@
 **/obj/
 **/*.local.json
 tests/
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
