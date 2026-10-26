@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
 import { InventoryApi } from '../../core/api/handynet-api';
@@ -14,7 +15,7 @@ import { ProductPanelComponent } from './product-panel/product-panel';
 
 @Component({
   selector: 'hn-inventory-page',
-  imports: [FormsModule, ...UI, ManualEntryDialogComponent, ProductPanelComponent],
+  imports: [FormsModule, RouterLink, ...UI, ManualEntryDialogComponent, ProductPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './inventory.page.html',
 })

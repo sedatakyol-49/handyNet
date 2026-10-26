@@ -1717,6 +1717,83 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Inventory.Domain.ImeiBlacklistEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<Guid?>("DeactivatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deactivated_by_user_id");
+
+                    b.Property<string>("DeactivationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("deactivation_reason");
+
+                    b.Property<string>("Imei")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character(15)")
+                        .HasColumnName("imei")
+                        .IsFixedLength();
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_imei_blacklist");
+
+                    b.HasIndex("Imei")
+                        .IsUnique()
+                        .HasDatabaseName("ux_imei_blacklist_active")
+                        .HasFilter("deactivated_at IS NULL");
+
+                    b.HasIndex("Imei", "CreatedAt")
+                        .HasDatabaseName("ix_imei_blacklist_imei_created_at");
+
+                    b.ToTable("imei_blacklist", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("ck_imei_blacklist_deactivation", "(deactivated_at IS NULL AND deactivated_by_user_id IS NULL AND deactivation_reason IS NULL) OR (deactivated_at IS NOT NULL AND deactivated_by_user_id IS NOT NULL AND deactivation_reason IS NOT NULL AND btrim(deactivation_reason) <> '')");
+
+                            t.HasCheckConstraint("ck_imei_blacklist_imei", "imei ~ '^[0-9]{15}$'");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Inventory.Domain.StockLevel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1822,6 +1899,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("unit_cost_minor");
 
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unit_id");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -1835,6 +1916,10 @@ namespace HandyNet.Migrations.Migrations
 
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_stock_movements_product_id");
+
+                    b.HasIndex("UnitId")
+                        .HasDatabaseName("ix_stock_movements_unit_id")
+                        .HasFilter("unit_id IS NOT NULL");
 
                     b.HasIndex("OrganizationId", "WarehouseId")
                         .HasDatabaseName("ix_stock_movements_organization_id_warehouse_id");
@@ -6395,6 +6480,12 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_stock_movements_products_product_id");
+
+                    b.HasOne("HandyNet.Modules.Inventory.Domain.StockUnit", null)
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_stock_unit_unit_id");
 
                     b.HasOne("HandyNet.Modules.Inventory.Domain.Warehouse", null)
                         .WithMany()

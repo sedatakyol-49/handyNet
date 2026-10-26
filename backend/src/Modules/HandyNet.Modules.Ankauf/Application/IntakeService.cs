@@ -185,6 +185,11 @@ internal sealed class IntakeService(
     IImageCodec imageCodec,
     IClock clock)
 {
+    /// <summary>Refusal of a device on the platform IMEI blacklist (ADR-0019); the shop sees only that it is blocked.</summary>
+    internal static Error Blacklisted(string imei) =>
+        Error.Conflict("imei.blacklisted", "This device is reported as lost, stolen or blocked. Do not buy it; contact the platform.")
+            .WithDetails(new Dictionary<string, object?> { ["imei"] = imei });
+
     private Guid OrganizationId => tenant.RequiredOrganizationId;
 
     private bool SignatureRequired => options.Value.RequireSellerSignature;
@@ -196,8 +201,14 @@ internal sealed class IntakeService(
             return Error.NotFound("ankauf.quote_not_found", "Quote not found.");
         if (await db.Set<Intake>().AnyAsync(i => i.QuoteId == quote.Id && i.Status != IntakeStatus.Rejected, ct))
             return Error.Conflict("ankauf.quote_used", "This quote is already used for an intake.");
-        if (Imei.TryNormalize(request.Imei, out var imei) && await inventory.IsImeiInStockAnywhereAsync(imei, ct))
-            return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. Do not buy the device; check its origin.");
+        if (Imei.TryNormalize(request.Imei, out var imei))
+        {
+            // Before any money changes hands: a reported device is not bought.
+            if (await inventory.IsImeiBlacklistedAsync(imei, ct))
+                return Blacklisted(imei);
+            if (await inventory.IsImeiInStockAnywhereAsync(imei, ct))
+                return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. Do not buy the device; check its origin.");
+        }
 
         var capture = SellerCaptureMethod.Manual;
         if (!string.IsNullOrWhiteSpace(request.Mrz))
@@ -344,6 +355,11 @@ internal sealed class IntakeService(
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_cash_movements_source"))
         {
             return Error.Conflict("ankauf.already_paid", "This purchase was already paid out of a till.");
+        }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            return Error.Conflict("imei.blacklisted", "This device was reported as lost, stolen or blocked. The purchase was not recorded.")
+                .WithDetails(new Dictionary<string, object?> { ["imei"] = intake.Imei });
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {

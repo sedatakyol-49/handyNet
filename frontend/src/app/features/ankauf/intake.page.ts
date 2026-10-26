@@ -206,6 +206,8 @@ export class IntakePage {
   protected readonly pendingPayment = signal<{ minor: number; method: IntakePaymentMethod; warehouseId: string | null; registerId: string | null } | null>(null);
 
   protected readonly imeiInStock = computed(() => toApiProblem(this.error()?.error ?? null).code === 'unit.imei_in_stock');
+  /** The device is on the platform IMEI blacklist (reported lost/stolen/blocked): never buy it. */
+  protected readonly imeiBlacklisted = computed(() => toApiProblem(this.error()?.error ?? null).code === 'imei.blacklisted');
 
   constructor() {
     // Prefill the seller IMEI from the quote once it is known.

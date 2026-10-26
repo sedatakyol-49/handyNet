@@ -71,7 +71,8 @@ public sealed class StockLevel
         UpdatedAt = now,
     };
 
-    public Result<StockMovement?> Adjust(int delta, MovementType type, string? reference, Guid? userId, DateTimeOffset now)
+    /// <param name="unitId">The serialized unit (IMEI) this movement belongs to, if any — the unit's history.</param>
+    public Result<StockMovement?> Adjust(int delta, MovementType type, string? reference, Guid? userId, DateTimeOffset now, Guid? unitId = null)
     {
         if (delta == 0)
             return Result<StockMovement?>.Success(null);
@@ -83,7 +84,7 @@ public sealed class StockLevel
 
         OnHand += delta;
         UpdatedAt = now;
-        return StockMovement.Record(this, delta, type, reference, userId, now);
+        return StockMovement.Record(this, delta, type, reference, userId, now, unitId);
     }
 
     /// <summary>
@@ -134,12 +135,16 @@ public sealed class StockMovement
     public MovementType Type { get; private set; }
     public string? Reference { get; private set; }
     public Guid? UserId { get; private set; }
+
+    /// <summary>Set for movements of a serialized unit (receipt, sale, return): the unit's status history.</summary>
+    public Guid? UnitId { get; private set; }
     public DateTimeOffset OccurredAt { get; private set; }
 
     /// <summary>Net purchase price per unit (EK, cents) recorded with a receipt, when known; null otherwise.</summary>
     public long? UnitCostMinor { get; internal set; }
 
-    internal static StockMovement Record(StockLevel level, int delta, MovementType type, string? reference, Guid? userId, DateTimeOffset now) => new()
+    internal static StockMovement Record(StockLevel level, int delta, MovementType type, string? reference, Guid? userId, DateTimeOffset now,
+        Guid? unitId = null) => new()
     {
         OrganizationId = level.OrganizationId,
         WarehouseId = level.WarehouseId,
@@ -149,6 +154,7 @@ public sealed class StockMovement
         Type = type,
         Reference = reference,
         UserId = userId,
+        UnitId = unitId,
         OccurredAt = now,
     };
 }

@@ -58,8 +58,14 @@ internal sealed class InventoryService(
     ITenantContext tenant,
     ICurrentUser currentUser,
     IProductCatalog catalog,
+    IExternalImeiCheck externalCheck,
     IClock clock) : IInventory
 {
+    public static Error Blacklisted(string imei) =>
+        Error.Conflict("imei.blacklisted",
+                $"The device with IMEI {imei} is reported as lost, stolen or blocked. Do not buy, stock or sell it; contact the platform.")
+            .WithDetails(new Dictionary<string, object?> { ["imei"] = imei });
+
     private Guid OrganizationId => tenant.RequiredOrganizationId;
     private Guid? UserId => currentUser.IsAuthenticated ? currentUser.UserId : null;
 
@@ -169,14 +175,21 @@ internal sealed class InventoryService(
     {
         if (!await IsOwnWarehouseAsync(warehouseId, ct) && !db.ChangeTracker.Entries<Warehouse>().Any(e => e.Entity.Id == warehouseId))
             return Error.NotFound("warehouse.not_found", "Warehouse not found.");
+        // The single gate for every way a device enters stock (Ankauf, Lager entry): blacklist first, then duplicates.
+        // A database trigger on stock_units repeats the blacklist check at write time.
+        if (await IsImeiBlacklistedAsync(imei, ct))
+            return Blacklisted(imei);
         if (await IsImeiInStockAnywhereAsync(imei, ct))
-            return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. The same device cannot be stocked twice.");
+            return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. The same device cannot be stocked twice.")
+                .WithDetails(new Dictionary<string, object?> { ["imei"] = imei });
 
         var unit = StockUnit.Receive(OrganizationId, warehouseId, productId, imei, purchasePriceMinor, scheme, source, clock.UtcNow);
         if (!unit.IsSuccess)
             return unit.Error!;
+        if (await externalCheck.CheckAsync(unit.Value.Imei, ct) == ExternalImeiStatus.Blocked)
+            return Blacklisted(unit.Value.Imei);
         var level = await GetOrStageLevelAsync(warehouseId, productId, ct);
-        var movement = level.Adjust(1, MovementType.UnitReceipt, source, UserId, clock.UtcNow);
+        var movement = level.Adjust(1, MovementType.UnitReceipt, source, UserId, clock.UtcNow, unit.Value.Id);
         if (!movement.IsSuccess)
             return movement.Error!;
         db.Add(unit.Value);
@@ -191,6 +204,20 @@ internal sealed class InventoryService(
     /// <summary>Checked through an id-free SECURITY DEFINER function: units of other organizations stay invisible.</summary>
     public async Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct) =>
         await db.Database.SqlQuery<bool>($"SELECT inventory.imei_in_stock({imei}) AS \"Value\"").SingleAsync(ct);
+
+    /// <summary>Yes/no through a SECURITY DEFINER function: tenants never read the blacklist itself.</summary>
+    public async Task<bool> IsImeiBlacklistedAsync(string imei, CancellationToken ct) =>
+        await db.Database.SqlQuery<bool>($"SELECT inventory.imei_blacklisted({imei}) AS \"Value\"").SingleAsync(ct);
+
+    public async Task<ImeiConflicts> FindImeiConflictsAsync(IReadOnlyCollection<string> imeis, CancellationToken ct)
+    {
+        if (imeis.Count == 0)
+            return new ImeiConflicts(new HashSet<string>(), new HashSet<string>());
+        var array = imeis.ToArray();
+        var inStock = await db.Database.SqlQuery<string>($"SELECT imei AS \"Value\" FROM inventory.imeis_in_stock({array}) AS imei").ToListAsync(ct);
+        var blacklisted = await db.Database.SqlQuery<string>($"SELECT imei AS \"Value\" FROM inventory.imeis_blacklisted({array}) AS imei").ToListAsync(ct);
+        return new ImeiConflicts(inStock.ToHashSet(StringComparer.Ordinal), blacklisted.ToHashSet(StringComparer.Ordinal));
+    }
 
     public async Task<Result> StageSellAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct)
     {
@@ -220,6 +247,9 @@ internal sealed class InventoryService(
             return Error.Conflict("unit.not_available", $"No device with IMEI {imei} is in stock.");
         if (unit.WarehouseId != warehouseId)
             return Error.Conflict("unit.other_warehouse", $"The device with IMEI {imei} is stocked in another warehouse.");
+        // Reported after it was stocked: it must not be sold (the stock_units trigger enforces this as well).
+        if (await IsImeiBlacklistedAsync(unit.Imei, ct))
+            return Blacklisted(unit.Imei);
 
         var sold = unit.MarkSold(clock.UtcNow);
         if (!sold.IsSuccess)
@@ -227,7 +257,7 @@ internal sealed class InventoryService(
         var level = await FindLevelAsync(unit.WarehouseId, unit.ProductId, ct);
         if (level is null)
             return Error.Conflict("stock.inconsistent", "The device has no stock level. Correct the stock first.");
-        var movement = level.Adjust(-1, MovementType.Sale, reference, UserId, clock.UtcNow);
+        var movement = level.Adjust(-1, MovementType.Sale, reference, UserId, clock.UtcNow, unit.Id);
         if (!movement.IsSuccess)
             return movement.Error!; // e.g. the last unit's quantity is reserved by an order
         db.Add(movement.Value!);
@@ -253,11 +283,14 @@ internal sealed class InventoryService(
         var unit = await db.Set<StockUnit>().FirstOrDefaultAsync(u => u.Id == unitId && u.OrganizationId == OrganizationId, ct);
         if (unit is null)
             return Error.NotFound("unit.not_found", "Device not found.");
+        // A returned device re-enters stock: same gate as a receipt.
+        if (await IsImeiBlacklistedAsync(unit.Imei, ct))
+            return Blacklisted(unit.Imei);
         var returned = unit.ReturnToStock(clock.UtcNow);
         if (!returned.IsSuccess)
             return returned;
         var level = await GetOrStageLevelAsync(unit.WarehouseId, unit.ProductId, ct);
-        var movement = level.Adjust(1, MovementType.Return, reference, UserId, clock.UtcNow);
+        var movement = level.Adjust(1, MovementType.Return, reference, UserId, clock.UtcNow, unit.Id);
         if (!movement.IsSuccess)
             return movement.Error!;
         db.Add(movement.Value!);

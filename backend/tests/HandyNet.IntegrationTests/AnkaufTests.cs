@@ -344,6 +344,35 @@ public sealed partial class AnkaufTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task A_blacklisted_device_is_refused_before_money_changes_hands_and_never_stocked()
+    {
+        var (dealer, key, admin, brand) = await PricedModelAsync();
+        var stolen = NewImei();
+        (await admin.PostAsync("/api/admin/imei-blacklist", new { imei = stolen, reason = "Stolen", source = "Polizei" })).Expect(HttpStatusCode.Created);
+
+        // Quote with the IMEI and the "Received" step: refused with a distinct code.
+        var quoted = await dealer.PostAsync("/api/ankauf/quotes", new { modelKey = key, condition = "Gut", imei = stolen });
+        Assert.Equal((HttpStatusCode.Conflict, "imei.blacklisted"), (quoted.Status, quoted.Code));
+        var quoteId = (await dealer.PostAsync("/api/ankauf/quotes", new { modelKey = key, condition = "Gut" }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+        var received = await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei = stolen, seller = AdultSeller });
+        Assert.Equal((HttpStatusCode.Conflict, "imei.blacklisted"), (received.Status, received.Code));
+        Assert.DoesNotContain("Polizei", received.Json.ToJsonString());
+
+        // Reported between receiving and paying: completing (stocking) is refused by the central inventory gate.
+        var imei = NewImei();
+        var intakeId = (await dealer.PostAsync("/api/ankauf/intakes", new { quoteId, imei, seller = AdultSeller }))
+            .Expect(HttpStatusCode.Created).Json["id"]!.GetValue<string>();
+        (await dealer.PostAsync($"/api/ankauf/intakes/{intakeId}/inspect", new { condition = "Gut" })).Expect(HttpStatusCode.OK);
+        (await admin.PostAsync("/api/admin/imei-blacklist", new { imei, reason = "Lost", source = "Kundenmeldung" })).Expect(HttpStatusCode.Created);
+        var completed = await PayAsync(dealer, intakeId, 100m, "BankTransfer");
+        Assert.Equal((HttpStatusCode.Conflict, "imei.blacklisted"), (completed.Status, completed.Code));
+        Assert.Equal("Inspected", (await dealer.GetAsync($"/api/ankauf/intakes/{intakeId}")).Json["status"]!.GetValue<string>());
+        var stock = (await dealer.GetAsync("/api/inventory/stock")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray();
+        Assert.DoesNotContain(stock, i => i!["brand"]?.GetValue<string>() == brand && i["onHand"]!.GetValue<int>() > 0);
+    }
+
+    [Fact]
     public async Task Ankaufbeleg_is_issued_for_completed_purchases_of_the_own_shop_only()
     {
         var (dealer, key, _, brand) = await PricedModelAsync();

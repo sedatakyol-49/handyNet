@@ -76,7 +76,8 @@
     "company": "Company",
     "salesDocuments": "Invoices & quotations",
     "overdueInvoices": "{count} overdue invoices",
-    "dailyReport": "Daily report"
+    "dailyReport": "Daily report",
+    "units": "Devices (IMEI)"
   },
   "auth": {
     "email": "Email address",
@@ -637,7 +638,20 @@
       "pos.printer_limit": "A register can have at most 20 printer profiles.",
       "pos.printer_version": "Reload the page and save again.",
       "pos.printer_name_taken": "This register already has a printer with this name.",
-      "pos.email_language_invalid": "This email language is not supported."
+      "pos.email_language_invalid": "This email language is not supported.",
+      "imei.blacklisted": "Device blocked: this IMEI is reported as lost, stolen or blocked. Do not buy, stock or sell it.",
+      "entry.imei_conflicts": "Some devices are blocked or already in stock. Nothing was saved.",
+      "blacklist.already_active": "This IMEI is already blocked.",
+      "blacklist.already_inactive": "This block has already been lifted.",
+      "blacklist.note_required": "A note is required for the reason “Other”.",
+      "blacklist.not_found": "Blacklist entry not found.",
+      "blacklist.search": "Search by the first digits of the IMEI (digits only, max. 15).",
+      "unit.imei_prefix": "Search by the first digits of the IMEI (digits only, max. 15).",
+      "imei.invalid": "The IMEI must be 15 digits with a valid check digit.",
+      "blacklist.deactivation_reason": "Please enter a reason for lifting the block (max. 500 characters).",
+      "blacklist.reason": "Unknown reason.",
+      "blacklist.source": "Please enter the source of the report (max. 200 characters).",
+      "blacklist.note": "The note is too long (max. 1000 characters)."
     },
     "validation": {
       "required": "This field is required.",
@@ -1161,6 +1175,14 @@
           "imeiOtherRow": "At least one IMEI is also entered in another row.",
           "skuOtherRow": "This SKU is already used in another row."
         }
+      },
+      "imeiBlacklisted": "IMEI {imei} is reported as lost, stolen or blocked. Do not stock the device. Nothing was saved.",
+      "imeiBlacklistedAny": "One of the devices is reported as lost, stolen or blocked. Nothing was saved.",
+      "imeiConflicts": "These devices cannot be stocked: {list}. Remove them and save again – nothing was saved.",
+      "problem": {
+        "blacklisted": "blocked",
+        "inStock": "already in stock",
+        "other": "refused"
       }
     }
   },
@@ -1332,7 +1354,8 @@
       "invoices": "Commission invoices",
       "moderation": "Marketplace moderation",
       "fiscal": "Tills & TSE",
-      "users": "Users"
+      "users": "Users",
+      "blacklist": "IMEI blacklist"
     },
     "disputes": {
       "subtitle": "Review and decide complaints handed over to SEHA.",
@@ -2152,7 +2175,9 @@
         "idNumber": "Letters and digits only (2–30 characters)."
       },
       "belegDownload": "Purchase receipt (PDF)",
-      "summary": "Summary"
+      "summary": "Summary",
+      "imeiBlacklistedHeading": "Device blocked – do not buy",
+      "imeiBlacklistedText": "This IMEI is reported as lost, stolen or blocked. Do not pay out any money, keep the seller's details and contact the platform."
     },
     "intakes": {
       "title": "Purchases",
@@ -3896,5 +3921,75 @@
       "empty": "No module with revenue is active for your company (till, buyback, marketplace).",
       "note": "Calendar day in local time ({zone}). Gross amounts; VAT by treatment as in the Z report. Not a tax evaluation."
     }
+  },
+  "units": {
+    "title": "Devices (IMEI)",
+    "subtitle": "Individual devices in your own stock with their history. Devices enter stock through the stock entry or a buyback.",
+    "backToStock": "Back to stock",
+    "imeiSearch": "IMEI (starts with)",
+    "status": "Device status",
+    "allStatuses": "All statuses",
+    "productFilter": "Filtered by product.",
+    "showAll": "Show all",
+    "product": "Product",
+    "taxScheme": "Taxation",
+    "purchasePrice": "Purchase price",
+    "receivedAt": "Received",
+    "history": "History",
+    "openLabel": "Show history of IMEI {imei}",
+    "empty": "No devices found",
+    "emptyText": "Devices with an IMEI enter stock through the stock entry or a buyback.",
+    "detailTitle": "Device",
+    "source": "Source",
+    "noHistory": "No movements recorded (received on {date})."
+  },
+  "unitStatus": {
+    "InStock": "In stock",
+    "Reserved": "Reserved",
+    "Sold": "Sold",
+    "Scrapped": "Written off"
+  },
+  "unitTaxScheme": {
+    "Standard": "Standard VAT",
+    "Margin25a": "Margin scheme (§25a UStG)"
+  },
+  "blacklistReason": {
+    "Lost": "Lost",
+    "Stolen": "Stolen",
+    "Fraud": "Fraud",
+    "Other": "Other"
+  },
+  "blacklistState": {
+    "active": "Blocked",
+    "inactive": "Lifted"
+  },
+  "blacklist": {
+    "subtitle": "IMEI blacklist: devices reported as lost, stolen or fraudulent. Dealers only learn yes/no when buying, stocking and selling.",
+    "add": "Block device",
+    "addSubmit": "Block",
+    "externalNote": "No external database (e.g. GSMA) is connected. The list contains only entries recorded here.",
+    "search": "IMEI (starts with)",
+    "state": "Block status",
+    "all": "All",
+    "active": "Blocked (active)",
+    "inactive": "Lifted",
+    "reason": "Reason",
+    "source": "Source of the report",
+    "sourceHint": "e.g. police station with case number, or a dealer report",
+    "note": "Note",
+    "createdAt": "Blocked on",
+    "deactivate": "Lift block",
+    "deactivateTitle": "Lift block",
+    "deactivateLabel": "Lift block of IMEI {imei}",
+    "deactivateText": "The block of IMEI {imei} will be lifted. The entry stays as history.",
+    "deactivationReason": "Reason for lifting",
+    "empty": "No entries",
+    "invalidImei": "The IMEI must be 15 digits with a valid check digit.",
+    "sourceRequired": "Please enter the source.",
+    "noteRequired": "A note is required for the reason “Other”.",
+    "checkInput": "Please check your input.",
+    "added": "IMEI {imei} has been blocked.",
+    "reasonRequired": "Please enter a reason.",
+    "deactivated": "The block of IMEI {imei} has been lifted."
   }
 }

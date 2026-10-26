@@ -6,6 +6,12 @@ public sealed record StockSnapshot(Guid WarehouseId, Guid ProductId, int OnHand,
 
 public sealed record WarehouseSnapshot(Guid Id, string Code, string Name, bool IsDefault);
 
+/// <summary>IMEIs of a bulk check that are in stock anywhere on the platform / actively blacklisted.</summary>
+public sealed record ImeiConflicts(IReadOnlySet<string> InStock, IReadOnlySet<string> Blacklisted)
+{
+    public bool Any => InStock.Count > 0 || Blacklisted.Count > 0;
+}
+
 public sealed record StockTotal(Guid ProductId, int OnHand, int Reserved, int SerializedUnitsInStock)
 {
     public int Available => OnHand - Reserved;
@@ -47,13 +53,22 @@ public interface IInventory
 
     /// <summary>
     /// Stages receipt of one serialized device: a stock unit with its IMEI and purchase price, +1 on the product's
-    /// stock level and a movement. Fails (on save) if the IMEI is already in stock anywhere on the platform.
+    /// stock level and a movement. This is the single entry gate for devices (Ankauf, Lager entry): refused with
+    /// <c>imei.blacklisted</c> if the IMEI is on the platform blacklist (or blocked by the external check, if one is
+    /// connected) and with <c>unit.imei_in_stock</c> if it is already in stock anywhere on the platform. Saving fails as
+    /// well if either becomes true concurrently (unique index / trigger, SQLSTATE HNB01).
     /// </summary>
     Task<Result<Guid>> StageReceiveUnitAsync(Guid warehouseId, Guid productId, string imei, long purchasePriceMinor,
         Domain.TaxScheme scheme, string source, CancellationToken ct);
 
     /// <summary>True if the IMEI is currently in stock (InStock or Reserved) at any organization.</summary>
     Task<bool> IsImeiInStockAnywhereAsync(string imei, CancellationToken ct);
+
+    /// <summary>True if the IMEI is actively blacklisted (lost/stolen/blocked). Yes/no only; the list itself is never exposed to tenants.</summary>
+    Task<bool> IsImeiBlacklistedAsync(string imei, CancellationToken ct);
+
+    /// <summary>Which of these (normalized) IMEIs are in stock anywhere on the platform and which are actively blacklisted — to report every offending IMEI of a bulk entry at once.</summary>
+    Task<ImeiConflicts> FindImeiConflictsAsync(IReadOnlyCollection<string> imeis, CancellationToken ct);
 
     /// <summary>
     /// Stages an over-the-counter sale of a non-serialized product: on-hand decreases with a <c>Sale</c> movement.
@@ -62,7 +77,7 @@ public interface IInventory
     /// </summary>
     Task<Result> StageSellAsync(Guid warehouseId, Guid productId, int quantity, string reference, CancellationToken ct);
 
-    /// <summary>Stages the sale of one own in-stock IMEI unit in the warehouse: unit → Sold, −1 on its stock level.</summary>
+    /// <summary>Stages the sale of one own in-stock IMEI unit in the warehouse: unit → Sold, −1 on its stock level. Blacklisted devices are refused (<c>imei.blacklisted</c>).</summary>
     Task<Result<UnitSnapshot>> StageSellUnitAsync(Guid warehouseId, string imei, string reference, CancellationToken ct);
 
     /// <summary>Stages a customer return of a non-serialized product: on-hand increases with a <c>Return</c> movement.</summary>
@@ -70,7 +85,7 @@ public interface IInventory
 
     /// <summary>
     /// Stages the return of a sold unit: Sold → InStock, +1 on its stock level. Saving fails if the same IMEI has been
-    /// stocked anywhere on the platform in the meantime (unique index).
+    /// stocked anywhere on the platform in the meantime (unique index). Blacklisted devices do not re-enter stock (<c>imei.blacklisted</c>).
     /// </summary>
     Task<Result> StageReturnUnitAsync(Guid unitId, string reference, CancellationToken ct);
 

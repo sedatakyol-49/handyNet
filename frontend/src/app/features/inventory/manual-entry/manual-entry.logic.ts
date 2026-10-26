@@ -1,4 +1,4 @@
-import { CatalogCategories, LookupMatch, ManualEntryRequest, ManualEntryResult, OfferCondition } from '../../../core/api/models';
+import { CatalogCategories, ImeiProblem, LookupMatch, ManualEntryRequest, ManualEntryResult, OfferCondition } from '../../../core/api/models';
 import { minorToDecimal, minorToInput, parseMoneyToMinor } from '../../../core/format/money';
 
 /**
@@ -16,6 +16,23 @@ export const MAX_DELIVERY_DAYS = 60;
 /** Removes whitespace, dashes and slashes (same as the API's Imei.TryNormalize). */
 export function normalizeImei(input: string | null | undefined): string {
   return (input ?? '').replace(/[\s\-/]/g, '');
+}
+
+/**
+ * The per-IMEI problems of a refused entry (problem details `imeis`: `imei.blacklisted` / `unit.imei_in_stock`), in
+ * entry order. Unknown shapes yield an empty list, so the caller falls back to the generic message.
+ */
+export function imeiProblems(body: unknown): ImeiProblem[] {
+  const list = (body as { imeis?: unknown } | null)?.imeis;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((p): p is ImeiProblem => !!p && typeof p.imei === 'string' && typeof p.code === 'string')
+    .map((p) => ({ imei: p.imei, code: p.code }));
+}
+
+/** i18n key that names why one IMEI cannot be stocked. */
+export function imeiProblemKey(code: string): string {
+  return code === 'imei.blacklisted' ? 'inventory.entry.problem.blacklisted' : code === 'unit.imei_in_stock' ? 'inventory.entry.problem.inStock' : 'inventory.entry.problem.other';
 }
 
 /** 15 digits with a valid Luhn check digit. */
@@ -411,6 +428,8 @@ export function stepForProblem(code: string | null, fieldKeys: string[]): EntryS
     'entry.quantity_mismatch': 'stock',
     'entry.purchase_price': 'stock',
     'unit.imei_in_stock': 'stock',
+    'imei.blacklisted': 'stock',
+    'entry.imei_conflicts': 'stock',
     'warehouse.not_found': 'stock',
     'stock.quantity': 'stock',
     'entry.serialized_offer_unsupported': 'offer',

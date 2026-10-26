@@ -95,4 +95,33 @@ public static class ManualEntryRules
                 "B2B offers for serialized (IMEI) stock are not supported yet. Save the stock without an offer.");
         return null;
     }
+
+    /// <summary>
+    /// Refusal listing every IMEI that cannot be stocked, in entry order: <c>imei.blacklisted</c> (reported lost/stolen/blocked,
+    /// takes precedence) or <c>unit.imei_in_stock</c> (already in stock anywhere on the platform). Details: <c>imeis</c> =
+    /// [{ imei, code }]. With a single offending IMEI the error code is that IMEI's code; with several it is
+    /// <c>entry.imei_conflicts</c>.
+    /// </summary>
+    public static Error ImeiConflicts(IEnumerable<string> imeis, IReadOnlySet<string> blacklisted, IReadOnlySet<string> inStock)
+    {
+        var problems = imeis
+            .Where(i => blacklisted.Contains(i) || inStock.Contains(i))
+            .Distinct(StringComparer.Ordinal)
+            .Select(i => new ImeiProblem(i, blacklisted.Contains(i) ? "imei.blacklisted" : "unit.imei_in_stock"))
+            .ToList();
+        var details = new Dictionary<string, object?> { ["imeis"] = problems };
+        if (problems.Count == 1)
+        {
+            var only = problems[0];
+            details["imei"] = only.Imei;
+            return only.Code == "imei.blacklisted"
+                ? Error.Conflict(only.Code, $"The device with IMEI {only.Imei} is reported as lost, stolen or blocked. Do not stock it; contact the platform.").WithDetails(details)
+                : Error.Conflict(only.Code, $"IMEI {only.Imei} is already in stock. The same device cannot be stocked twice.").WithDetails(details);
+        }
+        return Error.Conflict("entry.imei_conflicts",
+            $"{problems.Count} devices cannot be stocked (reported as lost/stolen/blocked or already in stock). Nothing was saved.").WithDetails(details);
+    }
 }
+
+/// <summary>One IMEI that prevents an entry, with a stable code (<c>imei.blacklisted</c>, <c>unit.imei_in_stock</c>).</summary>
+public sealed record ImeiProblem(string Imei, string Code);

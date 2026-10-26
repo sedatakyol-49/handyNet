@@ -4,6 +4,11 @@ import { Observable, catchError, from, switchMap, throwError } from 'rxjs';
 import { API_BASE_URL } from './api-config';
 import { queryParams } from './http-params';
 import {
+  BlacklistEntry,
+  BlacklistReason,
+  StockUnitRow,
+  UnitDetail,
+  UnitStatus,
   CashMovement,
   CompanyLogo,
   CompanyProfile,
@@ -386,6 +391,36 @@ export class InventoryApi {
   /** Manual entry; reuse the same key when retrying the same attempt (201 created, 200 replayed). */
   createItem(body: ManualEntryRequest, idempotencyKey: string): Observable<ManualEntryResult> {
     return this.http.post<ManualEntryResult>(`${this.url}/items`, body, { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) });
+  }
+
+  /** Own serialized devices; `imei` searches by IMEI prefix (digits only). */
+  units(q: { productId?: string | null; status?: UnitStatus | null; imei?: string | null; warehouseId?: string | null; page?: number; pageSize?: number }): Observable<Paged<StockUnitRow>> {
+    return this.http.get<Paged<StockUnitRow>>(`${this.url}/units`, { params: queryParams(q) });
+  }
+
+  /** One device with its history (receipt, sale, return). */
+  unit(id: string): Observable<UnitDetail> {
+    return this.http.get<UnitDetail>(`${this.url}/units/${id}`);
+  }
+}
+
+/** Platform administration of the IMEI blacklist (tenants never read it; they only get yes/no inside the API). */
+@Injectable({ providedIn: 'root' })
+export class AdminImeiBlacklistApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = inject(API_BASE_URL);
+  private readonly url = `${this.base}/api/admin/imei-blacklist`;
+
+  list(q: { imei?: string | null; active?: boolean | null; page?: number; pageSize?: number }): Observable<Paged<BlacklistEntry>> {
+    return this.http.get<Paged<BlacklistEntry>>(this.url, { params: queryParams(q) });
+  }
+
+  add(body: { imei: string; reason: BlacklistReason; note: string | null; source: string }): Observable<BlacklistEntry> {
+    return this.http.post<BlacklistEntry>(this.url, body);
+  }
+
+  deactivate(id: string, reason: string): Observable<BlacklistEntry> {
+    return this.http.post<BlacklistEntry>(`${this.url}/${id}/deactivate`, { reason });
   }
 }
 

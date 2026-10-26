@@ -352,6 +352,9 @@ internal sealed class SalesInputResolver(HandyNetDbContext db, ITenantContext te
                 var unit = await inventory.FindOwnUnitByImeiAsync(r.Imei.Trim(), ct);
                 if (unit is null)
                     return Error.NotFound("pos.unit_not_found", $"Line {index}: no device with IMEI {r.Imei.Trim()} in your stock.");
+                if (await inventory.IsImeiBlacklistedAsync(unit.Imei, ct))
+                    return Error.Conflict("imei.blacklisted", $"Line {index}: the device {unit.Imei} is reported as lost, stolen or blocked. It must not be sold.")
+                        .WithDetails(new Dictionary<string, object?> { ["imei"] = unit.Imei });
                 if (r.ProductId is { } expected && expected != unit.ProductId)
                     return Error.Validation("pos.imei_product_mismatch", $"Line {index}: the device {r.Imei.Trim()} is not of the selected product.");
                 var device = products.GetValueOrDefault(unit.ProductId) ?? (await catalog.GetAsync([unit.ProductId], ct)).GetValueOrDefault(unit.ProductId);
@@ -788,6 +791,10 @@ internal sealed class SalesInvoiceService(
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            return Error.Conflict("imei.blacklisted", "A device on this invoice was reported as lost, stolen or blocked. It must not be sold.");
+        }
         catch (DbUpdateConcurrencyException)
         {
             return Error.Conflict("pos.stock_changed", "Stock changed while issuing (e.g. the device was sold at the till). Try again.");
@@ -852,6 +859,10 @@ internal sealed class SalesInvoiceService(
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_stock_units_imei_in_stock"))
         {
             return Error.Conflict("unit.imei_in_stock", "A device of this invoice is already in stock again. Check its origin.");
+        }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            return Error.Conflict("imei.blacklisted", "A device of this invoice was reported as lost, stolen or blocked. It cannot go back into stock.");
         }
         catch (DbUpdateConcurrencyException)
         {
