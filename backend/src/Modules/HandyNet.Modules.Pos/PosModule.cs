@@ -41,6 +41,9 @@ public static class PosModule
                 "Pos:Fiscal:MaxAttempts must be 1–10 and RetryDelayMs 0–10000.")
             .Validate(o => Uri.TryCreate(o.Fiskaly.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && o.Fiskaly.TimeoutSeconds is >= 1 and <= 120,
                 "Pos:Fiskaly:BaseUrl must be an https URL and TimeoutSeconds 1–120.")
+            .Validate(o => o.Fiskaly.MaxRetries is >= 0 and <= 10 && o.Fiskaly.RetryBaseDelayMs is >= 0 and <= 10_000
+                           && o.Fiskaly.AdministrationTimeoutSeconds is >= 30 and <= 300,
+                "Pos:Fiskaly:MaxRetries must be 0–10, RetryBaseDelayMs 0–10000 and AdministrationTimeoutSeconds 30–300.")
             .ValidateOnStart();
         services.AddSingleton<IModuleModel, PosModel>();
         services.AddDataProtection();
@@ -52,7 +55,8 @@ public static class PosModule
         {
             var fiskaly = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PosOptions>>().Value.Fiskaly;
             http.BaseAddress = new Uri(fiskaly.BaseUrl.TrimEnd('/') + "/");
-            http.Timeout = TimeSpan.FromSeconds(fiskaly.TimeoutSeconds);
+            // Per-request timeouts (normal vs. slow TSS administration) are applied by FiskalyApiClient itself.
+            http.Timeout = Timeout.InfiniteTimeSpan;
         });
         services.AddScoped<FiscalSignerProvider>();
         services.AddScoped<FiscalSealer>();
@@ -236,6 +240,16 @@ public static class PosModule
                 IValidator<FiscalConfigRequest> validator, FiscalAdministration service, CancellationToken ct) =>
             await validator.ProblemIfInvalidAsync(request, ct)
             ?? (await service.SetRegisterAsync(organizationId, registerId, request, ct)).ToHttp(Results.Ok));
+
+        // fiskaly: read-only connection test (nothing is signed) and client registration with the TSS admin PIN.
+        admin.MapPost("/{organizationId:guid}/fiskaly/test", async (Guid organizationId, FiscalAdministration service, CancellationToken ct) =>
+            (await service.TestFiskalyAsync(organizationId, ct)).ToHttp(Results.Ok));
+
+        admin.MapPost("/{organizationId:guid}/registers/{registerId:guid}/fiskaly-client", async (Guid organizationId, Guid registerId,
+                FiskalyRegisterClientRequest request, IValidator<FiskalyRegisterClientRequest> validator, FiscalAdministration service,
+                CancellationToken ct) =>
+            await validator.ProblemIfInvalidAsync(request, ct)
+            ?? (await service.RegisterFiskalyClientAsync(organizationId, registerId, request.AdminPin!, ct)).ToHttp(Results.Ok));
 
         return app;
     }

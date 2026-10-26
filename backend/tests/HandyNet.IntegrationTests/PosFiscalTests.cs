@@ -378,4 +378,68 @@ public sealed class PosFiscalTests(HandyNetFixture fixture)
         await using var staging = Production(allow: true);
         Assert.Equal(HttpStatusCode.OK, (await staging.CreateClient().GetAsync("/health/live")).StatusCode);
     }
+
+    [Fact]
+    public async Task Fiskaly_connection_test_client_registration_and_a_signed_sale()
+    {
+        var (shop, register, product) = await ShopAsync();
+        var admin = await _scenario.AdminAsync();
+        var tss = Guid.NewGuid();
+        var test = $"/api/admin/pos/fiscal/{shop.OrganizationId}/fiskaly/test";
+
+        // No credentials yet: the test reports it without calling fiskaly.
+        await ConfigureAsync(shop, new { mode = "FiskalyCloudTse", fiskalyTssId = tss });
+        var missing = (await admin.PostAsync(test)).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Failed", "fiskaly.credentialsMissing"), (missing["status"]!.GetValue<string>(), missing["errorCode"]!.GetValue<string>()));
+
+        await ConfigureAsync(shop, new { mode = "FiskalyCloudTse", fiskalyTssId = tss, fiskalyApiKey = "test_key_fx", fiskalyApiSecret = "secret_fx" });
+        var result = (await admin.PostAsync(test)).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Warning", "TEST", false), (result["status"]!.GetValue<string>(), result["environment"]!.GetValue<string>(),
+            result["environmentMismatch"]!.GetValue<bool>()));
+        Assert.Equal("INITIALIZED", result["tssState"]!.GetValue<string>());
+        var client = result["clients"]!.AsArray().Single()!;
+        Assert.Equal((register, "NotRegistered"), (Id(client, "registerId"), client["state"]!.GetValue<string>()));
+        var clientId = Guid.Parse(client["clientId"]!.GetValue<string>());
+        Assert.Equal('4', clientId.ToString()[14]); // UUIDv4 derived from the register id
+        Assert.DoesNotContain("secret_fx", result.ToJsonString());
+        // The stored, encrypted credentials were used for POST /auth.
+        Assert.Contains(fixture.Fiskaly.Requests, r => r.Path == "/api/v2/auth" && r.Body!.Contains("test_key_fx"));
+
+        // A till that is not registered is refused (outage path), never registered implicitly from the till.
+        var refused = (await shop.PostAsync("/api/pos/sales", Sale(register, product), Key())).Expect(HttpStatusCode.Created).Json;
+        Assert.Equal("Failed", refused["fiscal"]!["status"]!.GetValue<string>());
+
+        // Registration needs the TSS admin PIN: validated, a wrong PIN is reported, the right one registers the client.
+        var registerPath = $"/api/admin/pos/fiscal/{shop.OrganizationId}/registers/{register}/fiskaly-client";
+        Assert.Equal("validation.failed", (await admin.PostAsync(registerPath, new { adminPin = "12" })).Code);
+        Assert.Equal("pos.fiskaly_admin_pin_rejected", (await admin.PostAsync(registerPath, new { adminPin = "999999" })).Code);
+        Assert.Equal(HttpStatusCode.Forbidden, (await shop.PostAsync(registerPath, new { adminPin = FakeFiskalyServer.AdminPin })).Status);
+        var registered = (await admin.PostAsync(registerPath, new { adminPin = FakeFiskalyServer.AdminPin })).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Registered", clientId.ToString()), (registered["state"]!.GetValue<string>(), registered["clientId"]!.GetValue<string>()));
+        Assert.Contains(fixture.Fiskaly.For(tss), r => r.Method == "PUT" && r.Path.Contains("/client/") && r.Body!.Contains(register.ToString("N")));
+
+        var txBefore = fixture.Fiskaly.For(tss).Count(r => r.Path.Contains("/tx/"));
+        var ok = (await admin.PostAsync(test)).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal("Ok", ok["status"]!.GetValue<string>());
+        Assert.Equal(txBefore, fixture.Fiskaly.For(tss).Count(r => r.Path.Contains("/tx/"))); // the connection test signs nothing
+
+        // Now a sale is signed through fiskaly: test environment marked on the receipt and the till.
+        var sale = (await shop.PostAsync("/api/pos/sales", Sale(register, product), Key())).Expect(HttpStatusCode.Created).Json;
+        var fiscal = sale["fiscal"]!;
+        Assert.Equal(("Signed", true, "FiskalyCloudTse"), (fiscal["status"]!.GetValue<string>(), fiscal["isTest"]!.GetValue<bool>(),
+            fiscal["mode"]!.GetValue<string>()));
+        Assert.Equal(clientId.ToString(), fiscal["clientId"]!.GetValue<string>());
+        Assert.StartsWith("V0;", fiscal["qrPayload"]!.GetValue<string>());
+        Assert.Equal(2, fixture.Fiskaly.For(tss).Count(r => r.Path.Contains("/tx/")) - txBefore); // revision 1 + 2
+        var finish = fixture.Fiskaly.For(tss).Last(r => r.Path.Contains("tx_revision=2"));
+        var receipt = JsonNode.Parse(finish.Body!)!["schema"]!["standard_v1"]!["receipt"]!;
+        Assert.Equal("19.00", receipt["amounts_per_vat_rate"]![0]!["amount"]!.GetValue<string>());
+        var status = (await shop.GetAsync($"/api/pos/registers/{register}/fiscal")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Test", true), (status["state"]!.GetValue<string>(), status["isTest"]!.GetValue<bool>()));
+
+        // Configured as Production while the keys are TEST keys: the connection test flags the mismatch.
+        await ConfigureAsync(shop, new { mode = "FiskalyCloudTse", fiskalyTssId = tss, fiskalyEnvironment = "Production" });
+        var mismatch = (await admin.PostAsync(test)).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal(("Warning", true), (mismatch["status"]!.GetValue<string>(), mismatch["environmentMismatch"]!.GetValue<bool>()));
+    }
 }

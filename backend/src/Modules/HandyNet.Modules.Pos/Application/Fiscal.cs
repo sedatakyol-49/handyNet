@@ -42,17 +42,56 @@ public sealed class FiscalOptions
 /// <summary>fiskaly SIGN DE v2. Credentials never in appsettings: user-secrets, environment or the secret store.</summary>
 public sealed class FiskalyOptions
 {
+    /// <summary>
+    /// The fiskaly SIGN middleware. Per the SIGN DE v2 spec it serves ALL operations, while createClient, updateTss and
+    /// upsertTransaction are "only available via Middleware". TEST or LIVE is decided by the API key, not by the URL.
+    /// </summary>
     public const string DefaultBaseUrl = "https://kassensichv-middleware.fiskaly.com/api/v2";
 
     public string BaseUrl { get; set; } = DefaultBaseUrl;
 
+    /// <summary>Timeout of one HTTP request (seconds).</summary>
     public int TimeoutSeconds { get; set; } = 10;
 
-    /// <summary>HTTP retries for timeouts, 429 and 5xx (same transaction revision, so retries are idempotent).</summary>
+    /// <summary>Timeout of slow TSS administration calls (deploying a TSS: the spec asks for at least 30 s).</summary>
+    public int AdministrationTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>HTTP retries for timeouts, 429, 499 and 5xx (same transaction revision, so retries are idempotent).</summary>
     public int MaxRetries { get; set; } = 2;
+
+    /// <summary>Base of the exponential backoff between HTTP retries (ms); a Retry-After header wins (capped at 5 s).</summary>
+    public int RetryBaseDelayMs { get; set; } = 250;
 
     /// <summary>Named credential pairs referenced by a fiscal configuration (<c>Pos:Fiskaly:Credentials:{name}:ApiKey|ApiSecret</c>).</summary>
     public Dictionary<string, FiskalyCredentialOptions> Credentials { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// fiskaly ids. The SIGN DE v2 spec asks for UUIDv4 TSS, client and transaction ids (and warns that a future major version
+/// will enforce it), while HandyNet ids are UUIDv7. Any other UUID is mapped to a deterministic id in UUIDv4 format (SHA-256
+/// of key + purpose, version/variant bits set), so a retry with the same key always addresses the same fiskaly resource.
+/// </summary>
+public static class FiskalyIds
+{
+    public static Guid Transaction(Guid key) => V4(key, "tx");
+
+    public static Guid Client(Guid registerId) => V4(registerId, "client");
+
+    public static bool IsV4(Guid id) => id.Version == 4 && (id.Variant & 0b1100) == 0b1000;
+
+    internal static Guid V4(Guid source, string purpose)
+    {
+        if (IsV4(source))
+            return source;
+        Span<byte> input = stackalloc byte[16 + purpose.Length];
+        source.TryWriteBytes(input[..16], bigEndian: true, out _);
+        System.Text.Encoding.ASCII.GetBytes(purpose, input[16..]);
+        Span<byte> hash = stackalloc byte[32];
+        System.Security.Cryptography.SHA256.HashData(input, hash);
+        hash[6] = (byte)((hash[6] & 0x0F) | 0x40);
+        hash[8] = (byte)((hash[8] & 0x3F) | 0x80);
+        return new Guid(hash[..16], bigEndian: true);
+    }
 }
 
 public sealed class FiskalyCredentialOptions

@@ -1,5 +1,6 @@
 using FluentValidation;
 using HandyNet.Modules.Pos.Domain;
+using HandyNet.Modules.Pos.Infrastructure;
 using HandyNet.Modules.Tenancy.Contracts;
 using HandyNet.Persistence;
 using HandyNet.SharedKernel;
@@ -89,6 +90,40 @@ public sealed record RegisterFiscalStatusDto(
     string? OutageReason,
     string? RefusalCode,
     DateTimeOffset? LastSignatureAt);
+
+/// <summary>fiskaly client of one register as seen by the connection test: Registered, Deregistered, NotRegistered or InvalidClientId.</summary>
+public sealed record FiskalyClientCheckDto(Guid RegisterId, string Name, string ClientId, string State);
+
+/// <summary>
+/// Result of "Verbindung testen" (nothing is signed): Status Ok, Warning (connected, but environment mismatch, TSS not
+/// INITIALIZED or a till not registered) or Failed (ErrorCode says why: fiskaly.credentialsMissing, fiskaly.credentialsRejected,
+/// fiskaly.unreachable, fiskaly.tssMissing, fiskaly.tssNotFound, fiskaly.requestFailed). Environment is fiskaly's TEST/LIVE
+/// claim of the token; ConfiguredEnvironment the stored Sandbox/Production setting.
+/// </summary>
+public sealed record FiskalyConnectionTestDto(
+    string Status,
+    string? Environment,
+    string? ConfiguredEnvironment,
+    bool EnvironmentMismatch,
+    Guid? TssId,
+    string? TssState,
+    string? TssSerialNumber,
+    IReadOnlyList<FiskalyClientCheckDto> Clients,
+    string? ErrorCode,
+    string? Detail,
+    DateTimeOffset CheckedAt);
+
+/// <summary>The TSS admin PIN for registering a till as fiskaly client. Used once, never stored or logged.</summary>
+public sealed record FiskalyRegisterClientRequest(string? AdminPin);
+
+internal sealed class FiskalyRegisterClientValidator : AbstractValidator<FiskalyRegisterClientRequest>
+{
+    public FiskalyRegisterClientValidator()
+    {
+        RuleFor(x => x.AdminPin).NotEmpty().Length(6, 64).WithErrorCode("validation.fiskalyAdminPin")
+            .WithMessage("The admin PIN of the TSS has at least 6 characters.");
+    }
+}
 
 internal sealed class FiscalConfigValidator : AbstractValidator<FiscalConfigRequest>
 {
@@ -228,6 +263,107 @@ internal sealed class FiscalAdministration(
         db.ChangeTracker.Clear();
         return await DetailAsync(services, org, ct);
     }
+
+    /// <summary>
+    /// "Verbindung testen": authenticates with the stored fiskaly credentials and reads the TSS and the clients of the
+    /// registers. Read-only — no transaction is started, nothing is signed.
+    /// </summary>
+    public async Task<Result<FiskalyConnectionTestDto>> TestFiskalyAsync(Guid organizationId, CancellationToken ct)
+    {
+        var org = (await organizations.GetAsync([organizationId], ct)).GetValueOrDefault(organizationId);
+        if (org is null)
+            return Error.NotFound("organization.not_found", "Organization not found.");
+        await using var scope = ScopeFor(organizationId);
+        var services = scope.ServiceProvider;
+        var provider = services.GetRequiredService<FiscalSignerProvider>();
+        var api = services.GetRequiredService<FiskalyApiClient>();
+        var config = (await provider.EffectiveAsync(null, ct)).Organization;
+        var configured = config?.FiskalyEnvironment;
+
+        FiskalyConnectionTestDto Failed(string code, string? detail = null, string? env = null, bool mismatch = false) =>
+            new("Failed", env, configured, mismatch, config?.FiskalyTssId, null, null, [], code, detail, clock.UtcNow);
+
+        var credentials = provider.FiskalyCredentialsOf(config);
+        if (credentials is null)
+            return Failed("fiskaly.credentialsMissing");
+        var token = await api.AuthenticateAsync(credentials, fresh: true, ct);
+        if (!token.IsSuccess)
+            return Failed(ConnectionErrorCode(token.Error!), token.Error!.Message);
+        var env = token.Value.Environment;
+        var mismatch = env is not null && (env == "LIVE") != (configured == "Production");
+        if (config?.FiskalyTssId is not { } tssId)
+            return Failed("fiskaly.tssMissing", null, env, mismatch);
+        var tss = await api.GetTssAsync(credentials, tssId, ct);
+        if (!tss.IsSuccess)
+            return Failed(tss.Error!.Code == FiskalyErrors.NotFound ? "fiskaly.tssNotFound" : ConnectionErrorCode(tss.Error), tss.Error.Message, env, mismatch);
+        var tssState = FiskalyApiClient.Text(tss.Value["state"]);
+
+        var db = services.GetRequiredService<HandyNetDbContext>();
+        var registers = await db.Set<Register>().AsNoTracking().Where(r => r.OrganizationId == organizationId && r.IsActive).OrderBy(r => r.Name)
+            .ToListAsync(ct);
+        var clients = new List<FiskalyClientCheckDto>();
+        foreach (var register in registers)
+        {
+            var clientId = await FiskalyClientIdAsync(provider, register.Id, ct);
+            if (!Guid.TryParse(clientId, out var clientGuid))
+            {
+                clients.Add(new FiskalyClientCheckDto(register.Id, register.Name, clientId, "InvalidClientId"));
+                continue;
+            }
+            var client = await api.GetClientAsync(credentials, tssId, clientGuid, ct);
+            if (!client.IsSuccess)
+                return Failed(ConnectionErrorCode(client.Error!), client.Error!.Message, env, mismatch);
+            var state = FiskalyApiClient.Text(client.Value?["state"]) switch
+            {
+                null => "NotRegistered",
+                "REGISTERED" => "Registered",
+                _ => "Deregistered",
+            };
+            clients.Add(new FiskalyClientCheckDto(register.Id, register.Name, clientId, state));
+        }
+
+        var warning = mismatch || tssState != "INITIALIZED" || clients.Any(c => c.State != "Registered");
+        return new FiskalyConnectionTestDto(warning ? "Warning" : "Ok", env, configured, mismatch, tssId, tssState,
+            FiskalyApiClient.Text(tss.Value["serial_number"]), clients, null, null, clock.UtcNow);
+    }
+
+    /// <summary>Registers a till as client of the organization's TSS with the admin PIN (createClient requires admin authentication).</summary>
+    public async Task<Result<FiskalyClientCheckDto>> RegisterFiskalyClientAsync(Guid organizationId, Guid registerId, string adminPin, CancellationToken ct)
+    {
+        var org = (await organizations.GetAsync([organizationId], ct)).GetValueOrDefault(organizationId);
+        if (org is null)
+            return Error.NotFound("organization.not_found", "Organization not found.");
+        await using var scope = ScopeFor(organizationId);
+        var services = scope.ServiceProvider;
+        var db = services.GetRequiredService<HandyNetDbContext>();
+        var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == registerId && r.OrganizationId == organizationId, ct);
+        if (register is null)
+            return Error.NotFound("pos.register_not_found", "Register not found.");
+        var provider = services.GetRequiredService<FiscalSignerProvider>();
+        var config = (await provider.EffectiveAsync(null, ct)).Organization;
+        var credentials = provider.FiskalyCredentialsOf(config);
+        if (config?.FiskalyTssId is not { } tssId || credentials is null)
+            return Error.Conflict("pos.fiscal_configuration_incomplete", "The fiskaly TSE is not fully configured (TSS id and credentials are required).");
+        var clientId = await FiskalyClientIdAsync(provider, registerId, ct);
+        if (!Guid.TryParse(clientId, out var clientGuid))
+            return Error.Validation(FiskalyErrors.InvalidClientId, "The fiskaly client id of this till must be a UUID.");
+        var created = await services.GetRequiredService<FiskalyApiClient>()
+            .RegisterClientAsync(credentials, tssId, clientGuid, register.Id.ToString("N"), adminPin, ct);
+        if (!created.IsSuccess)
+            return created.Error!;
+        return new FiskalyClientCheckDto(register.Id, register.Name, clientId, "Registered");
+    }
+
+    /// <summary>The register's fiskaly client id: its own override, else the UUIDv4 derived from the register id.</summary>
+    private static async Task<string> FiskalyClientIdAsync(FiscalSignerProvider provider, Guid registerId, CancellationToken ct) =>
+        (await provider.EffectiveAsync(registerId, ct)).Register?.ClientId ?? FiscalSignerProvider.DefaultClientId(FiscalMode.FiskalyCloudTse, registerId);
+
+    private static string ConnectionErrorCode(Error error) => error.Code switch
+    {
+        FiskalyErrors.CredentialsRejected => "fiskaly.credentialsRejected",
+        FiscalErrors.Unavailable => "fiskaly.unreachable",
+        _ => "fiskaly.requestFailed",
+    };
 
     private AsyncServiceScope ScopeFor(Guid organizationId)
     {
