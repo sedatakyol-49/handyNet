@@ -13,9 +13,9 @@
 		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
 		Cross-Origin-Opener-Policy "same-origin"
 		# Angular SSR emits inline critical CSS, an onload handler on the stylesheet link and inline state scripts,
-		# hence 'unsafe-inline' for script/style. Inter is loaded from Google Fonts (see docs/deployment.md, GDPR note).
+		# hence 'unsafe-inline' for script/style. Inter is self-hosted (@fontsource/inter).
 		# Extra image hosts (e.g. an S3 bucket serving product images) go into CSP_IMG_EXTRA.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: {$CSP_IMG_EXTRA}; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: {$CSP_IMG_EXTRA}; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 

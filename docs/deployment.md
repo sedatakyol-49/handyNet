@@ -120,9 +120,8 @@ The legacy host-cron scripts `deploy/backup/backup.sh` and `restore-test.sh` rem
 - **CSP:** Angular SSR inlines critical CSS and state scripts, so `script-src`/`style-src` include `'unsafe-inline'`.
   A nonce-based CSP is a possible hardening. `frame-ancestors 'none'`, HSTS (1 year), `nosniff`, Referrer-Policy and
   Permissions-Policy are set in `deploy/caddy/Caddyfile`. HSTS has no `preload`; add it only when you are sure.
-- **GDPR / fonts:** `frontend/src/index.html` loads Inter from Google Fonts. Fetching fonts from Google servers
-  from a German visitor's browser has been ruled a GDPR violation by courts (LG Munich 2022). Before go-live
-  self-host Inter (npm `@fontsource/inter`) and drop the two Google hosts from the CSP.
+- **Fonts:** Inter is self-hosted (npm `@fontsource/inter`, bundled with the app); the page makes no requests to
+  Google Fonts and the CSP allows fonts from `'self'` only.
 - Sign a data processing agreement (AVV/DPA) with Hetzner and with your SMTP provider; keep SMTP in the EU.
 - Regular OS patching: `unattended-upgrades` handles the host; update images by redeploying (base images are pulled on
   `deploy.sh`; `caddy:2-alpine` and `postgres:16-alpine` receive minor/patch updates on pull; PostgreSQL major upgrades
