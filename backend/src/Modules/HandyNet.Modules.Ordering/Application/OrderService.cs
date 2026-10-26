@@ -142,7 +142,9 @@ internal sealed class OrderService(
 
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
-            foreach (var line in order.Lines)
+            // Each reservation row-locks the offer's stock level until commit. Locking in one global order (product, then
+            // offer) instead of the cart's order keeps two carts with the same items in another order from deadlocking.
+            foreach (var line in order.Lines.OrderBy(l => l.ProductId).ThenBy(l => l.OfferId))
             {
                 var reservation = await offers.ReserveAsync(line.OfferId, line.Quantity, $"order:{order.Id}", ct);
                 if (reservation is null)

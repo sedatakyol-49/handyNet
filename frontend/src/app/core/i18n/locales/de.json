@@ -207,6 +207,8 @@
     "notFound": "Der Datensatz wurde nicht gefunden.",
     "unexpected": "Ein unerwarteter Fehler ist aufgetreten.",
     "codes": {
+      "request.concurrent_conflict": "Die Daten wurden gleichzeitig von einer anderen Anfrage geändert. Es wurde nichts gespeichert – bitte erneut versuchen.",
+      "service.busy": "Der Dienst ist gerade ausgelastet. Es wurde nichts gespeichert – bitte gleich erneut versuchen.",
       "auth.invalid_credentials": "E-Mail-Adresse oder Passwort ist falsch.",
       "auth.locked_out": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.",
       "auth.current_password_invalid": "Das aktuelle Passwort ist nicht korrekt.",

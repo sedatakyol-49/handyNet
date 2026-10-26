@@ -207,6 +207,8 @@
     "notFound": "Kayıt bulunamadı.",
     "unexpected": "Beklenmeyen bir hata oluştu.",
     "codes": {
+      "request.concurrent_conflict": "Veriler aynı anda başka bir istek tarafından değiştirildi. Hiçbir şey kaydedilmedi – lütfen tekrar deneyin.",
+      "service.busy": "Hizmet şu anda yoğun. Hiçbir şey kaydedilmedi – lütfen biraz sonra tekrar deneyin.",
       "auth.invalid_credentials": "E-posta adresi veya şifre hatalı.",
       "auth.locked_out": "Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.",
       "auth.current_password_invalid": "Mevcut şifre yanlış.",

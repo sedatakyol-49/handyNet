@@ -119,3 +119,12 @@ flowchart TD
 RFC 7807 problem details with a stable machine-readable `code` (`order.insufficient_stock`,
 `module.disabled`, …). 422 = validation, 409 = conflict/state, 403 = tenant/module/permission, 404 = not found
 (also used for other tenants' resources, so existence is not revealed).
+
+Expected contention is never a 500. Services map the conflicts they anticipate (unique keys, a racing
+Idempotency-Key, which replays the stored result) to their own codes. Whatever escapes them is caught by
+`DbContentionExceptionHandler`: a deadlock, serialization failure or lock timeout (40P01/40001/55P03) becomes 409
+`request.concurrent_conflict`, and an exhausted connection pool or a server without free connection slots
+(53300/57P03) becomes 503 `service.busy`. Both carry `Retry-After: 1`, and the transaction was rolled back, so
+nothing was saved and the client can repeat the request. Multi-row writes take row locks in one global order
+(for example, order placement reserves stock by product and then offer, not in cart order) so concurrent requests
+do not deadlock.
