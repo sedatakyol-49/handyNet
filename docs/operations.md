@@ -38,15 +38,55 @@ Not certified and not reviewed by a tax adviser. Non-secret settings:
 | `Pos:Fiscal:AllowSimulatedTseInProduction` | `false` | **staging only**: allows the simulated test TSE in the Production environment (startup check, admin API and sale time) |
 | `Pos:Fiscal:MaxAttempts` | `3` | attempts per TSE call (start/finish, same idempotency key) before the sale continues as a TSE outage |
 | `Pos:Fiscal:RetryDelayMs` | `200` | pause between attempts (× attempt number) |
-| `Pos:Fiskaly:BaseUrl` | `https://kassensichv-middleware.fiskaly.com/api/v2` | fiskaly SIGN DE v2 base URL (https only) |
+| `Pos:Fiskaly:BaseUrl` | `https://kassensichv-middleware.fiskaly.com/api/v2` | fiskaly SIGN DE v2 middleware (https only). Same URL for TEST and LIVE — the API key decides the environment, and client registration and transactions are "only available via Middleware" per the spec |
 | `Pos:Fiskaly:TimeoutSeconds` | `10` | HTTP timeout per fiskaly call |
-| `Pos:Fiskaly:MaxRetries` | `2` | HTTP retries on timeouts, 429 and 5xx |
+| `Pos:Fiskaly:AdministrationTimeoutSeconds` | `60` | timeout of slow TSS administration calls (30–300; the spec asks for ≥ 30 s when deploying a TSS) |
+| `Pos:Fiskaly:MaxRetries` | `2` | HTTP retries on timeouts, 429, 499 and 5xx (same request, idempotent) |
+| `Pos:Fiskaly:RetryBaseDelayMs` | `250` | exponential backoff base between those retries; a `Retry-After` header wins (capped at 5 s) |
 | `DataProtection:KeysPath` | unset (default key ring location of the host) | directory of the ASP.NET Data Protection key ring; **set it in every multi-instance or container deployment** (e.g. a volume) and back it up — without it stored fiskaly credentials and simulated TSE keys become unreadable after a restart |
 
 The platform admin chooses the mode per organization (and optionally per register) under Administration → "Kassen &
 TSE" (`/api/admin/pos/fiscal`). A TSE outage never blocks sales: receipts carry "Sicherheitseinrichtung ausgefallen",
 outages are listed there and in `pos.fiscal_outages`. DSFinV-K: `GET /api/pos/exports/dsfinvk?registerId=…&from=…&to=…`
 (`pos.manage`).
+
+### fiskaly setup and connection test
+
+1. Create the TSS in the fiskaly dashboard/API (create → `UNINITIALIZED` → admin PIN from the PUK → `INITIALIZED`) and
+   note its id. HandyNet does not create TSS from the UI.
+2. "Kassen & TSE": mode fiskaly, TSS id, environment (Sandbox/Production) and the API key + secret (stored encrypted) or
+   a credential reference. Save.
+3. **"Verbindung testen"** (`POST /api/admin/pos/fiscal/{org}/fiskaly/test`): authenticates with the stored credentials and
+   reports the key's environment (`TEST`/`LIVE` from the token claim), a mismatch with the configured environment, the
+   TSS state and serial number, and per active till whether its fiskaly client is registered. Nothing is signed.
+4. **Register each till** ("Registrieren", `POST …/registers/{id}/fiskaly-client` with the TSS admin PIN): fiskaly requires
+   admin authentication to create a client, so the till never does it itself; the PIN is used once and not stored. A
+   till whose client is not registered gets the outage path (receipt marker), not a silent registration.
+
+While an organization is on Sandbox (or the simulated TSE), the till shows the banner **"Testumgebung – Belege nicht
+steuerlich gültig"** and receipts carry the test notice; a transaction answered with `_env: TEST` is marked as test even if
+the configuration says Production.
+
+### Opt-in live test against the fiskaly TEST environment
+
+`FiskalySandboxTests` (integration test project) runs the full flow through the production adapter: auth → create,
+deploy and initialize a new TSS → register a client → start/finish a transaction for a sale with 19 % and 7 % totals
+paid in cash → check the parsed signature data (counter, signature, start/end time, serial number, public key, QR data);
+the TSS is disabled afterwards. It is **skipped** unless both variables are set, needs no database, and refuses keys
+that are not TEST keys. Credentials, PUK and admin PIN are never printed.
+
+```powershell
+# TEST keys from the fiskaly dashboard (never commit them; keep them out of shell history where possible)
+$env:FISKALY_TEST_API_KEY = Read-Host "fiskaly TEST api_key"
+$env:FISKALY_TEST_API_SECRET = Read-Host -AsSecureString "fiskaly TEST api_secret" |
+  ForEach-Object { [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($_)) }
+cd backend
+dotnet test tests/HandyNet.IntegrationTests --filter "FullyQualifiedName~FiskalySandboxTests" --artifacts-path ../.artifacts -nologo
+Remove-Item Env:FISKALY_TEST_API_KEY, Env:FISKALY_TEST_API_SECRET
+```
+
+Optional `FISKALY_TEST_BASE_URL` overrides the middleware URL. Each run creates one TEST TSS (fiskaly limits TSS
+creation per day).
 
 ## File storage (ADR-0011)
 

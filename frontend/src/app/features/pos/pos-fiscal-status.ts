@@ -5,7 +5,7 @@ import { FiscalApi, RegisterFiscalStatus } from '../../core/api/fiscal-api';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { HnDatePipe } from '../../core/format/date.pipe';
 import { PosContext } from './pos-context';
-import { tseTone } from './fiscal.logic';
+import { isTestEnvironment, tseTone } from './fiscal.logic';
 
 /**
  * TSE state of the current register (provided by the POS app next to PosContext): loaded when the register changes and
@@ -20,6 +20,8 @@ export class PosFiscalStatus {
   readonly status = signal<RegisterFiscalStatus | null>(null);
   readonly tone = computed(() => tseTone(this.status()?.state));
   readonly outage = computed(() => this.status()?.state === 'Outage');
+  /** Simulated TSE or fiskaly TEST/Sandbox: receipts are not valid for tax purposes. */
+  readonly testEnvironment = computed(() => isTestEnvironment(this.status()));
 
   constructor() {
     effect(() => {
@@ -89,12 +91,21 @@ export class PosTsePillComponent {
   });
 }
 
-/** Full-width banner while the register's TSE is down: sales continue with the legally required outage marker. */
+/**
+ * Full-width banners: while the register signs in a test environment (receipts not valid for tax purposes), and while the
+ * register's TSE is down (sales continue with the outage marker).
+ */
 @Component({
   selector: 'hn-pos-tse-banner',
   imports: [TranslatePipe, HnDatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (fiscal.testEnvironment()) {
+      <div class="hn-no-print border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-center text-sm font-semibold text-amber-900" role="status"
+        data-testid="pos-tse-test-banner">
+        {{ 'pos.tse.testEnvironment' | t }}
+      </div>
+    }
     @if (fiscal.outage()) {
       <div class="hn-no-print border-b border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" data-testid="pos-tse-outage-banner">
         <strong>{{ 'pos.tse.outageTitle' | t }}</strong>

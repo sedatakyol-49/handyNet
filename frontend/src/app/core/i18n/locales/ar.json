@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "يرجى إدخال سبب رفع الحظر (500 حرف كحدّ أقصى).",
       "blacklist.reason": "سبب غير معروف.",
       "blacklist.source": "يرجى إدخال مصدر البلاغ (200 حرف كحدّ أقصى).",
-      "blacklist.note": "الملاحظة طويلة جدًا (1000 حرف كحدّ أقصى)."
+      "blacklist.note": "الملاحظة طويلة جدًا (1000 حرف كحدّ أقصى).",
+      "pos.fiskaly_admin_pin_rejected": "رفض fiskaly رمز PIN لمسؤول TSS. يُقفل بعد خمس محاولات فاشلة.",
+      "pos.fiskaly_client_not_registered": "الصندوق غير مسجّل لدى fiskaly. سجّله في «الصناديق و TSE».",
+      "pos.fiskaly_invalid_client_id": "يجب أن يكون معرّف عميل fiskaly للصندوق بصيغة UUID.",
+      "pos.fiskaly_credentials_rejected": "رفض fiskaly بيانات الدخول.",
+      "pos.fiskaly_not_found": "لا يعرف fiskaly جهاز TSS أو الصندوق المطلوب.",
+      "pos.tse_unavailable": "تعذّر الوصول إلى TSE حاليًا. يرجى المحاولة مرة أخرى.",
+      "pos.tse_rejected": "رفض TSE الطلب."
     },
     "validation": {
       "required": "هذا الحقل مطلوب.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "أدخل المبلغ أو عدد كل فئة.",
       "reasonRequired": "اختر سبباً أو صِفه.",
       "versionRequired": "أرسل الإصدار الذي تم تحميل النموذج به.",
-      "idExpiryRequired": "تاريخ انتهاء وثيقة الهوية مطلوب."
+      "idExpiryRequired": "تاريخ انتهاء وثيقة الهوية مطلوب.",
+      "fiskalyAdminPin": "يتكوّن رمز PIN لمسؤول TSS من 6 أحرف على الأقل."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "تأخير اصطناعي (مللي ثانية)",
       "failureRate": "نسبة الأخطاء (%)",
       "forcedOutage": "فرض عطل TSE",
-      "fiskalyUnverified": "محوّل fiskaly: غير مُختبَر مع الخدمة الحقيقية. تُحفظ بيانات الدخول مشفّرة ولا تُعرض أبدًا.",
+      "fiskalyUnverified": "محوّل fiskaly: تم فحصه وفق مواصفة الواجهة البرمجية المنشورة (SIGN DE v2)؛ ولم يُجرَ بعد تشغيل في بيئة TEST الحقيقية. تُحفظ بيانات الدخول مشفّرة ولا تُعرض أبدًا.",
       "tssId": "معرّف TSS (UUID)",
       "environment": "البيئة",
       "credentialReference": "مرجع بيانات الدخول",
@@ -1446,6 +1454,46 @@
         "failureRate": "من 0 إلى 100 %.",
         "uuid": "يرجى إدخال UUID صالح.",
         "credentialsPair": "أدخل مفتاح API والسرّ معًا."
+      },
+      "fiskaly": {
+        "title": "الاتصال بـ fiskaly",
+        "test": "اختبار الاتصال",
+        "testHint": "يسجّل الدخول ببيانات الدخول المحفوظة ويقرأ TSS وعملاء الصناديق. لا يتم توقيع أي شيء.",
+        "saveFirst": "احفظ أولًا معرّف TSS وبيانات الدخول.",
+        "status": {
+          "Ok": "الاتصال سليم.",
+          "Warning": "تم الاتصال – يرجى الانتباه إلى الملاحظات.",
+          "Failed": "فشل الاتصال."
+        },
+        "environment": "بيئة المفاتيح",
+        "env": {
+          "TEST": "TEST – بيئة اختبار، الإيصالات غير صالحة ضريبيًا",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "المفاتيح لا تطابق البيئة المضبوطة ({configured}). يتطلب LIVE مفاتيح LIVE جديدة وTSS جديدًا.",
+        "tssState": "حالة TSS",
+        "tssNotInitialized": "لم تتم تهيئة TSS – لا يمكن التوقيع إلا بعد ذلك.",
+        "clients": "الصناديق لدى fiskaly",
+        "clientState": {
+          "Registered": "مسجّل",
+          "NotRegistered": "غير مسجّل",
+          "Deregistered": "أُلغي تسجيله",
+          "InvalidClientId": "معرّف العميل ليس UUID"
+        },
+        "error": {
+          "credentialsMissing": "لا توجد بيانات دخول محفوظة (قابلة للقراءة).",
+          "credentialsRejected": "رفض fiskaly مفتاح الواجهة البرمجية أو السرّ. المفاتيح صالحة لـ TEST فقط أو لـ LIVE فقط.",
+          "unreachable": "تعذّر الوصول إلى fiskaly. يرجى المحاولة لاحقًا.",
+          "tssMissing": "لا يوجد معرّف TSS محفوظ.",
+          "tssNotFound": "لا يعرف fiskaly معرّف TSS هذا مع هذه المفاتيح.",
+          "requestFailed": "رفض fiskaly الطلب."
+        },
+        "checked": "تم الفحص",
+        "register": "تسجيل",
+        "registerTitle": "تسجيل الصندوق {name} لدى fiskaly",
+        "adminPin": "رمز PIN لمسؤول TSS",
+        "adminPinHint": "يُستخدم لهذا التسجيل فقط ولا يُحفظ.",
+        "registered": "الصندوق {name} مسجّل لدى fiskaly."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "عطل TSE.",
       "outageText": "يستمر البيع؛ تحمل الإيصالات الملاحظة \"Sicherheitseinrichtung ausgefallen\" ويُسجَّل العطل.",
-      "outageSince": "منذ"
+      "outageSince": "منذ",
+      "testEnvironment": "بيئة اختبار – الإيصالات غير صالحة ضريبيًا"
     },
     "cashier": {
       "switch": "تبديل أمين الصندوق",

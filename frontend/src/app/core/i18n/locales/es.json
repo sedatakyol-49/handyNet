@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "Indique un motivo para levantar el bloqueo (máx. 500 caracteres).",
       "blacklist.reason": "Motivo desconocido.",
       "blacklist.source": "Indique el origen del aviso (máx. 200 caracteres).",
-      "blacklist.note": "La nota es demasiado larga (máx. 1000 caracteres)."
+      "blacklist.note": "La nota es demasiado larga (máx. 1000 caracteres).",
+      "pos.fiskaly_admin_pin_rejected": "fiskaly rechazó el PIN de administrador de la TSS. Se bloquea tras cinco intentos fallidos.",
+      "pos.fiskaly_client_not_registered": "La caja no está registrada en fiskaly. Regístrela en «Cajas y TSE».",
+      "pos.fiskaly_invalid_client_id": "El ID de cliente de fiskaly de la caja debe ser un UUID.",
+      "pos.fiskaly_credentials_rejected": "fiskaly rechazó las credenciales.",
+      "pos.fiskaly_not_found": "fiskaly no conoce la TSS o la caja solicitada.",
+      "pos.tse_unavailable": "La TSE no está disponible en este momento. Inténtelo de nuevo.",
+      "pos.tse_rejected": "La TSE rechazó la solicitud."
     },
     "validation": {
       "required": "Este campo es obligatorio.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "Introduzca el importe o el recuento por denominación.",
       "reasonRequired": "Elija un motivo o descríbalo.",
       "versionRequired": "Envíe la versión con la que se cargó el formulario.",
-      "idExpiryRequired": "La fecha de caducidad del documento de identidad es obligatoria."
+      "idExpiryRequired": "La fecha de caducidad del documento de identidad es obligatoria.",
+      "fiskalyAdminPin": "El PIN de administrador de la TSS tiene al menos 6 caracteres."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "Retardo artificial (ms)",
       "failureRate": "Tasa de fallos (%)",
       "forcedOutage": "Forzar fallo de la TSE",
-      "fiskalyUnverified": "Adaptador de fiskaly: no verificado con el servicio real. Las credenciales se guardan cifradas y nunca se muestran.",
+      "fiskalyUnverified": "Adaptador de fiskaly: comprobado con la especificación pública de la API (SIGN DE v2); falta una prueba en el entorno TEST real. Las credenciales se guardan cifradas y nunca se muestran.",
       "tssId": "ID de TSS (UUID)",
       "environment": "Entorno",
       "credentialReference": "Referencia de credenciales",
@@ -1446,6 +1454,46 @@
         "failureRate": "De 0 a 100 %.",
         "uuid": "Introduzca un UUID válido.",
         "credentialsPair": "Introduzca la clave y el secreto API juntos."
+      },
+      "fiskaly": {
+        "title": "Conexión con fiskaly",
+        "test": "Probar conexión",
+        "testHint": "Inicia sesión con las credenciales guardadas y lee la TSS y los clientes de caja. No se firma nada.",
+        "saveFirst": "Guarde primero el ID de la TSS y las credenciales.",
+        "status": {
+          "Ok": "Conexión correcta.",
+          "Warning": "Conectado – revise las indicaciones.",
+          "Failed": "La conexión ha fallado."
+        },
+        "environment": "Entorno de las claves",
+        "env": {
+          "TEST": "TEST – entorno de pruebas, tickets sin validez fiscal",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "Las claves no corresponden al entorno configurado ({configured}). Para LIVE se necesitan claves LIVE nuevas y una TSS nueva.",
+        "tssState": "Estado de la TSS",
+        "tssNotInitialized": "La TSS no está inicializada; solo después se puede firmar.",
+        "clients": "Cajas en fiskaly",
+        "clientState": {
+          "Registered": "registrada",
+          "NotRegistered": "no registrada",
+          "Deregistered": "dada de baja",
+          "InvalidClientId": "el ID de cliente no es un UUID"
+        },
+        "error": {
+          "credentialsMissing": "No hay credenciales (legibles) guardadas.",
+          "credentialsRejected": "fiskaly rechazó la clave o el secreto de la API. Las claves solo valen para TEST o para LIVE.",
+          "unreachable": "No se puede acceder a fiskaly. Inténtelo más tarde.",
+          "tssMissing": "No hay ningún ID de TSS guardado.",
+          "tssNotFound": "fiskaly no conoce este ID de TSS con estas claves.",
+          "requestFailed": "fiskaly rechazó la solicitud."
+        },
+        "checked": "Comprobado",
+        "register": "Registrar",
+        "registerTitle": "Registrar la caja {name} en fiskaly",
+        "adminPin": "PIN de administrador de la TSS",
+        "adminPinHint": "Solo se usa para este registro y no se guarda.",
+        "registered": "La caja {name} está registrada en fiskaly."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "Fallo de la TSE.",
       "outageText": "Las ventas continúan; los tiques llevan la nota «Sicherheitseinrichtung ausgefallen» y el fallo queda registrado.",
-      "outageSince": "desde"
+      "outageSince": "desde",
+      "testEnvironment": "Entorno de pruebas – tickets sin validez fiscal"
     },
     "cashier": {
       "switch": "Cambiar cajero",

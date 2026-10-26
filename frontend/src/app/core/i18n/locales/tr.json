@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "Lütfen engelin kaldırılması için bir neden girin (en fazla 500 karakter).",
       "blacklist.reason": "Bilinmeyen neden.",
       "blacklist.source": "Lütfen bildirimin kaynağını girin (en fazla 200 karakter).",
-      "blacklist.note": "Not çok uzun (en fazla 1000 karakter)."
+      "blacklist.note": "Not çok uzun (en fazla 1000 karakter).",
+      "pos.fiskaly_admin_pin_rejected": "fiskaly TSS yönetici PIN'ini reddetti. Beş hatalı denemeden sonra kilitlenir.",
+      "pos.fiskaly_client_not_registered": "Kasa fiskaly'ye kayıtlı değil. „Kasalar ve TSE“ altında kaydedin.",
+      "pos.fiskaly_invalid_client_id": "Kasanın fiskaly istemci kimliği bir UUID olmalıdır.",
+      "pos.fiskaly_credentials_rejected": "fiskaly erişim bilgilerini reddetti.",
+      "pos.fiskaly_not_found": "fiskaly istenen TSS'yi veya kasayı tanımıyor.",
+      "pos.tse_unavailable": "TSE şu anda erişilemiyor. Lütfen tekrar deneyin.",
+      "pos.tse_rejected": "TSE isteği reddetti."
     },
     "validation": {
       "required": "Bu alan zorunludur.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "Tutarı veya birim sayımlarını girin.",
       "reasonRequired": "Bir neden seçin veya açıklayın.",
       "versionRequired": "Formun yüklendiği sürümü gönderin.",
-      "idExpiryRequired": "Kimlik belgesinin son kullanma tarihi gereklidir."
+      "idExpiryRequired": "Kimlik belgesinin son kullanma tarihi gereklidir.",
+      "fiskalyAdminPin": "TSS yönetici PIN'i en az 6 karakterdir."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "Yapay gecikme (ms)",
       "failureRate": "Hata oranı (%)",
       "forcedOutage": "TSE arızasını zorla",
-      "fiskalyUnverified": "fiskaly adaptörü: gerçek hizmete karşı doğrulanmadı. Erişim bilgileri şifreli saklanır ve asla gösterilmez.",
+      "fiskalyUnverified": "fiskaly bağdaştırıcısı: yayımlanan API belirtimine (SIGN DE v2) göre denetlendi; gerçek TEST ortamında çalıştırma henüz yapılmadı. Erişim bilgileri şifreli saklanır ve asla gösterilmez.",
       "tssId": "TSS kimliği (UUID)",
       "environment": "Ortam",
       "credentialReference": "Erişim bilgisi referansı",
@@ -1446,6 +1454,46 @@
         "failureRate": "%0 ile %100 arası.",
         "uuid": "Lütfen geçerli bir UUID girin.",
         "credentialsPair": "API anahtarını ve gizli anahtarı birlikte girin."
+      },
+      "fiskaly": {
+        "title": "fiskaly bağlantısı",
+        "test": "Bağlantıyı test et",
+        "testHint": "Kayıtlı erişim bilgileriyle oturum açar, TSS ve kasa istemcilerini okur. Hiçbir şey imzalanmaz.",
+        "saveFirst": "Önce TSS kimliğini ve erişim bilgilerini kaydedin.",
+        "status": {
+          "Ok": "Bağlantı sorunsuz.",
+          "Warning": "Bağlandı – lütfen notlara dikkat edin.",
+          "Failed": "Bağlantı başarısız."
+        },
+        "environment": "Anahtarların ortamı",
+        "env": {
+          "TEST": "TEST – test ortamı, fişler vergi açısından geçerli değil",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "Anahtarlar ayarlanan ortamla ({configured}) uyuşmuyor. LIVE için yeni LIVE anahtarları ve yeni bir TSS gerekir.",
+        "tssState": "TSS durumu",
+        "tssNotInitialized": "TSS başlatılmamış – imzalama ancak bundan sonra mümkün.",
+        "clients": "fiskaly'deki kasalar",
+        "clientState": {
+          "Registered": "kayıtlı",
+          "NotRegistered": "kayıtlı değil",
+          "Deregistered": "kaydı silinmiş",
+          "InvalidClientId": "istemci kimliği UUID değil"
+        },
+        "error": {
+          "credentialsMissing": "Kayıtlı (okunabilir) erişim bilgisi yok.",
+          "credentialsRejected": "fiskaly API anahtarını veya gizli anahtarı reddetti. Anahtarlar yalnızca TEST veya yalnızca LIVE için geçerlidir.",
+          "unreachable": "fiskaly'ye ulaşılamıyor. Lütfen daha sonra tekrar deneyin.",
+          "tssMissing": "Kayıtlı TSS kimliği yok.",
+          "tssNotFound": "fiskaly bu anahtarlarla bu TSS kimliğini tanımıyor.",
+          "requestFailed": "fiskaly isteği reddetti."
+        },
+        "checked": "Denetlendi",
+        "register": "Kaydet",
+        "registerTitle": "{name} kasasını fiskaly'ye kaydet",
+        "adminPin": "TSS yönetici PIN'i",
+        "adminPinHint": "Yalnızca bu kayıt için kullanılır ve saklanmaz.",
+        "registered": "{name} kasası fiskaly'ye kaydedildi."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "TSE arızalı.",
       "outageText": "Satışlar devam eder; fişlere \"Sicherheitseinrichtung ausgefallen\" notu eklenir ve arıza kaydedilir.",
-      "outageSince": "şu tarihten beri:"
+      "outageSince": "şu tarihten beri:",
+      "testEnvironment": "Test ortamı – fişler vergi açısından geçerli değil"
     },
     "cashier": {
       "switch": "Kasiyer değiştir",

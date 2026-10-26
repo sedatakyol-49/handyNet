@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "لطفاً دلیلی برای برداشتن مسدودی وارد کنید (حداکثر 500 نویسه).",
       "blacklist.reason": "دلیل نامعتبر.",
       "blacklist.source": "لطفاً منبع گزارش را وارد کنید (حداکثر 200 نویسه).",
-      "blacklist.note": "یادداشت بیش از حد طولانی است (حداکثر 1000 نویسه)."
+      "blacklist.note": "یادداشت بیش از حد طولانی است (حداکثر 1000 نویسه).",
+      "pos.fiskaly_admin_pin_rejected": "fiskaly پین مدیر TSS را رد کرد. پس از پنج تلاش ناموفق قفل می‌شود.",
+      "pos.fiskaly_client_not_registered": "صندوق در fiskaly ثبت نشده است. آن را در «صندوق‌ها و TSE» ثبت کنید.",
+      "pos.fiskaly_invalid_client_id": "شناسهٔ کلاینت fiskaly صندوق باید UUID باشد.",
+      "pos.fiskaly_credentials_rejected": "fiskaly اطلاعات ورود را رد کرد.",
+      "pos.fiskaly_not_found": "fiskaly این TSS یا صندوق درخواستی را نمی‌شناسد.",
+      "pos.tse_unavailable": "TSE در حال حاضر در دسترس نیست. لطفاً دوباره تلاش کنید.",
+      "pos.tse_rejected": "TSE درخواست را رد کرد."
     },
     "validation": {
       "required": "این فیلد الزامی است.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "مبلغ یا تعداد هر اسکناس/سکه را وارد کنید.",
       "reasonRequired": "یک دلیل انتخاب کنید یا آن را توضیح دهید.",
       "versionRequired": "نسخه‌ای را که فرم با آن بارگذاری شده ارسال کنید.",
-      "idExpiryRequired": "تاریخ انقضای مدرک شناسایی الزامی است."
+      "idExpiryRequired": "تاریخ انقضای مدرک شناسایی الزامی است.",
+      "fiskalyAdminPin": "PIN مدیر TSS دست‌کم 6 نویسه دارد."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "تأخیر مصنوعی (میلی‌ثانیه)",
       "failureRate": "نرخ خطا (%)",
       "forcedOutage": "اجبار قطعی TSE",
-      "fiskalyUnverified": "آداپتور fiskaly: با سرویس واقعی آزموده نشده است. اطلاعات ورود رمزگذاری‌شده ذخیره و هرگز نمایش داده نمی‌شود.",
+      "fiskalyUnverified": "آداپتور fiskaly: با مشخصات منتشرشدهٔ API (SIGN DE v2) بررسی شده است؛ اجرای آن در محیط واقعی TEST هنوز انجام نشده است. اطلاعات ورود رمزگذاری‌شده ذخیره می‌شود و هرگز نمایش داده نمی‌شود.",
       "tssId": "شناسهٔ TSS (UUID)",
       "environment": "محیط",
       "credentialReference": "مرجع اطلاعات ورود",
@@ -1446,6 +1454,46 @@
         "failureRate": "۰ تا ۱۰۰ %.",
         "uuid": "لطفاً یک UUID معتبر وارد کنید.",
         "credentialsPair": "کلید و رمز API را با هم وارد کنید."
+      },
+      "fiskaly": {
+        "title": "اتصال به fiskaly",
+        "test": "آزمایش اتصال",
+        "testHint": "با اطلاعات ورود ذخیره‌شده وارد می‌شود و TSS و کلاینت‌های صندوق را می‌خواند. چیزی امضا نمی‌شود.",
+        "saveFirst": "ابتدا شناسهٔ TSS و اطلاعات ورود را ذخیره کنید.",
+        "status": {
+          "Ok": "اتصال برقرار است.",
+          "Warning": "متصل شد – لطفاً به نکات توجه کنید.",
+          "Failed": "اتصال ناموفق بود."
+        },
+        "environment": "محیط کلیدها",
+        "env": {
+          "TEST": "TEST – محیط آزمایشی، رسیدها از نظر مالیاتی معتبر نیستند",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "کلیدها با محیط تنظیم‌شده ({configured}) مطابقت ندارند. برای LIVE کلیدهای جدید LIVE و یک TSS جدید لازم است.",
+        "tssState": "وضعیت TSS",
+        "tssNotInitialized": "TSS مقداردهی اولیه نشده است – امضا فقط پس از آن ممکن است.",
+        "clients": "صندوق‌ها در fiskaly",
+        "clientState": {
+          "Registered": "ثبت‌شده",
+          "NotRegistered": "ثبت‌نشده",
+          "Deregistered": "لغو ثبت‌شده",
+          "InvalidClientId": "شناسهٔ کلاینت UUID نیست"
+        },
+        "error": {
+          "credentialsMissing": "اطلاعات ورود (قابل‌خواندن) ذخیره نشده است.",
+          "credentialsRejected": "fiskaly کلید یا رمز API را رد کرد. کلیدها فقط برای TEST یا فقط برای LIVE معتبرند.",
+          "unreachable": "fiskaly در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.",
+          "tssMissing": "شناسهٔ TSS ذخیره نشده است.",
+          "tssNotFound": "fiskaly این شناسهٔ TSS را با این کلیدها نمی‌شناسد.",
+          "requestFailed": "fiskaly درخواست را رد کرد."
+        },
+        "checked": "بررسی شد",
+        "register": "ثبت",
+        "registerTitle": "ثبت صندوق {name} در fiskaly",
+        "adminPin": "PIN مدیر TSS",
+        "adminPinHint": "فقط برای همین ثبت استفاده می‌شود و ذخیره نمی‌شود.",
+        "registered": "صندوق {name} در fiskaly ثبت شد."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "قطعی TSE.",
       "outageText": "فروش ادامه دارد؛ رسیدها یادداشت «Sicherheitseinrichtung ausgefallen» دارند و قطعی ثبت می‌شود.",
-      "outageSince": "از"
+      "outageSince": "از",
+      "testEnvironment": "محیط آزمایشی – رسیدها از نظر مالیاتی معتبر نیستند"
     },
     "cashier": {
       "switch": "تغییر صندوق‌دار",

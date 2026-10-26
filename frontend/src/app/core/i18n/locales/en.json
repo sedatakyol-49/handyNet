@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "Please enter a reason for lifting the block (max. 500 characters).",
       "blacklist.reason": "Unknown reason.",
       "blacklist.source": "Please enter the source of the report (max. 200 characters).",
-      "blacklist.note": "The note is too long (max. 1000 characters)."
+      "blacklist.note": "The note is too long (max. 1000 characters).",
+      "pos.fiskaly_admin_pin_rejected": "fiskaly rejected the TSS admin PIN. It is blocked after five failed attempts.",
+      "pos.fiskaly_client_not_registered": "The till is not registered with fiskaly. Register it under “Tills & TSE”.",
+      "pos.fiskaly_invalid_client_id": "The fiskaly client ID of the till must be a UUID.",
+      "pos.fiskaly_credentials_rejected": "fiskaly rejected the credentials.",
+      "pos.fiskaly_not_found": "fiskaly does not know the requested TSS or till.",
+      "pos.tse_unavailable": "The TSE is currently not reachable. Please try again.",
+      "pos.tse_rejected": "The TSE rejected the request."
     },
     "validation": {
       "required": "This field is required.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "Enter the amount or the denomination counts.",
       "reasonRequired": "Choose a reason or describe it.",
       "versionRequired": "Send the version the form was loaded with.",
-      "idExpiryRequired": "The expiry date of the ID document is required."
+      "idExpiryRequired": "The expiry date of the ID document is required.",
+      "fiskalyAdminPin": "The TSS admin PIN has at least 6 characters."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "Artificial latency (ms)",
       "failureRate": "Failure rate (%)",
       "forcedOutage": "Force TSE outage",
-      "fiskalyUnverified": "fiskaly adapter: not verified against the real service. Credentials are stored encrypted and never shown.",
+      "fiskalyUnverified": "fiskaly adapter: checked against the published API specification (SIGN DE v2); a run against the real TEST environment is still pending. Credentials are stored encrypted and never shown.",
       "tssId": "TSS id (UUID)",
       "environment": "Environment",
       "credentialReference": "Credential reference",
@@ -1446,6 +1454,46 @@
         "failureRate": "0 to 100 %.",
         "uuid": "Please enter a valid UUID.",
         "credentialsPair": "Enter API key and secret together."
+      },
+      "fiskaly": {
+        "title": "fiskaly connection",
+        "test": "Test connection",
+        "testHint": "Signs in with the stored credentials and reads the TSS and the till clients. Nothing is signed.",
+        "saveFirst": "Save the TSS ID and credentials first.",
+        "status": {
+          "Ok": "Connection OK.",
+          "Warning": "Connected – please check the notes.",
+          "Failed": "Connection failed."
+        },
+        "environment": "Environment of the keys",
+        "env": {
+          "TEST": "TEST – test environment, receipts not valid for tax purposes",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "The keys do not match the configured environment ({configured}). LIVE needs new LIVE keys and a new TSS.",
+        "tssState": "TSS state",
+        "tssNotInitialized": "The TSS is not initialized – signing is only possible afterwards.",
+        "clients": "Tills at fiskaly",
+        "clientState": {
+          "Registered": "registered",
+          "NotRegistered": "not registered",
+          "Deregistered": "deregistered",
+          "InvalidClientId": "client ID is not a UUID"
+        },
+        "error": {
+          "credentialsMissing": "No (readable) credentials stored.",
+          "credentialsRejected": "fiskaly rejected the API key or secret. Keys are valid for either TEST or LIVE only.",
+          "unreachable": "fiskaly is not reachable. Please try again later.",
+          "tssMissing": "No TSS ID stored.",
+          "tssNotFound": "fiskaly does not know this TSS ID for these keys.",
+          "requestFailed": "fiskaly rejected the request."
+        },
+        "checked": "Checked",
+        "register": "Register",
+        "registerTitle": "Register till {name} with fiskaly",
+        "adminPin": "TSS admin PIN",
+        "adminPinHint": "Used only for this registration and never stored.",
+        "registered": "Till {name} is registered with fiskaly."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "TSE outage.",
       "outageText": "Sales continue; receipts carry the note \"Sicherheitseinrichtung ausgefallen\" and the outage is recorded.",
-      "outageSince": "since"
+      "outageSince": "since",
+      "testEnvironment": "Test environment – receipts not valid for tax purposes"
     },
     "cashier": {
       "switch": "Switch cashier",
