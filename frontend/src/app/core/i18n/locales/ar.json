@@ -637,6 +637,29 @@
       "pos.printer_limit": "يمكن أن يحتوي الكاشير على 20 ملف طابعة كحد أقصى.",
       "pos.printer_version": "أعد تحميل الصفحة واحفظ مرة أخرى.",
       "pos.printer_name_taken": "يوجد لدى هذا الكاشير طابعة بهذا الاسم بالفعل."
+    },
+    "validation": {
+      "required": "هذا الحقل مطلوب.",
+      "maxLength": "الحد الأقصى المسموح به {maxLength} حرفًا.",
+      "minLength": "يلزم {minLength} أحرف على الأقل.",
+      "length": "يجب أن يتراوح الطول بين {minLength} و{maxLength} حرفًا.",
+      "exactLength": "يلزم {maxLength} حرفًا بالضبط.",
+      "email": "يرجى إدخال عنوان بريد إلكتروني صالح.",
+      "greaterThan": "يجب أن تكون القيمة أكبر من {comparisonValue}.",
+      "min": "يجب ألا تقل القيمة عن {comparisonValue}.",
+      "lessThan": "يجب أن تكون القيمة أصغر من {comparisonValue}.",
+      "max": "يجب ألا تزيد القيمة عن {comparisonValue}.",
+      "range": "يجب أن تكون القيمة بين {from} و{to}.",
+      "rangeExclusive": "يجب أن تكون القيمة بين {from} و{to} (دون احتساب الحدّين).",
+      "enum": "هذه القيمة غير مسموح بها.",
+      "precision": "الحد الأقصى {expectedPrecision} أرقام، منها {expectedScale} بعد الفاصلة.",
+      "equal": "يجب أن تكون القيمة {comparisonValue}.",
+      "notEqual": "هذه القيمة غير مسموح بها.",
+      "imei": "يجب أن يتكون رقم IMEI من 15 رقمًا مع رقم تحقق صحيح.",
+      "category": "فئة غير معروفة.",
+      "quality": "جودة قطعة غير معروفة.",
+      "language": "يجب أن تكون اللغة de أو en أو tr أو es أو ru أو ar أو fa.",
+      "month": "يجب أن يكون الشهر بالصيغة YYYY-MM."
     }
   },
   "dashboard": {

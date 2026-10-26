@@ -24,8 +24,8 @@ internal sealed class CreateProductValidator : AbstractValidator<CreateProductRe
     {
         RuleFor(x => x.Brand).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.");
-        RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.");
+        RuleFor(x => x.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.").WithErrorCode("validation.category");
+        RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.").WithErrorCode("validation.quality");
         RuleFor(x => x.Mpn).MaximumLength(100);
         RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.Ean) || !string.IsNullOrWhiteSpace(x.Mpn))
             .WithName("Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.");
@@ -71,8 +71,8 @@ internal sealed class UpdateProductValidator : AbstractValidator<UpdateProductRe
     {
         RuleFor(x => x.Brand).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(300);
-        RuleFor(x => x.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.");
-        RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.");
+        RuleFor(x => x.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.").WithErrorCode("validation.category");
+        RuleFor(x => x.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.").WithErrorCode("validation.quality");
         RuleFor(x => x.Mpn).MaximumLength(100);
         RuleFor(x => x.Version).NotNull();
         RuleFor(x => x.ModelName).MaximumLength(200);

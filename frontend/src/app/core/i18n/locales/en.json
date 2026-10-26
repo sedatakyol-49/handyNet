@@ -637,6 +637,29 @@
       "pos.printer_limit": "A register can have at most 20 printer profiles.",
       "pos.printer_version": "Reload the page and save again.",
       "pos.printer_name_taken": "This register already has a printer with this name."
+    },
+    "validation": {
+      "required": "This field is required.",
+      "maxLength": "At most {maxLength} characters allowed.",
+      "minLength": "At least {minLength} characters required.",
+      "length": "The length must be between {minLength} and {maxLength} characters.",
+      "exactLength": "Exactly {maxLength} characters required.",
+      "email": "Please enter a valid email address.",
+      "greaterThan": "The value must be greater than {comparisonValue}.",
+      "min": "The value must be at least {comparisonValue}.",
+      "lessThan": "The value must be less than {comparisonValue}.",
+      "max": "The value must be at most {comparisonValue}.",
+      "range": "The value must be between {from} and {to}.",
+      "rangeExclusive": "The value must be between {from} and {to} (exclusive).",
+      "enum": "This value is not allowed.",
+      "precision": "At most {expectedPrecision} digits, of which {expectedScale} decimal places.",
+      "equal": "The value must be {comparisonValue}.",
+      "notEqual": "This value is not allowed.",
+      "imei": "The IMEI must be 15 digits with a valid check digit.",
+      "category": "Unknown category.",
+      "quality": "Unknown part quality.",
+      "language": "The language must be one of de, en, tr, es, ru, ar or fa.",
+      "month": "The month must have the form YYYY-MM."
     }
   },
   "dashboard": {

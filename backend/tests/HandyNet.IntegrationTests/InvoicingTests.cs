@@ -88,7 +88,13 @@ public sealed class InvoicingTests(HandyNetFixture fixture)
         await MovePaidAtAsync(b1, "2024-01-01 00:30:00+01");
 
         // Month validation.
-        Assert.Equal("validation.failed", (await admin.PostAsync("/api/admin/invoices/issue", new { month = "2024-1" })).Code);
+        var badMonth = await admin.PostAsync("/api/admin/invoices/issue", new { month = "2024-1" });
+        Assert.Equal("validation.failed", badMonth.Code);
+        // Stable per-field codes ride along so the UI can translate (errors keeps its shape).
+        Assert.Equal("validation.month", badMonth.Body!["errorCodes"]!["Month"]![0]!["code"]!.GetValue<string>());
+        Assert.NotEmpty(badMonth.Body["errors"]!["Month"]!.AsArray());
+        var emptyMonth = await admin.PostAsync("/api/admin/invoices/issue", new { month = "" });
+        Assert.Equal("validation.required", emptyMonth.Body!["errorCodes"]!["Month"]![0]!["code"]!.GetValue<string>());
         Assert.Equal("invoicing.month_not_over", (await admin.PostAsync("/api/admin/invoices/issue", new { month = "2099-01" })).Code);
         Assert.Equal(HttpStatusCode.Forbidden, (await sellerA.PostAsync("/api/admin/invoices/issue", new { month = "2024-01" })).Status);
 

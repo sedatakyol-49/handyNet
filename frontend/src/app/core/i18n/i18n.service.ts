@@ -1,4 +1,5 @@
 import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
+import { setValidationTranslator } from '../api/api-problem';
 import { StorageService } from '../storage.service';
 import de from './locales/de.json';
 
@@ -78,6 +79,7 @@ export class I18nService {
   readonly locale = computed(() => FORMAT_LOCALES[this.lang()]);
 
   constructor() {
+    setValidationTranslator((code, params) => (this.has('errors.' + code) ? this.t('errors.' + code, params) : null));
     const saved = this.storage.get(STORAGE_KEY) as Lang | null;
     if (saved && saved !== 'de' && LANGUAGES.some((l) => l.code === saved)) void this.use(saved);
     else this.applyDocumentAttributes();

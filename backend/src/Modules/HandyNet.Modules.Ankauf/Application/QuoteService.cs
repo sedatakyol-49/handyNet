@@ -50,7 +50,7 @@ internal sealed class CreateQuoteValidator : AbstractValidator<CreateQuoteReques
         RuleForEach(x => x.Defects).IsInEnum();
         RuleFor(x => x.BatteryHealthPercent).InclusiveBetween(0, 100);
         RuleFor(x => x.ConsumerPrice).GreaterThanOrEqualTo(0).PrecisionScale(10, 2, ignoreTrailingZeros: true);
-        RuleFor(x => x.Imei).Must(i => i is null || Imei.TryNormalize(i, out _)).WithMessage("IMEI must be 15 digits with a valid check digit.");
+        RuleFor(x => x.Imei).Must(i => i is null || Imei.TryNormalize(i, out _)).WithMessage("IMEI must be 15 digits with a valid check digit.").WithErrorCode("validation.imei");
     }
 }
 
