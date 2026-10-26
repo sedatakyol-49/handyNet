@@ -11,7 +11,8 @@ using Microsoft.Extensions.Options;
 namespace HandyNet.Modules.Pos.Application;
 
 /// <summary>Email: an address, or null for the email of the receipt's customer.</summary>
-public sealed record EmailReceiptRequest(string? Email);
+/// <param name="Language">Language of the email (de, en, tr, es, ru, ar, fa); null = the email language of the company.</param>
+public sealed record EmailReceiptRequest(string? Email, string? Language = null);
 
 /// <summary>Recipient masked (e.g. "a***@example.com"): the response must not echo the full address on shared screens.</summary>
 public sealed record ReceiptEmailDto(Guid Id, Guid ReceiptId, string RecipientMasked, DateTimeOffset RequestedAt);
@@ -25,7 +26,11 @@ public sealed record PublicReceiptDto(ReceiptDocument Document, bool Cancelled, 
 
 internal sealed class EmailReceiptValidator : AbstractValidator<EmailReceiptRequest>
 {
-    public EmailReceiptValidator() => RuleFor(x => x.Email).MaximumLength(ReceiptEmail.MaxEmailLength);
+    public EmailReceiptValidator()
+    {
+        RuleFor(x => x.Email).MaximumLength(ReceiptEmail.MaxEmailLength);
+        RuleFor(x => x.Language).Must(ReceiptEmail.IsEmailLanguage).WithMessage("The email language is not supported.");
+    }
 }
 
 internal sealed class PublicReceiptRow
@@ -63,7 +68,7 @@ internal sealed class EReceiptService(HandyNetDbContext db, ITenantContext tenan
         // Serialize requests per receipt so the limit holds under concurrency.
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"receipt-email:" + receiptId}, 0))", ct);
         var sent = await db.Set<ReceiptEmail>().CountAsync(e => e.ReceiptId == receiptId, ct);
-        var created = ReceiptEmail.Request(receipt, email, sent, ReceiptEmail.ContentOf(receipt.Document!), actor.UserId, clock.UtcNow);
+        var created = ReceiptEmail.Request(receipt, email, sent, ReceiptEmail.ContentOf(receipt.Document!), actor.UserId, clock.UtcNow, request.Language);
         if (!created.IsSuccess)
             return created.Error!;
         db.Add(created.Value);

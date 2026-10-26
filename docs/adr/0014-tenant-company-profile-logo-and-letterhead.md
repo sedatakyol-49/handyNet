@@ -82,3 +82,14 @@ such as opening hours or the return policy. A parallel workstream (Ankauf) needs
   invoices for till sales are already paid and do not print them.
 - VAT IDs are only checked by format; a VIES check and a re-verification workflow for legal-identity changes are future
   work.
+
+## Addendum: email language
+
+The company profile also holds `email_language` (`de` default, CHECK in the seven UI locales, edited on the company page,
+validated by the API with 422). It is the language of the emails the platform sends to the organization (order placed
+-> seller, order status -> buyer, organization verified) and the default for emails the organization sends to its
+customers (e-receipt, quotation/invoice). The Notifications module reads it through `IOrganizationDirectory`
+(`OrganizationSummary.EmailLanguage`), so there is no new module dependency. The send requests of receipts and sales
+documents take an optional `language` that overrides the setting for that one email; the POS events carry it as an
+optional field (`null` = use the organization's setting), so payloads written before the field existed still
+deserialize and render in the organization's language.

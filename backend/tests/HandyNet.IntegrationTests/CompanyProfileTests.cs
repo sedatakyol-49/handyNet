@@ -31,7 +31,7 @@ public sealed class CompanyProfileTests(HandyNetFixture fixture)
                  {
                      "name", "legalName", "street", "postalCode", "city", "countryCode", "vatId", "taxNumber", "contactEmail", "contactPhone",
                      "website", "receiptHeader", "receiptFooter", "bankName", "iban", "bic", "managingDirector", "registerCourt", "registerNumber",
-                     "paymentTermsDays", "version",
+                     "paymentTermsDays", "version", "emailLanguage",
                  })
             request[name] = profile[name]?.DeepClone();
         change(request);
@@ -337,6 +337,33 @@ public sealed class CompanyProfileTests(HandyNetFixture fixture)
         // Bank data is not part of the public receipt (full IBAN: a random VAT ID may contain "DE89").
         Assert.DoesNotContain("DE89370400440532013000", view.ToJsonString());
         Assert.DoesNotContain("IBAN", view.ToJsonString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Email_language_defaults_to_german_is_validated_and_stays_per_organization()
+    {
+        var a = await _scenario.RegisterAsync("sprachefirma", wholesaler: false);
+        var b = await _scenario.RegisterAsync("spracheandere", wholesaler: false);
+        var profile = (await a.GetAsync("/api/organization/profile")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal("de", profile["emailLanguage"]!.GetValue<string>());
+
+        // Unknown or malformed codes are rejected with the validation status; nothing changes.
+        foreach (var bad in new[] { "xx", "english", "" })
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, (await a.PutAsync("/api/organization/profile", Edit(profile, r => r["emailLanguage"] = bad))).Status);
+
+        var saved = (await a.PutAsync("/api/organization/profile", Edit(profile, r => r["emailLanguage"] = "FA"))).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal("fa", saved["emailLanguage"]!.GetValue<string>());
+        // An older client that sends no language keeps the setting.
+        var kept = (await a.PutAsync("/api/organization/profile", Edit(saved, r => { r.Remove("emailLanguage"); r["name"] = "Sprache Mitte"; }))).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal("fa", kept["emailLanguage"]!.GetValue<string>());
+
+        // The other organization is unaffected (RLS), and the database rejects codes outside the seven locales.
+        Assert.Equal("de", (await b.GetAsync("/api/organization/profile")).Expect(HttpStatusCode.OK).Json["emailLanguage"]!.GetValue<string>());
+        Assert.Equal("fa", await AsOwnerAsync<string>($"SELECT email_language FROM tenancy.organizations WHERE id = '{a.OrganizationId}'"));
+        await using var owner = new NpgsqlConnection(fixture.OwnerConnectionString);
+        await owner.OpenAsync();
+        await using var invalid = new NpgsqlCommand($"UPDATE tenancy.organizations SET email_language = 'it' WHERE id = '{a.OrganizationId}'", owner);
+        Assert.Equal("23514", (await Assert.ThrowsAsync<PostgresException>(() => invalid.ExecuteNonQueryAsync())).SqlState);
     }
 
     [Fact]

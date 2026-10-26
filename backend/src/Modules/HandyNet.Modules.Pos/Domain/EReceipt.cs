@@ -25,6 +25,13 @@ public sealed class ReceiptEmail : Entity, IAuditable
     public DateTimeOffset RequestedAt { get; private set; }
     public Guid RequestedBy { get; private set; }
 
+    /// <summary>Languages an email can be requested in (the UI locales); null means "the organization's email language".</summary>
+    public static readonly IReadOnlyList<string> EmailLanguages = ["de", "en", "tr", "es", "ru", "ar", "fa"];
+
+    public static bool IsEmailLanguage(string? language) => language is null || EmailLanguages.Contains(language.Trim().ToLowerInvariant());
+
+    internal static string? NormalizeLanguage(string? language) => string.IsNullOrWhiteSpace(language) ? null : language.Trim().ToLowerInvariant();
+
     public static Result<string> NormalizeAddress(string? email)
     {
         var e = email?.Trim();
@@ -33,11 +40,14 @@ public sealed class ReceiptEmail : Entity, IAuditable
         return e.ToLowerInvariant();
     }
 
-    public static Result<ReceiptEmail> Request(Receipt receipt, string? email, int alreadySent, EReceiptContent content, Guid userId, DateTimeOffset now)
+    public static Result<ReceiptEmail> Request(Receipt receipt, string? email, int alreadySent, EReceiptContent content, Guid userId, DateTimeOffset now,
+        string? language = null)
     {
         var address = NormalizeAddress(email);
         if (!address.IsSuccess)
             return address.Error!;
+        if (!IsEmailLanguage(language))
+            return Error.Validation("pos.email_language_invalid", "The email language is not supported.");
         if (alreadySent >= MaxPerReceipt)
             return Error.Conflict("pos.receipt_email_limit", $"This receipt was already emailed {MaxPerReceipt} times.");
         var request = new ReceiptEmail
@@ -49,7 +59,7 @@ public sealed class ReceiptEmail : Entity, IAuditable
             RequestedAt = now,
             RequestedBy = userId,
         };
-        request.Raise(new ReceiptEmailRequested(request.Id, receipt.OrganizationId, receipt.Id, address.Value, content));
+        request.Raise(new ReceiptEmailRequested(request.Id, receipt.OrganizationId, receipt.Id, address.Value, content, NormalizeLanguage(language)));
         return request;
     }
 

@@ -31,7 +31,8 @@ public sealed record CompanyProfile(
     string? ManagingDirector,
     string? RegisterCourt,
     string? RegisterNumber,
-    int? PaymentTermsDays)
+    int? PaymentTermsDays,
+    string EmailLanguage = CompanyProfileRules.DefaultEmailLanguage)
 {
     /// <summary>Stored form: trimmed, empty → null, VAT id/IBAN/BIC without spaces in upper case, email lower case.</summary>
     public CompanyProfile Normalized() => new(
@@ -40,7 +41,8 @@ public sealed record CompanyProfile(
         Opt(TaxNumber), Opt(ContactEmail)?.ToLowerInvariant(), Opt(ContactPhone), Opt(Website),
         Multiline(ReceiptHeader), Multiline(ReceiptFooter),
         Opt(BankName), CompanyProfileRules.NormalizeIban(Iban), Opt(Bic)?.Replace(" ", "").ToUpperInvariant(),
-        Opt(ManagingDirector), Opt(RegisterCourt), Opt(RegisterNumber), PaymentTermsDays);
+        Opt(ManagingDirector), Opt(RegisterCourt), Opt(RegisterNumber), PaymentTermsDays,
+        string.IsNullOrWhiteSpace(EmailLanguage) ? CompanyProfileRules.DefaultEmailLanguage : EmailLanguage.Trim().ToLowerInvariant());
 
     private static string? Opt(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
 
@@ -77,6 +79,13 @@ public static partial class CompanyProfileRules
     public const int MaxRegisterCourtLength = 100;
     public const int MaxRegisterNumberLength = 50;
     public const int MaxPaymentTermsDays = 365;
+
+    /// <summary>Language of the emails the platform sends to an organization and on its behalf (the seven UI locales); German by default.</summary>
+    public const string DefaultEmailLanguage = "de";
+
+    public static readonly IReadOnlyList<string> EmailLanguages = ["de", "en", "tr", "es", "ru", "ar", "fa"];
+
+    public static bool IsEmailLanguage(string? code) => code is not null && EmailLanguages.Contains(code);
 
     /// <summary>IBAN lengths of the SEPA countries (ISO 13616 registry).</summary>
     private static readonly Dictionary<string, int> IbanLengths = new()
@@ -153,6 +162,8 @@ public static partial class CompanyProfileRules
             return Invalid("length", "A letterhead field is too long.");
         if (p.PaymentTermsDays is < 0 or > MaxPaymentTermsDays)
             return Invalid("payment_terms", $"Payment terms are 0 to {MaxPaymentTermsDays} days.");
+        if (!string.IsNullOrWhiteSpace(p.EmailLanguage) && !IsEmailLanguage(p.EmailLanguage.Trim().ToLowerInvariant()))
+            return Invalid("email_language", $"The email language is one of: {string.Join(", ", EmailLanguages)}.");
         return null;
     }
 

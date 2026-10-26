@@ -219,6 +219,31 @@ public sealed class PosSalesDocumentsTests(HandyNetFixture fixture)
         Assert.Single((await shop.GetAsync("/api/pos/quotations?search=0002")).Json["items"]!.AsArray());
     }
 
+    [Fact]
+    public async Task Quotation_email_follows_the_company_email_language_and_the_language_of_the_request()
+    {
+        var shop = await ShopAsync();
+        var customerEmail = $"sprache-{Scenario.UniqueSuffix()}@example.de";
+        var customer = await CustomerAsync(shop, customerEmail);
+        var quotation = (await shop.PostAsync("/api/pos/quotations", new { customerId = customer, lines = new[] { Line(description: "Service") } }))
+            .Expect(HttpStatusCode.Created).Json;
+        var path = $"/api/pos/quotations/{Id(quotation)}/email";
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await shop.PostAsync(path, new { email = customerEmail, language = "xx" })).Status);
+
+        // Default: German. Company language English. Explicit Turkish wins over the company setting.
+        (await shop.PostAsync(path, new { email = customerEmail })).Expect(HttpStatusCode.Accepted);
+        await ProcessEmailsUntilAsync(() => fixture.Emails.Sent.Count(e => e.To == customerEmail) == 1);
+        await shop.SetEmailLanguageAsync("en");
+        (await shop.PostAsync(path, new { email = customerEmail })).Expect(HttpStatusCode.Accepted);
+        (await shop.PostAsync(path, new { email = customerEmail, language = "tr" })).Expect(HttpStatusCode.Accepted);
+        await ProcessEmailsUntilAsync(() => fixture.Emails.Sent.Count(e => e.To == customerEmail) == 3);
+
+        var bodies = fixture.Emails.Sent.Where(e => e.To == customerEmail).Select(e => e.Body).ToList();
+        Assert.Contains("anbei erhalten Sie unser Angebot", bodies[0]);
+        Assert.Contains(bodies, b => b.Contains("Please find attached our quotation"));
+        Assert.Contains(bodies, b => !b.Contains("anbei erhalten") && !b.Contains("Please find attached"));
+    }
+
     // ---- sales invoices: shared series, stock, IMEI, idempotency, immutability -------------------------------------------------
 
     [Fact]

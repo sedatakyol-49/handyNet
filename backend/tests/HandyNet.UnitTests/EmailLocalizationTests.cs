@@ -107,6 +107,16 @@ public partial class EmailLocalizationTests
     private static SalesDocumentEmailRequested Document(string kind) => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), kind, "TITLEX", "NR-1",
         "kunde@example.de", "SHOPX", 119_00, new DateOnly(2026, 3, 2), new DateOnly(2026, 3, 16), new DateOnly(2026, 4, 1), "doc.pdf", Convert.ToBase64String([1, 2, 3]));
 
+    [Fact]
+    public void Events_written_before_the_language_field_still_deserialize_without_a_language()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(Document("Invoice"));
+        var withoutLanguage = json.Replace(",\"Language\":null", "");
+        Assert.DoesNotContain("Language", withoutLanguage);
+        Assert.Null(System.Text.Json.JsonSerializer.Deserialize<SalesDocumentEmailRequested>(withoutLanguage)!.Language);
+        Assert.Equal("fa", System.Text.Json.JsonSerializer.Deserialize<SalesDocumentEmailRequested>(withoutLanguage.TrimEnd('}') + ",\"Language\":\"fa\"}")!.Language);
+    }
+
     [Theory, MemberData(nameof(Locales))]
     public void Receipt_and_sales_documents_render_in_every_locale_and_rtl_only_for_ar_fa(string locale)
     {

@@ -46,7 +46,8 @@ public sealed record CompanyProfileDto(
     CompanyLogoDto? Logo,
     string Status,
     uint Version,
-    bool CanEdit);
+    bool CanEdit,
+    string EmailLanguage = CompanyProfileRules.DefaultEmailLanguage);
 
 /// <param name="Version">The <see cref="CompanyProfileDto.Version"/> the form was loaded with (required: optimistic concurrency).</param>
 public sealed record UpdateCompanyProfileRequest(
@@ -70,11 +71,14 @@ public sealed record UpdateCompanyProfileRequest(
     string? RegisterCourt,
     string? RegisterNumber,
     int? PaymentTermsDays,
-    uint? Version)
+    uint? Version,
+    string? EmailLanguage = null)
 {
-    public CompanyProfile ToProfile() => new(Name ?? "", LegalName ?? "", Street ?? "", PostalCode ?? "", City ?? "",
+    /// <param name="currentEmailLanguage">Kept when the request carries no language (older clients).</param>
+    public CompanyProfile ToProfile(string? currentEmailLanguage = null) => new(Name ?? "", LegalName ?? "", Street ?? "", PostalCode ?? "", City ?? "",
         string.IsNullOrWhiteSpace(CountryCode) ? "DE" : CountryCode, VatId, TaxNumber, ContactEmail, ContactPhone, Website, ReceiptHeader,
-        ReceiptFooter, BankName, Iban, Bic, ManagingDirector, RegisterCourt, RegisterNumber, PaymentTermsDays);
+        ReceiptFooter, BankName, Iban, Bic, ManagingDirector, RegisterCourt, RegisterNumber, PaymentTermsDays,
+        EmailLanguage ?? currentEmailLanguage ?? CompanyProfileRules.DefaultEmailLanguage);
 }
 
 internal sealed class UpdateCompanyProfileValidator : AbstractValidator<UpdateCompanyProfileRequest>
@@ -131,6 +135,8 @@ internal sealed class UpdateCompanyProfileValidator : AbstractValidator<UpdateCo
         RuleFor(x => x.ManagingDirector).MaximumLength(CompanyProfileRules.MaxManagingDirectorLength);
         RuleFor(x => x.RegisterCourt).MaximumLength(CompanyProfileRules.MaxRegisterCourtLength);
         RuleFor(x => x.RegisterNumber).MaximumLength(CompanyProfileRules.MaxRegisterNumberLength);
+        RuleFor(x => x.EmailLanguage!).Must(l => CompanyProfileRules.IsEmailLanguage(l.Trim().ToLowerInvariant())).When(x => x.EmailLanguage is not null)
+            .WithMessage("The email language is one of: de, en, tr, es, ru, ar, fa.");
         RuleFor(x => x.PaymentTermsDays).InclusiveBetween(0, CompanyProfileRules.MaxPaymentTermsDays).When(x => x.PaymentTermsDays is not null);
     }
 
@@ -192,7 +198,7 @@ internal sealed class CompanyProfileService(
         if (request.Version is { } expected)
             db.Entry(organization).Property(o => o.Version).OriginalValue = expected;
 
-        var change = organization.UpdateCompanyProfile(request.ToProfile(), currentUser.UserId, clock.UtcNow);
+        var change = organization.UpdateCompanyProfile(request.ToProfile(organization.EmailLanguage), currentUser.UserId, clock.UtcNow);
         if (!change.IsSuccess)
             return change.Error!;
         if (change.Value.Changed)
@@ -327,7 +333,7 @@ internal sealed class CompanyProfileService(
         o.Id, o.Name, o.LegalName, o.Street, o.PostalCode, o.City, o.CountryCode, o.VatId, o.TaxNumber, o.ContactEmail, o.ContactPhone,
         o.Website, o.ReceiptHeader, o.ReceiptFooter, o.BankName, o.Iban, o.Bic, o.ManagingDirector, o.RegisterCourt, o.RegisterNumber,
         o.PaymentTermsDays, logo is null ? null : ToLogoDto(logo), o.Status.ToString(), version,
-        tenant.Permissions.Contains(Permissions.OrganizationManage));
+        tenant.Permissions.Contains(Permissions.OrganizationManage), o.EmailLanguage);
 
     private Task<OrganizationLogo?> ActiveLogoAsync(Guid organizationId, bool tracked, CancellationToken ct)
     {

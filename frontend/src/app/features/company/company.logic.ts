@@ -18,6 +18,7 @@ export type CompanyField = keyof CompanyForm;
 const FIELDS: CompanyField[] = [
   'name', 'legalName', 'street', 'postalCode', 'city', 'countryCode', 'vatId', 'taxNumber', 'contactEmail', 'contactPhone', 'website',
   'receiptHeader', 'receiptFooter', 'bankName', 'iban', 'bic', 'managingDirector', 'registerCourt', 'registerNumber', 'paymentTermsDays',
+  'emailLanguage',
 ];
 
 export function formFromProfile(p: CompanyProfile): CompanyForm {
@@ -60,6 +61,7 @@ export function requestFromForm(form: CompanyForm, version: number): UpdateCompa
     registerCourt: blank(form.registerCourt),
     registerNumber: blank(form.registerNumber),
     paymentTermsDays: terms === '' ? null : Number(terms),
+    emailLanguage: blank(form.emailLanguage) ?? 'de',
     version,
   };
 }

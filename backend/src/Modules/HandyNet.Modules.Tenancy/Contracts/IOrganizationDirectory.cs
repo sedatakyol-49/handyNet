@@ -2,7 +2,7 @@ using HandyNet.SharedKernel.Tenancy;
 
 namespace HandyNet.Modules.Tenancy.Contracts;
 
-public sealed record OrganizationSummary(Guid Id, string Name, string City, bool IsVerified);
+public sealed record OrganizationSummary(Guid Id, string Name, string City, bool IsVerified, string EmailLanguage = "de");
 
 /// <summary>Name, legal name, postal address and VAT id of an organization, as printed on documents it issues (till receipts, Ankaufbeleg).</summary>
 public sealed record OrganizationLegalDetails(

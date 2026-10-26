@@ -28,6 +28,7 @@ const PROFILE: CompanyProfile = {
   registerCourt: null,
   registerNumber: null,
   paymentTermsDays: 14,
+  emailLanguage: 'de',
   logo: null,
   status: 'Verified',
   version: 42,

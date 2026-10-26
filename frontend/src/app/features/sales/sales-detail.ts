@@ -6,7 +6,8 @@ import { SalesApi } from '../../core/api/handynet-api';
 import { InvoicePaymentMethod, PosPaymentMethod, Quotation, SalesInvoice, SalesLine, SalesVat } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { minorToInput } from '../../core/format/money';
-import { I18nService } from '../../core/i18n/i18n.service';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
+import { I18nService, LANGUAGES } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { UI } from '../../shared/ui';
 import { PosCashierStore } from '../pos/pos-cashier.store';
@@ -245,6 +246,13 @@ type DialogName = 'email' | 'payment' | 'collect' | 'creditNote' | 'issue' | nul
         <hn-field [label]="'sales.detail.emailAddress' | t" for="sales-email-to" [hint]="'sales.detail.emailHint' | t">
           <input hnInput id="sales-email-to" type="email" class="h-11" autocomplete="off" [value]="emailTo()" (input)="emailTo.set($any($event.target).value)" data-testid="sales-email-to" />
         </hn-field>
+        <hn-field [label]="'sales.detail.emailLanguage' | t" for="sales-email-language">
+          <select hnSelect id="sales-email-language" class="h-11" [value]="emailLanguage()" (change)="emailLang.set($any($event.target).value)" data-testid="sales-email-language">
+            @for (l of languages; track l.code) {
+              <option [value]="l.code" [selected]="emailLanguage() === l.code">{{ l.label }}</option>
+            }
+          </select>
+        </hn-field>
         @if (dialogError()) {<hn-banner [text]="dialogError()" />}
         <div class="flex justify-end gap-2">
           <button hnButton type="button" class="min-h-11" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
@@ -356,6 +364,11 @@ export class SalesDetailComponent {
   protected readonly manualMethods: Exclude<InvoicePaymentMethod, 'Cash'>[] = ['BankTransfer', 'Card', 'Other'];
   protected readonly tillMethods: PosPaymentMethod[] = ['Cash', 'Card'];
   protected readonly emailTo = signal('');
+  private readonly branding = inject(CompanyBrandingStore);
+  protected readonly languages = LANGUAGES;
+  /** Chosen in the dialog; null = the company's email language. */
+  protected readonly emailLang = signal<string | null>(null);
+  protected readonly emailLanguage = computed(() => this.emailLang() ?? this.branding.profile()?.emailLanguage ?? 'de');
   protected readonly payMethod = signal<Exclude<InvoicePaymentMethod, 'Cash'>>('BankTransfer');
   protected readonly payAmount = signal('');
   protected readonly payDate = signal(isoToday());
@@ -464,7 +477,10 @@ export class SalesDetailComponent {
   protected openDialog(name: DialogName): void {
     this.dialogError.set(null);
     const i = this.invoice();
-    if (name === 'email') this.emailTo.set('');
+    if (name === 'email') {
+      this.emailTo.set('');
+      this.emailLang.set(null);
+    }
     if (name === 'payment' && i) {
       this.payAmount.set(minorToInput(i.openMinor));
       this.payDate.set(isoToday());
@@ -507,7 +523,7 @@ export class SalesDetailComponent {
     const d = this.doc();
     if (!d) return;
     const email = this.emailTo().trim() || null;
-    await this.runDialog(this.kind() === 'quotation' ? this.api.emailQuotation(d.id, email) : this.api.emailInvoice(d.id, email), (r) => {
+    await this.runDialog(this.kind() === 'quotation' ? this.api.emailQuotation(d.id, email, this.emailLanguage()) : this.api.emailInvoice(d.id, email, this.emailLanguage()), (r) => {
       this.toast.success(this.i18n.t('sales.detail.emailSent', { to: r.recipientMasked }));
       if (this.kind() === 'quotation') void this.load('quotation', d.id);
     });

@@ -3,7 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
 import { PosReceiptLink, Receipt } from '../../core/api/models';
-import { I18nService } from '../../core/i18n/i18n.service';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
+import { I18nService, LANGUAGES } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { UI } from '../../shared/ui';
 import { posErrorText } from './pos-error';
@@ -35,6 +36,14 @@ export function looksLikeEmail(value: string): boolean {
         <hn-field class="min-w-0 flex-1" [label]="'pos.ereceipt.email' | t" for="pos-ereceipt-email" [errors]="error()">
           <input hnInput id="pos-ereceipt-email" name="email" type="email" autocomplete="off" inputmode="email" class="min-h-11" [value]="email()"
             (input)="email.set($any($event.target).value); error.set(null)" data-testid="pos-ereceipt-email" />
+        </hn-field>
+        <hn-field class="w-40" [label]="'pos.ereceipt.language' | t" for="pos-ereceipt-language">
+          <select hnSelect id="pos-ereceipt-language" name="language" class="min-h-11" [value]="emailLanguage()"
+            (change)="language.set($any($event.target).value)" data-testid="pos-ereceipt-language">
+            @for (l of languages; track l.code) {
+              <option [value]="l.code" [selected]="emailLanguage() === l.code">{{ l.label }}</option>
+            }
+          </select>
         </hn-field>
         <button hnButton variant="primary" type="submit" class="min-h-11" [loading]="busy()" [disabled]="busy()" data-testid="pos-ereceipt-send">
           {{ 'pos.ereceipt.send' | t }}
@@ -78,6 +87,11 @@ export class PosEReceiptComponent {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly receipt = input.required<Receipt>();
+  private readonly branding = inject(CompanyBrandingStore);
+  protected readonly languages = LANGUAGES;
+  /** Chosen for this send; null = the company's email language. */
+  protected readonly language = signal<string | null>(null);
+  protected readonly emailLanguage = computed(() => this.language() ?? this.branding.profile()?.emailLanguage ?? 'de');
 
   protected readonly email = signal('');
   protected readonly error = signal<string | null>(null);
@@ -97,6 +111,7 @@ export class PosEReceiptComponent {
       this.receipt().id;
       untracked(() => {
         this.email.set('');
+        this.language.set(null);
         this.error.set(null);
         this.sentTo.set(null);
         this.link.set(null);
@@ -114,7 +129,7 @@ export class PosEReceiptComponent {
     this.busy.set(true);
     this.error.set(null);
     try {
-      const sent = await firstValueFrom(this.api.emailReceipt(this.receipt().id, address));
+      const sent = await firstValueFrom(this.api.emailReceipt(this.receipt().id, address, this.emailLanguage()));
       this.sentTo.set(sent.recipientMasked);
       this.email.set('');
       this.toast.success(this.i18n.t('pos.ereceipt.sent', { to: sent.recipientMasked }));

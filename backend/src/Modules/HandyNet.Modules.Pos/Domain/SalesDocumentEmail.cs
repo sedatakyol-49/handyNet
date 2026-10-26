@@ -32,8 +32,10 @@ public sealed class SalesDocumentEmail : Entity, IAuditable
     public Guid RequestedBy { get; private set; }
 
     public static Result<SalesDocumentEmail> Request(Guid organizationId, SalesDocumentType type, Guid documentId, SalesDocument document, string? email,
-        int alreadySent, byte[] pdf, Guid userId, DateTimeOffset now)
+        int alreadySent, byte[] pdf, Guid userId, DateTimeOffset now, string? language = null)
     {
+        if (!ReceiptEmail.IsEmailLanguage(language))
+            return Error.Validation("pos.email_language_invalid", "The email language is not supported.");
         var address = ReceiptEmail.NormalizeAddress(email);
         if (!address.IsSuccess)
             return Error.Validation("pos.sales_email_invalid", "The email address is not valid.");
@@ -51,7 +53,7 @@ public sealed class SalesDocumentEmail : Entity, IAuditable
         };
         request.Raise(new SalesDocumentEmailRequested(request.Id, organizationId, documentId, document.Kind, document.Title, document.Number,
             address.Value, document.Seller.Name, document.TotalGrossMinor, document.Date, document.DueDate, document.ValidUntil, $"{document.Number}.pdf",
-            Convert.ToBase64String(pdf)));
+            Convert.ToBase64String(pdf), ReceiptEmail.NormalizeLanguage(language)));
         return request;
     }
 }

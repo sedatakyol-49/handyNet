@@ -512,6 +512,27 @@ public sealed class PosStaffAndDocumentsTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task Receipt_email_uses_the_company_email_language_unless_the_request_names_one()
+    {
+        var (shop, _, receipt, _) = await SaleWithCustomerAsync();
+        var receiptId = Id(receipt);
+        var number = receipt["number"]!.ToString();
+        var viaCompany = $"firma-{Scenario.UniqueSuffix()}@example.de";
+        var viaRequest = $"anfrage-{Scenario.UniqueSuffix()}@example.de";
+
+        await shop.SetEmailLanguageAsync("en");
+        (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = viaCompany })).Expect(HttpStatusCode.Accepted);
+        (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = viaRequest, language = "ru" })).Expect(HttpStatusCode.Accepted);
+        // Unknown language: validation error, nothing queued.
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await shop.PostAsync($"/api/pos/sales/{receiptId}/email", new { email = viaRequest, language = "xx" })).Status);
+
+        await ProcessEmailsUntilAsync(() => fixture.Emails.Sent.Any(e => e.To == viaCompany) && fixture.Emails.Sent.Any(e => e.To == viaRequest));
+        Assert.Contains($" No. {number}", fixture.Emails.Sent.Single(e => e.To == viaCompany).Subject);
+        Assert.Contains($" № {number}", fixture.Emails.Sent.Single(e => e.To == viaRequest).Subject);
+        Assert.Equal(2L, await AsOwnerAsync<long>($"SELECT count(*) FROM pos.receipt_emails WHERE receipt_id = '{receiptId}'"));
+    }
+
+    [Fact]
     public async Task Public_receipt_link_is_unguessable_read_only_without_customer_data_and_expires()
     {
         var (shop, _, receipt, _) = await SaleWithCustomerAsync();

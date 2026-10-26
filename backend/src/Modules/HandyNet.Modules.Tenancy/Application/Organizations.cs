@@ -278,7 +278,7 @@ internal sealed class OrganizationDirectory(HandyNetDbContext db) : IOrganizatio
     public async Task<IReadOnlyDictionary<Guid, OrganizationSummary>> GetAsync(IReadOnlyCollection<Guid> organizationIds, CancellationToken ct) =>
         await db.Set<Organization>().AsNoTracking()
             .Where(o => organizationIds.Contains(o.Id))
-            .Select(o => new OrganizationSummary(o.Id, o.Name, o.City, o.Status == OrganizationStatus.Verified))
+            .Select(o => new OrganizationSummary(o.Id, o.Name, o.City, o.Status == OrganizationStatus.Verified, o.EmailLanguage))
             .ToDictionaryAsync(o => o.Id, ct);
 
     public async Task<IReadOnlyList<Guid>> GetMemberUserIdsAsync(Guid organizationId, IReadOnlyCollection<MembershipRole> roles, CancellationToken ct) =>
