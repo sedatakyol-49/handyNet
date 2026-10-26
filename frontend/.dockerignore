@@ -3,3 +3,9 @@ dist/
 .angular/
 test-results/
 playwright-report/
+.env
+.env.*
+*.local.json
+*.pem
+*.key
+.git/

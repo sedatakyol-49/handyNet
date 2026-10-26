@@ -95,6 +95,9 @@ ownership of a company. Admins see contract and account data only — no receipt
 
 ## Deploying a new version
 
+Production on a single host (Caddy, GHCR images, daily backup container): see `docs/deployment.md` and `deploy/compose.prod.yml`.
+The steps below describe the generic flow.
+
 1. Take a backup (`deploy/backup/backup.sh`).
 2. Run migrations: `docker compose run --rm migrator` (or `dotnet HandyNet.Api.dll migrate`).
 3. Roll out the API. Migrations must be backward compatible with the previous API version (expand/contract).

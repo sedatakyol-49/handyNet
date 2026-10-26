@@ -1,0 +1,38 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt). DOMAIN, ACME_EMAIL, CSP_IMG_EXTRA come from the compose environment.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		# Angular SSR emits inline critical CSS, an onload handler on the stylesheet link and inline state scripts,
+		# hence 'unsafe-inline' for script/style. Inter is loaded from Google Fonts (see docs/deployment.md, GDPR note).
+		# Extra image hosts (e.g. an S3 bucket serving product images) go into CSP_IMG_EXTRA.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: {$CSP_IMG_EXTRA}; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# API: every route lives under /api (auth, catalog, public receipts, public Ankauf check-in, product images) plus /health.
+	@api path /api/* /health/*
+	handle @api {
+		# Caddy sets X-Forwarded-For/-Proto/-Host itself and discards client-supplied values.
+		reverse_proxy api:8080
+	}
+
+	# Everything else: Angular SSR server.
+	handle {
+		reverse_proxy web:4000
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

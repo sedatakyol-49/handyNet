@@ -23,6 +23,7 @@ using HandyNet.SharedKernel.Tenancy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
@@ -118,6 +119,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(HandyNetClaims.PlatformAdminPolicy, p => p.RequireAuthenticatedUser().RequireClaim(HandyNetClaims.PlatformAdmin, "true"));
 
+// Behind a reverse proxy (Caddy, see deploy/compose.prod.yml) the socket peer is the proxy. Trust X-Forwarded-For/-Proto
+// only from the configured proxy networks (CIDR list, e.g. the compose network) so rate limits and audit see the real
+// client IP and spoofed headers from elsewhere are ignored. Unset = loopback only (the framework default).
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    var networks = builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+    if (networks.Length > 0)
+    {
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+        foreach (var cidr in networks)
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
+    }
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -187,6 +205,7 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();

@@ -11,7 +11,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true
 COPY --from=build /app .
 # Local file storage (product images) when FileStorage:Provider = Local; a named volume inherits this ownership.
-RUN mkdir -p /data/files && chown $APP_UID /data/files
+RUN mkdir -p /data/files /data/keys && chown $APP_UID /data/files /data/keys
 USER $APP_UID
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "HandyNet.Api.dll"]
