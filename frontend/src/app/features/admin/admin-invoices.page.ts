@@ -108,7 +108,42 @@ import { AdminTabsComponent } from './admin-tabs';
       </div>
       <p class="mb-2 text-xs text-slate-600">{{ 'invoices.admin.monthDocumentsHint' | t }}</p>
       <hn-banner class="mb-3" [error]="documents.error()" />
-      <hn-table [loading]="documents.loading()">
+      <!-- phone: cards plus a totals summary; md+: table -->
+      <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="admin-invoices-cards">
+        @for (d of documents.value() ?? []; track d.id) {
+          <li class="hn-card flex flex-col gap-1 p-4" [attr.data-invoice-number]="d.number" [attr.data-kind]="d.kind">
+            <div class="flex items-start justify-between gap-2">
+              <span class="hn-mono text-xs font-semibold"><bdi>{{ d.number }}</bdi></span>
+              <hn-status-badge [status]="d.kind" kind="invoiceKind" [tone]="d.kind === 'CreditNote' ? 'warning' : 'neutral'" />
+            </div>
+            @if (d.referencedInvoiceNumber) {
+              <p class="text-xs text-slate-500">{{ 'invoices.corrects' | t: { number: d.referencedInvoiceNumber } }}</p>
+            }
+            <p class="text-sm" [title]="d.organizationId">{{ d.recipientName }}</p>
+            <p class="text-xs text-slate-500">{{ date(d.issueDate) }} · {{ d.lineCount }} {{ 'invoices.lineCount' | t }}</p>
+            <dl class="mt-1 grid grid-cols-3 gap-2 text-xs">
+              <div><dt class="text-slate-500">{{ 'invoices.net' | t }}</dt><dd class="tabular-nums"><bdi dir="ltr">{{ d.totalNetMinor | money: d.currency }}</bdi></dd></div>
+              <div><dt class="text-slate-500">{{ 'invoices.vat' | t }}</dt><dd class="tabular-nums"><bdi dir="ltr">{{ d.totalVatMinor | money: d.currency }}</bdi></dd></div>
+              <div><dt class="text-slate-500">{{ 'invoices.gross' | t }}</dt><dd class="font-semibold tabular-nums"><bdi dir="ltr">{{ d.totalGrossMinor | money: d.currency }}</bdi></dd></div>
+            </dl>
+          </li>
+        } @empty {
+          @if (!documents.loading()) {
+            <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'invoices.admin.noDocuments' | t" /></div></li>
+          }
+        }
+      </ul>
+      @if (documents.value()?.length) {
+        <section class="hn-card mt-3 p-4 md:hidden" aria-labelledby="admin-invoices-total-heading" data-testid="admin-invoices-card-total">
+          <h3 id="admin-invoices-total-heading" class="mb-1 text-sm">{{ 'invoices.admin.total' | t }}</h3>
+          <dl class="grid grid-cols-3 gap-2 text-xs">
+            <div><dt class="text-slate-500">{{ 'invoices.net' | t }}</dt><dd class="font-medium tabular-nums"><bdi dir="ltr">{{ totals().netMinor | money }}</bdi></dd></div>
+            <div><dt class="text-slate-500">{{ 'invoices.vat' | t }}</dt><dd class="font-medium tabular-nums"><bdi dir="ltr">{{ totals().vatMinor | money }}</bdi></dd></div>
+            <div><dt class="text-slate-500">{{ 'invoices.gross' | t }}</dt><dd class="font-semibold tabular-nums"><bdi dir="ltr">{{ totals().grossMinor | money }}</bdi></dd></div>
+          </dl>
+        </section>
+      }
+      <hn-table class="hidden md:block" [loading]="documents.loading()">
         <table class="hn-table" data-testid="admin-invoices-table">
           <thead>
             <tr>

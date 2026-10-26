@@ -34,7 +34,25 @@ import { ledgerKind, ledgerKindKey, sellerSignedMinor } from '../orders/payment/
 
       <section class="lg:col-span-2" aria-labelledby="payouts-heading">
         <h2 id="payouts-heading" class="mb-2 text-sm">{{ 'finance.recentPayouts' | t }}</h2>
-        <hn-table [loading]="balance.loading()">
+        <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="payouts-cards">
+          @for (p of balance.value()?.recentPayouts ?? []; track p.id) {
+            <li class="hn-card flex flex-col gap-1 p-4" [attr.data-order-id]="p.orderId">
+              <div class="flex items-start justify-between gap-2">
+                <a class="hn-link hn-mono text-xs font-semibold" [routerLink]="['/app/bestellungen', p.orderId]" [attr.aria-label]="'finance.openOrderNumber' | t: { number: p.orderNumber }">
+                  {{ p.orderNumber }}
+                </a>
+                <span class="font-semibold tabular-nums">{{ p.amountMinor | money: p.currency }}</span>
+              </div>
+              <p class="text-xs text-slate-500">{{ p.createdAt | hnDate }}</p>
+              <p class="hn-mono break-all text-xs text-slate-600">{{ p.providerTransferId }}</p>
+            </li>
+          } @empty {
+            @if (!balance.loading()) {
+              <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'finance.noPayouts' | t" [text]="'finance.noPayoutsText' | t" /></div></li>
+            }
+          }
+        </ul>
+        <hn-table class="hidden md:block" [loading]="balance.loading()">
           <table class="hn-table" data-testid="payouts-table">
             <thead>
               <tr>
@@ -71,7 +89,27 @@ import { ledgerKind, ledgerKindKey, sellerSignedMinor } from '../orders/payment/
       <h2 id="ledger-heading" class="mb-1 text-sm">{{ 'finance.ledger' | t }}</h2>
       <p class="mb-2 text-xs text-slate-600">{{ 'finance.ledgerHint' | t }}</p>
       <hn-banner class="mb-3" [error]="ledger.error()" />
-      <hn-table [loading]="ledger.loading()">
+      <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="ledger-cards">
+        @for (l of ledger.value()?.items ?? []; track l.entryId + l.sourceId + $index) {
+          <li class="hn-card flex flex-col gap-1 p-4" [attr.data-kind]="kind(l.amountMinor)">
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-xs text-slate-500">{{ l.occurredAt | hnDate }} · {{ kindKey(l) | t }}</span>
+              <span class="font-semibold tabular-nums" [class]="kind(l.amountMinor) === 'credit' ? 'text-emerald-800' : 'text-slate-900'">
+                {{ signed(l.amountMinor) | signedMoney: l.currency }}
+              </span>
+            </div>
+            <p class="text-sm">{{ l.description }}</p>
+          </li>
+        } @empty {
+          @if (!ledger.loading()) {
+            <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'finance.noLedger' | t" /></div></li>
+          }
+        }
+      </ul>
+      <div class="md:hidden">
+        <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="ledger.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+      </div>
+      <hn-table class="hidden md:block" [loading]="ledger.loading()">
         <table class="hn-table" data-testid="ledger-table">
           <thead>
             <tr>

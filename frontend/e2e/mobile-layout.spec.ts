@@ -40,6 +40,22 @@ test.describe.serial('mobile list layout', () => {
     await expect(page.getByTestId('stock-cards')).toBeVisible();
     await expect(page.getByTestId('stock-table')).toBeHidden();
     await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('tab', { name: 'Bewegungen' }).click();
+    await expect(page.getByTestId('movements-cards')).toBeVisible();
+    await expect(page.getByTestId('movements-table')).toBeHidden();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('finance payouts and ledger list as cards', async ({ page }) => {
+    await login(page, seller.email, PASSWORD);
+
+    await page.goto('/app/finanzen');
+    await expect(page.getByTestId('payouts-cards')).toBeVisible();
+    await expect(page.getByTestId('payouts-table')).toBeHidden();
+    await expect(page.getByTestId('ledger-cards')).toBeVisible();
+    await expect(page.getByTestId('ledger-table')).toBeHidden();
+    await expectNoHorizontalOverflow(page);
   });
 
   test('admin companies and users list as cards', async ({ page }) => {
@@ -53,6 +69,21 @@ test.describe.serial('mobile list layout', () => {
     await page.goto('/app/administration/benutzer');
     await expect(page.getByTestId('users-cards')).toBeVisible();
     await expect(page.getByTestId('users-table')).toBeHidden();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto('/app/administration/rechnungen');
+    await expect(page.getByTestId('admin-invoices-cards')).toBeVisible();
+    await expect(page.getByTestId('admin-invoices-table')).toBeHidden();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto('/app/administration/reklamationen');
+    await expect(page.getByTestId('admin-disputes-cards')).toBeVisible();
+    await expect(page.getByTestId('admin-disputes-table')).toBeHidden();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto('/app/administration/ankauf');
+    await expect(page.getByTestId('pl-cards')).toBeVisible();
+    await expect(page.getByTestId('pl-table')).toBeHidden();
     await expectNoHorizontalOverflow(page);
   });
 });
