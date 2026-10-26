@@ -62,7 +62,7 @@ public sealed record InvoiceFile(string FileName, byte[] Content);
 internal sealed class IssueInvoicesValidator : AbstractValidator<IssueInvoicesRequest>
 {
     public IssueInvoicesValidator() =>
-        RuleFor(x => x.Month).NotEmpty().Matches(@"^\d{4}-(0[1-9]|1[0-2])$").WithMessage("Month must have the form YYYY-MM.");
+        RuleFor(x => x.Month).NotEmpty().Matches(@"^\d{4}-(0[1-9]|1[0-2])$").WithMessage("Month must have the form YYYY-MM.").WithErrorCode("validation.month");
 }
 
 internal static class InvoiceMapping

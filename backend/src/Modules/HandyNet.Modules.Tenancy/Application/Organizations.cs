@@ -111,7 +111,7 @@ internal sealed class RegisterBusinessValidator : AbstractValidator<RegisterBusi
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Password).NotEmpty();
         RuleFor(x => x.Organization).NotNull().SetValidator(new OrganizationInputValidator());
-        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.");
+        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.").WithErrorCode("validation.language");
     }
 }
 

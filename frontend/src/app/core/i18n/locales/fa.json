@@ -637,6 +637,29 @@
       "pos.printer_limit": "یک صندوق حداکثر می‌تواند 20 پروفایل چاپگر داشته باشد.",
       "pos.printer_version": "صفحه را دوباره بارگیری کنید و دوباره ذخیره کنید.",
       "pos.printer_name_taken": "این صندوق از قبل چاپگری با این نام دارد."
+    },
+    "validation": {
+      "required": "این فیلد الزامی است.",
+      "maxLength": "حداکثر {maxLength} نویسه مجاز است.",
+      "minLength": "حداقل {minLength} نویسه لازم است.",
+      "length": "طول باید بین {minLength} و {maxLength} نویسه باشد.",
+      "exactLength": "دقیقاً {maxLength} نویسه لازم است.",
+      "email": "لطفاً یک نشانی ایمیل معتبر وارد کنید.",
+      "greaterThan": "مقدار باید بزرگ‌تر از {comparisonValue} باشد.",
+      "min": "مقدار باید حداقل {comparisonValue} باشد.",
+      "lessThan": "مقدار باید کوچک‌تر از {comparisonValue} باشد.",
+      "max": "مقدار باید حداکثر {comparisonValue} باشد.",
+      "range": "مقدار باید بین {from} و {to} باشد.",
+      "rangeExclusive": "مقدار باید بین {from} و {to} باشد (بدون احتساب مرزها).",
+      "enum": "این مقدار مجاز نیست.",
+      "precision": "حداکثر {expectedPrecision} رقم، که {expectedScale} رقم آن اعشار است.",
+      "equal": "مقدار باید {comparisonValue} باشد.",
+      "notEqual": "این مقدار مجاز نیست.",
+      "imei": "IMEI باید ۱۵ رقم با رقم کنترلی معتبر باشد.",
+      "category": "دسته‌بندی ناشناخته.",
+      "quality": "کیفیت قطعه ناشناخته.",
+      "language": "زبان باید یکی از de، en، tr، es، ru، ar یا fa باشد.",
+      "month": "ماه باید به شکل YYYY-MM باشد."
     }
   },
   "dashboard": {

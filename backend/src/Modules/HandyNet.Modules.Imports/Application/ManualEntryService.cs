@@ -105,8 +105,8 @@ internal sealed class ManualEntryValidator : AbstractValidator<ManualEntryReques
         {
             RuleFor(x => x.NewProduct!.Brand).NotEmpty().MaximumLength(100);
             RuleFor(x => x.NewProduct!.Name).NotEmpty().MaximumLength(300);
-            RuleFor(x => x.NewProduct!.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.");
-            RuleFor(x => x.NewProduct!.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.");
+            RuleFor(x => x.NewProduct!.Category).Must(c => CategoryParser.TryParse(c, out _)).WithMessage("Unknown category.").WithErrorCode("validation.category");
+            RuleFor(x => x.NewProduct!.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.").WithErrorCode("validation.quality");
             RuleFor(x => x.NewProduct!.Mpn).MaximumLength(100);
             RuleFor(x => x.NewProduct!.Ean).Must(e => string.IsNullOrWhiteSpace(e) || Gtin.TryNormalize(e, out _))
                 .WithMessage("EAN/GTIN is invalid (length or check digit).");
@@ -120,7 +120,7 @@ internal sealed class ManualEntryValidator : AbstractValidator<ManualEntryReques
         RuleFor(x => x.Quantity).InclusiveBetween(0, ManualEntryRules.MaxQuantity);
         RuleFor(x => x.Imeis).Must(i => i is null || i.Length <= ManualEntryRules.MaxImeis)
             .WithMessage($"At most {ManualEntryRules.MaxImeis} IMEIs per entry.");
-        RuleForEach(x => x.Imeis).Must(i => Imei.TryNormalize(i, out _)).WithMessage("IMEI '{PropertyValue}' must be 15 digits with a valid check digit.");
+        RuleForEach(x => x.Imeis).Must(i => Imei.TryNormalize(i, out _)).WithMessage("IMEI '{PropertyValue}' must be 15 digits with a valid check digit.").WithErrorCode("validation.imei");
         RuleFor(x => x.Imeis).Must(i => i is null || i.Select(Normalize).Distinct().Count() == i.Length)
             .WithMessage("The same IMEI is listed twice.");
         RuleFor(x => x.PurchasePrice).GreaterThanOrEqualTo(0).PrecisionScale(12, 2, ignoreTrailingZeros: true);

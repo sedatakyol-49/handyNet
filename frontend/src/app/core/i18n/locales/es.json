@@ -637,6 +637,29 @@
       "pos.printer_limit": "Una caja puede tener como máximo 20 perfiles de impresora.",
       "pos.printer_version": "Recargue la página y vuelva a guardar.",
       "pos.printer_name_taken": "Esta caja ya tiene una impresora con este nombre."
+    },
+    "validation": {
+      "required": "Este campo es obligatorio.",
+      "maxLength": "Se permiten como máximo {maxLength} caracteres.",
+      "minLength": "Se requieren al menos {minLength} caracteres.",
+      "length": "La longitud debe estar entre {minLength} y {maxLength} caracteres.",
+      "exactLength": "Se requieren exactamente {maxLength} caracteres.",
+      "email": "Introduce una dirección de correo válida.",
+      "greaterThan": "El valor debe ser mayor que {comparisonValue}.",
+      "min": "El valor debe ser como mínimo {comparisonValue}.",
+      "lessThan": "El valor debe ser menor que {comparisonValue}.",
+      "max": "El valor debe ser como máximo {comparisonValue}.",
+      "range": "El valor debe estar entre {from} y {to}.",
+      "rangeExclusive": "El valor debe estar entre {from} y {to} (sin incluir los límites).",
+      "enum": "Este valor no está permitido.",
+      "precision": "Como máximo {expectedPrecision} dígitos, de ellos {expectedScale} decimales.",
+      "equal": "El valor debe ser {comparisonValue}.",
+      "notEqual": "Este valor no está permitido.",
+      "imei": "El IMEI debe tener 15 dígitos con un dígito de control válido.",
+      "category": "Categoría desconocida.",
+      "quality": "Calidad de pieza desconocida.",
+      "language": "El idioma debe ser de, en, tr, es, ru, ar o fa.",
+      "month": "El mes debe tener el formato AAAA-MM."
     }
   },
   "dashboard": {

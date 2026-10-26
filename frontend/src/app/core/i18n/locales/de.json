@@ -637,6 +637,29 @@
       "pos.printer_limit": "Eine Kasse kann höchstens 20 Druckerprofile haben.",
       "pos.printer_version": "Bitte die Seite neu laden und erneut speichern.",
       "pos.printer_name_taken": "Diese Kasse hat schon einen Drucker mit diesem Namen."
+    },
+    "validation": {
+      "required": "Dieses Feld ist erforderlich.",
+      "maxLength": "Höchstens {maxLength} Zeichen erlaubt.",
+      "minLength": "Mindestens {minLength} Zeichen erforderlich.",
+      "length": "Die Länge muss zwischen {minLength} und {maxLength} Zeichen liegen.",
+      "exactLength": "Genau {maxLength} Zeichen erforderlich.",
+      "email": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "greaterThan": "Der Wert muss größer als {comparisonValue} sein.",
+      "min": "Der Wert muss mindestens {comparisonValue} betragen.",
+      "lessThan": "Der Wert muss kleiner als {comparisonValue} sein.",
+      "max": "Der Wert darf höchstens {comparisonValue} betragen.",
+      "range": "Der Wert muss zwischen {from} und {to} liegen.",
+      "rangeExclusive": "Der Wert muss zwischen {from} und {to} liegen (Grenzen ausgenommen).",
+      "enum": "Dieser Wert ist nicht zulässig.",
+      "precision": "Höchstens {expectedPrecision} Stellen, davon {expectedScale} Nachkommastellen.",
+      "equal": "Der Wert muss {comparisonValue} sein.",
+      "notEqual": "Dieser Wert ist nicht zulässig.",
+      "imei": "Die IMEI muss 15 Ziffern mit gültiger Prüfziffer haben.",
+      "category": "Unbekannte Kategorie.",
+      "quality": "Unbekannte Teilequalität.",
+      "language": "Die Sprache muss de, en, tr, es, ru, ar oder fa sein.",
+      "month": "Der Monat muss das Format JJJJ-MM haben."
     }
   },
   "dashboard": {

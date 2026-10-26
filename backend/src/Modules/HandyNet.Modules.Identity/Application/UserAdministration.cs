@@ -81,7 +81,7 @@ internal sealed class AdminEmailRequestValidator : AbstractValidator<AdminEmailR
     public AdminEmailRequestValidator()
     {
         RuleFor(x => x.Reason).MaximumLength(AdminReason.MaxLength);
-        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.");
+        RuleFor(x => x.Language).Must(EmailLanguage.IsSupported).WithMessage("Language must be one of de, en, tr, es, ru, ar, fa.").WithErrorCode("validation.language");
     }
 }
 

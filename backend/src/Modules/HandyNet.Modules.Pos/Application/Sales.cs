@@ -141,7 +141,7 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
             line.RuleFor(l => l).Must(l => l.ProductId is not null || !string.IsNullOrWhiteSpace(l.Imei))
                 .WithName("Line").WithMessage("Each line needs a productId or an IMEI.");
             line.RuleFor(l => l.Imei).Must(i => i is null || (i.Trim().Length == 15 && i.Trim().All(char.IsAsciiDigit)))
-                .WithMessage("IMEI must have 15 digits.");
+                .WithMessage("IMEI must have 15 digits.").WithErrorCode("validation.imei");
             line.RuleFor(l => l.Quantity).InclusiveBetween(1, Receipt.MaxQuantity);
             line.RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.");
             line.RuleFor(l => l.UnitPriceMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);

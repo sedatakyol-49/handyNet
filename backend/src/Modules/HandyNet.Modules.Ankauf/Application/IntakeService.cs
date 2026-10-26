@@ -115,7 +115,7 @@ internal sealed class ReceiveIntakeValidator : AbstractValidator<ReceiveIntakeRe
     public ReceiveIntakeValidator()
     {
         RuleFor(x => x.QuoteId).NotEmpty();
-        RuleFor(x => x.Imei).NotEmpty().Must(i => Imei.TryNormalize(i, out _)).WithMessage("IMEI must be 15 digits with a valid check digit.");
+        RuleFor(x => x.Imei).NotEmpty().Must(i => Imei.TryNormalize(i, out _)).WithMessage("IMEI must be 15 digits with a valid check digit.").WithErrorCode("validation.imei");
         RuleFor(x => x.Seller).NotNull().SetValidator(new SellerValidator());
         RuleFor(x => x.Mrz).MaximumLength(200);
     }

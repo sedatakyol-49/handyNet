@@ -33,7 +33,50 @@ public static class Problems
         var errors = result.Errors
             .GroupBy(e => e.PropertyName)
             .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+        // Added next to "errors" (same keys, same order) so clients can translate by stable code instead of showing server text.
+        var errorCodes = result.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(g => g.Key, g => g.Select(ToFieldError).ToArray());
         return Results.ValidationProblem(errors, statusCode: StatusCodes.Status422UnprocessableEntity,
-            extensions: new Dictionary<string, object?> { ["code"] = "validation.failed" });
+            extensions: new Dictionary<string, object?> { ["code"] = "validation.failed", ["errorCodes"] = errorCodes });
+    }
+
+    /// <summary>Stable client-facing codes for FluentValidation built-ins; custom <c>validation.*</c> codes pass through.</summary>
+    private static readonly Dictionary<string, string> BuiltInCodes = new(StringComparer.Ordinal)
+    {
+        ["NotEmptyValidator"] = "validation.required",
+        ["NotNullValidator"] = "validation.required",
+        ["MaximumLengthValidator"] = "validation.maxLength",
+        ["MinimumLengthValidator"] = "validation.minLength",
+        ["LengthValidator"] = "validation.length",
+        ["ExactLengthValidator"] = "validation.exactLength",
+        ["EmailValidator"] = "validation.email",
+        ["AspNetCoreCompatibleEmailValidator"] = "validation.email",
+        ["GreaterThanValidator"] = "validation.greaterThan",
+        ["GreaterThanOrEqualValidator"] = "validation.min",
+        ["LessThanValidator"] = "validation.lessThan",
+        ["LessThanOrEqualValidator"] = "validation.max",
+        ["InclusiveBetweenValidator"] = "validation.range",
+        ["ExclusiveBetweenValidator"] = "validation.rangeExclusive",
+        ["EnumValidator"] = "validation.enum",
+        ["PrecisionScaleValidator"] = "validation.precision",
+        ["EqualValidator"] = "validation.equal",
+        ["NotEqualValidator"] = "validation.notEqual",
+    };
+
+    private static readonly string[] ParamNames =
+        ["MaxLength", "MinLength", "ComparisonValue", "From", "To", "ExpectedPrecision", "ExpectedScale"];
+
+    private static object ToFieldError(FluentValidation.Results.ValidationFailure e)
+    {
+        string? code = null;
+        if (e.ErrorCode is { Length: > 0 } c)
+            code = c.StartsWith("validation.", StringComparison.Ordinal) ? c : BuiltInCodes.GetValueOrDefault(c);
+        var parameters = new Dictionary<string, string>();
+        if (code is not null && e.FormattedMessagePlaceholderValues is { } values)
+            foreach (var name in ParamNames)
+                if (values.TryGetValue(name, out var v) && v is IFormattable f)
+                    parameters[char.ToLowerInvariant(name[0]) + name[1..]] = f.ToString(null, System.Globalization.CultureInfo.InvariantCulture);
+        return new { code, @params = parameters };
     }
 }
