@@ -636,7 +636,8 @@
       "pos.printer_baud_rate": "Diese Baudrate wird nicht unterstützt.",
       "pos.printer_limit": "Eine Kasse kann höchstens 20 Druckerprofile haben.",
       "pos.printer_version": "Bitte die Seite neu laden und erneut speichern.",
-      "pos.printer_name_taken": "Diese Kasse hat schon einen Drucker mit diesem Namen."
+      "pos.printer_name_taken": "Diese Kasse hat schon einen Drucker mit diesem Namen.",
+      "pos.email_language_invalid": "Diese E-Mail-Sprache wird nicht unterstützt."
     },
     "validation": {
       "required": "Dieses Feld ist erforderlich.",
@@ -2939,7 +2940,8 @@
       "validUntil": "Link gültig bis {date}",
       "publicMissingTitle": "Beleg nicht verfügbar",
       "publicMissing": "Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an das Geschäft.",
-      "publicCancelled": "Dieser Beleg wurde storniert."
+      "publicCancelled": "Dieser Beleg wurde storniert.",
+      "language": "Sprache der E-Mail"
     },
     "invoice": {
       "title": "Rechnung",
@@ -3494,7 +3496,8 @@
       "tax": "Steuer und Register",
       "bank": "Bankverbindung und Zahlungsziel",
       "receipts": "Belege",
-      "logo": "Logo"
+      "logo": "Logo",
+      "emails": "E-Mails"
     },
     "legalHint": "Diese Angaben erscheinen auf Rechnungen und Ankaufbelegen. Änderungen am Firmennamen oder an der USt-IdNr. werden der Plattform gemeldet.",
     "legalNotice": "Sie ändern Firmenname oder USt-IdNr. – die Plattform wird darüber informiert.",
@@ -3524,7 +3527,8 @@
       "managingDirector": "Geschäftsführung",
       "registerCourt": "Registergericht",
       "registerNumber": "Registernummer",
-      "paymentTermsDays": "Zahlungsziel in Tagen"
+      "paymentTermsDays": "Zahlungsziel in Tagen",
+      "emailLanguage": "Sprache der E-Mails"
     },
     "hints": {
       "name": "So erscheint Ihr Unternehmen in SEHA und oben auf dem Bon.",
@@ -3535,7 +3539,8 @@
       "registerCourt": "z. B. Amtsgericht Charlottenburg",
       "registerNumber": "z. B. HRB 123456",
       "iban": "Wird mit Prüfziffer geprüft; Leerzeichen sind erlaubt.",
-      "paymentTermsDays": "Standard für Ihre Rechnungen, 0 bis 365 Tage."
+      "paymentTermsDays": "Standard für Ihre Rechnungen, 0 bis 365 Tage.",
+      "emailLanguage": "In dieser Sprache gehen Bestell-, Freischalt- und Beleg-E-Mails an Sie und Ihre Kunden. Beim Versand lässt sie sich ändern."
     },
     "placeholders": {
       "receiptHeader": "z. B. Ihr Handy-Profi in Berlin-Mitte",
@@ -3799,7 +3804,8 @@
       "creditNoteIssued": "Stornorechnung {number} ausgestellt.",
       "creditNoteFor": "Storno zu Rechnung {number}",
       "cancelledBy": "Storniert durch {number}",
-      "refundRequired": "Für Stornorechnungen ist das Recht „Erstattungen“ (pos.refund) nötig."
+      "refundRequired": "Für Stornorechnungen ist das Recht „Erstattungen“ (pos.refund) nötig.",
+      "emailLanguage": "Sprache der E-Mail"
     },
     "warnings": {
       "customer_vat_id_missing": "Geschäftskunde ohne USt-IdNr. – bei innergemeinschaftlichen Lieferungen oder Reverse Charge erforderlich.",

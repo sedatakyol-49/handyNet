@@ -2373,6 +2373,8 @@ export interface CompanyProfileFields {
   registerCourt: string | null;
   registerNumber: string | null;
   paymentTermsDays: number | null;
+  /** Language of the emails to this company and of those it sends to its customers: de, en, tr, es, ru, ar or fa. */
+  emailLanguage: string;
 }
 
 export interface CompanyProfile extends CompanyProfileFields {

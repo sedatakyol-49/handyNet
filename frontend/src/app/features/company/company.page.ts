@@ -4,7 +4,7 @@ import { toApiProblem } from '../../core/api/api-problem';
 import { OrganizationApi } from '../../core/api/handynet-api';
 import { CompanyProfile } from '../../core/api/models';
 import { CompanyBrandingStore } from '../../core/company/company-branding.store';
-import { I18nService } from '../../core/i18n/i18n.service';
+import { I18nService, LANGUAGES } from '../../core/i18n/i18n.service';
 import { ToastService, describeProblem } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
@@ -103,6 +103,18 @@ interface SectionDef {
                   </hn-field>
                 }
               </div>
+            </section>
+
+            <section class="hn-card p-4" aria-labelledby="company-emails-heading" data-testid="company-section-emails">
+              <h2 id="company-emails-heading" class="mb-3 text-sm">{{ 'company.sections.emails' | t }}</h2>
+              <hn-field [label]="'company.fields.emailLanguage' | t" for="company-emailLanguage" [hint]="'company.hints.emailLanguage' | t" [errors]="errorOf('emailLanguage')">
+                <select hnSelect id="company-emailLanguage" name="emailLanguage" [value]="form().emailLanguage" (change)="set('emailLanguage', $any($event.target).value)"
+                  aria-describedby="company-emailLanguage-hint" data-testid="company-emailLanguage">
+                  @for (l of languages; track l.code) {
+                    <option [value]="l.code" [selected]="form().emailLanguage === l.code">{{ l.label }}</option>
+                  }
+                </select>
+              </hn-field>
             </section>
           </fieldset>
 
@@ -253,6 +265,7 @@ export class CompanyPage {
   ];
   protected readonly receiptFields = ['receiptHeader', 'receiptFooter'] as const;
   protected readonly maxLines = COMPANY_LIMITS.receiptLines;
+  protected readonly languages = LANGUAGES;
 
   protected readonly form = signal<CompanyForm>(emptyForm());
   private readonly original = signal<CompanyForm>(emptyForm());
@@ -431,6 +444,6 @@ function emptyForm(): CompanyForm {
   return {
     name: '', legalName: '', street: '', postalCode: '', city: '', countryCode: 'DE', vatId: '', taxNumber: '', contactEmail: '', contactPhone: '',
     website: '', receiptHeader: '', receiptFooter: '', bankName: '', iban: '', bic: '', managingDirector: '', registerCourt: '', registerNumber: '',
-    paymentTermsDays: '',
+    paymentTermsDays: '', emailLanguage: 'de',
   };
 }

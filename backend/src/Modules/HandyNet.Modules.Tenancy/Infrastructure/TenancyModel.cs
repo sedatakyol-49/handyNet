@@ -18,11 +18,13 @@ public sealed class TenancyModel : IModuleModel
                 t.HasCheckConstraint("ck_organizations_has_capability", "is_wholesaler OR is_retailer OR is_repair_provider");
                 // Company data maintained by the tenant (ADR-0014); the domain checks the IBAN checksum, the database the shape.
                 t.HasCheckConstraint("ck_organizations_payment_terms", "payment_terms_days BETWEEN 0 AND 365");
+                t.HasCheckConstraint("ck_organizations_email_language", "email_language IN ('de', 'en', 'tr', 'es', 'ru', 'ar', 'fa')");
                 t.HasCheckConstraint("ck_organizations_iban", "iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'");
                 t.HasCheckConstraint("ck_organizations_bic", "bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'");
                 t.HasCheckConstraint("ck_organizations_bank_needs_iban", "iban IS NOT NULL OR (bic IS NULL AND bank_name IS NULL)");
             });
             b.HasKey(x => x.Id);
+            b.Property(x => x.EmailLanguage).HasMaxLength(2).HasDefaultValue("de").IsRequired();
             b.Property(x => x.Name).HasMaxLength(200).IsRequired();
             b.Property(x => x.LegalName).HasMaxLength(300).IsRequired();
             b.Property(x => x.VatId).HasMaxLength(20);

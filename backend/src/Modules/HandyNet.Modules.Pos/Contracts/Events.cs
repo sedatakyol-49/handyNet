@@ -35,7 +35,8 @@ public sealed record EReceiptContent(
 /// A cashier asked to send a receipt by email. Raised by POS (outbox, same transaction as the recorded request); the
 /// Notifications module renders and sends it. The recipient address is the only personal data in the payload.
 /// </summary>
-public sealed record ReceiptEmailRequested(Guid RequestId, Guid OrganizationId, Guid ReceiptId, string Recipient, EReceiptContent Content) : IDomainEvent;
+public sealed record ReceiptEmailRequested(Guid RequestId, Guid OrganizationId, Guid ReceiptId, string Recipient, EReceiptContent Content,
+    string? Language = null) : IDomainEvent;
 
 /// <summary>
 /// A quotation or invoice to be emailed to the customer as a PDF attachment. Raised by POS (outbox, same transaction as the
@@ -56,4 +57,5 @@ public sealed record SalesDocumentEmailRequested(
     DateOnly? DueDate,
     DateOnly? ValidUntil,
     string PdfFileName,
-    string PdfBase64) : IDomainEvent;
+    string PdfBase64,
+    string? Language = null) : IDomainEvent;

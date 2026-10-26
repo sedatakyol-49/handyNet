@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Receipt } from '../../core/api/models';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 import { PosEReceiptComponent, looksLikeEmail, publicReceiptUrl } from './pos-ereceipt';
 
 describe('e-receipt helpers', () => {
@@ -38,7 +39,7 @@ describe('PosEReceiptComponent', () => {
 
     (el.querySelector('[data-testid="pos-ereceipt-send-customer"]') as HTMLButtonElement).click();
     const mail = http.expectOne('/api/pos/sales/rc1/email');
-    expect(mail.request.body).toEqual({ email: null });
+    expect(mail.request.body).toEqual({ email: null, language: 'de' });
     mail.flush({ id: 'm1', receiptId: 'rc1', recipientMasked: 'k***@example.de', requestedAt: '2026-10-18T10:00:00Z' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -50,6 +51,24 @@ describe('PosEReceiptComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="pos-ereceipt-url"]')?.textContent).toContain('/beleg/t');
     expect(el.querySelector('[data-testid="qr-code"]')).not.toBeNull();
+  });
+
+  it('preselects the email language of the company and sends the chosen one', () => {
+    (TestBed.inject(CompanyBrandingStore) as unknown as { profile: () => unknown }).profile = () => ({ emailLanguage: 'tr' });
+    const fixture = TestBed.createComponent(PosEReceiptComponent);
+    fixture.componentRef.setInput('receipt', receipt);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const select = el.querySelector('[data-testid="pos-ereceipt-language"]') as HTMLSelectElement;
+    expect(select.options.length).toBe(7);
+    expect(select.options[select.selectedIndex].value).toBe('tr');
+
+    select.value = 'ru';
+    select.dispatchEvent(new Event('change'));
+    (el.querySelector('[data-testid="pos-ereceipt-send-customer"]') as HTMLButtonElement).click();
+    const mail = http.expectOne('/api/pos/sales/rc1/email');
+    expect(mail.request.body).toEqual({ email: null, language: 'ru' });
+    mail.flush({ id: 'm1', receiptId: 'rc1', recipientMasked: 'k***@example.de', requestedAt: '2026-10-18T10:00:00Z' });
   });
 
   it('refuses an invalid address without calling the API', () => {

@@ -28,6 +28,10 @@ internal sealed class EmailQueue(
         return (await users.GetAsync(ids, ct)).Values.ToList();
     }
 
+    /// <summary>Email language of an organization (its company setting); German when unknown.</summary>
+    public async Task<string> LanguageAsync(Guid organizationId, CancellationToken ct) =>
+        EmailText.Normalize((await organizations.GetAsync([organizationId], ct)).GetValueOrDefault(organizationId)?.EmailLanguage);
+
     public async Task<string> OrganizationNameAsync(Guid organizationId, CancellationToken ct) =>
         (await organizations.GetAsync([organizationId], ct)).GetValueOrDefault(organizationId)?.Name ?? "?";
 
@@ -52,7 +56,7 @@ internal sealed class EmailQueue(
 }
 
 /// <summary>E-receipt requested at the till: one email to the given address per request (idempotent per outbox message).</summary>
-internal sealed class ReceiptEmailRequestedHandler(HandyNetDbContext db, IClock clock) : IOutboxHandler
+internal sealed class ReceiptEmailRequestedHandler(HandyNetDbContext db, IClock clock, EmailQueue queue) : IOutboxHandler
 {
     public string EventType => typeof(HandyNet.Modules.Pos.Contracts.ReceiptEmailRequested).FullName!;
 
@@ -61,7 +65,9 @@ internal sealed class ReceiptEmailRequestedHandler(HandyNetDbContext db, IClock 
         if (await db.Set<EmailMessage>().AsNoTracking().AnyAsync(e => e.SourceId == messageId, ct))
             return;
         var e = JsonSerializer.Deserialize<HandyNet.Modules.Pos.Contracts.ReceiptEmailRequested>(payload)!;
-        db.Add(EmailMessage.Queue(messageId, EReceiptTemplate.Template, e.Recipient, null, EReceiptTemplate.Render(e.Content), clock.UtcNow));
+        // The send request may choose a language; otherwise the sending organization's email language applies (older payloads: its setting).
+        var language = string.IsNullOrWhiteSpace(e.Language) ? await queue.LanguageAsync(e.OrganizationId, ct) : EmailText.Normalize(e.Language);
+        db.Add(EmailMessage.Queue(messageId, EReceiptTemplate.Template, e.Recipient, null, EReceiptTemplate.Render(e.Content, language), clock.UtcNow));
     }
 }
 
@@ -76,8 +82,9 @@ internal sealed class OrderPlacedHandler(EmailQueue queue, IOptions<Notification
         var buyer = await queue.OrganizationNameAsync(e.BuyerOrganizationId, ct);
         var recipients = await queue.ResponsiblePeopleAsync(e.SellerOrganizationId, ct);
         var link = $"{options.Value.PublicBaseUrl.TrimEnd('/')}/app/bestellungen/{e.OrderId}";
+        var language = await queue.LanguageAsync(e.SellerOrganizationId, ct);
         await queue.QueueAsync(messageId, "order.placed", recipients,
-            EmailTemplates.OrderPlacedForSeller(seller, buyer, e.GrossTotalMinor, link), ct);
+            EmailTemplates.OrderPlacedForSeller(seller, buyer, e.GrossTotalMinor, link, language), ct);
     }
 }
 
@@ -100,7 +107,7 @@ internal sealed class OrderStatusChangedHandler(EmailQueue queue, IOptions<Notif
         var recipients = await queue.ResponsiblePeopleAsync(recipientOrg, ct);
         var link = $"{options.Value.PublicBaseUrl.TrimEnd('/')}/app/bestellungen/{e.OrderId}";
         await queue.QueueAsync(messageId, $"order.{e.To.ToLowerInvariant()}", recipients,
-            EmailTemplates.OrderStatusForCounterparty(e.To, actor, e.Reason, link), ct);
+            EmailTemplates.OrderStatusForCounterparty(e.To, actor, e.Reason, link, await queue.LanguageAsync(recipientOrg, ct)), ct);
     }
 }
 
@@ -164,12 +171,12 @@ internal sealed class OrganizationVerifiedHandler(EmailQueue queue, IOptions<Not
         var name = await queue.OrganizationNameAsync(e.OrganizationId, ct);
         var recipients = await queue.ResponsiblePeopleAsync(e.OrganizationId, ct);
         await queue.QueueAsync(messageId, "organization.verified", recipients,
-            EmailTemplates.OrganizationVerified(name, options.Value.PublicBaseUrl.TrimEnd('/') + "/app"), ct);
+            EmailTemplates.OrganizationVerified(name, options.Value.PublicBaseUrl.TrimEnd('/') + "/app", await queue.LanguageAsync(e.OrganizationId, ct)), ct);
     }
 }
 
 /// <summary>Quotation or invoice requested by email: one email with the PDF per request (idempotent per outbox message).</summary>
-internal sealed class SalesDocumentEmailRequestedHandler(HandyNetDbContext db, IClock clock) : IOutboxHandler
+internal sealed class SalesDocumentEmailRequestedHandler(HandyNetDbContext db, IClock clock, EmailQueue queue) : IOutboxHandler
 {
     public string EventType => typeof(HandyNet.Modules.Pos.Contracts.SalesDocumentEmailRequested).FullName!;
 
@@ -178,6 +185,7 @@ internal sealed class SalesDocumentEmailRequestedHandler(HandyNetDbContext db, I
         if (await db.Set<EmailMessage>().AsNoTracking().AnyAsync(e => e.SourceId == messageId, ct))
             return;
         var e = JsonSerializer.Deserialize<HandyNet.Modules.Pos.Contracts.SalesDocumentEmailRequested>(payload)!;
-        db.Add(EmailMessage.Queue(messageId, SalesDocumentTemplate.Template, e.Recipient, null, SalesDocumentTemplate.Render(e), clock.UtcNow));
+        var language = string.IsNullOrWhiteSpace(e.Language) ? await queue.LanguageAsync(e.OrganizationId, ct) : EmailText.Normalize(e.Language);
+        db.Add(EmailMessage.Queue(messageId, SalesDocumentTemplate.Template, e.Recipient, null, SalesDocumentTemplate.Render(e, language), clock.UtcNow));
     }
 }

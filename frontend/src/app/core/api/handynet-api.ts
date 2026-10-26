@@ -996,8 +996,8 @@ export class PosApi {
 
   // ---- e-receipts
   /** Email the receipt (null = to the receipt's customer); sent by the Notifications outbox. */
-  emailReceipt(id: string, email: string | null): Observable<PosReceiptEmail> {
-    return this.http.post<PosReceiptEmail>(`${this.url}/sales/${id}/email`, { email });
+  emailReceipt(id: string, email: string | null, language?: string | null): Observable<PosReceiptEmail> {
+    return this.http.post<PosReceiptEmail>(`${this.url}/sales/${id}/email`, { email, language: language ?? null });
   }
 
   /** A public, read-only link (QR) to the receipt; the token is only returned here. */
@@ -1117,8 +1117,8 @@ export class SalesApi {
     return this.http.post<SalesInvoice>(`${this.url}/quotations/${id}/convert`, {});
   }
 
-  emailQuotation(id: string, email: string | null): Observable<SalesEmailResult> {
-    return this.http.post<SalesEmailResult>(`${this.url}/quotations/${id}/email`, { email });
+  emailQuotation(id: string, email: string | null, language?: string | null): Observable<SalesEmailResult> {
+    return this.http.post<SalesEmailResult>(`${this.url}/quotations/${id}/email`, { email, language: language ?? null });
   }
 
   quotationPdf(id: string): Observable<Blob> {
@@ -1172,8 +1172,8 @@ export class SalesApi {
     return this.http.post<SalesInvoice>(`${this.url}/sales-invoices/${id}/credit-note`, body);
   }
 
-  emailInvoice(id: string, email: string | null): Observable<SalesEmailResult> {
-    return this.http.post<SalesEmailResult>(`${this.url}/sales-invoices/${id}/email`, { email });
+  emailInvoice(id: string, email: string | null, language?: string | null): Observable<SalesEmailResult> {
+    return this.http.post<SalesEmailResult>(`${this.url}/sales-invoices/${id}/email`, { email, language: language ?? null });
   }
 
   invoicePdf(id: string): Observable<Blob> {

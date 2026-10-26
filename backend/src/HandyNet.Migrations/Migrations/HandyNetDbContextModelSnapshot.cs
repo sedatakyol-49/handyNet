@@ -5781,6 +5781,14 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("EmailLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasDefaultValue("de")
+                        .HasColumnName("email_language");
+
                     b.Property<string>("Iban")
                         .HasMaxLength(34)
                         .HasColumnType("character varying(34)")
@@ -5913,6 +5921,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_organizations_bank_needs_iban", "iban IS NOT NULL OR (bic IS NULL AND bank_name IS NULL)");
 
                             t.HasCheckConstraint("ck_organizations_bic", "bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'");
+
+                            t.HasCheckConstraint("ck_organizations_email_language", "email_language IN ('de', 'en', 'tr', 'es', 'ru', 'ar', 'fa')");
 
                             t.HasCheckConstraint("ck_organizations_has_capability", "is_wholesaler OR is_retailer OR is_repair_provider");
 

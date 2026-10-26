@@ -636,7 +636,8 @@
       "pos.printer_baud_rate": "This baud rate is not supported.",
       "pos.printer_limit": "A register can have at most 20 printer profiles.",
       "pos.printer_version": "Reload the page and save again.",
-      "pos.printer_name_taken": "This register already has a printer with this name."
+      "pos.printer_name_taken": "This register already has a printer with this name.",
+      "pos.email_language_invalid": "This email language is not supported."
     },
     "validation": {
       "required": "This field is required.",
@@ -2939,7 +2940,8 @@
       "validUntil": "Link valid until {date}",
       "publicMissingTitle": "Receipt not available",
       "publicMissing": "This link is invalid or has expired. Please contact the shop.",
-      "publicCancelled": "This receipt has been cancelled."
+      "publicCancelled": "This receipt has been cancelled.",
+      "language": "Email language"
     },
     "invoice": {
       "title": "Invoice",
@@ -3494,7 +3496,8 @@
       "tax": "Tax and register",
       "bank": "Bank details and payment terms",
       "receipts": "Receipts",
-      "logo": "Company logo"
+      "logo": "Company logo",
+      "emails": "Emails"
     },
     "legalHint": "These details appear on invoices and purchase receipts. Changes to the legal name or the VAT ID are reported to the platform.",
     "legalNotice": "You are changing the legal name or VAT ID – the platform will be notified.",
@@ -3524,7 +3527,8 @@
       "managingDirector": "Managing director",
       "registerCourt": "Register court",
       "registerNumber": "Register number",
-      "paymentTermsDays": "Payment terms in days"
+      "paymentTermsDays": "Payment terms in days",
+      "emailLanguage": "Email language"
     },
     "hints": {
       "name": "How your company appears in SEHA and at the top of the receipt.",
@@ -3535,7 +3539,8 @@
       "registerCourt": "e.g. Amtsgericht Charlottenburg",
       "registerNumber": "e.g. HRB 123456",
       "iban": "Checked with its check digits; spaces are allowed.",
-      "paymentTermsDays": "Default for your invoices, 0 to 365 days."
+      "paymentTermsDays": "Default for your invoices, 0 to 365 days.",
+      "emailLanguage": "Order, activation and receipt emails to you and your customers are sent in this language. You can change it when sending."
     },
     "placeholders": {
       "receiptHeader": "e.g. Your phone experts in Berlin-Mitte",
@@ -3799,7 +3804,8 @@
       "creditNoteIssued": "Credit note {number} issued.",
       "creditNoteFor": "Cancels invoice {number}",
       "cancelledBy": "Cancelled by {number}",
-      "refundRequired": "Credit notes need the \"refunds\" right (pos.refund)."
+      "refundRequired": "Credit notes need the \"refunds\" right (pos.refund).",
+      "emailLanguage": "Email language"
     },
     "warnings": {
       "customer_vat_id_missing": "Business customer without VAT ID – required for intra-EU supplies or reverse charge.",

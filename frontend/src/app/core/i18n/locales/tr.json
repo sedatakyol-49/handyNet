@@ -636,7 +636,8 @@
       "pos.printer_baud_rate": "Bu baud hızı desteklenmiyor.",
       "pos.printer_limit": "Bir kasada en fazla 20 yazıcı profili olabilir.",
       "pos.printer_version": "Lütfen sayfayı yeniden yükleyip tekrar kaydedin.",
-      "pos.printer_name_taken": "Bu kasada bu ada sahip bir yazıcı zaten var."
+      "pos.printer_name_taken": "Bu kasada bu ada sahip bir yazıcı zaten var.",
+      "pos.email_language_invalid": "Bu e-posta dili desteklenmiyor."
     },
     "validation": {
       "required": "Bu alan zorunludur.",
@@ -2939,7 +2940,8 @@
       "validUntil": "Bağlantı {date} tarihine kadar geçerli",
       "publicMissingTitle": "Fiş mevcut değil",
       "publicMissing": "Bu bağlantı geçersiz veya süresi dolmuş. Lütfen mağazaya başvurun.",
-      "publicCancelled": "Bu fiş iptal edildi."
+      "publicCancelled": "Bu fiş iptal edildi.",
+      "language": "E-posta dili"
     },
     "invoice": {
       "title": "Fatura",
@@ -3494,7 +3496,8 @@
       "tax": "Vergi ve sicil",
       "bank": "Banka bilgileri ve ödeme vadesi",
       "receipts": "Fişler",
-      "logo": "Şirket logosu"
+      "logo": "Şirket logosu",
+      "emails": "E-postalar"
     },
     "legalHint": "Bu bilgiler faturalarda ve alım belgelerinde görünür. Ticari unvan veya KDV numarası değişiklikleri platforma bildirilir.",
     "legalNotice": "Ticari unvanı veya KDV numarasını değiştiriyorsunuz – platform bilgilendirilecek.",
@@ -3524,7 +3527,8 @@
       "managingDirector": "Genel müdür",
       "registerCourt": "Sicil mahkemesi",
       "registerNumber": "Sicil numarası",
-      "paymentTermsDays": "Gün olarak ödeme vadesi"
+      "paymentTermsDays": "Gün olarak ödeme vadesi",
+      "emailLanguage": "E-posta dili"
     },
     "hints": {
       "name": "Şirketiniz SEHA’da ve fişin üstünde böyle görünür.",
@@ -3535,7 +3539,8 @@
       "registerCourt": "örn. Amtsgericht Charlottenburg",
       "registerNumber": "örn. HRB 123456",
       "iban": "Kontrol basamaklarıyla doğrulanır; boşluklara izin verilir.",
-      "paymentTermsDays": "Faturalarınız için varsayılan, 0 ile 365 gün arası."
+      "paymentTermsDays": "Faturalarınız için varsayılan, 0 ile 365 gün arası.",
+      "emailLanguage": "Sipariş, etkinleştirme ve fiş e-postaları size ve müşterilerinize bu dilde gönderilir. Gönderirken değiştirebilirsiniz."
     },
     "placeholders": {
       "receiptHeader": "örn. Berlin-Mitte’deki telefon uzmanınız",
@@ -3799,7 +3804,8 @@
       "creditNoteIssued": "{number} iptal faturası düzenlendi.",
       "creditNoteFor": "{number} faturasının iptali",
       "cancelledBy": "{number} ile iptal edildi",
-      "refundRequired": "İptal faturaları için \"iadeler\" yetkisi (pos.refund) gerekir."
+      "refundRequired": "İptal faturaları için \"iadeler\" yetkisi (pos.refund) gerekir.",
+      "emailLanguage": "E-posta dili"
     },
     "warnings": {
       "customer_vat_id_missing": "KDV kimlik numarası olmayan kurumsal müşteri – AB içi teslimat veya ters ibrazda gereklidir.",

@@ -42,6 +42,31 @@ public sealed class NotificationTests(HandyNetFixture fixture)
     }
 
     [Fact]
+    public async Task Order_and_verification_emails_use_the_email_language_of_the_receiving_organization()
+    {
+        // Verification email: the organization chose English before the platform activated it.
+        var supplier = await _scenario.RegisterAsync("sprache-lieferant", wholesaler: true);
+        var shop = await _scenario.RegisterAsync("sprache-shop", wholesaler: false, retailer: true);
+        await supplier.SetEmailLanguageAsync("en");
+        await shop.SetEmailLanguageAsync("tr");
+        await _scenario.ApproveAsync(supplier, "ProductImport", "Inventory", "B2BSales");
+        await _scenario.ApproveAsync(shop, "B2BPurchasing", "Inventory");
+        var supplierEmail = (await supplier.GetAsync("/api/me")).Json["email"]!.GetValue<string>();
+        var shopEmail = (await shop.GetAsync("/api/me")).Json["email"]!.GetValue<string>();
+        var (offerId, _) = await _scenario.PublishOfferAsync(supplier, shop, quantity: 5);
+
+        // Order placed goes to the seller (English), the rejection to the buyer (Turkish).
+        var order = (await shop.PostAsync("/api/orders", new { lines = new[] { new { offerId, quantity = 1 } } },
+            new Dictionary<string, string> { ["Idempotency-Key"] = "lang-1" })).Expect(HttpStatusCode.Created);
+        (await supplier.PostAsync($"/api/orders/{order.Json["id"]!.GetValue<string>()}/reject", new { reason = "out of stock" })).Expect(HttpStatusCode.OK);
+        await ProcessUntilAsync(() => fixture.Emails.Sent.Any(e => e.To == shopEmail && e.Subject == "Siparişiniz reddedildi")
+                                      && fixture.Emails.Sent.Any(e => e.To == supplierEmail && e.Subject.StartsWith("New order from"))
+                                      && fixture.Emails.Sent.Any(e => e.To == supplierEmail && e.Subject.EndsWith("has been activated"))
+                                      && fixture.Emails.Sent.Any(e => e.To == shopEmail && e.Subject.EndsWith("etkinleştirildi")));
+        Assert.DoesNotContain(fixture.Emails.Sent, e => (e.To == supplierEmail || e.To == shopEmail) && e.Subject.Contains("freigeschaltet"));
+    }
+
+    [Fact]
     public async Task Order_lifecycle_emails_reach_the_other_party_exactly_once()
     {
         var (supplier, shop) = await _scenario.SupplierAndShopAsync();

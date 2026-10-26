@@ -27,6 +27,25 @@ public class CompanyProfileTests
 
     private static CompanyProfile Profile(Organization o) => o.CompanyProfile;
 
+    [Fact]
+    public void Email_language_defaults_to_german_normalizes_and_accepts_only_the_seven_locales()
+    {
+        var o = NewOrganization();
+        Assert.Equal("de", o.EmailLanguage);
+
+        foreach (var locale in CompanyProfileRules.EmailLanguages)
+            Assert.True(NewOrganization().UpdateCompanyProfile(Profile(o) with { EmailLanguage = $" {locale.ToUpperInvariant()} " }, Owner, Now).IsSuccess);
+
+        Assert.True(o.UpdateCompanyProfile(Profile(o) with { EmailLanguage = "TR" }, Owner, Now).IsSuccess);
+        Assert.Equal("tr", o.EmailLanguage);
+        var invalid = o.UpdateCompanyProfile(Profile(o) with { EmailLanguage = "it" }, Owner, Now);
+        Assert.Equal("company.invalid_email_language", invalid.Error!.Code);
+        Assert.Equal("tr", o.EmailLanguage);
+        // Blank means the default.
+        Assert.True(o.UpdateCompanyProfile(Profile(o) with { EmailLanguage = " " }, Owner, Now).IsSuccess);
+        Assert.Equal("de", o.EmailLanguage);
+    }
+
     [Theory]
     [InlineData("DE89370400440532013000", true)]
     [InlineData("de89 3704 0044 0532 0130 00", true)]          // spaces and lower case are fine

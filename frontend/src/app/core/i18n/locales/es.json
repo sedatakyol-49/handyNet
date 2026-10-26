@@ -636,7 +636,8 @@
       "pos.printer_baud_rate": "Esta velocidad en baudios no es compatible.",
       "pos.printer_limit": "Una caja puede tener como máximo 20 perfiles de impresora.",
       "pos.printer_version": "Recargue la página y vuelva a guardar.",
-      "pos.printer_name_taken": "Esta caja ya tiene una impresora con este nombre."
+      "pos.printer_name_taken": "Esta caja ya tiene una impresora con este nombre.",
+      "pos.email_language_invalid": "Este idioma de correo no es compatible."
     },
     "validation": {
       "required": "Este campo es obligatorio.",
@@ -2939,7 +2940,8 @@
       "validUntil": "Enlace válido hasta {date}",
       "publicMissingTitle": "Tique no disponible",
       "publicMissing": "Este enlace no es válido o ha caducado. Contacte con la tienda.",
-      "publicCancelled": "Este tique ha sido anulado."
+      "publicCancelled": "Este tique ha sido anulado.",
+      "language": "Idioma del correo"
     },
     "invoice": {
       "title": "Factura",
@@ -3494,7 +3496,8 @@
       "tax": "Impuestos y registro",
       "bank": "Datos bancarios y plazo de pago",
       "receipts": "Tiques",
-      "logo": "Logotipo"
+      "logo": "Logotipo",
+      "emails": "Correos electrónicos"
     },
     "legalHint": "Estos datos aparecen en facturas y justificantes de compra. Los cambios de la razón social o del NIF-IVA se comunican a la plataforma.",
     "legalNotice": "Está cambiando la razón social o el NIF-IVA: se informará a la plataforma.",
@@ -3524,7 +3527,8 @@
       "managingDirector": "Dirección general",
       "registerCourt": "Registro mercantil",
       "registerNumber": "Número de registro",
-      "paymentTermsDays": "Plazo de pago en días"
+      "paymentTermsDays": "Plazo de pago en días",
+      "emailLanguage": "Idioma de los correos"
     },
     "hints": {
       "name": "Así aparece su empresa en SEHA y en la parte superior del tique.",
@@ -3535,7 +3539,8 @@
       "registerCourt": "p. ej. Amtsgericht Charlottenburg",
       "registerNumber": "p. ej. HRB 123456",
       "iban": "Se comprueba con sus dígitos de control; se admiten espacios.",
-      "paymentTermsDays": "Valor predeterminado para sus facturas, de 0 a 365 días."
+      "paymentTermsDays": "Valor predeterminado para sus facturas, de 0 a 365 días.",
+      "emailLanguage": "Los correos de pedidos, activación y recibos para usted y sus clientes se envían en este idioma. Puede cambiarlo al enviar."
     },
     "placeholders": {
       "receiptHeader": "p. ej. Sus expertos en móviles en Berlín-Mitte",
@@ -3799,7 +3804,8 @@
       "creditNoteIssued": "Factura rectificativa {number} emitida.",
       "creditNoteFor": "Anula la factura {number}",
       "cancelledBy": "Anulada por {number}",
-      "refundRequired": "Las facturas rectificativas requieren el permiso «devoluciones» (pos.refund)."
+      "refundRequired": "Las facturas rectificativas requieren el permiso «devoluciones» (pos.refund).",
+      "emailLanguage": "Idioma del correo"
     },
     "warnings": {
       "customer_vat_id_missing": "Cliente empresa sin NIF-IVA: necesario en entregas intracomunitarias o inversión del sujeto pasivo.",

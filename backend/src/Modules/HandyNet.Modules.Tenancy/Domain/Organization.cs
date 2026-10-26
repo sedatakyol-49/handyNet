@@ -77,6 +77,9 @@ public sealed class Organization : Entity, IAuditable
     /// <summary>Default payment terms of the company's invoices in days (null = not set).</summary>
     public int? PaymentTermsDays { get; private set; }
 
+    /// <summary>Language of the emails to this organization and of those it sends to its customers (default de; see <see cref="CompanyProfileRules.EmailLanguages"/>).</summary>
+    public string EmailLanguage { get; private set; } = CompanyProfileRules.DefaultEmailLanguage;
+
     public IReadOnlyCollection<OrganizationModule> Modules => _modules;
 
     /// <summary>New status changes of this unit of work (written append-only; read the history from its own table).</summary>
@@ -136,7 +139,7 @@ public sealed class Organization : Entity, IAuditable
 
     /// <summary>The company data as the company maintains it (ADR-0014).</summary>
     public CompanyProfile CompanyProfile => new(Name, LegalName, Street, PostalCode, City, CountryCode, VatId, TaxNumber, ContactEmail,
-        ContactPhone, Website, ReceiptHeader, ReceiptFooter, BankName, Iban, Bic, ManagingDirector, RegisterCourt, RegisterNumber, PaymentTermsDays);
+        ContactPhone, Website, ReceiptHeader, ReceiptFooter, BankName, Iban, Bic, ManagingDirector, RegisterCourt, RegisterNumber, PaymentTermsDays, EmailLanguage);
 
     /// <summary>
     /// The company updates its own data (ADR-0014). A change of the legal identity (legal name, VAT ID) needs no
@@ -178,6 +181,7 @@ public sealed class Organization : Entity, IAuditable
         RegisterCourt = after.RegisterCourt;
         RegisterNumber = after.RegisterNumber;
         PaymentTermsDays = after.PaymentTermsDays;
+        EmailLanguage = after.EmailLanguage;
 
         if (legal.Count > 0)
         {

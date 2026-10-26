@@ -62,7 +62,8 @@ public sealed record CreditNoteRequest(string Reason, Guid? RegisterId);
 /// <summary>Collect at the till: AmountMinor applied to the invoice (null = the open amount); payments as at a sale (cash with change, card exact).</summary>
 public sealed record CollectInvoiceRequest(Guid RegisterId, long? AmountMinor, IReadOnlyList<SalePaymentRequest> Payments);
 
-public sealed record SalesEmailRequest(string? Email);
+/// <param name="Language">Language of the email (de, en, tr, es, ru, ar, fa); null = the email language of the company.</param>
+public sealed record SalesEmailRequest(string? Email, string? Language = null);
 
 public sealed record SalesQuery(
     string? Search,
@@ -278,7 +279,11 @@ internal sealed class CollectInvoiceRequestValidator : AbstractValidator<Collect
 
 internal sealed class SalesEmailRequestValidator : AbstractValidator<SalesEmailRequest>
 {
-    public SalesEmailRequestValidator() => RuleFor(x => x.Email).MaximumLength(ReceiptEmail.MaxEmailLength);
+    public SalesEmailRequestValidator()
+    {
+        RuleFor(x => x.Email).MaximumLength(ReceiptEmail.MaxEmailLength);
+        RuleFor(x => x.Language).Must(ReceiptEmail.IsEmailLanguage).WithMessage("The email language is not supported.");
+    }
 }
 
 // ---- shared helpers ---------------------------------------------------------------------------------------------------------
@@ -547,7 +552,7 @@ internal sealed class QuotationService(
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"sales-email:" + id}, 0))", ct);
         var sent = await db.Set<SalesDocumentEmail>().CountAsync(e => e.DocumentId == id, ct);
         var created = SalesDocumentEmail.Request(OrganizationId, SalesDocumentType.Quotation, id, document, email.Value, sent, SalesDocumentPdf.Render(document, await LetterheadAsync(ct)),
-            actor.UserId, clock.UtcNow);
+            actor.UserId, clock.UtcNow, request.Language);
         if (!created.IsSuccess)
             return created.Error!;
         quotation.MarkSent(clock.UtcNow);
@@ -888,7 +893,7 @@ internal sealed class SalesInvoiceService(
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"sales-email:" + id}, 0))", ct);
         var sent = await db.Set<SalesDocumentEmail>().CountAsync(e => e.DocumentId == id, ct);
         var created = SalesDocumentEmail.Request(OrganizationId, SalesDocumentType.Invoice, id, invoice.Document, email.Value, sent,
-            SalesDocumentPdf.Render(invoice.Document, await LetterheadAsync(ct)), actor.UserId, clock.UtcNow);
+            SalesDocumentPdf.Render(invoice.Document, await LetterheadAsync(ct)), actor.UserId, clock.UtcNow, request.Language);
         if (!created.IsSuccess)
             return created.Error!;
         db.Add(created.Value);

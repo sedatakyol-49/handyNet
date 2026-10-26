@@ -37,6 +37,7 @@ const PROFILE: CompanyProfile = {
   registerCourt: null,
   registerNumber: null,
   paymentTermsDays: 14,
+  emailLanguage: 'de',
   logo: null,
   status: 'Verified',
   version: 42,
@@ -73,6 +74,9 @@ describe('company logic', () => {
     expect(request.bic).toBe('COBADEFF');
     expect(request.paymentTermsDays).toBe(30);
     expect(request.website).toBeNull();
+    expect(request.emailLanguage).toBe('de');
+    expect(requestFromForm(form({ emailLanguage: 'fa' }), 1).emailLanguage).toBe('fa');
+    expect(requestFromForm(form({ emailLanguage: '' }), 1).emailLanguage).toBe('de');
     expect(request.version).toBe(42);
   });
 

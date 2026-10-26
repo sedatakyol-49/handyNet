@@ -111,10 +111,12 @@ test.describe.serial('company profile and logo', () => {
     await expect(page.locator('#company-iban-error')).toContainText('IBAN');
     await page.getByTestId('company-iban').fill('DE89370400440532013000');
     await page.getByTestId('company-bankName').fill('Commerzbank');
+    await page.getByTestId('company-emailLanguage').selectOption('tr');
     await page.getByTestId('company-save').click();
     await expect(page.getByText('Firmendaten gespeichert.')).toBeVisible();
     await page.reload();
     await expect(page.getByTestId('company-iban')).toHaveValue('DE89 3704 0044 0532 0130 00');
+    await expect(page.getByTestId('company-emailLanguage')).toHaveValue('tr');
     await expect(page.getByTestId('company-receiptFooter')).toHaveValue(`Mo–Sa 10–19 Uhr\n${footer}`);
 
     // Logo: crop dialog, upload, visible on the page and in the top bar.
