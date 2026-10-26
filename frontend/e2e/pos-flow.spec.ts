@@ -374,6 +374,7 @@ test.describe.serial('POS test TSE', () => {
     await page.goto(`/kasse/${registerId}`);
     await expect(page.getByTestId('pos-tse-status')).toHaveAttribute('data-state', 'Test');
     await expect(page.getByTestId('pos-tse-status')).toContainText('Test-TSE');
+    await expect(page.getByTestId('pos-tse-test-banner')).toHaveText('Testumgebung – Belege nicht steuerlich gültig');
     let receipt = await sellByCard(page);
     const tse = receipt.getByTestId('receipt-tse');
     await expect(tse).toBeVisible();
@@ -410,6 +411,23 @@ test.describe.serial('POS test TSE', () => {
     await expect(page.getByTestId('pos-tse-outage-banner')).toHaveCount(0);
     const after = await admin.call<{ outages: { endedAt: string | null }[] }>('GET', `/api/admin/pos/fiscal/${orgId}`, '');
     expect(after.outages[0].endedAt).not.toBeNull();
+
+    // ---- fiskaly with a credential reference that is not configured: "Verbindung testen" says so (fiskaly is never called)
+    await admin.call('PUT', `/api/admin/pos/fiscal/${orgId}`, '', {
+      mode: 'FiskalyCloudTse', fiskalyTssId: crypto.randomUUID(), fiskalyEnvironment: 'Sandbox', fiskalyCredentialReference: 'e2e-not-configured',
+    });
     await admin.dispose();
+    await page.reload();
+    await expect(page.getByTestId('pos-tse-test-banner')).toBeVisible(); // Sandbox = test environment
+    await page.goto('/app'); // the till has no user menu
+    await logout(page);
+    await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.goto('/app/administration/kassen-tse');
+    await page.getByTestId('admin-fiscal-search').fill(shop.name);
+    await page.getByTestId('admin-fiscal-search').press('Enter');
+    await page.locator(`[data-org="${shop.name}"]`).click();
+    await page.getByTestId('admin-fiskaly-test').click();
+    await expect(page.getByTestId('admin-fiskaly-result')).toHaveAttribute('data-status', 'Failed');
+    await expect(page.getByTestId('admin-fiskaly-result')).toContainText('Keine (lesbaren) Zugangsdaten hinterlegt.');
   });
 });

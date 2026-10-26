@@ -8,6 +8,7 @@ import { createQuery } from '../../shared/data/query';
 import { UI } from '../../shared/ui';
 import { FiscalForm, FiscalFormErrors, shortSignature, toForm, toRequest, validateFiscalForm } from '../pos/fiscal.logic';
 import { AdminTabsComponent } from './admin-tabs';
+import { AdminFiskalyConnectionComponent } from './admin-fiskaly-connection';
 
 /**
  * Platform admin "Kassen & TSE": fiscal mode per organization and register (Disabled / simulated test TSE / fiskaly),
@@ -16,7 +17,7 @@ import { AdminTabsComponent } from './admin-tabs';
  */
 @Component({
   selector: 'hn-admin-fiscal-page',
-  imports: [FormsModule, AdminTabsComponent, ...UI],
+  imports: [FormsModule, AdminTabsComponent, AdminFiskalyConnectionComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-page-header [title]="'admin.title' | t" [description]="'admin.fiscal.subtitle' | t" />
@@ -138,6 +139,11 @@ import { AdminTabsComponent } from './admin-tabs';
               </div>
             </form>
           </section>
+
+          @if (d.configuration?.mode === 'FiskalyCloudTse') {
+            <hn-admin-fiskaly-connection [organizationId]="d.organizationId"
+              [configured]="!!d.configuration?.fiskalyTssId && (!!d.configuration?.hasStoredFiskalyCredentials || !!d.configuration?.fiskalyCredentialReference)" />
+          }
 
           @if (d.simulatedTse; as tse) {
             <section class="hn-card p-4" aria-labelledby="fiscal-tse-heading" data-testid="admin-fiscal-tse">

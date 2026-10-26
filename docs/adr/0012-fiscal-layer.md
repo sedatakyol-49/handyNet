@@ -65,7 +65,7 @@ The product owner wants a flexible **test TSE** configurable by the platform adm
   a rolled-back sale also rolls back its TSE transaction, keeping test data consistent.
 - Every signed receipt and export says **"Test-TSE – nicht für den Echtbetrieb"** (`isTest`).
 
-### fiskaly adapter (`FiskalyTseSigner`, **not verified against the real service**)
+### fiskaly adapter (`FiskalyTseSigner`, **not verified against the real service** — see the 2026-10-26 addendum)
 
 - SIGN DE v2 shape: `POST /auth` (token cached per key, refreshed once on 401), `PUT /tss/{tss}/client/{client}` (once
   per process), `PUT /tss/{tss}/tx/{tx}?tx_revision=1` (`ACTIVE`) and `…=2` (`FINISHED` with
@@ -105,3 +105,60 @@ Certified TSE in production (fiskaly verification in the sandbox first), BSI TR-
 certificate in `tse.csv`, cancel of orphaned TSE transactions, notification of the till to the tax office (§146a Abs. 4
 AO), full DSFinV-K (see above) and its validation with the DSFinV-K validator, offline mode, and an external review by a
 tax adviser of process data, storno handling, §25a mapping and the export.
+
+## Addendum (2026-10-26): fiskaly contract review against the SIGN DE v2 spec
+
+**Verified against the published OpenAPI spec** (`https://workspace.fiskaly.com/specs/sign-de-v2.json`) with
+spec-shaped recorded responses (`FiskalyContractTests`) and an in-process fake in the integration tests:
+
+- `POST /auth` (`api_key`/`api_secret` → `access_token`, `access_token_expires_in`, `access_token_claims.env` TEST/LIVE);
+  a 401 refreshes the token once. One real call was made with deliberately invalid keys: the TEST middleware answered
+  `401 {"message":"Invalid user credentials","status_code":401,"error":"Unauthorized"}` (no `code`); this is handled.
+- Base URL: the middleware (`kassensichv-middleware.fiskaly.com/api/v2`) serves all operations and is the only host for
+  `createClient`, `updateTss` and `upsertTransaction` ("only available via Middleware"); TEST or LIVE is bound to the
+  key, not the URL. So there is one base URL setting, not one per environment.
+- Fixed mismatches:
+  - `createClient` **requires admin authentication**. The till no longer creates clients; it only checks
+    `GET …/client/{id}` is `REGISTERED` (otherwise outage path). Registration is an admin action with the TSS admin PIN
+    (admin auth → create → logout). A wrong PIN is not retried, because five failures block it.
+  - TSS, client and transaction ids must be **UUIDv4**. HandyNet's v7 keys are mapped deterministically, so a retry
+    reaches the same fiskaly resource.
+  - `signature.counter` is a `BigintCounter` string.
+  - A FINISHED response without complete signature data is treated as transient. It is never stored as a signed receipt.
+  - `_env: TEST` marks the receipt as a test receipt even if the configuration says Production. Outage receipts of a
+    sandbox TSS are marked as test too.
+  - Retries now use exponential backoff and honour `Retry-After`. They cover 499 and `503 E_TSS_LOCKED`. 4xx responses
+    are not retried and report fiskaly's `code`/`message`. A 423 (TSS defective/deleted/evicted) is refused.
+  - Timeouts are set per request. TSS administration calls get at least 30 s.
+- `standard_v1.receipt`: `receipt_type` RECEIPT, `amounts_per_vat_rate` (NORMAL / REDUCED_1 / SPECIAL_RATE_1 /
+  SPECIAL_RATE_2 / NULL by rate) and `amounts_per_payment_type` (CASH / NON_CASH). Amounts match `^-?\d+(\.\d{2,5})$`.
+  Revision 1 carries no schema, as the spec requires. Other events use `raw`. The TSS lifecycle calls (create,
+  UNINITIALIZED, admin PIN from the PUK, admin auth, INITIALIZED, DISABLED, logout) are in `FiskalyApiClient` for setup
+  tooling and the sandbox test.
+- Admin "Verbindung testen" is read-only. It reports the environment, a mismatch, the TSS state and the client
+  registration of each till. The till shows "Testumgebung – Belege nicht steuerlich gültig" while on Sandbox or the
+  simulated TSE.
+
+**Still needs a real TEST run** (credentials pending) with the opt-in `FiskalySandboxTests` (see operations.md). Open
+points include:
+
+- the exact 401/403 bodies of admin auth and createClient;
+- the `qr_code_data` format;
+- how long the UNINITIALIZED step takes;
+- the conflict behaviour of a repeated revision with a different body;
+- client limits.
+
+Not used or not implemented: TSE export (TAR); CANCELLED for orphaned transactions (open ACTIVE transactions count
+against the 2000 limit); refresh-token auth; client deregistration; TSS provisioning from the UI. HandyNet has no 7 % VAT
+treatment yet. The adapter maps by rate, so 7 % totals would land in REDUCED_1.
+
+**Switching an organization to LIVE:**
+
+1. Create new LIVE API keys in fiskaly. TEST keys never work on LIVE.
+2. Create and initialize a new LIVE TSS. A TEST TSS, its clients and its transactions cannot be moved: test data is not
+   migrated.
+3. Enter the LIVE keys and the TSS id, with environment Production.
+4. Run "Verbindung testen". It must show LIVE and no mismatch.
+5. Register every till with the LIVE TSS admin PIN, then sell.
+
+Receipts signed on TEST stay test receipts.

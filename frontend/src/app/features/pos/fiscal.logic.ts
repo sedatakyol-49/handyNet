@@ -1,5 +1,5 @@
 import qrcode from 'qrcode-generator';
-import { FiscalConfig, FiscalConfigRequest, FiscalState } from '../../core/api/fiscal-api';
+import { FiscalConfig, FiscalConfigRequest, FiscalState, FiskalyConnectionTest, RegisterFiscalStatus } from '../../core/api/fiscal-api';
 import { ReceiptFiscal } from '../../core/api/models';
 
 /** Fiscal (TSE / KassenSichV) helpers for the receipt, the top bar and the admin form. Pure functions, unit-tested. */
@@ -70,6 +70,29 @@ export function tseTone(state: FiscalState | null | undefined): 'ok' | 'test' | 
     default:
       return 'muted';
   }
+}
+
+/** The till signs in a test environment (simulated TSE or fiskaly TEST/Sandbox): its receipts are not valid for tax purposes. */
+export function isTestEnvironment(status: RegisterFiscalStatus | null | undefined): boolean {
+  return !!status && status.isTest && status.state !== 'NotConfigured' && status.state !== 'Refused';
+}
+
+export interface FiskalyNote {
+  tone: 'success' | 'warning' | 'danger' | 'info';
+  key: string;
+  params?: Record<string, string | number>;
+}
+
+/** Translated notes (i18n keys) for a fiskaly connection test result, most important first. */
+export function fiskalyTestNotes(result: FiskalyConnectionTest): FiskalyNote[] {
+  const notes: FiskalyNote[] = [];
+  const statusTone = result.status === 'Ok' ? 'success' : result.status === 'Warning' ? 'warning' : 'danger';
+  notes.push({ tone: statusTone, key: `admin.fiscal.fiskaly.status.${result.status}` });
+  if (result.errorCode) notes.push({ tone: 'danger', key: `admin.fiscal.fiskaly.error.${result.errorCode.replace(/^fiskaly\./, '')}` });
+  if (result.environmentMismatch)
+    notes.push({ tone: 'warning', key: 'admin.fiscal.fiskaly.envMismatch', params: { configured: result.configuredEnvironment ?? 'Sandbox' } });
+  if (result.tssState && result.tssState !== 'INITIALIZED') notes.push({ tone: 'warning', key: 'admin.fiscal.fiskaly.tssNotInitialized' });
+  return notes;
 }
 
 /** The admin form for the simulated TSE / fiskaly (strings for inputs; empty = not set / inherit). */

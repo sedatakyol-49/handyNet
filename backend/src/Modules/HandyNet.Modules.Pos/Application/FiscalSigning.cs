@@ -21,7 +21,8 @@ public sealed record EffectiveFiscalConfiguration(
     FiscalConfiguration? Register);
 
 /// <summary>A signer ready for one register.</summary>
-public sealed record ResolvedFiscalSigner(IFiscalSigner Signer, FiscalMode Mode, string ClientId);
+/// <summary>IsTest: simulated TSE or fiskaly not configured as Production (receipts are marked as test receipts).</summary>
+public sealed record ResolvedFiscalSigner(IFiscalSigner Signer, FiscalMode Mode, string ClientId, bool IsTest = false);
 
 /// <summary>Resolves the fiscal mode and signer per organization/register, including the Production gates.</summary>
 internal sealed class FiscalSignerProvider(
@@ -52,8 +53,9 @@ internal sealed class FiscalSignerProvider(
         return new EffectiveFiscalConfiguration(mode, source, simulated, clientId, org, register);
     }
 
-    /// <summary>The fiskaly client id must be a UUID; the simulated TSE uses the register id as Kassen-Seriennummer.</summary>
-    public static string DefaultClientId(FiscalMode? mode, Guid registerId) => mode == FiscalMode.FiskalyCloudTse ? registerId.ToString() : registerId.ToString("N");
+    /// <summary>The fiskaly client id must be a UUIDv4 (derived from the register id); the simulated TSE uses the register id as Kassen-Seriennummer.</summary>
+    public static string DefaultClientId(FiscalMode? mode, Guid registerId) =>
+        mode == FiscalMode.FiskalyCloudTse ? FiskalyIds.Client(registerId).ToString() : registerId.ToString("N");
 
     /// <summary>Null when signing is possible for the register (or the organization), otherwise the reason (409/503-like conflict).</summary>
     public async Task<Error?> CheckAsync(Guid? registerId, CancellationToken ct)
@@ -98,10 +100,12 @@ internal sealed class FiscalSignerProvider(
             default:
                 return Error.Conflict("pos.fiscal_signer_missing", "Unknown fiscal mode.");
         }
-        return new ResolvedFiscalSigner(signer, effective.Mode.Value, effective.ClientId);
+        var isTest = effective.Mode == FiscalMode.SimulatedTse
+                     || (effective.Mode == FiscalMode.FiskalyCloudTse && effective.Organization?.FiskalyEnvironment != "Production");
+        return new ResolvedFiscalSigner(signer, effective.Mode.Value, effective.ClientId, isTest);
     }
 
-    private FiskalyCredentials? FiskalyCredentialsOf(FiscalConfiguration? config)
+    internal FiskalyCredentials? FiskalyCredentialsOf(FiscalConfiguration? config)
     {
         if (config is null)
             return null;
@@ -219,7 +223,7 @@ internal sealed class FiscalSealer(
         logger.LogWarning("TSE outage on register {RegisterId} ({Mode}): {Code} {Message}", registerId, resolved.Mode, last!.Code, last.Message);
         await StartOutageAsync(registerId, sessionId, resolved.Mode, last.Message, ct);
         return new FiscalData(FiscalStatus.Failed, KassenSichV.OutageNotice, transaction?.TseSerialNumber, transaction?.Number, null, null,
-            transaction?.StartedAt, null, Mode: resolved.Mode.ToString(), IsTest: resolved.Mode == FiscalMode.SimulatedTse, ClientId: resolved.ClientId,
+            transaction?.StartedAt, null, Mode: resolved.Mode.ToString(), IsTest: resolved.IsTest, ClientId: resolved.ClientId,
             ProcessType: process.ProcessType, ProcessData: process.ProcessData, Error: Truncate(last.Message, 500));
     }
 

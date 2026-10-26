@@ -127,6 +127,30 @@ export interface OrganizationFiscalSummary {
   tseSerialNumber: string | null;
 }
 
+export type FiskalyClientState = 'Registered' | 'NotRegistered' | 'Deregistered' | 'InvalidClientId';
+
+export interface FiskalyClientCheck {
+  registerId: string;
+  name: string;
+  clientId: string;
+  state: FiskalyClientState;
+}
+
+/** "Verbindung testen" (read-only, nothing is signed). errorCode is set when status is Failed (e.g. fiskaly.credentialsRejected). */
+export interface FiskalyConnectionTest {
+  status: 'Ok' | 'Warning' | 'Failed';
+  environment: 'TEST' | 'LIVE' | null;
+  configuredEnvironment: 'Sandbox' | 'Production' | null;
+  environmentMismatch: boolean;
+  tssId: string | null;
+  tssState: string | null;
+  tssSerialNumber: string | null;
+  clients: FiskalyClientCheck[];
+  errorCode: string | null;
+  detail: string | null;
+  checkedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class FiscalApi {
   private readonly http = inject(HttpClient);
@@ -165,5 +189,15 @@ export class AdminFiscalApi {
 
   setRegister(id: string, registerId: string, body: FiscalConfigRequest): Observable<OrganizationFiscal> {
     return this.http.put<OrganizationFiscal>(`${this.url}/${id}/registers/${registerId}`, body);
+  }
+
+  /** Authenticates with the stored fiskaly credentials and reads TSS and clients; signs nothing. */
+  testFiskaly(id: string): Observable<FiskalyConnectionTest> {
+    return this.http.post<FiskalyConnectionTest>(`${this.url}/${id}/fiskaly/test`, {});
+  }
+
+  /** Registers the till as fiskaly client; the TSS admin PIN is used once and not stored. */
+  registerFiskalyClient(id: string, registerId: string, adminPin: string): Observable<FiskalyClientCheck> {
+    return this.http.post<FiskalyClientCheck>(`${this.url}/${id}/registers/${registerId}/fiskaly-client`, { adminPin });
   }
 }

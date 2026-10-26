@@ -653,7 +653,14 @@
       "blacklist.deactivation_reason": "Укажите причину снятия блокировки (макс. 500 символов).",
       "blacklist.reason": "Неизвестная причина.",
       "blacklist.source": "Укажите источник сообщения (макс. 200 символов).",
-      "blacklist.note": "Заметка слишком длинная (макс. 1000 символов)."
+      "blacklist.note": "Заметка слишком длинная (макс. 1000 символов).",
+      "pos.fiskaly_admin_pin_rejected": "fiskaly отклонил PIN администратора TSS. После пяти неудачных попыток он блокируется.",
+      "pos.fiskaly_client_not_registered": "Касса не зарегистрирована в fiskaly. Зарегистрируйте её в разделе «Кассы и TSE».",
+      "pos.fiskaly_invalid_client_id": "ID клиента fiskaly для кассы должен быть UUID.",
+      "pos.fiskaly_credentials_rejected": "fiskaly отклонил учётные данные.",
+      "pos.fiskaly_not_found": "fiskaly не знает запрошенную TSS или кассу.",
+      "pos.tse_unavailable": "TSE сейчас недоступна. Повторите попытку.",
+      "pos.tse_rejected": "TSE отклонила запрос."
     },
     "validation": {
       "required": "Это поле обязательно.",
@@ -718,7 +725,8 @@
       "cashOrDenominations": "Укажите сумму или количество по номиналам.",
       "reasonRequired": "Выберите причину или опишите её.",
       "versionRequired": "Передайте версию, с которой была загружена форма.",
-      "idExpiryRequired": "Укажите срок действия документа, удостоверяющего личность."
+      "idExpiryRequired": "Укажите срок действия документа, удостоверяющего личность.",
+      "fiskalyAdminPin": "PIN администратора TSS содержит не менее 6 символов."
     }
   },
   "dashboard": {
@@ -1407,7 +1415,7 @@
       "latency": "Искусственная задержка (мс)",
       "failureRate": "Доля ошибок (%)",
       "forcedOutage": "Принудительный сбой TSE",
-      "fiskalyUnverified": "Адаптер fiskaly: не проверен на реальном сервисе. Учётные данные хранятся зашифрованными и никогда не показываются.",
+      "fiskalyUnverified": "Адаптер fiskaly: проверен по опубликованной спецификации API (SIGN DE v2); прогон в реальной среде TEST ещё не выполнен. Учётные данные хранятся в зашифрованном виде и никогда не показываются.",
       "tssId": "ID TSS (UUID)",
       "environment": "Среда",
       "credentialReference": "Ссылка на учётные данные",
@@ -1446,6 +1454,46 @@
         "failureRate": "От 0 до 100 %.",
         "uuid": "Введите корректный UUID.",
         "credentialsPair": "Введите API-ключ и секрет вместе."
+      },
+      "fiskaly": {
+        "title": "Подключение к fiskaly",
+        "test": "Проверить подключение",
+        "testHint": "Входит с сохранёнными учётными данными и читает TSS и клиентов касс. Ничего не подписывается.",
+        "saveFirst": "Сначала сохраните ID TSS и учётные данные.",
+        "status": {
+          "Ok": "Подключение в порядке.",
+          "Warning": "Подключено – обратите внимание на замечания.",
+          "Failed": "Подключение не удалось."
+        },
+        "environment": "Среда ключей",
+        "env": {
+          "TEST": "TEST – тестовая среда, чеки не имеют налоговой силы",
+          "LIVE": "LIVE"
+        },
+        "envMismatch": "Ключи не соответствуют настроенной среде ({configured}). Для LIVE нужны новые ключи LIVE и новая TSS.",
+        "tssState": "Состояние TSS",
+        "tssNotInitialized": "TSS не инициализирована – подписывать можно только после этого.",
+        "clients": "Кассы в fiskaly",
+        "clientState": {
+          "Registered": "зарегистрирована",
+          "NotRegistered": "не зарегистрирована",
+          "Deregistered": "снята с регистрации",
+          "InvalidClientId": "ID клиента не является UUID"
+        },
+        "error": {
+          "credentialsMissing": "Нет сохранённых (читаемых) учётных данных.",
+          "credentialsRejected": "fiskaly отклонил ключ или секрет API. Ключи действуют только для TEST или только для LIVE.",
+          "unreachable": "fiskaly недоступен. Повторите попытку позже.",
+          "tssMissing": "ID TSS не сохранён.",
+          "tssNotFound": "fiskaly не знает этот ID TSS для этих ключей.",
+          "requestFailed": "fiskaly отклонил запрос."
+        },
+        "checked": "Проверено",
+        "register": "Зарегистрировать",
+        "registerTitle": "Зарегистрировать кассу {name} в fiskaly",
+        "adminPin": "PIN администратора TSS",
+        "adminPinHint": "Используется только для этой регистрации и не сохраняется.",
+        "registered": "Касса {name} зарегистрирована в fiskaly."
       }
     }
   },
@@ -2952,7 +3000,8 @@
       },
       "outageTitle": "Сбой TSE.",
       "outageText": "Продажи продолжаются; чеки получают отметку «Sicherheitseinrichtung ausgefallen», сбой регистрируется.",
-      "outageSince": "с"
+      "outageSince": "с",
+      "testEnvironment": "Тестовая среда – чеки не имеют налоговой силы"
     },
     "cashier": {
       "switch": "Сменить кассира",

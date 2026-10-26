@@ -1,6 +1,9 @@
 import qrcode from 'qrcode-generator';
 import { ReceiptFiscal } from '../../core/api/models';
-import { hasTseBlock, parseQrPayload, qrSvgPath, shortSignature, toForm, toRequest, tseTone, validateFiscalForm } from './fiscal.logic';
+import { FiscalState, FiskalyConnectionTest, RegisterFiscalStatus } from '../../core/api/fiscal-api';
+import {
+  fiskalyTestNotes, hasTseBlock, isTestEnvironment, parseQrPayload, qrSvgPath, shortSignature, toForm, toRequest, tseTone, validateFiscalForm,
+} from './fiscal.logic';
 
 const PAYLOAD =
   'V0;4f3c0b2a;Kassenbeleg-V1;Beleg^19.00_0.00_0.00_0.00_0.00^19.00:Bar;12;24;2026-10-18T09:30:00.000Z;2026-10-18T09:30:01.000Z;' +
@@ -8,6 +11,40 @@ const PAYLOAD =
 
 const fiscal = (status: string): ReceiptFiscal => ({
   status, notice: null, tseSerialNumber: null, transactionNumber: null, signatureCounter: null, signature: null, startedAt: null, finishedAt: null,
+});
+
+const status = (state: FiscalState, isTest: boolean): RegisterFiscalStatus => ({
+  registerId: 'r', mode: 'FiskalyCloudTse', state, isTest, tseSerialNumber: null, clientId: 'c', outageSince: null, outageReason: null,
+  refusalCode: null, lastSignatureAt: null,
+});
+
+const connection = (patch: Partial<FiskalyConnectionTest>): FiskalyConnectionTest => ({
+  status: 'Ok', environment: 'TEST', configuredEnvironment: 'Sandbox', environmentMismatch: false, tssId: 't', tssState: 'INITIALIZED',
+  tssSerialNumber: 's', clients: [], errorCode: null, detail: null, checkedAt: '2026-10-26T10:00:00Z', ...patch,
+});
+
+describe('fiskaly connection and test environment', () => {
+  it('shows the test-environment banner for test TSEs (also during an outage), not for real or unusable ones', () => {
+    expect(isTestEnvironment(status('Test', true))).toBe(true);
+    expect(isTestEnvironment(status('Outage', true))).toBe(true);
+    expect(isTestEnvironment(status('Ok', false))).toBe(false);
+    expect(isTestEnvironment(status('Refused', true))).toBe(false);
+    expect(isTestEnvironment(status('NotConfigured', true))).toBe(false);
+    expect(isTestEnvironment(null)).toBe(false);
+  });
+
+  it('turns a connection test into translated notes', () => {
+    expect(fiskalyTestNotes(connection({}))).toEqual([{ tone: 'success', key: 'admin.fiscal.fiskaly.status.Ok' }]);
+    expect(fiskalyTestNotes(connection({ status: 'Failed', errorCode: 'fiskaly.credentialsRejected', environment: null }))).toEqual([
+      { tone: 'danger', key: 'admin.fiscal.fiskaly.status.Failed' },
+      { tone: 'danger', key: 'admin.fiscal.fiskaly.error.credentialsRejected' },
+    ]);
+    const warning = fiskalyTestNotes(connection({ status: 'Warning', environmentMismatch: true, configuredEnvironment: 'Production', tssState: 'UNINITIALIZED' }));
+    expect(warning.map((n) => n.key)).toEqual([
+      'admin.fiscal.fiskaly.status.Warning', 'admin.fiscal.fiskaly.envMismatch', 'admin.fiscal.fiskaly.tssNotInitialized',
+    ]);
+    expect(warning[1].params).toEqual({ configured: 'Production' });
+  });
 });
 
 describe('fiscal logic', () => {

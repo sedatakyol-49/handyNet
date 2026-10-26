@@ -42,6 +42,8 @@ public sealed class HandyNetFixture : IAsyncLifetime
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
     public CapturingEmailSender Emails { get; } = new();
 
+    public FakeFiskalyServer Fiskaly { get; } = new();
+
     /// <summary>Throw-away root of the local file storage (product images) for this test run.</summary>
     public string FileRoot { get; } = Path.Combine(Path.GetTempPath(), "handynet-test-files", Guid.NewGuid().ToString("N"));
 
@@ -110,7 +112,13 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("Invoicing:AutoIssue", "false");
             web.UseSetting("FileStorage:Provider", "Local");
             web.UseSetting("FileStorage:Local:RootPath", FileRoot);
-            web.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
+            web.UseSetting("Pos:Fiskaly:RetryBaseDelayMs", "0");
+            web.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IEmailSender>(Emails);
+                // Tests never reach the real fiskaly service: the adapter talks to an in-process fake (FiskalySandboxTests is the opt-in exception).
+                services.AddHttpClient<HandyNet.Modules.Pos.Infrastructure.FiskalyApiClient>().ConfigurePrimaryHttpMessageHandler(() => Fiskaly);
+            });
         });
         _ = Factory.Server; // start host now (runs admin bootstrap)
     }
