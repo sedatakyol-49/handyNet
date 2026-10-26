@@ -29,7 +29,7 @@ internal sealed class EmailReceiptValidator : AbstractValidator<EmailReceiptRequ
     public EmailReceiptValidator()
     {
         RuleFor(x => x.Email).MaximumLength(ReceiptEmail.MaxEmailLength);
-        RuleFor(x => x.Language).Must(ReceiptEmail.IsEmailLanguage).WithMessage("The email language is not supported.");
+        RuleFor(x => x.Language).Must(ReceiptEmail.IsEmailLanguage).WithErrorCode("validation.language").WithMessage("The email language is not supported.");
     }
 }
 

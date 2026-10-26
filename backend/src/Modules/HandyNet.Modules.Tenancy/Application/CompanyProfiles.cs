@@ -136,7 +136,7 @@ internal sealed class UpdateCompanyProfileValidator : AbstractValidator<UpdateCo
         RuleFor(x => x.RegisterCourt).MaximumLength(CompanyProfileRules.MaxRegisterCourtLength);
         RuleFor(x => x.RegisterNumber).MaximumLength(CompanyProfileRules.MaxRegisterNumberLength);
         RuleFor(x => x.EmailLanguage!).Must(l => CompanyProfileRules.IsEmailLanguage(l.Trim().ToLowerInvariant())).When(x => x.EmailLanguage is not null)
-            .WithMessage("The email language is one of: de, en, tr, es, ru, ar, fa.");
+            .WithErrorCode("validation.language").WithMessage("The email language is one of: de, en, tr, es, ru, ar, fa.");
         RuleFor(x => x.PaymentTermsDays).InclusiveBetween(0, CompanyProfileRules.MaxPaymentTermsDays).When(x => x.PaymentTermsDays is not null);
     }
 
