@@ -64,6 +64,8 @@ import {
   runBulk,
   setQuantityForAll,
   stepForProblem,
+  imeiProblems,
+  imeiProblemKey,
   syncRows,
   toggleSelection,
   validateRows,
@@ -665,6 +667,16 @@ export class ManualEntryDialogComponent {
     if (problem.code === 'unit.imei_in_stock') {
       const imei = raw instanceof HttpErrorResponse ? (raw.error?.imei as string | undefined) : undefined;
       return imei ? this.i18n.t('inventory.entry.imeiInStock', { imei }) : this.i18n.t('inventory.entry.imeiInStockAny');
+    }
+    if (problem.code === 'imei.blacklisted') {
+      const imei = raw instanceof HttpErrorResponse ? (raw.error?.imei as string | undefined) : undefined;
+      return imei ? this.i18n.t('inventory.entry.imeiBlacklisted', { imei }) : this.i18n.t('inventory.entry.imeiBlacklistedAny');
+    }
+    if (problem.code === 'entry.imei_conflicts') {
+      const list = imeiProblems(raw instanceof HttpErrorResponse ? raw.error : null)
+        .map((p) => `${p.imei} (${this.i18n.t(imeiProblemKey(p.code))})`)
+        .join(', ');
+      return this.i18n.t('inventory.entry.imeiConflicts', { list });
     }
     if (problem.code === 'validation.failed') return this.i18n.t('inventory.entry.validationFailed');
     if (problem.status === 0 || problem.status >= 500) return `${describeProblem(this.i18n, problem)} ${this.i18n.t('inventory.entry.retryHint')}`;

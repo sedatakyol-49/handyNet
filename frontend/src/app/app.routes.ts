@@ -104,6 +104,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/inventory/inventory.page').then((m) => m.InventoryPage),
       },
       {
+        path: 'lager/geraete',
+        canActivate: [accessGuard('Inventory', 'inventory.manage')],
+        loadComponent: () => import('./features/inventory/units.page').then((m) => m.UnitsPage),
+      },
+      {
         path: 'importe',
         canActivate: [accessGuard('ProductImport', 'imports.manage')],
         loadComponent: () => import('./features/imports/imports-history.page').then((m) => m.ImportsHistoryPage),
@@ -192,6 +197,11 @@ export const routes: Routes = [
         path: 'administration/rechnungen',
         canActivate: [platformAdminGuard],
         loadComponent: () => import('./features/admin/admin-invoices.page').then((m) => m.AdminInvoicesPage),
+      },
+      {
+        path: 'administration/imei-sperrliste',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/admin-imei-blacklist.page').then((m) => m.AdminImeiBlacklistPage),
       },
       {
         path: 'administration/kassen-tse',

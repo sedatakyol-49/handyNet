@@ -119,6 +119,8 @@ internal sealed class QuoteService(HandyNetDbContext db, ITenantContext tenant, 
         string? imei = null;
         if (request.Imei is { } raw && Imei.TryNormalize(raw, out var normalized))
         {
+            if (await inventory.IsImeiBlacklistedAsync(normalized, ct))
+                return IntakeService.Blacklisted(normalized);
             if (await inventory.IsImeiInStockAnywhereAsync(normalized, ct))
                 return Error.Conflict("unit.imei_in_stock", "This IMEI is already in stock. Do not buy the device; check its origin.");
             imei = normalized;

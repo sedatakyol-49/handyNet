@@ -76,7 +76,8 @@
     "company": "Empresa",
     "salesDocuments": "Facturas y presupuestos",
     "overdueInvoices": "{count} facturas vencidas",
-    "dailyReport": "Informe diario"
+    "dailyReport": "Informe diario",
+    "units": "Dispositivos (IMEI)"
   },
   "auth": {
     "email": "Correo electrónico",
@@ -637,7 +638,20 @@
       "pos.printer_limit": "Una caja puede tener como máximo 20 perfiles de impresora.",
       "pos.printer_version": "Recargue la página y vuelva a guardar.",
       "pos.printer_name_taken": "Esta caja ya tiene una impresora con este nombre.",
-      "pos.email_language_invalid": "Este idioma de correo no es compatible."
+      "pos.email_language_invalid": "Este idioma de correo no es compatible.",
+      "imei.blacklisted": "Dispositivo bloqueado: este IMEI figura como perdido, robado o bloqueado. No lo compre, no lo registre en stock ni lo venda.",
+      "entry.imei_conflicts": "Algunos dispositivos están bloqueados o ya están en stock. No se guardó nada.",
+      "blacklist.already_active": "Este IMEI ya está bloqueado.",
+      "blacklist.already_inactive": "Este bloqueo ya se ha levantado.",
+      "blacklist.note_required": "Para el motivo «Otro» se requiere una nota.",
+      "blacklist.not_found": "No se encontró la entrada de la lista negra.",
+      "blacklist.search": "Busque por los primeros dígitos del IMEI (solo dígitos, máx. 15).",
+      "unit.imei_prefix": "Busque por los primeros dígitos del IMEI (solo dígitos, máx. 15).",
+      "imei.invalid": "El IMEI debe tener 15 dígitos con un dígito de control válido.",
+      "blacklist.deactivation_reason": "Indique un motivo para levantar el bloqueo (máx. 500 caracteres).",
+      "blacklist.reason": "Motivo desconocido.",
+      "blacklist.source": "Indique el origen del aviso (máx. 200 caracteres).",
+      "blacklist.note": "La nota es demasiado larga (máx. 1000 caracteres)."
     },
     "validation": {
       "required": "Este campo es obligatorio.",
@@ -1161,6 +1175,14 @@
           "imeiOtherRow": "Al menos un IMEI también está introducido en otra fila.",
           "skuOtherRow": "Este número de artículo ya se usa en otra fila."
         }
+      },
+      "imeiBlacklisted": "El IMEI {imei} figura como perdido, robado o bloqueado. No registre el dispositivo. No se guardó nada.",
+      "imeiBlacklistedAny": "Uno de los dispositivos figura como perdido, robado o bloqueado. No se guardó nada.",
+      "imeiConflicts": "Estos dispositivos no se pueden registrar: {list}. Elimínelos y vuelva a guardar; no se guardó nada.",
+      "problem": {
+        "blacklisted": "bloqueado",
+        "inStock": "ya en stock",
+        "other": "rechazado"
       }
     }
   },
@@ -1332,7 +1354,8 @@
       "invoices": "Facturas de comisión",
       "moderation": "Moderación del marketplace",
       "fiscal": "Cajas y TSE",
-      "users": "Usuarios"
+      "users": "Usuarios",
+      "blacklist": "Lista negra de IMEI"
     },
     "disputes": {
       "subtitle": "Revisar y resolver las reclamaciones remitidas a SEHA.",
@@ -2152,7 +2175,9 @@
         "idNumber": "Solo letras y dígitos (2–30 caracteres)."
       },
       "belegDownload": "Justificante de compra (PDF)",
-      "summary": "Resumen"
+      "summary": "Resumen",
+      "imeiBlacklistedHeading": "Dispositivo bloqueado: no lo compre",
+      "imeiBlacklistedText": "Este IMEI figura como perdido, robado o bloqueado. No pague, conserve los datos del vendedor y contacte con la plataforma."
     },
     "intakes": {
       "title": "Recompras",
@@ -3896,5 +3921,75 @@
       "empty": "No hay ningún módulo con movimientos activo para su empresa (caja, compras, marketplace).",
       "note": "Día natural en hora local ({zone}). Importes brutos; IVA por tipo como en el informe Z. No es una evaluación fiscal."
     }
+  },
+  "units": {
+    "title": "Dispositivos (IMEI)",
+    "subtitle": "Dispositivos individuales de su propio stock con su historial. Los dispositivos entran en stock mediante el registro de stock o una recompra.",
+    "backToStock": "Volver al stock",
+    "imeiSearch": "IMEI (empieza por)",
+    "status": "Estado",
+    "allStatuses": "Todos los estados",
+    "productFilter": "Filtrado por artículo.",
+    "showAll": "Mostrar todo",
+    "product": "Artículo",
+    "taxScheme": "Tributación",
+    "purchasePrice": "Precio de compra",
+    "receivedAt": "Entrada",
+    "history": "Historial",
+    "openLabel": "Mostrar historial del IMEI {imei}",
+    "empty": "No se encontraron dispositivos",
+    "emptyText": "Los dispositivos con IMEI entran en stock mediante el registro de stock o una recompra.",
+    "detailTitle": "Dispositivo",
+    "source": "Origen",
+    "noHistory": "Sin movimientos registrados (entrada el {date})."
+  },
+  "unitStatus": {
+    "InStock": "En stock",
+    "Reserved": "Reservado",
+    "Sold": "Vendido",
+    "Scrapped": "Dado de baja"
+  },
+  "unitTaxScheme": {
+    "Standard": "IVA general",
+    "Margin25a": "Régimen de margen (§25a UStG)"
+  },
+  "blacklistReason": {
+    "Lost": "Perdido",
+    "Stolen": "Robado",
+    "Fraud": "Fraude",
+    "Other": "Otro"
+  },
+  "blacklistState": {
+    "active": "Bloqueado",
+    "inactive": "Levantado"
+  },
+  "blacklist": {
+    "subtitle": "Lista negra de IMEI: dispositivos notificados como perdidos, robados o fraudulentos. Los comercios solo ven sí/no al comprar, registrar y vender.",
+    "add": "Bloquear dispositivo",
+    "addSubmit": "Bloquear",
+    "externalNote": "No hay ninguna base de datos externa (p. ej. GSMA) conectada. La lista solo contiene las entradas registradas aquí.",
+    "search": "IMEI (empieza por)",
+    "state": "Estado",
+    "all": "Todos",
+    "active": "Bloqueado (activo)",
+    "inactive": "Levantado",
+    "reason": "Motivo",
+    "source": "Origen del aviso",
+    "sourceHint": "p. ej., comisaría con número de expediente o aviso de un comercio",
+    "note": "Nota",
+    "createdAt": "Bloqueado el",
+    "deactivate": "Levantar bloqueo",
+    "deactivateTitle": "Levantar bloqueo",
+    "deactivateLabel": "Levantar bloqueo del IMEI {imei}",
+    "deactivateText": "Se levantará el bloqueo del IMEI {imei}. La entrada se conserva como historial.",
+    "deactivationReason": "Motivo del levantamiento",
+    "empty": "Sin entradas",
+    "invalidImei": "El IMEI debe tener 15 dígitos con un dígito de control válido.",
+    "sourceRequired": "Indique el origen.",
+    "noteRequired": "Para el motivo «Otro» se requiere una nota.",
+    "checkInput": "Revise los datos introducidos.",
+    "added": "El IMEI {imei} se ha bloqueado.",
+    "reasonRequired": "Indique un motivo.",
+    "deactivated": "Se ha levantado el bloqueo del IMEI {imei}."
   }
 }

@@ -29,7 +29,8 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/finanzen/rechnungen', labelKey: 'nav.invoices', module: 'B2BSales', permission: 'orders.fulfil', section: 'sales' },
   { path: '/app/angebote', labelKey: 'nav.offers', module: 'B2BSales', section: 'sales' },
   { path: '/app/verkauf/rechnungen', labelKey: 'nav.salesDocuments', module: 'Pos', permission: 'pos.sell', badge: 'overdueInvoices', alsoActive: ['/app/verkauf'], section: 'sales' },
-  { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', section: 'sales' },
+  { path: '/app/lager', labelKey: 'nav.inventory', module: 'Inventory', exact: true, section: 'sales' },
+  { path: '/app/lager/geraete', labelKey: 'nav.units', module: 'Inventory', permission: 'inventory.manage', section: 'sales' },
   { path: '/app/importe', labelKey: 'nav.imports', module: 'ProductImport', permission: 'imports.manage', section: 'sales' },
   { path: '/app/berichte/tagesbericht', labelKey: 'nav.dailyReport', permission: 'reports.read', always: true, section: 'main' },
   { path: '/app/team', labelKey: 'nav.team', permission: 'organization.manage', always: true, section: 'settings' },
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/app/administration/ankauf', labelKey: 'admin.tabs.ankauf', adminOnly: true, section: 'platform' },
   { path: '/app/administration/rechnungen', labelKey: 'admin.tabs.invoices', adminOnly: true, section: 'platform' },
   { path: '/app/administration/kassen-tse', labelKey: 'admin.tabs.fiscal', adminOnly: true, section: 'platform' },
+  { path: '/app/administration/imei-sperrliste', labelKey: 'admin.tabs.blacklist', adminOnly: true, section: 'platform' },
 ];
 
 export const NAV_SECTIONS: NavItem['section'][] = ['main', 'purchasing', 'sales', 'pos', 'platform', 'settings'];

@@ -76,7 +76,8 @@
     "company": "Şirket",
     "salesDocuments": "Faturalar ve teklifler",
     "overdueInvoices": "{count} vadesi geçmiş fatura",
-    "dailyReport": "Günlük rapor"
+    "dailyReport": "Günlük rapor",
+    "units": "Cihazlar (IMEI)"
   },
   "auth": {
     "email": "E-posta adresi",
@@ -637,7 +638,20 @@
       "pos.printer_limit": "Bir kasada en fazla 20 yazıcı profili olabilir.",
       "pos.printer_version": "Lütfen sayfayı yeniden yükleyip tekrar kaydedin.",
       "pos.printer_name_taken": "Bu kasada bu ada sahip bir yazıcı zaten var.",
-      "pos.email_language_invalid": "Bu e-posta dili desteklenmiyor."
+      "pos.email_language_invalid": "Bu e-posta dili desteklenmiyor.",
+      "imei.blacklisted": "Cihaz engelli: Bu IMEI kayıp, çalıntı veya engelli olarak bildirildi. Satın almayın, stoğa almayın, satmayın.",
+      "entry.imei_conflicts": "Bazı cihazlar engelli veya zaten stokta. Hiçbir şey kaydedilmedi.",
+      "blacklist.already_active": "Bu IMEI zaten engelli.",
+      "blacklist.already_inactive": "Bu engel zaten kaldırıldı.",
+      "blacklist.note_required": "“Diğer” nedeni için not gereklidir.",
+      "blacklist.not_found": "Kara liste kaydı bulunamadı.",
+      "blacklist.search": "IMEI'nin ilk hanelerine göre arayın (yalnızca rakam, en fazla 15).",
+      "unit.imei_prefix": "IMEI'nin ilk hanelerine göre arayın (yalnızca rakam, en fazla 15).",
+      "imei.invalid": "IMEI geçerli kontrol basamağına sahip 15 haneli olmalıdır.",
+      "blacklist.deactivation_reason": "Lütfen engelin kaldırılması için bir neden girin (en fazla 500 karakter).",
+      "blacklist.reason": "Bilinmeyen neden.",
+      "blacklist.source": "Lütfen bildirimin kaynağını girin (en fazla 200 karakter).",
+      "blacklist.note": "Not çok uzun (en fazla 1000 karakter)."
     },
     "validation": {
       "required": "Bu alan zorunludur.",
@@ -1161,6 +1175,14 @@
           "imeiOtherRow": "En az bir IMEI başka bir satırda da girildi.",
           "skuOtherRow": "Bu ürün numarası başka bir satırda zaten kullanılıyor."
         }
+      },
+      "imeiBlacklisted": "{imei} IMEI numarası kayıp, çalıntı veya engelli olarak bildirildi. Cihazı stoğa almayın. Hiçbir şey kaydedilmedi.",
+      "imeiBlacklistedAny": "Cihazlardan biri kayıp, çalıntı veya engelli olarak bildirildi. Hiçbir şey kaydedilmedi.",
+      "imeiConflicts": "Bu cihazlar stoğa alınamaz: {list}. Bunları kaldırıp tekrar kaydedin – hiçbir şey kaydedilmedi.",
+      "problem": {
+        "blacklisted": "engelli",
+        "inStock": "zaten stokta",
+        "other": "reddedildi"
       }
     }
   },
@@ -1332,7 +1354,8 @@
       "invoices": "Komisyon faturaları",
       "moderation": "Pazar yeri moderasyonu",
       "fiscal": "Kasalar ve TSE",
-      "users": "Kullanıcılar"
+      "users": "Kullanıcılar",
+      "blacklist": "IMEI kara listesi"
     },
     "disputes": {
       "subtitle": "SEHA'ya devredilen şikâyetleri inceleyin ve karara bağlayın.",
@@ -2152,7 +2175,9 @@
         "idNumber": "Yalnızca harf ve rakam (2–30 karakter)."
       },
       "belegDownload": "Alım belgesi (PDF)",
-      "summary": "Özet"
+      "summary": "Özet",
+      "imeiBlacklistedHeading": "Cihaz engelli – satın almayın",
+      "imeiBlacklistedText": "Bu IMEI kayıp, çalıntı veya engelli olarak bildirildi. Para ödemeyin, satıcının bilgilerini saklayın ve platformla iletişime geçin."
     },
     "intakes": {
       "title": "Geri alımlar",
@@ -3896,5 +3921,75 @@
       "empty": "Şirketiniz için ciro içeren bir modül etkin değil (kasa, alım, pazaryeri).",
       "note": "Yerel saate göre takvim günü ({zone}). Brüt tutarlar; KDV, Z raporundaki gibi vergi türüne göre. Vergi değerlendirmesi değildir."
     }
+  },
+  "units": {
+    "title": "Cihazlar (IMEI)",
+    "subtitle": "Kendi stoğunuzdaki tekil cihazlar ve geçmişleri. Cihazlar stok girişiyle veya geri alımla stoğa girer.",
+    "backToStock": "Stoğa dön",
+    "imeiSearch": "IMEI (başlangıç)",
+    "status": "Durum",
+    "allStatuses": "Tüm durumlar",
+    "productFilter": "Ürüne göre filtrelendi.",
+    "showAll": "Tümünü göster",
+    "product": "Ürün",
+    "taxScheme": "Vergilendirme",
+    "purchasePrice": "Alış fiyatı",
+    "receivedAt": "Giriş",
+    "history": "Geçmiş",
+    "openLabel": "IMEI {imei} geçmişini göster",
+    "empty": "Cihaz bulunamadı",
+    "emptyText": "IMEI'li cihazlar stok girişiyle veya geri alımla stoğa girer.",
+    "detailTitle": "Cihaz",
+    "source": "Kaynak",
+    "noHistory": "Kayıtlı hareket yok ({date} tarihinde girdi)."
+  },
+  "unitStatus": {
+    "InStock": "Stokta",
+    "Reserved": "Rezerve",
+    "Sold": "Satıldı",
+    "Scrapped": "Kayıttan düşüldü"
+  },
+  "unitTaxScheme": {
+    "Standard": "Normal KDV",
+    "Margin25a": "Marj vergilendirmesi (§25a UStG)"
+  },
+  "blacklistReason": {
+    "Lost": "Kayıp",
+    "Stolen": "Çalıntı",
+    "Fraud": "Dolandırıcılık",
+    "Other": "Diğer"
+  },
+  "blacklistState": {
+    "active": "Engelli",
+    "inactive": "Kaldırıldı"
+  },
+  "blacklist": {
+    "subtitle": "IMEI kara listesi: kayıp, çalıntı veya dolandırıcılıkla ilgili bildirilen cihazlar. Satıcılar yalnızca satın alma, stoğa alma ve satışta evet/hayır öğrenir.",
+    "add": "Cihazı engelle",
+    "addSubmit": "Engelle",
+    "externalNote": "Harici bir veritabanı (ör. GSMA) bağlı değil. Liste yalnızca burada kaydedilen girişleri içerir.",
+    "search": "IMEI (başlangıç)",
+    "state": "Durum",
+    "all": "Tümü",
+    "active": "Engelli (etkin)",
+    "inactive": "Kaldırıldı",
+    "reason": "Neden",
+    "source": "Bildirimin kaynağı",
+    "sourceHint": "ör. dosya numarasıyla polis birimi veya satıcı bildirimi",
+    "note": "Not",
+    "createdAt": "Engellenme tarihi",
+    "deactivate": "Engeli kaldır",
+    "deactivateTitle": "Engeli kaldır",
+    "deactivateLabel": "IMEI {imei} engelini kaldır",
+    "deactivateText": "IMEI {imei} engeli kaldırılacak. Kayıt geçmiş olarak kalır.",
+    "deactivationReason": "Kaldırma nedeni",
+    "empty": "Kayıt yok",
+    "invalidImei": "IMEI geçerli kontrol basamağına sahip 15 haneli olmalıdır.",
+    "sourceRequired": "Lütfen kaynağı girin.",
+    "noteRequired": "“Diğer” nedeni için not gereklidir.",
+    "checkInput": "Lütfen girişleri kontrol edin.",
+    "added": "IMEI {imei} engellendi.",
+    "reasonRequired": "Lütfen bir neden girin.",
+    "deactivated": "IMEI {imei} engeli kaldırıldı."
   }
 }

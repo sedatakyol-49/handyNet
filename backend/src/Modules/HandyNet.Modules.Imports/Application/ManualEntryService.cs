@@ -254,6 +254,10 @@ internal sealed class ManualEntryService(
         var entryId = Guid.CreateVersion7();
         var reference = $"manual:{entryId}";
         var unitIds = new List<Guid>();
+        // All or nothing, and every offending IMEI at once (blacklisted or already in stock anywhere), so the dealer can
+        // set those devices aside instead of fixing one IMEI per attempt. StageReceiveUnitAsync re-checks each one.
+        if (imeis.Count > 0 && await inventory.FindImeiConflictsAsync(imeis, ct) is { Any: true } conflicts)
+            return ManualEntryRules.ImeiConflicts(imeis, conflicts.Blacklisted, conflicts.InStock);
         foreach (var imei in imeis)
         {
             var unit = await inventory.StageReceiveUnitAsync(warehouseId, productId, imei, unitCost ?? 0,
@@ -303,6 +307,12 @@ internal sealed class ManualEntryService(
             logger.LogInformation("Manual entry {EntryId}: product {ProductId} ({Action}), +{Quantity} in {Warehouse}, offer {OfferAction}",
                 entryId, productId, productAction, quantityReceived, warehouseId, offerAction);
             return new ManualEntryResult(dto, Replayed: false);
+        }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            await tx.RollbackAsync(CancellationToken.None);
+            db.ChangeTracker.Clear();
+            return Error.Conflict("imei.blacklisted", "One of the devices was reported as lost, stolen or blocked while saving. Nothing was saved.");
         }
         catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || ex.IsUniqueViolation())
         {

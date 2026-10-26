@@ -603,6 +603,65 @@ export interface StockMovement {
   unitCostMinor?: number | null;
 }
 
+// ---- serialized units (Geräte nach IMEI) and the platform IMEI blacklist (ADR-0019)
+
+export type UnitTaxScheme = 'Standard' | 'Margin25a';
+export type UnitStatus = 'InStock' | 'Reserved' | 'Sold' | 'Scrapped';
+export type BlacklistReason = 'Lost' | 'Stolen' | 'Fraud' | 'Other';
+
+/** One IMEI that blocked a Lager entry (problem details `imeis`): imei.blacklisted or unit.imei_in_stock. */
+export interface ImeiProblem {
+  imei: string;
+  code: string;
+}
+
+export interface StockUnitRow {
+  id: string;
+  imei: string;
+  productId: string;
+  brand: string;
+  productName: string;
+  ean: string | null;
+  warehouseId: string;
+  warehouseCode: string;
+  status: UnitStatus;
+  taxScheme: UnitTaxScheme;
+  /** Purchase price in integer cents. */
+  purchasePriceMinor: number;
+  source: string;
+  receivedAt: string;
+  closedAt: string | null;
+}
+
+export interface UnitHistoryEntry {
+  movementId: number;
+  type: string;
+  quantity: number;
+  statusAfter: UnitStatus;
+  reference: string | null;
+  userId: string | null;
+  occurredAt: string;
+}
+
+export interface UnitDetail {
+  unit: StockUnitRow;
+  history: UnitHistoryEntry[];
+}
+
+export interface BlacklistEntry {
+  id: string;
+  imei: string;
+  reason: BlacklistReason;
+  note: string | null;
+  source: string;
+  isActive: boolean;
+  createdByUserId: string;
+  createdAt: string;
+  deactivatedAt: string | null;
+  deactivatedByUserId: string | null;
+  deactivationReason: string | null;
+}
+
 export interface Listing {
   offerId: string;
   sellerOrganizationId: string;

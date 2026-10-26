@@ -69,7 +69,7 @@ flowchart TD
 | Identity | `identity` | users, password hashing, lockout, JWT access tokens (disabled accounts / revoked admin role rejected per request), rotating refresh tokens (sessions, reuse detection), password reset and email verification tokens (ADR-0010); platform administration of user accounts (`/api/admin/users`, ADR-0013) | `IUserAccounts`, events `EmailVerificationRequested` / `PasswordResetRequested`; port `IUserMembershipSource` (implemented by Tenancy) |
 | Tenancy | `tenancy` | organizations (master data incl. tax number and contact data), verification, status history, memberships/roles (incl. per-cashier POS rights on staff memberships; at least one owner, DB-enforced), module activation, tenant resolution; platform administration of companies (`/api/admin/organizations`, ADR-0013); the tenant's own company profile (`/api/organization/profile`: master/contact/tax data, receipt texts, bank and register data, payment terms; legal-identity changes recorded in the status history) and company logo (`/api/organization/logo`, public `/api/logos/{id}/screen|print`, ADR-0014) | `IOrganizationDirectory`, `IOrganizationModuleDirectory` (admin: organizations with a module), `IOrganizationBranding` (receipt branding, PDF letterhead); port `IOrganizationFactSource` (admin counts, implemented by POS and Marketplace) |
 | Catalog | `catalog` | canonical products, EAN/MPN identity, matching rules, lookup, canonical product images (upload by creating org or platform admin, SkiaSharp re-encoding, public immutable serving — ADR-0011) | `IProductCatalog`, `ProductMatcher` |
-| Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule), sell/return staging for POS | `IInventory` |
+| Inventory | `inventory` | warehouses, stock levels, movements (receipts with EK), reservations, serialized units (IMEI, Luhn rule) with list and history (`stock_movements.unit_id`), sell/return staging for POS, platform IMEI blacklist (admin-only table, yes/no functions for tenants, single entry gate + DB trigger, `IExternalImeiCheck` port disabled by default; ADR-0019) | `IInventory` |
 | Marketplace | `marketplace` | supplier offers, B2B listing view (with model data + images), filters, facets, offer detail with other sellers; read-only for products (no product creation); platform moderation (offer and seller blocks, separate from the seller's status, audited; `/api/admin/marketplace`) | `IOfferReservations` (incl. `GetBlockedAsync` → `offer.blocked`), `IOfferSync`, `IOwnOfferPrices` |
 | Imports | `imports` | CSV/XLSX parsing, mapping, preview (dry run), commit; manual single-item Lager entry (`/api/inventory/items`, same apply path as a one-row import, idempotent) | – (top-level) |
 | Ordering | `ordering` | B2B orders, idempotency, lifecycle incl. delivery + inspection window, completion job | `IOrderFulfilment` |
@@ -109,7 +109,9 @@ flowchart TD
 2. `TenantResolutionMiddleware`: if `X-Organization-Id` is present, verify membership in the DB, load status,
    role and modules into `TenantContext`.
 3. Endpoint filters: `RequireTenant` → `RequireModule` (verified + enabled) → `RequirePermission`.
-4. EF `TenantSessionInterceptor` sets `app.current_org` on every connection; RLS does the rest.
+4. EF `TenantSessionInterceptor` sets `app.current_org` on every connection; RLS does the rest. It also sets
+   `app.platform_admin` (`on` only for an authenticated platform admin); platform-only tables such as
+   `inventory.imei_blacklist` admit rows only in such sessions (ADR-0019).
 5. `SaveChanges` interceptors write the audit log and the outbox in the same transaction.
 
 ## Errors

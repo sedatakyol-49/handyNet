@@ -34,6 +34,8 @@ import {
   parseImeiList,
   parseModelList,
   stepForProblem,
+  imeiProblems,
+  imeiProblemKey,
   validateIdentify,
   validateOffer,
   validateStock,
@@ -463,11 +465,31 @@ describe('bulk save run', () => {
 describe('API error → step', () => {
   it('maps codes and field keys to the step to fix', () => {
     expect(stepForProblem('unit.imei_in_stock', [])).toBe('stock');
+    expect(stepForProblem('imei.blacklisted', [])).toBe('stock');
+    expect(stepForProblem('entry.imei_conflicts', [])).toBe('stock');
     expect(stepForProblem('entry.sku_conflict', [])).toBe('offer');
     expect(stepForProblem('entry.identifier_conflict', [])).toBe('identify');
     expect(stepForProblem('validation.failed', ['newproduct.brand'])).toBe('identify');
     expect(stepForProblem('validation.failed', ['imeis.0'])).toBe('stock');
     expect(stepForProblem('validation.failed', ['offer.price'])).toBe('offer');
     expect(stepForProblem(null, [])).toBe('summary');
+  });
+});
+
+describe('IMEI problems of a refused entry', () => {
+  it('reads the per-IMEI problems in order and ignores unknown shapes', () => {
+    const body = { code: 'entry.imei_conflicts', imeis: [{ imei: '490154203237518', code: 'imei.blacklisted' }, { imei: '356938035643809', code: 'unit.imei_in_stock' }, { bad: 1 }] };
+    expect(imeiProblems(body)).toEqual([
+      { imei: '490154203237518', code: 'imei.blacklisted' },
+      { imei: '356938035643809', code: 'unit.imei_in_stock' },
+    ]);
+    expect(imeiProblems({ imeis: 'x' })).toEqual([]);
+    expect(imeiProblems(null)).toEqual([]);
+  });
+
+  it('names the reason per IMEI', () => {
+    expect(imeiProblemKey('imei.blacklisted')).toBe('inventory.entry.problem.blacklisted');
+    expect(imeiProblemKey('unit.imei_in_stock')).toBe('inventory.entry.problem.inStock');
+    expect(imeiProblemKey('x')).toBe('inventory.entry.problem.other');
   });
 });

@@ -36,6 +36,8 @@ const patterns = [
   /'(errors\.codes\.invoicing\.\w+)'/g,
   // POS keys are referenced from TS logic (error texts, validation, shortcut labels) as well.
   /'((?:pos|posPaymentMethod|receiptKind|taxTreatment|posSessionStatus|posRegisterStatus|cashMovementKind)(?:\.[A-Za-z0-9]+)+)'/g, // not API codes like pos.no_open_session
+  // Device (IMEI) and IMEI blacklist keys are referenced from TS logic (validators, toasts) as well.
+  /'((?:units|blacklist|unitStatus|unitTaxScheme|blacklistReason|blacklistState)(?:\.[A-Za-z0-9]+)+)'/g,
 ];
 for (const f of files) {
   const src = readFileSync(f, 'utf8');

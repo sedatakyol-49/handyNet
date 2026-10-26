@@ -76,7 +76,8 @@
     "company": "Unternehmen",
     "salesDocuments": "Rechnungen & Angebote",
     "overdueInvoices": "{count} überfällige Rechnungen",
-    "dailyReport": "Tagesbericht"
+    "dailyReport": "Tagesbericht",
+    "units": "Geräte (IMEI)"
   },
   "auth": {
     "email": "E-Mail-Adresse",
@@ -637,7 +638,20 @@
       "pos.printer_limit": "Eine Kasse kann höchstens 20 Druckerprofile haben.",
       "pos.printer_version": "Bitte die Seite neu laden und erneut speichern.",
       "pos.printer_name_taken": "Diese Kasse hat schon einen Drucker mit diesem Namen.",
-      "pos.email_language_invalid": "Diese E-Mail-Sprache wird nicht unterstützt."
+      "pos.email_language_invalid": "Diese E-Mail-Sprache wird nicht unterstützt.",
+      "imei.blacklisted": "Gerät gesperrt: Diese IMEI ist als verloren, gestohlen oder gesperrt gemeldet. Nicht ankaufen, nicht einbuchen, nicht verkaufen.",
+      "entry.imei_conflicts": "Einige Geräte sind gesperrt oder bereits im Bestand. Es wurde nichts gespeichert.",
+      "blacklist.already_active": "Diese IMEI ist bereits gesperrt.",
+      "blacklist.already_inactive": "Diese Sperre wurde bereits aufgehoben.",
+      "blacklist.note_required": "Bei „Sonstiges“ ist eine Notiz erforderlich.",
+      "blacklist.not_found": "Sperreintrag nicht gefunden.",
+      "blacklist.search": "Suche nach den ersten Ziffern der IMEI (nur Ziffern, max. 15).",
+      "unit.imei_prefix": "Suche nach den ersten Ziffern der IMEI (nur Ziffern, max. 15).",
+      "imei.invalid": "Die IMEI muss 15 Ziffern mit gültiger Prüfziffer haben.",
+      "blacklist.deactivation_reason": "Bitte einen Grund für die Aufhebung angeben (max. 500 Zeichen).",
+      "blacklist.reason": "Unbekannter Grund.",
+      "blacklist.source": "Bitte die Quelle der Meldung angeben (max. 200 Zeichen).",
+      "blacklist.note": "Die Notiz ist zu lang (max. 1000 Zeichen)."
     },
     "validation": {
       "required": "Dieses Feld ist erforderlich.",
@@ -1161,6 +1175,14 @@
           "imeiOtherRow": "Mindestens eine IMEI ist auch in einer anderen Zeile erfasst.",
           "skuOtherRow": "Diese Artikelnummer wird bereits in einer anderen Zeile verwendet."
         }
+      },
+      "imeiBlacklisted": "Die IMEI {imei} ist als verloren, gestohlen oder gesperrt gemeldet. Gerät nicht einbuchen. Es wurde nichts gespeichert.",
+      "imeiBlacklistedAny": "Eines der Geräte ist als verloren, gestohlen oder gesperrt gemeldet. Es wurde nichts gespeichert.",
+      "imeiConflicts": "Diese Geräte können nicht eingebucht werden: {list}. Entfernen Sie sie und speichern Sie erneut – es wurde nichts gespeichert.",
+      "problem": {
+        "blacklisted": "gesperrt",
+        "inStock": "bereits im Bestand",
+        "other": "abgelehnt"
       }
     }
   },
@@ -1332,7 +1354,8 @@
       "invoices": "Provisionsrechnungen",
       "moderation": "Marktplatz-Moderation",
       "fiscal": "Kassen & TSE",
-      "users": "Benutzer"
+      "users": "Benutzer",
+      "blacklist": "IMEI-Sperrliste"
     },
     "disputes": {
       "subtitle": "An SEHA übergebene Reklamationen prüfen und entscheiden.",
@@ -2152,7 +2175,9 @@
         "idNumber": "Nur Buchstaben und Ziffern (2–30 Zeichen)."
       },
       "belegDownload": "Ankaufbeleg (PDF)",
-      "summary": "Zusammenfassung"
+      "summary": "Zusammenfassung",
+      "imeiBlacklistedHeading": "Gerät gesperrt – nicht ankaufen",
+      "imeiBlacklistedText": "Diese IMEI ist als verloren, gestohlen oder gesperrt gemeldet. Bitte kein Geld auszahlen, die Angaben des Verkäufers festhalten und die Plattform kontaktieren."
     },
     "intakes": {
       "title": "Ankäufe",
@@ -3896,5 +3921,75 @@
       "empty": "Für Ihr Unternehmen ist kein Modul mit Umsätzen aktiv (Kasse, Ankauf, Marktplatz).",
       "note": "Kalendertag nach Ortszeit ({zone}). Brutto-Beträge; Umsatzsteuer nach Steuerart wie im Z-Bericht. Keine steuerliche Auswertung."
     }
+  },
+  "units": {
+    "title": "Geräte (IMEI)",
+    "subtitle": "Einzelgeräte im eigenen Bestand mit Verlauf. Geräte kommen über die Lager-Erfassung oder den Ankauf in den Bestand.",
+    "backToStock": "Zum Lager",
+    "imeiSearch": "IMEI (Anfang)",
+    "status": "Gerätestatus",
+    "allStatuses": "Alle Status",
+    "productFilter": "Gefiltert nach Artikel.",
+    "showAll": "Alle anzeigen",
+    "product": "Artikel",
+    "taxScheme": "Besteuerung",
+    "purchasePrice": "Einkaufspreis",
+    "receivedAt": "Eingang",
+    "history": "Verlauf",
+    "openLabel": "Verlauf von IMEI {imei} anzeigen",
+    "empty": "Keine Geräte gefunden",
+    "emptyText": "Geräte mit IMEI kommen über die Lager-Erfassung oder den Ankauf in den Bestand.",
+    "detailTitle": "Gerät",
+    "source": "Herkunft",
+    "noHistory": "Keine Bewegungen erfasst (eingegangen am {date})."
+  },
+  "unitStatus": {
+    "InStock": "Auf Lager",
+    "Reserved": "Reserviert",
+    "Sold": "Verkauft",
+    "Scrapped": "Ausgebucht"
+  },
+  "unitTaxScheme": {
+    "Standard": "Regelbesteuerung",
+    "Margin25a": "Differenzbesteuerung (§25a UStG)"
+  },
+  "blacklistReason": {
+    "Lost": "Verloren",
+    "Stolen": "Gestohlen",
+    "Fraud": "Betrug",
+    "Other": "Sonstiges"
+  },
+  "blacklistState": {
+    "active": "Gesperrt",
+    "inactive": "Aufgehoben"
+  },
+  "blacklist": {
+    "subtitle": "IMEI-Sperrliste: als verloren, gestohlen oder betrügerisch gemeldete Geräte. Händler erfahren nur ja/nein beim Ankauf, Einbuchen und Verkauf.",
+    "add": "Gerät sperren",
+    "addSubmit": "Sperren",
+    "externalNote": "Es ist keine externe Datenbank (z. B. GSMA) angebunden. Die Liste enthält nur Einträge, die hier erfasst wurden.",
+    "search": "IMEI (Anfang)",
+    "state": "Sperrstatus",
+    "all": "Alle",
+    "active": "Gesperrt (aktiv)",
+    "inactive": "Aufgehoben",
+    "reason": "Grund",
+    "source": "Quelle der Meldung",
+    "sourceHint": "z. B. Polizeidienststelle mit Aktenzeichen oder Händlermeldung",
+    "note": "Notiz",
+    "createdAt": "Gesperrt am",
+    "deactivate": "Sperre aufheben",
+    "deactivateTitle": "Sperre aufheben",
+    "deactivateLabel": "Sperre von IMEI {imei} aufheben",
+    "deactivateText": "Die Sperre von IMEI {imei} wird aufgehoben. Der Eintrag bleibt als Verlauf erhalten.",
+    "deactivationReason": "Grund der Aufhebung",
+    "empty": "Keine Einträge",
+    "invalidImei": "Die IMEI muss 15 Ziffern mit gültiger Prüfziffer haben.",
+    "sourceRequired": "Bitte die Quelle angeben.",
+    "noteRequired": "Bei „Sonstiges“ ist eine Notiz erforderlich.",
+    "checkInput": "Bitte Eingaben prüfen.",
+    "added": "IMEI {imei} wurde gesperrt.",
+    "reasonRequired": "Bitte einen Grund angeben.",
+    "deactivated": "Die Sperre von IMEI {imei} wurde aufgehoben."
   }
 }

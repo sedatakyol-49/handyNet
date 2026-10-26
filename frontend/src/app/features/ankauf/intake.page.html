@@ -89,6 +89,9 @@
         @if (imeiInStock()) {
           <hn-banner class="mb-3" tone="danger" [heading]="'ankauf.intake.imeiInStockHeading' | t" [text]="'ankauf.intake.imeiInStockText' | t"
             data-testid="intake-imei-in-stock" />
+        } @else if (imeiBlacklisted()) {
+          <hn-banner class="mb-3" tone="danger" [heading]="'ankauf.intake.imeiBlacklistedHeading' | t" [text]="'ankauf.intake.imeiBlacklistedText' | t"
+            data-testid="intake-imei-blacklisted" />
         } @else {
           <hn-banner class="mb-3" [text]="errorFor('receive')" data-testid="intake-receive-error" />
         }
@@ -591,6 +594,10 @@
         <hn-banner [text]="errorFor('complete')" />
         @if (imeiInStock()) {
           <hn-banner tone="danger" [heading]="'ankauf.intake.imeiInStockHeading' | t" [text]="'ankauf.intake.imeiInStockText' | t" />
+        }
+        @if (imeiBlacklisted()) {
+          <hn-banner tone="danger" [heading]="'ankauf.intake.imeiBlacklistedHeading' | t" [text]="'ankauf.intake.imeiBlacklistedText' | t"
+            data-testid="intake-complete-imei-blacklisted" />
         }
         <div class="flex justify-end gap-2">
           <button hnButton type="button" [disabled]="!!busy()" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>

@@ -53,9 +53,35 @@ public sealed class InventoryModel : IModuleModel
             b.Property(x => x.Type).HasConversion<string>().HasMaxLength(30);
             b.Property(x => x.Reference).HasMaxLength(200);
             b.HasIndex(x => new { x.OrganizationId, x.ProductId, x.OccurredAt });
+            b.HasIndex(x => x.UnitId).HasFilter("unit_id IS NOT NULL");
             b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
                 .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<StockUnit>().WithMany().HasForeignKey(x => x.UnitId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Platform-wide, not tenant-owned (ADR-0019). RLS admits only platform-admin sessions (app.platform_admin); tenants
+        // ask inventory.imei_blacklisted(imei) for yes/no. Rows are never deleted (no DELETE grant, trigger guards updates).
+        modelBuilder.Entity<ImeiBlacklistEntry>(b =>
+        {
+            b.ToTable("imei_blacklist", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_imei_blacklist_imei", "imei ~ '^[0-9]{15}$'");
+                t.HasCheckConstraint("ck_imei_blacklist_deactivation",
+                    "(deactivated_at IS NULL AND deactivated_by_user_id IS NULL AND deactivation_reason IS NULL) OR " +
+                    "(deactivated_at IS NOT NULL AND deactivated_by_user_id IS NOT NULL AND deactivation_reason IS NOT NULL AND btrim(deactivation_reason) <> '')");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Imei).HasMaxLength(15).IsFixedLength().IsRequired();
+            b.Property(x => x.Reason).HasConversion<string>().HasMaxLength(20);
+            b.Property(x => x.Note).HasMaxLength(ImeiBlacklistEntry.MaxNoteLength);
+            b.Property(x => x.Source).HasMaxLength(ImeiBlacklistEntry.MaxSourceLength).IsRequired();
+            b.Property(x => x.DeactivationReason).HasMaxLength(ImeiBlacklistEntry.MaxDeactivationReasonLength);
+            b.Property(x => x.Version).IsRowVersion();
+            b.Ignore(x => x.IsActive);
+            // At most one active block per IMEI; deactivated entries remain as history.
+            b.HasIndex(x => x.Imei).IsUnique().HasFilter("deactivated_at IS NULL").HasDatabaseName("ux_imei_blacklist_active");
+            b.HasIndex(x => new { x.Imei, x.CreatedAt }).HasDatabaseName("ix_imei_blacklist_imei_created_at");
         });
 
         modelBuilder.Entity<StockUnit>(b =>

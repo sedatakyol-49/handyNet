@@ -14,7 +14,7 @@ interface AdminTab {
 
 /**
  * Sub-navigation of the platform administration (Unternehmen / Benutzer / Reklamationen / Marktplatz-Moderation /
- * Ankaufspreise / Provisionsrechnungen / Kassen & TSE). Detail pages keep their list tab highlighted.
+ * Ankaufspreise / Provisionsrechnungen / Kassen & TSE / IMEI-Sperrliste). Detail pages keep their list tab highlighted.
  */
 @Component({
   selector: 'hn-admin-tabs',
@@ -93,6 +93,12 @@ export class AdminTabsComponent {
     {
       path: '/app/administration/kassen-tse',
       labelKey: 'admin.tabs.fiscal',
+      prefixes: [],
+      exact: false,
+    },
+    {
+      path: '/app/administration/imei-sperrliste',
+      labelKey: 'admin.tabs.blacklist',
       prefixes: [],
       exact: false,
     },

@@ -144,6 +144,7 @@ const ENUMS = {
   taxTreatment: 'TaxTreatment', posSessionStatus: 'CashSessionStatus', cashMovementKind: 'CashMovementKind',
   invoiceKind: 'InvoiceKind', 'inventory.entry.productAction': 'EntryProductAction', 'inventory.entry.offerAction': 'EntryOfferAction',
   'pos.reasons': 'CashMovementReason',
+  unitStatus: 'UnitStatus', unitTaxScheme: 'Inventory:TaxScheme', blacklistReason: 'BlacklistReason',
 };
 // Enum values the UI translates through a composed key (cash reason "Other" → pos.reasons.OtherDeposit/OtherWithdrawal).
 const ENUM_IGNORE = new Set(['pos.reasons.Other']);

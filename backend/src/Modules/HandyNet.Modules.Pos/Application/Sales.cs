@@ -310,6 +310,10 @@ internal sealed partial class SaleService(
             logger.LogInformation("Concurrent duplicate POS sale for key {Key}", idempotencyKey);
             return await ReplayAsync(idempotencyKey, requestHash, ct) ?? Error.Conflict("pos.duplicate", "The sale could not be recorded. Try again.");
         }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            return Error.Conflict("imei.blacklisted", "A device on this sale was reported as lost, stolen or blocked. It must not be sold.");
+        }
         catch (DbUpdateConcurrencyException)
         {
             return Error.Conflict("pos.stock_changed", "Stock changed while selling (e.g. the same device or the last units were sold at another register). Scan again.");
@@ -487,6 +491,10 @@ internal sealed partial class SaleService(
 
         if (trimmed.Length == 15 && trimmed.All(char.IsAsciiDigit) && await inventory.FindOwnUnitByImeiAsync(trimmed, ct) is { } unit)
         {
+            // Tell the cashier at scan time, not only when the sale is refused.
+            if (await inventory.IsImeiBlacklistedAsync(unit.Imei, ct))
+                return Error.Conflict("imei.blacklisted", $"The device with IMEI {unit.Imei} is reported as lost, stolen or blocked. It must not be sold.")
+                    .WithDetails(new Dictionary<string, object?> { ["imei"] = unit.Imei });
             var device = (await catalog.GetAsync([unit.ProductId], ct))[unit.ProductId];
             var treatment = unit.TaxScheme == TaxScheme.Margin25a ? TaxTreatment.Margin25a : TaxTreatment.Standard19;
             var unitPrice = (await prices.ResolveAsync(unit.WarehouseId, [unit.ProductId], ct))[unit.ProductId].Price;
@@ -576,6 +584,10 @@ internal sealed partial class SaleService(
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_stock_units_imei_in_stock"))
         {
             return Error.Conflict("unit.imei_in_stock", "The returned device is already in stock again (here or at another organization). Check its origin.");
+        }
+        catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
+        {
+            return Error.Conflict("imei.blacklisted", "The returned device was reported as lost, stolen or blocked. It cannot go back into stock.");
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_receipts_one_storno"))
         {

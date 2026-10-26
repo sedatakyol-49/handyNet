@@ -76,7 +76,16 @@ const INTAKE_TONES: Record<string, Tone> = {
   Rejected: 'neutral',
 };
 
+/** Serialized units (IMEI) in the own stock. */
+const UNIT_TONES: Record<string, Tone> = {
+  InStock: 'success',
+  Reserved: 'warning',
+  Sold: 'info',
+  Scrapped: 'neutral',
+};
+
 const KIND_TONES: Record<string, Record<string, Tone>> = {
+  unitStatus: UNIT_TONES,
   intakeStatus: INTAKE_TONES,
   shipmentStatus: SHIPMENT_TONES,
   paymentStatus: PAYMENT_TONES,
