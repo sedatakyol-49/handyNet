@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Catalog.Contracts;
 using HandyNet.Modules.Marketplace.Contracts;
@@ -36,13 +37,13 @@ internal sealed class BrowseQueryValidator : AbstractValidator<BrowseQuery>
         RuleFor(x => x.PriceMin).GreaterThanOrEqualTo(0).PrecisionScale(12, 2, ignoreTrailingZeros: true);
         RuleFor(x => x.PriceMax).GreaterThanOrEqualTo(0).PrecisionScale(12, 2, ignoreTrailingZeros: true);
         RuleFor(x => x).Must(x => x.PriceMin is null || x.PriceMax is null || x.PriceMin <= x.PriceMax)
-            .WithName("PriceMax").WithMessage("priceMax must not be below priceMin.");
+            .WithName("PriceMax").WithMessage("priceMax must not be below priceMin.").WithErrorCode("validation.priceRange");
         RuleFor(x => x.MaxDeliveryDays).InclusiveBetween(0, Offer.MaxDeliveryDays);
         RuleFor(x => x.CompatibleModel).MaximumLength(200);
         RuleFor(x => x.Search).MaximumLength(200);
         RuleForEach(x => x.Brand).MaximumLength(100);
-        RuleFor(x => x.Brand).Must(b => b is null || b.Length <= 50).WithMessage("At most 50 brands.");
-        RuleFor(x => x.SellerId).Must(s => s is null || s.Length <= 50).WithMessage("At most 50 sellers.");
+        RuleFor(x => x.Brand).MaxCount(b => b!.Length, 50, "At most 50 brands.");
+        RuleFor(x => x.SellerId).MaxCount(s => s!.Length, 50, "At most 50 sellers.");
     }
 }
 

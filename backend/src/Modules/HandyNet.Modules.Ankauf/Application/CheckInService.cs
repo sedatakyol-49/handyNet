@@ -29,7 +29,7 @@ internal sealed class PublicCheckInValidator : AbstractValidator<PublicCheckInRe
     public PublicCheckInValidator()
     {
         RuleFor(x => x.Seller).NotNull().SetValidator(new SellerValidator());
-        RuleFor(x => x.Consent).Equal(true).WithMessage("Please confirm the privacy notice.");
+        RuleFor(x => x.Consent).Equal(true).WithMessage("Please confirm the privacy notice.").WithErrorCode("validation.consent");
         RuleFor(x => x.Signature).MaximumLength(SignatureImage.MaxBytes * 4 / 3 + 100);
     }
 }

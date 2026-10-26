@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -100,7 +101,7 @@ internal sealed class ManualEntryValidator : AbstractValidator<ManualEntryReques
     public ManualEntryValidator()
     {
         RuleFor(x => x).Must(x => (x.ProductId is null) != (x.NewProduct is null))
-            .WithName("Product").WithMessage("Provide either productId or newProduct.");
+            .WithName("Product").WithMessage("Provide either productId or newProduct.").WithErrorCode("validation.productOrNew");
         When(x => x.NewProduct is not null, () =>
         {
             RuleFor(x => x.NewProduct!.Brand).NotEmpty().MaximumLength(100);
@@ -109,20 +110,18 @@ internal sealed class ManualEntryValidator : AbstractValidator<ManualEntryReques
             RuleFor(x => x.NewProduct!.Quality).Must(q => QualityParser.TryParse(q, out _)).WithMessage("Unknown part quality.").WithErrorCode("validation.quality");
             RuleFor(x => x.NewProduct!.Mpn).MaximumLength(100);
             RuleFor(x => x.NewProduct!.Ean).Must(e => string.IsNullOrWhiteSpace(e) || Gtin.TryNormalize(e, out _))
-                .WithMessage("EAN/GTIN is invalid (length or check digit).");
+                .WithMessage("EAN/GTIN is invalid (length or check digit).").WithErrorCode("validation.gtin");
             RuleFor(x => x.NewProduct!).Must(p => !string.IsNullOrWhiteSpace(p.Ean) || !string.IsNullOrWhiteSpace(p.Mpn))
-                .WithName("NewProduct.Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.");
+                .WithName("NewProduct.Identifier").WithMessage("Provide an EAN/GTIN or a manufacturer part number.").WithErrorCode("validation.identifier");
             RuleFor(x => x.NewProduct!.ModelName).MaximumLength(200);
-            RuleFor(x => x.NewProduct!.CompatibleModels).Must(m => m is null || m.Length <= Product.MaxCompatibleModels)
-                .WithMessage($"At most {Product.MaxCompatibleModels} compatible models.");
+            RuleFor(x => x.NewProduct!.CompatibleModels).MaxCount(m => m!.Length, Product.MaxCompatibleModels, $"At most {Product.MaxCompatibleModels} compatible models.");
             RuleForEach(x => x.NewProduct!.CompatibleModels).MaximumLength(200);
         });
         RuleFor(x => x.Quantity).InclusiveBetween(0, ManualEntryRules.MaxQuantity);
-        RuleFor(x => x.Imeis).Must(i => i is null || i.Length <= ManualEntryRules.MaxImeis)
-            .WithMessage($"At most {ManualEntryRules.MaxImeis} IMEIs per entry.");
+        RuleFor(x => x.Imeis).MaxCount(i => i!.Length, ManualEntryRules.MaxImeis, $"At most {ManualEntryRules.MaxImeis} IMEIs per entry.");
         RuleForEach(x => x.Imeis).Must(i => Imei.TryNormalize(i, out _)).WithMessage("IMEI '{PropertyValue}' must be 15 digits with a valid check digit.").WithErrorCode("validation.imei");
         RuleFor(x => x.Imeis).Must(i => i is null || i.Select(Normalize).Distinct().Count() == i.Length)
-            .WithMessage("The same IMEI is listed twice.");
+            .WithMessage("The same IMEI is listed twice.").WithErrorCode("validation.imeiDuplicate");
         RuleFor(x => x.PurchasePrice).GreaterThanOrEqualTo(0).PrecisionScale(12, 2, ignoreTrailingZeros: true);
         When(x => x.Offer is not null, () =>
         {

@@ -67,7 +67,38 @@ const MAX_BYTES = 10 * 1024 * 1024;
     </section>
 
     <hn-banner class="mb-3" [error]="lists.error()" />
-    <hn-table [loading]="lists.loading()">
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="pl-cards">
+      @for (l of lists.value() ?? []; track l.id) {
+        <li class="hn-card flex flex-col gap-1 p-4" [attr.data-list]="l.label">
+          <div class="flex items-start justify-between gap-2">
+            <span class="font-medium">{{ l.label }}</span>
+            <hn-status-badge [status]="l.status" kind="priceListStatus" [tone]="statusTone(l.status)" />
+          </div>
+          <p class="break-all text-xs text-slate-500">{{ l.fileName }} · {{ l.sheetName }}</p>
+          <p class="text-xs text-slate-600">{{ l.validFrom | hnDate }} – {{ l.validUntil | hnDate }}</p>
+          <p class="text-xs text-slate-500">{{ 'ankaufAdmin.lists.importedAt' | t }}: {{ l.importedAt | hnDate }}</p>
+          <dl class="mt-1 grid grid-cols-3 gap-2 text-xs">
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.total' | t }}</dt><dd class="tabular-nums">{{ l.summary.total }}</dd></div>
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.pending' | t }}</dt><dd class="tabular-nums" [class.text-amber-700]="l.summary.pending > 0" [class.font-semibold]="l.summary.pending > 0">{{ l.summary.pending }}</dd></div>
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.approved' | t }}</dt><dd class="tabular-nums">{{ l.summary.approved }}</dd></div>
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.rejected' | t }}</dt><dd class="tabular-nums">{{ l.summary.rejected }}</dd></div>
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.autoAccepted' | t }}</dt><dd class="tabular-nums">{{ l.summary.autoAccepted }}</dd></div>
+            <div><dt class="text-slate-500">{{ 'ankaufAdmin.summary.skipped' | t }}</dt><dd class="tabular-nums">{{ l.summary.skipped }}</dd></div>
+          </dl>
+          <div class="mt-1 flex justify-end">
+            <a hnButton size="sm" [variant]="l.status === 'Review' ? 'primary' : 'secondary'" [routerLink]="['/app/administration/ankauf/preislisten', l.id]"
+              [attr.aria-label]="'ankaufAdmin.lists.openLabel' | t: { label: l.label }" data-testid="pl-card-open">
+              {{ (l.status === 'Review' ? 'ankaufAdmin.lists.review' : 'ankaufAdmin.lists.open') | t }}
+            </a>
+          </div>
+        </li>
+      } @empty {
+        @if (!lists.loading()) {
+          <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'ankaufAdmin.lists.empty' | t" [text]="'ankaufAdmin.lists.emptyText' | t" /></div></li>
+        }
+      }
+    </ul>
+    <hn-table class="hidden md:block" [loading]="lists.loading()">
       <table class="hn-table" data-testid="pl-table">
         <thead>
           <tr>

@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Inventory.Contracts;
@@ -86,8 +87,8 @@ internal sealed class OpenSessionValidator : AbstractValidator<OpenSessionReques
     {
         RuleFor(x => x.OpeningCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor).When(x => x.OpeningCashMinor is not null);
         RuleFor(x => x.OpeningCashMinor).NotNull().When(x => x.Denominations is null)
-            .WithMessage("Enter the opening cash as an amount or as denomination counts.");
-        RuleFor(x => x.Denominations).Must(d => d is null || d.Count <= CashCount.EuroDenominations.Count).WithMessage("Too many denominations.");
+            .WithMessage("Enter the opening cash as an amount or as denomination counts.").WithErrorCode("validation.cashOrDenominations");
+        RuleFor(x => x.Denominations).MaxCount(d => d!.Count, CashCount.EuroDenominations.Count, "Too many denominations.");
     }
 }
 
@@ -98,7 +99,7 @@ internal sealed class CashMovementValidator : AbstractValidator<CashMovementRequ
         RuleFor(x => x.Kind).IsInEnum();
         RuleFor(x => x.ReasonCode).IsInEnum().When(x => x.ReasonCode is not null);
         RuleFor(x => x.AmountMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
-        RuleFor(x => x.Reason).NotEmpty().When(x => x.ReasonCode is null).WithMessage("Choose a reason or describe it.");
+        RuleFor(x => x.Reason).NotEmpty().When(x => x.ReasonCode is null).WithMessage("Choose a reason or describe it.").WithErrorCode("validation.reasonRequired");
         RuleFor(x => x.Reason).MaximumLength(CashMovement.MaxReasonLength);
     }
 }
@@ -109,8 +110,8 @@ internal sealed class CloseSessionValidator : AbstractValidator<CloseSessionRequ
     {
         RuleFor(x => x.CountedCashMinor).InclusiveBetween(0, PosLimits.MaxAmountMinor).When(x => x.CountedCashMinor is not null);
         RuleFor(x => x.CountedCashMinor).NotNull().When(x => x.Denominations is null)
-            .WithMessage("Enter the counted cash as an amount or as denomination counts.");
-        RuleFor(x => x.Denominations).Must(d => d is null || d.Count <= CashCount.EuroDenominations.Count).WithMessage("Too many denominations.");
+            .WithMessage("Enter the counted cash as an amount or as denomination counts.").WithErrorCode("validation.cashOrDenominations");
+        RuleFor(x => x.Denominations).MaxCount(d => d!.Count, CashCount.EuroDenominations.Count, "Too many denominations.");
         RuleFor(x => x.Note).MaximumLength(CashSession.MaxNoteLength);
     }
 }

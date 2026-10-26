@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Identity.Contracts;
 using HandyNet.Modules.Tenancy.Contracts;
@@ -65,7 +66,7 @@ internal sealed class SetPosRightsValidator : AbstractValidator<SetPosRightsRequ
 {
     public SetPosRightsValidator()
     {
-        RuleFor(x => x.Permissions).Must(p => p is null || p.Count <= 20).WithMessage("Too many permissions.");
+        RuleFor(x => x.Permissions).MaxCount(p => p!.Count, 20, "Too many permissions.");
         RuleFor(x => x.MaxDiscountPercent).InclusiveBetween(0, Permissions.FullDiscountPercent).When(x => x.MaxDiscountPercent is not null);
     }
 }
@@ -84,22 +85,23 @@ internal sealed class OrganizationInputValidator : AbstractValidator<Organizatio
         RuleFor(x => x.City).NotEmpty().MaximumLength(100);
         RuleFor(x => x.CountryCode).Length(2).When(x => x.CountryCode is not null);
         RuleFor(x => x.PostalCode).NotEmpty().Matches(@"^\d{5}$").When(x => (x.CountryCode ?? "DE") == "DE")
-            .WithMessage("German postal codes have five digits.");
+            .WithMessage("German postal codes have five digits.").WithErrorCode("validation.postalCodeDe");
         RuleFor(x => x.VatId).Matches(@"^DE\s?\d{9}$").When(x => !string.IsNullOrWhiteSpace(x.VatId) && (x.CountryCode ?? "DE") == "DE")
-            .WithMessage("German USt-IdNr. must be DE followed by nine digits.");
+            .WithMessage("German USt-IdNr. must be DE followed by nine digits.").WithErrorCode("validation.vatIdDe");
         RuleFor(x => x.PostalCode).NotEmpty().MaximumLength(10);
         RuleFor(x => x.VatId).MaximumLength(20);
         // Optional contact data (maintained by the platform admin; registration may send it too).
         RuleFor(x => x.TaxNumber!).Must(OrganizationContactRules.IsTaxNumber).When(x => !string.IsNullOrWhiteSpace(x.TaxNumber))
-            .WithMessage("A tax number (Steuernummer) has 10 to 13 digits, optionally separated by / or spaces.");
+            .WithMessage("A tax number (Steuernummer) has 10 to 13 digits, optionally separated by / or spaces.").WithErrorCode("validation.taxNumber");
         RuleFor(x => x.ContactEmail!).EmailAddress().MaximumLength(Organization.MaxContactEmailLength).When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
         RuleFor(x => x.ContactPhone!).Matches(@"^\+?[0-9 ()/\-]{6,40}$").When(x => !string.IsNullOrWhiteSpace(x.ContactPhone))
-            .WithMessage("Enter a phone number with digits, spaces, ( ) / - and an optional leading +.");
-        RuleFor(x => x.Website!).Must(OrganizationContactRules.IsWebsite).MaximumLength(Organization.MaxWebsiteLength)
-            .When(x => !string.IsNullOrWhiteSpace(x.Website))
-            .WithMessage("The website must be a full address starting with https:// or http://.");
+            .WithMessage("Enter a phone number with digits, spaces, ( ) / - and an optional leading +.").WithErrorCode("validation.phone");
+        RuleFor(x => x.Website!).Must(OrganizationContactRules.IsWebsite)
+            .WithMessage("The website must be a full address starting with https:// or http://.").WithErrorCode("validation.website")
+            .MaximumLength(Organization.MaxWebsiteLength)
+            .When(x => !string.IsNullOrWhiteSpace(x.Website));
         RuleFor(x => x).Must(x => x.IsWholesaler || x.IsRetailer || x.IsRepairProvider)
-            .OverridePropertyName("Capabilities").WithMessage("Select at least one business type.");
+            .OverridePropertyName("Capabilities").WithMessage("Select at least one business type.").WithErrorCode("validation.businessType");
     }
 }
 
@@ -121,7 +123,7 @@ internal sealed class AddStaffValidator : AbstractValidator<AddStaffRequest>
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(320);
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Role).IsInEnum().NotEqual(MembershipRole.Owner).WithMessage("Owners cannot be added as staff.");
+        RuleFor(x => x.Role).IsInEnum().NotEqual(MembershipRole.Owner).WithMessage("Owners cannot be added as staff.").WithErrorCode("validation.staffOwner");
     }
 }
 

@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using FluentValidation;
 using HandyNet.Modules.Inventory.Contracts;
 using HandyNet.Modules.Marketplace.Contracts;
@@ -63,7 +64,7 @@ internal sealed class PlaceOrderValidator : AbstractValidator<PlaceOrderRequest>
 
     public PlaceOrderValidator()
     {
-        RuleFor(x => x.Lines).NotEmpty().Must(l => l.Count <= MaxLines).WithMessage($"At most {MaxLines} lines per order.");
+        RuleFor(x => x.Lines).NotEmpty().MaxCount(l => l!.Count, MaxLines, $"At most {MaxLines} lines per order.");
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l.OfferId).NotEmpty();

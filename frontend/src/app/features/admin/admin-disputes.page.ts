@@ -19,7 +19,30 @@ import { AdminTabsComponent } from './admin-tabs';
     <hn-banner class="mb-3" [error]="queue.error()" />
     <p class="mb-2 text-xs text-slate-600">{{ 'admin.disputes.idsHint' | t }}</p>
 
-    <hn-table [loading]="queue.loading()">
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="admin-disputes-cards">
+      @for (d of queue.value() ?? []; track d.id) {
+        <li class="hn-card flex flex-col gap-1 p-4" [attr.data-order-id]="d.orderId" [attr.data-dispute-id]="d.id">
+          <div class="flex items-start justify-between gap-2">
+            <span class="hn-mono text-xs font-semibold" [title]="d.orderId">{{ d.orderNumber }}</span>
+            <span class="text-xs text-slate-500">{{ d.escalatedAt | hnDate }}</span>
+          </div>
+          <p class="text-sm">{{ d.reason | tEnum: 'disputeReason' }}</p>
+          <p class="text-xs text-slate-600">{{ 'orders.buyer' | t }}: <span [title]="d.buyerOrganizationId">{{ d.buyerName }}</span></p>
+          <p class="text-xs text-slate-600">{{ 'orders.seller' | t }}: <span [title]="d.sellerOrganizationId">{{ d.sellerName }}</span></p>
+          <div class="mt-1 flex justify-end">
+            <a hnButton size="sm" variant="primary" [routerLink]="['/app/administration/reklamationen', d.id]" data-testid="admin-dispute-card-open"
+              [attr.aria-label]="'admin.disputes.openLabel' | t: { order: d.orderNumber }">
+              {{ 'admin.disputes.open' | t }}
+            </a>
+          </div>
+        </li>
+      } @empty {
+        @if (!queue.loading()) {
+          <li class="sm:col-span-2"><div class="hn-card"><hn-empty-state [title]="'admin.disputes.empty' | t" [text]="'admin.disputes.emptyText' | t" /></div></li>
+        }
+      }
+    </ul>
+    <hn-table class="hidden md:block" [loading]="queue.loading()">
       <table class="hn-table" data-testid="admin-disputes-table">
         <thead>
           <tr>

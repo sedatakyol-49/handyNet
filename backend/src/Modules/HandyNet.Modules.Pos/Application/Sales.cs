@@ -1,3 +1,4 @@
+using HandyNet.SharedKernel.Web;
 using System.Security.Cryptography;
 using System.Text;
 using FluentValidation;
@@ -135,21 +136,21 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
     public CreateSaleValidator()
     {
         RuleFor(x => x.RegisterId).NotEmpty();
-        RuleFor(x => x.Lines).NotEmpty().Must(l => l is null || l.Count <= Receipt.MaxLines).WithMessage($"At most {Receipt.MaxLines} lines.");
+        RuleFor(x => x.Lines).NotEmpty().MaxCount(l => l!.Count, Receipt.MaxLines, $"At most {Receipt.MaxLines} lines.");
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l).Must(l => l.ProductId is not null || !string.IsNullOrWhiteSpace(l.Imei))
-                .WithName("Line").WithMessage("Each line needs a productId or an IMEI.");
+                .WithName("Line").WithMessage("Each line needs a productId or an IMEI.").WithErrorCode("validation.lineProductOrImei");
             line.RuleFor(l => l.Imei).Must(i => i is null || (i.Trim().Length == 15 && i.Trim().All(char.IsAsciiDigit)))
                 .WithMessage("IMEI must have 15 digits.").WithErrorCode("validation.imei");
             line.RuleFor(l => l.Quantity).InclusiveBetween(1, Receipt.MaxQuantity);
-            line.RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.");
+            line.RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.").WithErrorCode("validation.imeiQuantity");
             line.RuleFor(l => l.UnitPriceMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
             line.RuleFor(l => l.DiscountMinor).GreaterThanOrEqualTo(0).When(l => l.DiscountMinor is not null);
             line.RuleFor(l => l.Note).MaximumLength(Receipt.MaxNoteLength);
         });
         RuleFor(x => x.CustomerId).NotEqual(Guid.Empty).When(x => x.CustomerId is not null);
-        RuleFor(x => x.Payments).NotNull().Must(p => p is null || p.Count <= 10).WithMessage("At most 10 payments.");
+        RuleFor(x => x.Payments).NotNull().MaxCount(p => p!.Count, 10, "At most 10 payments.");
         RuleForEach(x => x.Payments).ChildRules(p =>
         {
             p.RuleFor(x => x.Method).IsInEnum();
@@ -174,7 +175,7 @@ internal sealed class ReturnValidator : AbstractValidator<ReturnRequest>
             l.RuleFor(x => x.Quantity).InclusiveBetween(1, Receipt.MaxQuantity);
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.LineNumber).Distinct().Count() == l.Count)
-            .WithMessage("Each line may appear only once.");
+            .WithMessage("Each line may appear only once.").WithErrorCode("validation.lineDuplicate");
         RuleFor(x => x.RefundMethod).IsInEnum();
         RuleFor(x => x.Reason).NotEmpty().MaximumLength(Receipt.MaxReasonLength);
     }

@@ -128,8 +128,39 @@
       </p>
     }
     <hn-banner class="mb-3" [error]="movements.error()" />
-    <hn-table [loading]="movements.loading()" [scrollY]="true">
-      <table class="hn-table">
+    <!-- phone: cards; md+: table -->
+    <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="movements-cards">
+      @for (m of movements.value()?.items ?? []; track m.id) {
+        <li class="hn-card flex flex-col gap-1 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-sm font-medium">{{ m.type | tEnum: 'movementType' }}</span>
+            <span class="text-lg font-bold tabular-nums" [class.text-emerald-700]="m.quantity > 0" [class.text-red-700]="m.quantity < 0">
+              {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">{{ m.occurredAt | hnDate }} · {{ warehouseCode(m.warehouseId) }}</p>
+          <p class="text-xs text-slate-600">{{ 'inventory.onHandAfter' | t }}: <span class="tabular-nums">{{ m.onHandAfter }}</span></p>
+          @if (m.reference) {
+            <p class="text-xs text-slate-600">{{ 'inventory.reference' | t }}: {{ m.reference }}</p>
+          }
+        </li>
+      } @empty {
+        <li class="sm:col-span-2">
+          <div class="hn-card">
+            @if (movements.loading()) {
+              <hn-skeleton-rows />
+            } @else {
+              <hn-empty-state [title]="'inventory.noMovements' | t" />
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <div class="md:hidden">
+      <hn-pagination [page]="movementPage()" [pageSize]="pageSize" [totalCount]="movements.value()?.totalCount ?? 0" (pageChange)="movementPage.set($event)" />
+    </div>
+    <hn-table class="hidden md:block" [loading]="movements.loading()" [scrollY]="true">
+      <table class="hn-table" data-testid="movements-table">
         <thead>
           <tr>
             <th scope="col">{{ 'inventory.occurredAt' | t }}</th>

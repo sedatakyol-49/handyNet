@@ -91,13 +91,13 @@ internal sealed class AdminOrganizationQueryValidator : AbstractValidator<AdminO
     {
         RuleFor(x => x.Search).MaximumLength(200);
         RuleFor(x => x.Status).Must(s => string.IsNullOrWhiteSpace(s) || Enum.TryParse<OrganizationStatus>(s, true, out _))
-            .WithMessage("Unknown organization status.");
+            .WithMessage("Unknown organization status.").WithErrorCode("validation.organizationStatus");
         RuleFor(x => x.Module).Must(m => string.IsNullOrWhiteSpace(m) || (Enum.TryParse<PlatformModule>(m, true, out var p) && Enum.IsDefined(p)))
-            .WithMessage("Unknown module.");
+            .WithMessage("Unknown module.").WithErrorCode("validation.module");
         RuleFor(x => x.Capability).Must(c => string.IsNullOrWhiteSpace(c) || Capabilities.Contains(c, StringComparer.OrdinalIgnoreCase))
-            .WithMessage("Capability must be wholesaler, retailer or repair.");
+            .WithMessage("Capability must be wholesaler, retailer or repair.").WithErrorCode("validation.capability");
         RuleFor(x => x).Must(x => x.CreatedFrom is null || x.CreatedTo is null || x.CreatedFrom < x.CreatedTo)
-            .OverridePropertyName("CreatedTo").WithMessage("The end of the period must be after its start.");
+            .OverridePropertyName("CreatedTo").WithMessage("The end of the period must be after its start.").WithErrorCode("validation.periodOrder");
     }
 }
 

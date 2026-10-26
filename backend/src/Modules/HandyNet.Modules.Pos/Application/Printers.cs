@@ -72,7 +72,7 @@ internal sealed class PrinterProfileValidator : AbstractValidator<PrinterProfile
         RuleFor(x => x.Name).NotEmpty().MaximumLength(PrinterProfile.MaxNameLength);
         RuleFor(x => x.Connection).IsInEnum();
         RuleFor(x => x.Codepage).IsInEnum();
-        RuleFor(x => x.PaperWidthMm).Must(w => PrinterProfile.PaperWidths.Contains(w)).WithMessage("The paper width must be 58 or 80 mm.");
+        RuleFor(x => x.PaperWidthMm).Must(w => PrinterProfile.PaperWidths.Contains(w)).WithMessage("The paper width must be 58 or 80 mm.").WithErrorCode("validation.paperWidth");
         RuleFor(x => x.CharsPerLine).InclusiveBetween(PrinterProfile.MinCharsPerLine, PrinterProfile.MaxCharsPerLine);
         RuleFor(x => x.Copies).InclusiveBetween(1, PrinterProfile.MaxCopies);
         RuleFor(x => x.Host).MaximumLength(PrinterProfile.MaxHostLength);
