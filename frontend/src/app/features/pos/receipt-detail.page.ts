@@ -79,7 +79,7 @@ import { PrinterService } from './printing/printer.service';
                 <dd>{{ r.reason }}</dd>
               }
               <dt>{{ 'pos.detail.session' | t }}</dt>
-              <dd><a class="hn-link" [routerLink]="['/kasse/sitzungen', r.sessionId]">{{ 'pos.detail.openSession' | t }}</a></dd>
+              <dd><a class="hn-link inline-flex min-h-11 items-center" [routerLink]="['/kasse/sitzungen', r.sessionId]">{{ 'pos.detail.openSession' | t }}</a></dd>
               @if (r.customer; as c) {
                 <dt>{{ 'pos.receipt.customer' | t }}</dt>
                 <dd>
@@ -119,10 +119,10 @@ import { PrinterService } from './printing/printer.service';
                 <table class="hn-table" data-testid="pos-detail-lines">
                   <thead>
                     <tr>
-                      <th scope="col" class="num">#</th>
+                      <th scope="col" class="num max-sm:hidden">#</th>
                       <th scope="col">{{ 'common.product' | t }}</th>
                       <th scope="col" class="num">{{ 'pos.detail.sold' | t }}</th>
-                      <th scope="col" class="num">{{ 'pos.detail.returned' | t }}</th>
+                      <th scope="col" class="num max-sm:hidden">{{ 'pos.detail.returned' | t }}</th>
                       <th scope="col" class="num">{{ 'pos.till.lineTotal' | t }}</th>
                       @if (returning()) {
                         <th scope="col" class="num">{{ 'pos.detail.returnQty' | t }}</th>
@@ -134,7 +134,7 @@ import { PrinterService } from './printing/printer.service';
                     @for (l of r.lines; track l.lineNumber) {
                       @let max = returnableOf(l);
                       <tr>
-                        <td class="num">{{ l.lineNumber }}</td>
+                        <td class="num max-sm:hidden">{{ l.lineNumber }}</td>
                         <td>
                           {{ l.description }}
                           @if (l.imei) {
@@ -142,7 +142,7 @@ import { PrinterService } from './printing/printer.service';
                           }
                         </td>
                         <td class="num">{{ l.quantity }}</td>
-                        <td class="num">{{ l.returnedQuantity }}</td>
+                        <td class="num max-sm:hidden">{{ l.returnedQuantity }}</td>
                         <td class="num">{{ l.lineGrossMinor | money }}</td>
                         @if (returning()) {
                           <td class="num">

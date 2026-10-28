@@ -45,7 +45,17 @@ import {
       }
     </div>
 
-    <form class="pos-card mb-3 p-3" (submit)="$event.preventDefault(); apply()" novalidate [attr.aria-label]="'pos.receipts.filters' | t" data-testid="pos-receipts-filter">
+    <button type="button" class="pos-soft mb-3 w-full justify-between md:hidden" [attr.aria-expanded]="filtersOpen()" aria-controls="pos-receipts-filter-form"
+      (click)="filtersOpen.update((v) => !v)" data-testid="pos-receipts-filter-toggle">
+      <span class="flex items-center gap-2">
+        {{ 'pos.receipts.filters' | t }}
+        @if (activeCount()) {
+          <span class="rounded-full bg-pos-accent px-1.5 text-xs text-pos-accent-ink tabular-nums">{{ activeCount() }}</span>
+        }
+      </span>
+      <span class="inline-block transition-none" [class.rotate-180]="filtersOpen()" aria-hidden="true">▾</span>
+    </button>
+    <form id="pos-receipts-filter-form" class="pos-card mb-3 p-3 md:block!" [class.hidden]="!filtersOpen()" (submit)="$event.preventDefault(); apply()" novalidate [attr.aria-label]="'pos.receipts.filters' | t" data-testid="pos-receipts-filter">
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         <hn-field [label]="'pos.receipt.number' | t" for="pos-f-number" [errors]="err('number')">
           <input hnInput id="pos-f-number" inputmode="numeric" class="h-11" autocomplete="off" [value]="draft().number" (input)="set('number', $any($event.target).value)" data-testid="pos-f-number" />
@@ -190,6 +200,8 @@ export class PosReceiptsPage {
   protected readonly methods = POS_PAYMENT_METHODS;
   protected readonly kinds: ReceiptKind[] = ['Sale', 'Return', 'Storno', 'InvoicePayment'];
   protected readonly pickCustomer = signal(false);
+  /** Phones: the filter form is collapsed behind a toggle (always shown from md). */
+  protected readonly filtersOpen = signal(false);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   /** Filter as applied (from the URL). */

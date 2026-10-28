@@ -2526,6 +2526,7 @@
       "searchHelp": "El texto filtra los productos; Intro añade una única coincidencia. Escáner: código + Intro.",
       "shortcutEnter": "Tomar el código o añadir la única coincidencia; en el campo numérico volver a escanear",
       "view": "Vista",
+      "openCart": "Abrir carrito: {count} artículos, {total}",
       "back": "Atrás",
       "methods": "Forma de pago",
       "removePayment": "Eliminar pago {method}",

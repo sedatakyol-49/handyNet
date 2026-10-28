@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PosApi } from '../../core/api/handynet-api';
 import { SessionStore } from '../../core/auth/session.store';
@@ -16,11 +16,11 @@ import { PosContext } from './pos-context';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'hn-no-print mb-4 block' },
   template: `
-    <nav class="flex flex-wrap items-center gap-1 border-b border-pos-line text-sm" [attr.aria-label]="'pos.subnav.label' | t">
+    <nav class="hn-pos-scroll-x flex flex-nowrap items-center gap-1 border-b border-pos-line text-sm" [attr.aria-label]="'pos.subnav.label' | t" data-testid="pos-subnav">
       @for (tab of visibleTabs(); track tab.id) {
         <a [routerLink]="['/kasse', registerId(), ...tab.path]" routerLinkActive="border-pos-accent text-pos-accent-text font-semibold"
           [routerLinkActiveOptions]="{ exact: tab.id === 'till' }" #rla="routerLinkActive" [attr.aria-current]="rla.isActive ? 'page' : null"
-          class="-mb-px inline-flex min-h-11 items-center border-b-[3px] border-transparent px-3.5 font-medium text-pos-muted hover:text-pos-ink" [attr.data-testid]="'pos-tab-' + tab.id">
+          class="inline-flex min-h-11 shrink-0 items-center border-b-[3px] border-transparent px-3.5 font-medium whitespace-nowrap text-pos-muted hover:text-pos-ink" [attr.data-testid]="'pos-tab-' + tab.id">
           {{ tab.label | t }}
         </a>
       }
@@ -59,6 +59,9 @@ export class PosSubnavComponent {
   private readonly sessionLoaded = computed(() => !this.session.loading());
 
   constructor() {
+    // Narrow screens: the tab strip scrolls sideways; keep the current tab in view.
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    afterNextRender(() => host.nativeElement.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }));
     effect(() => {
       const id = this.registerId();
       const name = this.register.value()?.name ?? null;

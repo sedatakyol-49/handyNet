@@ -24,11 +24,35 @@ import { PosSubnavComponent } from './pos-subnav';
     } @else {
       <div class="mb-3 flex flex-wrap gap-2" role="search">
         <label for="pos-prices-search" class="sr-only">{{ 'pos.sell.searchLabel' | t }}</label>
-        <input hnInput id="pos-prices-search" type="search" class="h-11 max-w-md flex-1" autocomplete="off" [placeholder]="'pos.price.searchPlaceholder' | t"
+        <input hnInput id="pos-prices-search" type="search" class="h-11 max-w-md min-w-0 flex-1" autocomplete="off" [placeholder]="'pos.price.searchPlaceholder' | t"
           [value]="search()" (input)="search.set($any($event.target).value)" data-testid="pos-prices-search" />
       </div>
       <hn-banner class="mb-3" [error]="products.error()" />
-      <hn-table [loading]="products.loading()">
+      <!-- phone: cards; md+: table -->
+      <ul class="grid gap-3 sm:grid-cols-2 md:hidden" data-testid="pos-prices-cards">
+        @for (p of products.value()?.items ?? []; track p.productId) {
+          <li class="pos-card flex flex-col gap-1 p-4" [attr.data-product-card]="p.name">
+            <p class="font-semibold leading-snug break-words">{{ p.name }}</p>
+            <p class="text-xs text-pos-muted">
+              {{ p.brand }} · EAN <span class="hn-mono">{{ p.ean ?? '–' }}</span> · {{ 'pos.price.stock' | t }} <span class="tabular-nums">{{ p.available }}</span>
+            </p>
+            <div class="mt-1 flex items-end justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs text-pos-muted">{{ 'pos.price.tillPrice' | t }} · {{ 'pos.price.sources.' + p.priceSource | t }}</p>
+                <p class="text-lg font-bold tabular-nums" data-testid="pos-prices-card-till">{{ p.priceMinor === null ? '–' : (p.priceMinor | money) }}</p>
+                <p class="text-xs text-pos-muted">{{ 'pos.price.posPrice' | t }}: <span class="tabular-nums">{{ p.posPriceMinor === null ? '–' : (p.posPriceMinor | money) }}</span></p>
+              </div>
+              <button hnButton type="button" class="min-h-11 shrink-0" (click)="edit(p)" [attr.aria-label]="'pos.price.editFor' | t: { name: p.name }" data-testid="pos-prices-card-edit">{{ 'pos.price.edit' | t }}</button>
+            </div>
+          </li>
+        } @empty {
+          <li class="py-8 text-center text-sm text-pos-muted sm:col-span-2">{{ 'pos.sell.noMatch' | t }}</li>
+        }
+      </ul>
+      <div class="md:hidden">
+        <hn-pagination [page]="page()" [pageSize]="pageSize" [totalCount]="products.value()?.totalCount ?? 0" (pageChange)="page.set($event)" />
+      </div>
+      <hn-table class="hidden md:block" [loading]="products.loading()">
         <table class="hn-table" data-testid="pos-prices">
           <thead>
             <tr>
