@@ -48,6 +48,22 @@ test.describe.serial('responsive back office', () => {
     await expectFits(page, ADMIN_ROUTES, 820);
   });
 
+  test('tablet: the wide offers table shows cards (two per row) instead of scrolling sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await login(page, seller.email, PASSWORD);
+    await page.goto('/app/angebote');
+    const table = page.getByTestId('offers-table');
+    await expect(table.getByRole('row').filter({ hasText: 'Display Responsive 1' })).toBeVisible();
+    await expect(table.locator('thead')).toHaveCSS('position', 'absolute');
+    const fits = await table.evaluate((t) => (t.parentElement ? t.parentElement.scrollWidth <= t.parentElement.clientWidth : true));
+    expect(fits, 'offers table scrolls inside its card at 820px').toBe(true);
+    const cols = await table.locator('tbody').evaluate((b) => getComputedStyle(b).gridTemplateColumns.split(' ').length);
+    expect(cols).toBe(2);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(table.locator('thead')).not.toHaveCSS('position', 'absolute');
+  });
+
   test('phone: navigation drawer opens and closes, top bar stays compact', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await login(page, seller.email, PASSWORD);

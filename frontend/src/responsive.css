@@ -126,6 +126,71 @@
     }
   }
 
+  /* `.hn-stack-lg` (together with `.hn-stack`): very wide tables stay cards up to lg (tablet), two cards per row. */
+  @media (48rem <= width < 64rem) {
+    .hn-table.hn-stack-lg,
+    .hn-table.hn-stack-lg tbody,
+    .hn-table.hn-stack-lg tbody tr,
+    .hn-table.hn-stack-lg tbody td,
+    .hn-table.hn-stack-lg tbody th {
+      display: block;
+      width: auto;
+    }
+    .hn-table.hn-stack-lg thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    /* Tablet: cards two per row. */
+    .hn-table.hn-stack-lg tbody {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .hn-table.hn-stack-lg tbody tr {
+      margin: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      border: 1px solid var(--color-slate-200);
+      border-radius: 0.5rem;
+      background: #fff;
+    }
+    .hn-table.hn-stack-lg tbody tr:has(hn-empty-state, hn-skeleton-rows) {
+      grid-column: 1 / -1;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    .hn-table.hn-stack-lg tbody :is(td, th)[data-label] {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.25rem 0;
+      border: 0;
+      text-align: end;
+      white-space: normal;
+    }
+    .hn-table.hn-stack-lg tbody :is(td, th)[data-label]::before {
+      content: attr(data-label);
+      flex-shrink: 0;
+      max-width: 45%;
+      text-align: start;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--color-slate-500);
+    }
+    .hn-table.hn-stack-lg tbody :is(td, th):not([data-label]) {
+      padding: 0.25rem 0;
+      border: 0;
+    }
+    .hn-table.hn-stack-lg tbody td.hn-actions {
+      position: static;
+      box-shadow: none;
+      text-align: start;
+    }
+  }
+
   /* Tab strips never wrap: they scroll sideways (hidden scrollbar, momentum on touch). */
   .hn-tabs {
     flex-wrap: nowrap;
