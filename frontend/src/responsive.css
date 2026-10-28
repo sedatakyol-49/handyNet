@@ -197,6 +197,11 @@
   .hn-icon-btn:not(.hn-pos *) {
     min-width: 44px;
   }
+  /* Everything else that acts like a button (chips, filter pills, card links). Root font is 14px: use px, not rem. */
+  :is(main, header) :is(button, [role="tab"], a[class*="rounded"], a[class*="chip"]):not(.hn-pos *),
+  header a:not(.hn-pos *) {
+    min-height: 44px;
+  }
 }
 
 /* Dialogs become bottom sheets (small) or full-screen (lg/xl) on phones. */
