@@ -437,13 +437,14 @@ public sealed class FiskalyTseSigner(FiskalyApiClient api, FiskalyCredentials cr
         for (var i = 0; i < buckets.Length; i++)
             if (buckets[i] != 0)
                 vat.Add(new JsonObject { ["vat_rate"] = rates[i], ["amount"] = KassenSichV.Amount(buckets[i]) });
+        // One entry per fiskaly payment type: card and "other" both count as NON_CASH and are summed.
         var payments = new JsonArray();
-        foreach (var payment in receipt.Payments.Where(p => p.AmountMinor != 0).OrderBy(p => p.Method == PaymentMethod.Cash ? 0 : 1))
-            payments.Add(new JsonObject
-            {
-                ["payment_type"] = payment.Method == PaymentMethod.Cash ? "CASH" : "NON_CASH",
-                ["amount"] = KassenSichV.Amount(payment.AmountMinor),
-            });
+        foreach (var group in receipt.Payments
+                     .GroupBy(p => p.Method == PaymentMethod.Cash ? "CASH" : "NON_CASH")
+                     .Select(g => (Type: g.Key, Amount: g.Sum(p => p.AmountMinor)))
+                     .Where(g => g.Amount != 0)
+                     .OrderBy(g => g.Type == "CASH" ? 0 : 1))
+            payments.Add(new JsonObject { ["payment_type"] = group.Type, ["amount"] = KassenSichV.Amount(group.Amount) });
         return new JsonObject
         {
             ["standard_v1"] = new JsonObject

@@ -491,6 +491,18 @@ public class FiskalyContractTests
     }
 
     [Fact]
+    public void Payments_of_the_same_fiskaly_type_are_summed_into_one_entry()
+    {
+        var vat = new List<TaxTotal> { new(TaxTreatment.Standard19, 1900, 50_00, 42_02, 7_98) };
+        var payments = new List<PaymentTotal> { new(PaymentMethod.Card, 20_00), new(PaymentMethod.Cash, 10_00), new(PaymentMethod.Card, 20_00) };
+        var schema = FiskalyTseSigner.Schema(new FiscalProcess(KassenSichV.ProcessTypeReceipt, "", new FiscalReceiptData(ReceiptKind.Sale, 1, 50_00, vat, payments)));
+        var entries = schema["standard_v1"]!["receipt"]!["amounts_per_payment_type"]!.AsArray();
+        Assert.Equal(2, entries.Count);
+        Assert.Equal(("CASH", "10.00"), (entries[0]!["payment_type"]!.GetValue<string>(), entries[0]!["amount"]!.GetValue<string>()));
+        Assert.Equal(("NON_CASH", "40.00"), (entries[1]!["payment_type"]!.GetValue<string>(), entries[1]!["amount"]!.GetValue<string>()));
+    }
+
+    [Fact]
     public void Non_receipt_events_use_the_raw_schema()
     {
         var schema = FiskalyTseSigner.Schema(new FiscalProcess(KassenSichV.ProcessTypeOther, "Einlage^ChangeFund^100.00"));
