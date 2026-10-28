@@ -23,7 +23,7 @@ import { UI } from '../../shared/ui';
     <hn-banner class="mb-3" [error]="staff.error()" />
 
     <hn-table [loading]="staff.loading()">
-      <table class="hn-table">
+      <table class="hn-table hn-stack">
         <thead>
           <tr>
             <th scope="col">{{ 'common.name' | t }}</th>
@@ -39,12 +39,12 @@ import { UI } from '../../shared/ui';
         <tbody>
           @for (s of staff.value() ?? []; track s.userId) {
             <tr>
-              <td class="font-medium">{{ s.displayName }}</td>
-              <td>{{ s.email }}</td>
-              <td><hn-status-badge [status]="s.role" kind="role" tone="neutral" /></td>
-              <td class="whitespace-nowrap">{{ s.createdAt | hnDate: 'date' }}</td>
+              <td [attr.data-label]="'common.name' | t" class="font-medium">{{ s.displayName }}</td>
+              <td [attr.data-label]="'auth.email' | t">{{ s.email }}</td>
+              <td [attr.data-label]="'team.role' | t"><hn-status-badge [status]="s.role" kind="role" tone="neutral" /></td>
+              <td [attr.data-label]="'team.since' | t" class="whitespace-nowrap">{{ s.createdAt | hnDate: 'date' }}</td>
               @if (hasPos()) {
-                <td class="text-xs" [attr.data-staff]="s.email" data-testid="team-pos-rights">
+                <td [attr.data-label]="'team.posRights.column' | t" class="text-xs" [attr.data-staff]="s.email" data-testid="team-pos-rights">
                   @if (!configurable(s.role)) {
                     <span class="text-slate-600">{{ 'team.posRights.all' | t }}</span>
                   } @else {

@@ -31,7 +31,9 @@
     "filterOptions": "Фильтр значений",
     "noOptions": "Нет значений",
     "clearSelection": "Снять выбор",
-    "selectedCount": "Выбрано: {count}"
+    "selectedCount": "Выбрано: {count}",
+    "moreActions": "Другие действия",
+    "filters": "Фильтры"
   },
   "pagination": {
     "label": "Постраничная навигация",

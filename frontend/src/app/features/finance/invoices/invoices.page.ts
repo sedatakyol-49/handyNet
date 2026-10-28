@@ -19,9 +19,9 @@ import { formatBillingMonth, formatDateOnly } from './invoice.logic';
   template: `
     <hn-page-header [title]="'invoices.title' | t" [description]="'invoices.subtitle' | t">
       <a hnButton routerLink="/app/finanzen">{{ 'invoices.backToFinance' | t }}</a>
-      <button hnButton type="button" [loading]="invoices.loading()" (click)="invoices.reload()" data-testid="invoices-refresh">
+      <hn-actions-menu><button hnButton type="button" [loading]="invoices.loading()" (click)="invoices.reload()" data-testid="invoices-refresh">
         {{ 'common.refresh' | t }}
-      </button>
+      </button></hn-actions-menu>
     </hn-page-header>
 
     <p class="mb-3 max-w-3xl text-xs text-slate-600">{{ 'invoices.hint' | t }}</p>

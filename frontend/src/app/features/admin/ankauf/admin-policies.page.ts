@@ -26,7 +26,7 @@ interface OverrideView {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-page-header [title]="'admin.title' | t" [description]="'ankaufAdmin.policy.subtitle' | t">
-      <button hnButton type="button" [loading]="policies.loading()" (click)="policies.reload()">{{ 'common.refresh' | t }}</button>
+      <hn-actions-menu><button hnButton type="button" [loading]="policies.loading()" (click)="policies.reload()">{{ 'common.refresh' | t }}</button></hn-actions-menu>
       @if (!form()) {
         <button hnButton variant="primary" type="button" (click)="startNew()" data-testid="policy-new">{{ 'ankaufAdmin.policy.newVersion' | t }}</button>
       }
@@ -101,7 +101,7 @@ interface OverrideView {
             <legend class="mb-1 text-xs font-semibold text-slate-700">{{ 'ankaufAdmin.policy.overrides' | t }}</legend>
             <p class="mb-2 text-xs text-slate-600">{{ 'ankaufAdmin.policy.overridesHint' | t }}</p>
             @if (f.overrides.length) {
-              <table class="hn-table mb-2">
+              <table class="hn-table mb-2 hn-stack">
                 <thead>
                   <tr>
                     <th scope="col">{{ 'ankaufAdmin.policy.scope' | t }}</th>
@@ -114,13 +114,13 @@ interface OverrideView {
                 <tbody>
                   @for (row of f.overrides; track $index; let i = $index) {
                     <tr>
-                      <td>
+                      <td [attr.data-label]="'ankaufAdmin.policy.scope' | t">
                         <select hnSelect [name]="'ov-scope-' + i" [(ngModel)]="row.scope" [attr.aria-label]="'ankaufAdmin.policy.scope' | t">
                           <option value="brand">{{ 'ankaufAdmin.policy.scopeBrand' | t }}</option>
                           <option value="model">{{ 'ankaufAdmin.policy.scopeModel' | t }}</option>
                         </select>
                       </td>
-                      <td class="min-w-64">
+                      <td [attr.data-label]="'ankaufAdmin.policy.key' | t" class="min-w-64">
                         <input hnInput [name]="'ov-key-' + i" [id]="'override-' + i + '-key'" [(ngModel)]="row.key"
                           [placeholder]="(row.scope === 'brand' ? 'ankaufAdmin.policy.brandPlaceholder' : 'ankaufAdmin.policy.modelPlaceholder') | t"
                           [attr.aria-label]="'ankaufAdmin.policy.key' | t" [attr.aria-invalid]="!!errors()['override-' + i + '-key']"
@@ -129,14 +129,14 @@ interface OverrideView {
                           <p class="mt-1 text-xs text-red-700" [id]="'override-' + i + '-key-error'" role="alert">{{ errors()['override-' + i + '-key'] | t }}</p>
                         }
                       </td>
-                      <td>
+                      <td [attr.data-label]="'common.condition' | t">
                         <select hnSelect [name]="'ov-cond-' + i" [(ngModel)]="row.condition" [attr.aria-label]="'common.condition' | t">
                           @for (c of conditions; track c) {
                             <option [value]="c">{{ c | tEnum: 'deviceCondition' }}</option>
                           }
                         </select>
                       </td>
-                      <td>
+                      <td [attr.data-label]="'ankaufAdmin.policy.adjustment' | t">
                         <div class="flex items-center gap-1">
                           <input hnInput [name]="'ov-pct-' + i" [id]="'override-' + i + '-percent'" inputmode="decimal" class="w-24 text-end" [(ngModel)]="row.percent"
                             [attr.aria-label]="'ankaufAdmin.policy.adjustment' | t" [attr.aria-invalid]="!!errors()['override-' + i + '-percent']" />
@@ -231,7 +231,7 @@ interface OverrideView {
       <section aria-labelledby="policy-history-heading">
         <h2 id="policy-history-heading" class="mb-2 text-sm">{{ 'ankaufAdmin.policy.history' | t }}</h2>
         <hn-table [loading]="policies.loading()">
-          <table class="hn-table" data-testid="policy-history">
+          <table class="hn-table hn-stack" data-testid="policy-history">
             <thead>
               <tr>
                 <th scope="col">{{ 'ankaufAdmin.policy.version' | t }}</th>
@@ -244,10 +244,10 @@ interface OverrideView {
             <tbody>
               @for (p of policies.value() ?? []; track p.id) {
                 <tr [class.bg-accent-50]="shown()?.id === p.id">
-                  <td class="tabular-nums">#{{ p.number }}</td>
-                  <td class="whitespace-nowrap text-xs">{{ p.effectiveFrom | hnDate }}</td>
-                  <td class="whitespace-nowrap text-xs">{{ p.createdAt | hnDate }}</td>
-                  <td><hn-status-badge [status]="state(p)" kind="policyState" [tone]="state(p) === 'active' ? 'success' : state(p) === 'scheduled' ? 'info' : 'neutral'" /></td>
+                  <td [attr.data-label]="'ankaufAdmin.policy.version' | t" class="tabular-nums">#{{ p.number }}</td>
+                  <td [attr.data-label]="'ankaufAdmin.policy.effectiveFrom' | t" class="whitespace-nowrap text-xs">{{ p.effectiveFrom | hnDate }}</td>
+                  <td [attr.data-label]="'ankaufAdmin.policy.createdAt' | t" class="whitespace-nowrap text-xs">{{ p.createdAt | hnDate }}</td>
+                  <td [attr.data-label]="'common.status' | t"><hn-status-badge [status]="state(p)" kind="policyState" [tone]="state(p) === 'active' ? 'success' : state(p) === 'scheduled' ? 'info' : 'neutral'" /></td>
                   <td class="text-end">
                     <button hnButton size="sm" variant="ghost" type="button" [attr.aria-pressed]="shown()?.id === p.id" (click)="selectedId.set(p.id)">
                       {{ 'ankaufAdmin.policy.show' | t }}

@@ -92,6 +92,7 @@ type Confirm = 'publish' | 'discard' | null;
 
       <hn-banner class="mb-3" [text]="actionErrorText()" />
 
+      <hn-filter-bar>
       <form class="mb-3 flex flex-wrap items-end gap-3" role="search" (submit)="$event.preventDefault(); applySearch(q.value)">
         <hn-field [label]="'ankaufAdmin.review.decision' | t" for="pl-f-decision" class="w-48">
           <select hnSelect id="pl-f-decision" (change)="setDecision($any($event.target).value)" data-testid="pl-filter-decision">
@@ -113,6 +114,7 @@ type Confirm = 'publish' | 'discard' | null;
           <input #q hnInput id="pl-f-search" type="search" [placeholder]="'ankaufAdmin.review.searchPlaceholder' | t" (change)="applySearch(q.value)" data-testid="pl-search" />
         </hn-field>
       </form>
+      </hn-filter-bar>
 
       @if (l.status === 'Review') {
         <div class="mb-2 flex flex-wrap items-center gap-2 text-sm" role="toolbar" [attr.aria-label]="'ankaufAdmin.review.bulk' | t">
@@ -130,7 +132,7 @@ type Confirm = 'publish' | 'discard' | null;
 
       <hn-banner class="mb-3" [error]="entries.error()" />
       <hn-table [loading]="entries.loading()">
-        <table class="hn-table" data-testid="pl-entries">
+        <table class="hn-table hn-stack" data-testid="pl-entries">
           <thead>
             <tr>
               @if (l.status === 'Review') {
@@ -161,15 +163,15 @@ type Confirm = 'publish' | 'discard' | null;
                     }
                   </td>
                 }
-                <td class="text-end tabular-nums text-xs text-slate-500">{{ e.rowNumber }}</td>
-                <td>{{ e.brand }}</td>
-                <td class="font-medium">{{ e.model }}</td>
-                <td class="whitespace-nowrap">{{ e.storage ?? '–' }}</td>
-                <td class="text-end tabular-nums whitespace-nowrap text-slate-600">{{ e.previousPriceMinor | money }}</td>
-                <td class="text-end tabular-nums whitespace-nowrap font-medium">{{ e.priceMinor | money }}</td>
-                <td class="text-end tabular-nums whitespace-nowrap" [class]="tone(e.change)">{{ pct(e) }}</td>
-                <td><hn-status-badge [status]="e.change" kind="priceChange" [tone]="changeTones[e.change]" /></td>
-                <td>
+                <td [attr.data-label]="'ankaufAdmin.review.row' | t" class="text-end tabular-nums text-xs text-slate-500">{{ e.rowNumber }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.brand' | t">{{ e.brand }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.model' | t" class="font-medium">{{ e.model }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.storage' | t" class="whitespace-nowrap">{{ e.storage ?? '–' }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.previousPrice' | t" class="text-end tabular-nums whitespace-nowrap text-slate-600">{{ e.previousPriceMinor | money }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.newPrice' | t" class="text-end tabular-nums whitespace-nowrap font-medium">{{ e.priceMinor | money }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.changePct' | t" class="text-end tabular-nums whitespace-nowrap" [class]="tone(e.change)">{{ pct(e) }}</td>
+                <td [attr.data-label]="'ankaufAdmin.review.change' | t"><hn-status-badge [status]="e.change" kind="priceChange" [tone]="changeTones[e.change]" /></td>
+                <td [attr.data-label]="'ankaufAdmin.review.decision' | t">
                   <hn-status-badge [status]="e.decision" kind="entryDecision" [tone]="decisionTones[e.decision]" />
                   @if (e.decidedAt) { <span class="block text-[11px] text-slate-500">{{ e.decidedAt | hnDate }}</span> }
                 </td>
@@ -196,7 +198,7 @@ type Confirm = 'publish' | 'discard' | null;
           @if (showSkipped()) {
             <div id="pl-skipped-panel" class="border-t border-slate-200">
               <p class="px-4 py-2 text-xs text-slate-600">{{ 'ankaufAdmin.skipped.hint' | t }}</p>
-              <table class="hn-table">
+              <table class="hn-table hn-stack">
                 <thead>
                   <tr>
                     <th scope="col" class="text-end">{{ 'ankaufAdmin.review.row' | t }}</th>
@@ -207,9 +209,9 @@ type Confirm = 'publish' | 'discard' | null;
                 <tbody>
                   @for (s of l.skippedRows; track s.rowNumber) {
                     <tr>
-                      <td class="text-end tabular-nums">{{ s.rowNumber }}</td>
-                      <td>{{ s.text || '–' }}</td>
-                      <td class="text-xs">{{ s.reason }}</td>
+                      <td [attr.data-label]="'ankaufAdmin.review.row' | t" class="text-end tabular-nums">{{ s.rowNumber }}</td>
+                      <td [attr.data-label]="'ankaufAdmin.skipped.text' | t">{{ s.text || '–' }}</td>
+                      <td [attr.data-label]="'ankaufAdmin.skipped.reason' | t" class="text-xs">{{ s.reason }}</td>
                     </tr>
                   }
                 </tbody>

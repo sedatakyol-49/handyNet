@@ -13,11 +13,15 @@
         {{ 'orders.actions.ship' | t }}
       </button>
     }
-    @if (canReject()) {
-      <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('reject')">{{ 'orders.actions.reject' | t }}</button>
-    }
-    @if (canCancel()) {
-      <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('cancel')">{{ 'orders.actions.cancel' | t }}</button>
+    @if (canReject() || canCancel()) {
+      <hn-actions-menu>
+        @if (canReject()) {
+          <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('reject')">{{ 'orders.actions.reject' | t }}</button>
+        }
+        @if (canCancel()) {
+          <button hnButton variant="danger" type="button" [disabled]="!!busy()" (click)="openReason('cancel')">{{ 'orders.actions.cancel' | t }}</button>
+        }
+      </hn-actions-menu>
     }
   </hn-page-header>
 
@@ -37,7 +41,7 @@
     <section class="hn-card overflow-hidden lg:col-span-2" aria-labelledby="lines-heading">
       <h2 id="lines-heading" class="border-b border-slate-200 px-4 py-3 text-sm">{{ 'orders.positions' | t }}</h2>
       <div class="overflow-x-auto">
-        <table class="hn-table">
+        <table class="hn-table hn-stack">
           <thead>
             <tr>
               <th scope="col" class="num">#</th>
@@ -52,11 +56,11 @@
             @for (l of o.lines; track l.lineNumber) {
               <tr>
                 <td class="num text-slate-500">{{ l.lineNumber }}</td>
-                <td class="min-w-48 font-medium">{{ l.brand }} {{ l.productName }}</td>
-                <td class="hn-mono whitespace-nowrap">{{ l.supplierSku }}</td>
-                <td class="num">{{ l.quantity }}</td>
-                <td class="num">{{ l.unitPriceMinor | money: o.currency }}</td>
-                <td class="num">{{ l.lineNetMinor | money: o.currency }}</td>
+                <td [attr.data-label]="'common.product' | t" class="min-w-48 font-medium">{{ l.brand }} {{ l.productName }}</td>
+                <td [attr.data-label]="'common.sku' | t" class="hn-mono whitespace-nowrap">{{ l.supplierSku }}</td>
+                <td [attr.data-label]="'common.quantity' | t" class="num">{{ l.quantity }}</td>
+                <td [attr.data-label]="'cart.unitPrice' | t" class="num">{{ l.unitPriceMinor | money: o.currency }}</td>
+                <td [attr.data-label]="'cart.lineNet' | t" class="num">{{ l.lineNetMinor | money: o.currency }}</td>
               </tr>
             }
           </tbody>

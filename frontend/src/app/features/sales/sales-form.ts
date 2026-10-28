@@ -43,7 +43,7 @@ type Kind = 'quotation' | 'invoice';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <hn-page-header [title]="title()">
+    <hn-page-header [title]="title()" [stickyActions]="true">
       <button hnButton type="button" class="min-h-11" (click)="cancel()" data-testid="sales-form-cancel">{{ 'common.cancel' | t }}</button>
       <button hnButton variant="primary" type="button" class="min-h-11" [loading]="saving()" [disabled]="saving()" (click)="save()" data-testid="sales-form-save">
         {{ 'common.save' | t }}
@@ -255,6 +255,7 @@ type Kind = 'quotation' | 'invoice';
         </section>
       </aside>
     </div>
+    <div class="h-20 md:hidden" aria-hidden="true"></div>
 
     <hn-pos-customer-dialog [open]="pickCustomer()" mode="pick" [attachedId]="customer()?.customerId ?? null" (chosen)="chooseCustomer($event)" (closed)="pickCustomer.set(false)" />
     <hn-sales-product-picker [open]="picker()" [warehouseId]="productWarehouse()" [initialSearch]="pickerSearch()" (picked)="addProduct($event)" (closed)="picker.set(false)" />

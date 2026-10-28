@@ -98,11 +98,11 @@ export function localIsoDate(now: Date = new Date()): string {
             </div>
             @if (p.sessions.length) {
               <div class="mt-4 overflow-x-auto">
-                <table class="hn-table" data-testid="dr-sessions">
+                <table class="hn-table hn-stack" data-testid="dr-sessions">
                   <thead><tr><th scope="col">{{ 'reports.daily.register' | t }}</th><th scope="col">{{ 'common.status' | t }}</th><th scope="col">{{ 'pos.sessions.opened' | t }}</th><th scope="col" class="num">{{ 'pos.z.expected' | t }}</th><th scope="col" class="num">{{ 'pos.z.difference' | t }}</th></tr></thead>
                   <tbody>
                     @for (s of p.sessions; track s.sessionId) {
-                      <tr><td>{{ s.registerName }}</td><td>{{ s.status | tEnum: 'posSessionStatus' }}</td><td class="text-xs">{{ s.openedAt | hnDate }}</td><td class="num">{{ s.expectedCashMinor | money }}</td><td class="num" [class.text-red-700]="(s.differenceMinor ?? 0) < 0">{{ s.differenceMinor === null ? '–' : (s.differenceMinor | signedMoney) }}</td></tr>
+                      <tr><td [attr.data-label]="'reports.daily.register' | t">{{ s.registerName }}</td><td [attr.data-label]="'common.status' | t">{{ s.status | tEnum: 'posSessionStatus' }}</td><td [attr.data-label]="'pos.sessions.opened' | t" class="text-xs">{{ s.openedAt | hnDate }}</td><td [attr.data-label]="'pos.z.expected' | t" class="num">{{ s.expectedCashMinor | money }}</td><td [attr.data-label]="'pos.z.difference' | t" class="num" [class.text-red-700]="(s.differenceMinor ?? 0) < 0">{{ s.differenceMinor === null ? '–' : (s.differenceMinor | signedMoney) }}</td></tr>
                     }
                   </tbody>
                 </table>
@@ -125,12 +125,12 @@ export function localIsoDate(now: Date = new Date()): string {
             </div>
             @if (a.devices.length) {
               <div class="mt-3 overflow-x-auto">
-                <table class="hn-table" data-testid="dr-devices">
+                <table class="hn-table hn-stack" data-testid="dr-devices">
                   <thead><tr><th scope="col">{{ 'reports.daily.time' | t }}</th><th scope="col">{{ 'ankauf.model' | t }}</th><th scope="col">IMEI</th><th scope="col">{{ 'ankauf.condition' | t }}</th><th scope="col">{{ 'ankauf.intake.paymentMethod' | t }}</th><th scope="col" class="num">{{ 'ankauf.intake.paid' | t }}</th></tr></thead>
                   <tbody>
                     @for (d of a.devices; track d.intakeId) {
-                      <tr><td class="text-xs">{{ d.completedAt | hnDate }}</td><td>{{ d.brand }} {{ d.model }} {{ d.storage }}</td><td class="hn-mono text-xs">{{ d.imei }}</td><td>{{ d.condition | tEnum: 'deviceCondition' }}</td>
-                        <td>{{ d.paymentMethod | tEnum: 'intakePaymentMethod' }}@if (d.paidFromTill) { <span class="ms-1 rounded bg-slate-100 px-1.5 text-[11px]">{{ 'reports.daily.fromTill' | t }}</span> }</td><td class="num">{{ d.paidMinor | money }}</td></tr>
+                      <tr><td [attr.data-label]="'reports.daily.time' | t" class="text-xs">{{ d.completedAt | hnDate }}</td><td [attr.data-label]="'ankauf.model' | t">{{ d.brand }} {{ d.model }} {{ d.storage }}</td><td class="hn-mono text-xs">{{ d.imei }}</td><td [attr.data-label]="'ankauf.condition' | t">{{ d.condition | tEnum: 'deviceCondition' }}</td>
+                        <td [attr.data-label]="'ankauf.intake.paymentMethod' | t">{{ d.paymentMethod | tEnum: 'intakePaymentMethod' }}@if (d.paidFromTill) { <span class="ms-1 rounded bg-slate-100 px-1.5 text-[11px]">{{ 'reports.daily.fromTill' | t }}</span> }</td><td [attr.data-label]="'ankauf.intake.paid' | t" class="num">{{ d.paidMinor | money }}</td></tr>
                     }
                   </tbody>
                 </table>

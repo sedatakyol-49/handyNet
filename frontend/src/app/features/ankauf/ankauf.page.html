@@ -205,7 +205,7 @@
   </div>
   <hn-banner class="mb-3" [error]="quotes.error()" />
   <hn-table [loading]="quotes.loading()">
-    <table class="hn-table" data-testid="ak-history">
+    <table class="hn-table hn-stack" data-testid="ak-history">
       <thead>
         <tr>
           <th scope="col">{{ 'ankauf.createdAtColumn' | t }}</th>
@@ -226,20 +226,20 @@
       <tbody>
         @for (q of quotes.value() ?? []; track q.id) {
           <tr>
-            <td class="whitespace-nowrap text-xs">{{ q.createdAt | hnDate }}</td>
-            <td>{{ label(q) }}</td>
-            <td>{{ q.condition | tEnum: 'deviceCondition' }}</td>
-            <td class="text-xs">
+            <td [attr.data-label]="'ankauf.createdAtColumn' | t" class="whitespace-nowrap text-xs">{{ q.createdAt | hnDate }}</td>
+            <td [attr.data-label]="'ankauf.model' | t">{{ label(q) }}</td>
+            <td [attr.data-label]="'ankauf.condition' | t">{{ q.condition | tEnum: 'deviceCondition' }}</td>
+            <td [attr.data-label]="'ankauf.defects' | t" class="text-xs">
               @for (d of q.defects; track d; let last = $last) { {{ d | tEnum: 'deviceDefect' }}@if (!last) {, } } @empty { – }
             </td>
             <td class="hn-mono text-xs">{{ q.imei ?? '–' }}</td>
-            <td class="text-end tabular-nums whitespace-nowrap font-medium">{{ q.platformOfferMinor | money }}</td>
-            <td class="text-end tabular-nums whitespace-nowrap">{{ q.maxConsumerPriceMinor | money }}</td>
-            <td class="text-end tabular-nums whitespace-nowrap" [class.text-red-700]="(q.dealerMarginMinor ?? 0) < 0">
+            <td [attr.data-label]="'ankauf.platformOfferShort' | t" class="text-end tabular-nums whitespace-nowrap font-medium">{{ q.platformOfferMinor | money }}</td>
+            <td [attr.data-label]="'ankauf.maxConsumerShort' | t" class="text-end tabular-nums whitespace-nowrap">{{ q.maxConsumerPriceMinor | money }}</td>
+            <td [attr.data-label]="'ankauf.dealerMargin' | t" class="text-end tabular-nums whitespace-nowrap" [class.text-red-700]="(q.dealerMarginMinor ?? 0) < 0">
               {{ q.dealerMarginMinor === null ? '–' : (q.dealerMarginMinor | signedMoney) }}
             </td>
-            <td class="whitespace-nowrap text-xs">{{ q.validUntil | hnDate }}</td>
-            <td class="text-end tabular-nums">#{{ q.policyNumber }}</td>
+            <td [attr.data-label]="'ankauf.validUntilColumn' | t" class="whitespace-nowrap text-xs">{{ q.validUntil | hnDate }}</td>
+            <td [attr.data-label]="'ankauf.policyColumn' | t" class="text-end tabular-nums">#{{ q.policyNumber }}</td>
             @if (canIntake()) {
               <td class="hn-actions">
                 @if (intakeFor().get(q.id); as intake) {

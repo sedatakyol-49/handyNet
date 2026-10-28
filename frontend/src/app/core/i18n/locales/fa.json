@@ -31,7 +31,9 @@
     "filterOptions": "فیلتر گزینه‌ها",
     "noOptions": "مقداری وجود ندارد",
     "clearSelection": "لغو انتخاب",
-    "selectedCount": "{count} انتخاب‌شده"
+    "selectedCount": "{count} انتخاب‌شده",
+    "moreActions": "اقدامات بیشتر",
+    "filters": "فیلترها"
   },
   "pagination": {
     "label": "پیمایش صفحات",

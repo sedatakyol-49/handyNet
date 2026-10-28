@@ -555,7 +555,7 @@
         }
       </div>
       <div class="max-h-[50vh] overflow-auto rounded-md border border-slate-200">
-        <table class="hn-table" data-testid="bulk-review">
+        <table class="hn-table hn-stack" data-testid="bulk-review">
           <thead>
             <tr>
               <th scope="col" class="text-start">{{ 'common.product' | t }}</th>
@@ -568,21 +568,21 @@
           <tbody>
             @for (row of rows; track row.id) {
               <tr [attr.data-row-id]="row.id" data-testid="bulk-review-row">
-                <td class="min-w-48">
+                <td [attr.data-label]="'common.product' | t" class="min-w-48">
                   <span class="font-medium">{{ matchLabel(row.match) }}</span>
                   @if (row.match.product.ean || row.match.product.mpn) {
                     <span class="block text-xs text-slate-500 hn-mono">{{ row.match.product.ean || row.match.product.mpn }}</span>
                   }
                 </td>
-                <td class="whitespace-nowrap text-end tabular-nums" data-testid="bulk-review-qty">
+                <td [attr.data-label]="'inventory.entry.receive' | t" class="whitespace-nowrap text-end tabular-nums" data-testid="bulk-review-qty">
                   @if (rowMode(row) === 'imei') {
                     {{ 'inventory.entry.devices' | t: { count: rowImeis(row).valid.length } }}
                   } @else {
                     +{{ row.quantity }}
                   }
                 </td>
-                <td class="whitespace-nowrap text-end tabular-nums">{{ moneyMinor(row.purchasePrice) !== null ? (moneyMinor(row.purchasePrice) | money) : '–' }}</td>
-                <td class="min-w-40 text-xs">
+                <td [attr.data-label]="'inventory.entry.bulk.ekShort' | t" class="whitespace-nowrap text-end tabular-nums">{{ moneyMinor(row.purchasePrice) !== null ? (moneyMinor(row.purchasePrice) | money) : '–' }}</td>
+                <td [attr.data-label]="'inventory.entry.offer' | t" class="min-w-40 text-xs">
                   @if (rowOfferPossible(row) && row.offer.enabled) {
                     <span class="hn-mono">{{ row.offer.supplierSku }}</span> · {{ moneyMinor(row.offer.price) | money }} {{ 'common.net' | t }} ·
                     {{ (row.offer.publish ? 'inventory.entry.published' : 'inventory.entry.notPublished') | t }}
@@ -590,7 +590,7 @@
                     {{ 'inventory.entry.noOffer' | t }}
                   }
                 </td>
-                <td class="min-w-48">
+                <td [attr.data-label]="'common.status' | t" class="min-w-48">
                   <span class="rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset" [class]="statusClass(row.status)" data-testid="bulk-review-status">{{ 'inventory.entry.bulk.status.' + row.status | t }}</span>
                   @if (row.status === 'error') {
                     <p class="mt-1 text-xs text-red-700" data-testid="bulk-review-error">{{ row.error }}</p>

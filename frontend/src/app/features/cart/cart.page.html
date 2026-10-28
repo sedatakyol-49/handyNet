@@ -36,7 +36,7 @@
       </header>
 
       <div class="overflow-x-auto">
-        <table class="hn-table">
+        <table class="hn-table hn-stack">
           <thead>
             <tr>
               <th scope="col">{{ 'common.product' | t }}</th>
@@ -51,7 +51,7 @@
             @for (item of group.items; track item.offerId) {
               @let issue = lineIssue(item);
               <tr [class.bg-red-50]="issue">
-                <td>
+                <td [attr.data-label]="'common.product' | t">
                   <span class="font-medium">{{ item.brand }} {{ item.productName }}</span>
                   <span class="block text-xs text-slate-500">
                     {{ item.quality | tEnum: 'quality' }} · {{ item.condition | tEnum: 'condition' }} ·
@@ -61,14 +61,14 @@
                     <span class="block text-xs font-medium text-red-700" role="alert">{{ issue }}</span>
                   }
                 </td>
-                <td class="hn-mono">{{ item.supplierSku }}</td>
-                <td class="num">
+                <td [attr.data-label]="'common.sku' | t" class="hn-mono">{{ item.supplierSku }}</td>
+                <td [attr.data-label]="'cart.unitPrice' | t" class="num">
                   @if (item.previousPriceMinor !== null && item.previousPriceMinor !== undefined) {
                     <span class="block text-xs text-slate-500 line-through">{{ item.previousPriceMinor | money: item.currency }}</span>
                   }
                   <span [class.font-semibold]="item.previousPriceMinor">{{ item.priceMinor | money: item.currency }}</span>
                 </td>
-                <td class="num">
+                <td [attr.data-label]="'common.quantity' | t" class="num">
                   <label class="sr-only" [for]="'cart-qty-' + item.offerId">{{ 'common.quantity' | t }}</label>
                   <input
                     hnInput
@@ -84,7 +84,7 @@
                   />
                   <span class="mt-0.5 block text-[11px] text-slate-500">{{ 'cart.limits' | t: { min: item.minOrderQuantity, available: item.available } }}</span>
                 </td>
-                <td class="num font-medium">{{ item.priceMinor * item.quantity | money: item.currency }}</td>
+                <td [attr.data-label]="'cart.lineNet' | t" class="num font-medium">{{ item.priceMinor * item.quantity | money: item.currency }}</td>
                 <td class="hn-actions">
                   <button hnButton variant="ghost" size="sm" type="button" (click)="cart.remove(item.offerId)" [disabled]="gs.busy"
                     [attr.aria-label]="('common.remove' | t) + ': ' + item.productName">

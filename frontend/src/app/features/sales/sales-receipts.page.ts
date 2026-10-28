@@ -36,6 +36,7 @@ const NO_FILTER: ReceiptsFilter = { register: '', number: '', from: '', to: '' }
       <a [routerLink]="nav.receipts" class="pos-chip" aria-pressed="true" data-testid="sales-tab-receipts">{{ 'sales.receipts.title' | t }}</a>
     </nav>
 
+    <hn-filter-bar>
     <form class="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="search" (submit)="$event.preventDefault(); apply()" data-testid="receipts-filter">
       <hn-field [label]="'sales.receipts.register' | t" for="rc-register">
         <select hnSelect id="rc-register" class="h-11" (change)="draft.update(d => ({ ...d, register: $any($event.target).value }))" data-testid="receipts-register">
@@ -59,6 +60,7 @@ const NO_FILTER: ReceiptsFilter = { register: '', number: '', from: '', to: '' }
         <button hnButton variant="ghost" type="button" class="min-h-11" (click)="reset()">{{ 'pos.receipts.reset' | t }}</button>
       </div>
     </form>
+    </hn-filter-bar>
 
     <hn-banner class="mb-3" [error]="receipts.error()" />
     <ul class="grid gap-2 md:hidden" data-testid="receipts-cards">

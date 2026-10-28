@@ -151,7 +151,7 @@ type DialogName = 'email' | 'payment' | 'collect' | 'creditNote' | 'issue' | nul
           </section>
 
           <hn-table>
-            <table class="hn-table" data-testid="sales-detail-lines">
+            <table class="hn-table hn-stack" data-testid="sales-detail-lines">
               <thead>
                 <tr>
                   <th>#</th>
@@ -167,15 +167,15 @@ type DialogName = 'email' | 'payment' | 'collect' | 'creditNote' | 'issue' | nul
                 @for (l of d.lines; track l.position) {
                   <tr class="hn-row-static">
                     <td>{{ l.position }}</td>
-                    <td>{{ l.description }}
+                    <td [attr.data-label]="'sales.fields.description' | t">{{ l.description }}
                       @if (l.imei) {<span class="block text-xs text-slate-500">IMEI {{ l.imei }}</span>}
                       @if (l.note) {<span class="block text-xs text-slate-500">{{ l.note }}</span>}
                     </td>
-                    <td class="num">{{ l.quantity }}</td>
+                    <td [attr.data-label]="'sales.fields.quantity' | t" class="num">{{ l.quantity }}</td>
                     <td class="num">{{ l.unitPriceMinor | money }}</td>
-                    <td class="num">{{ l.discountMinor ? (l.discountMinor | money) : '' }}</td>
-                    <td>{{ taxLabel(l) }}</td>
-                    <td class="num">{{ l.amountMinor | money }}</td>
+                    <td [attr.data-label]="'sales.fields.discount' | t" class="num">{{ l.discountMinor ? (l.discountMinor | money) : '' }}</td>
+                    <td [attr.data-label]="'sales.fields.vat' | t">{{ taxLabel(l) }}</td>
+                    <td [attr.data-label]="'sales.fields.amount' | t" class="num">{{ l.amountMinor | money }}</td>
                   </tr>
                 }
               </tbody>

@@ -110,7 +110,7 @@ import { quantityProblem } from './order-quantity';
             <p class="text-sm text-slate-500">{{ 'marketplace.detail.noOtherOffers' | t }}</p>
           } @else {
             <div class="overflow-x-auto rounded-md border border-slate-200">
-              <table class="hn-table" data-testid="other-offers">
+              <table class="hn-table hn-stack" data-testid="other-offers">
                 <thead>
                   <tr>
                     <th scope="col">{{ 'marketplace.seller' | t }}</th>
@@ -127,14 +127,14 @@ import { quantityProblem } from './order-quantity';
                 <tbody>
                   @for (o of d.otherOffers; track o.offerId) {
                     <tr>
-                      <td class="whitespace-nowrap">{{ o.sellerName }}<span class="block text-xs text-slate-500">{{ o.sellerCity }}</span></td>
-                      <td class="hn-mono">{{ o.supplierSku }}</td>
-                      <td class="whitespace-nowrap">{{ o.condition | tEnum: 'condition' }}</td>
-                      <td class="num font-semibold">{{ o.priceMinor | money: o.currency }}</td>
-                      <td class="num text-slate-600">{{ gross(o) | money: o.currency }}</td>
-                      <td class="num" [class.text-red-700]="o.available < o.minOrderQuantity">{{ o.available }}</td>
-                      <td class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
-                      <td class="num">{{ o.minOrderQuantity }}</td>
+                      <td [attr.data-label]="'marketplace.seller' | t" class="whitespace-nowrap">{{ o.sellerName }}<span class="block text-xs text-slate-500">{{ o.sellerCity }}</span></td>
+                      <td [attr.data-label]="'common.sku' | t" class="hn-mono">{{ o.supplierSku }}</td>
+                      <td [attr.data-label]="'common.condition' | t" class="whitespace-nowrap">{{ o.condition | tEnum: 'condition' }}</td>
+                      <td [attr.data-label]="'marketplace.netPrice' | t" class="num font-semibold">{{ o.priceMinor | money: o.currency }}</td>
+                      <td [attr.data-label]="'common.gross' | t" class="num text-slate-600">{{ gross(o) | money: o.currency }}</td>
+                      <td [attr.data-label]="'marketplace.available' | t" class="num" [class.text-red-700]="o.available < o.minOrderQuantity">{{ o.available }}</td>
+                      <td [attr.data-label]="'marketplace.delivery' | t" class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
+                      <td [attr.data-label]="'marketplace.moq' | t" class="num">{{ o.minOrderQuantity }}</td>
                       <td class="whitespace-nowrap">
                         <ng-container *ngTemplateOutlet="addRow; context: { $implicit: o, main: false }" />
                       </td>

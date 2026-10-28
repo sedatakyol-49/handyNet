@@ -22,6 +22,7 @@ const pathOf = (url: string) => url.split(/[?#]/)[0];
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, TranslateEnumPipe, EmailVerificationBannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
+  host: { '(document:keydown.escape)': 'navOpen.set(false)' },
 })
 export class ShellComponent {
   protected readonly session = inject(SessionStore);

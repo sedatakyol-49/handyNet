@@ -4,6 +4,7 @@ export { StatusBadgeComponent } from './status-badge';
 export { PaginationComponent } from './pagination';
 export { TableComponent } from './table';
 export { PageHeaderComponent, EmptyStateComponent, BannerComponent, ToastHostComponent, DialogComponent, SkeletonRowsComponent } from './misc';
+export { ActionsMenuComponent, FilterBarComponent } from './responsive';
 export { TranslatePipe, TranslateEnumPipe } from '../../core/i18n/translate.pipe';
 export { MoneyPipe, SignedMoneyPipe } from '../../core/format/money';
 export { HnDatePipe } from '../../core/format/date.pipe';
@@ -13,6 +14,7 @@ import { FieldComponent, InputDirective, SelectDirective } from './field';
 import { StatusBadgeComponent } from './status-badge';
 import { PaginationComponent } from './pagination';
 import { TableComponent } from './table';
+import { ActionsMenuComponent, FilterBarComponent } from './responsive';
 import { PageHeaderComponent, EmptyStateComponent, BannerComponent, DialogComponent, SkeletonRowsComponent } from './misc';
 import { TranslatePipe, TranslateEnumPipe } from '../../core/i18n/translate.pipe';
 import { MoneyPipe, SignedMoneyPipe } from '../../core/format/money';
@@ -27,6 +29,8 @@ export const UI = [
   StatusBadgeComponent,
   PaginationComponent,
   TableComponent,
+  ActionsMenuComponent,
+  FilterBarComponent,
   PageHeaderComponent,
   EmptyStateComponent,
   BannerComponent,

@@ -169,7 +169,7 @@ import { AdminFiskalyConnectionComponent } from './admin-fiskaly-connection';
           <section class="hn-card p-4" aria-labelledby="fiscal-registers-heading">
             <h2 id="fiscal-registers-heading" class="mb-2 text-sm">{{ 'admin.fiscal.registers' | t }}</h2>
             <hn-table>
-              <table class="hn-table" data-testid="admin-fiscal-registers">
+              <table class="hn-table hn-stack" data-testid="admin-fiscal-registers">
                 <thead>
                   <tr>
                     <th scope="col">{{ 'admin.fiscal.register' | t }}</th>
@@ -182,13 +182,13 @@ import { AdminFiskalyConnectionComponent } from './admin-fiskaly-connection';
                 <tbody>
                   @for (r of d.registers; track r.registerId) {
                     <tr [attr.data-register]="r.name">
-                      <td>{{ r.name }}</td>
-                      <td>
+                      <td [attr.data-label]="'admin.fiscal.register' | t">{{ r.name }}</td>
+                      <td [attr.data-label]="'admin.fiscal.mode' | t">
                         {{ (r.mode ?? 'None') | tEnum: 'fiscalMode' }}
                         <span class="block text-xs text-slate-500">{{ 'admin.fiscal.source.' + r.modeSource | t }}</span>
                       </td>
-                      <td class="hn-mono break-all text-xs">{{ r.clientId }}</td>
-                      <td class="text-xs">
+                      <td [attr.data-label]="'pos.tse.clientId' | t" class="hn-mono break-all text-xs">{{ r.clientId }}</td>
+                      <td [attr.data-label]="'admin.fiscal.behaviour' | t" class="text-xs">
                         @if (r.mode === 'SimulatedTse') {
                           {{ 'admin.fiscal.behaviourSummary' | t: { latency: r.latencyMs, rate: r.failureRatePercent } }}
                           @if (r.forcedOutage) {
@@ -251,7 +251,7 @@ import { AdminFiskalyConnectionComponent } from './admin-fiskaly-connection';
           <section class="hn-card p-4" aria-labelledby="fiscal-outages-heading">
             <h2 id="fiscal-outages-heading" class="mb-2 text-sm">{{ 'admin.fiscal.outages' | t }}</h2>
             <hn-table>
-              <table class="hn-table" data-testid="admin-fiscal-outages">
+              <table class="hn-table hn-stack" data-testid="admin-fiscal-outages">
                 <thead>
                   <tr>
                     <th scope="col">{{ 'admin.fiscal.register' | t }}</th>
@@ -263,16 +263,16 @@ import { AdminFiskalyConnectionComponent } from './admin-fiskaly-connection';
                 <tbody>
                   @for (o of d.outages; track o.id) {
                     <tr>
-                      <td>{{ o.registerName }}</td>
-                      <td class="whitespace-nowrap">{{ o.startedAt | hnDate }}</td>
-                      <td class="whitespace-nowrap">
+                      <td [attr.data-label]="'admin.fiscal.register' | t">{{ o.registerName }}</td>
+                      <td [attr.data-label]="'admin.fiscal.outageStart' | t" class="whitespace-nowrap">{{ o.startedAt | hnDate }}</td>
+                      <td [attr.data-label]="'admin.fiscal.outageEnd' | t" class="whitespace-nowrap">
                         @if (o.endedAt) {
                           {{ o.endedAt | hnDate }}
                         } @else {
                           <span class="font-semibold text-red-700">{{ 'admin.fiscal.ongoing' | t }}</span>
                         }
                       </td>
-                      <td class="text-xs">{{ o.reason }}</td>
+                      <td [attr.data-label]="'admin.fiscal.reason' | t" class="text-xs">{{ o.reason }}</td>
                     </tr>
                   } @empty {
                     <tr><td colspan="4" class="py-4 text-center text-slate-500">{{ 'admin.fiscal.noOutages' | t }}</td></tr>

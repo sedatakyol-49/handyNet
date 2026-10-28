@@ -1,0 +1,222 @@
+/*
+ * Responsive back office (phone < 48rem, tablet, desktop). Shared building blocks: actions menu, sticky save bar,
+ * touch targets, bottom-sheet dialogs. POS screens (.hn-pos) keep their own sizing. Imported by styles.css.
+ */
+@layer components {
+  html {
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+
+  /* Grid items may shrink below their content width (long names, inputs) instead of widening the page. */
+  main .grid > *,
+  main .flex > .min-w-0,
+  main .flex > :is(input, select) {
+    min-width: 0;
+  }
+  main input:not([type="checkbox"], [type="radio"]),
+  main select {
+    max-width: 100%;
+  }
+
+  /* Secondary page actions: "..." dropdown on phones, inline row from md up (see hn-actions-menu). */
+  .hn-actions-panel {
+    display: none;
+  }
+  .hn-actions-panel.hn-actions-open {
+    position: absolute;
+    inset-inline-end: 0;
+    top: 100%;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 15rem;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    border: 1px solid var(--color-slate-200);
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.16);
+  }
+  .hn-actions-panel > * {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  @media (width >= 48rem) {
+    .hn-actions-panel,
+    .hn-actions-panel.hn-actions-open {
+      position: static;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      width: auto;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      box-shadow: none;
+    }
+    .hn-actions-panel > * {
+      width: auto;
+      justify-content: center;
+    }
+  }
+
+  /*
+   * Stacked tables: below md every row of `table.hn-table.hn-stack` becomes a card; each cell shows its column title
+   * (data-label) next to the value. Header row stays in the DOM for screen readers.
+   */
+  @media (width < 48rem) {
+    .hn-table.hn-stack,
+    .hn-table.hn-stack tbody,
+    .hn-table.hn-stack tbody tr,
+    .hn-table.hn-stack tbody td,
+    .hn-table.hn-stack tbody th {
+      display: block;
+      width: auto;
+    }
+    .hn-table.hn-stack thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .hn-table.hn-stack tbody tr {
+      margin: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      border: 1px solid var(--color-slate-200);
+      border-radius: 0.5rem;
+      background: #fff;
+    }
+    .hn-table.hn-stack tbody tr:has(hn-empty-state, hn-skeleton-rows) {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    .hn-table.hn-stack tbody :is(td, th)[data-label] {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.25rem 0;
+      border: 0;
+      text-align: end;
+      white-space: normal;
+    }
+    .hn-table.hn-stack tbody :is(td, th)[data-label]::before {
+      content: attr(data-label);
+      flex-shrink: 0;
+      max-width: 45%;
+      text-align: start;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--color-slate-500);
+    }
+    .hn-table.hn-stack tbody :is(td, th):not([data-label]) {
+      padding: 0.25rem 0;
+      border: 0;
+    }
+    .hn-table.hn-stack tbody td.hn-actions {
+      position: static;
+      box-shadow: none;
+      text-align: start;
+    }
+  }
+
+  /* Tab strips never wrap: they scroll sideways (hidden scrollbar, momentum on touch). */
+  .hn-tabs {
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hn-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .hn-tab {
+    flex-shrink: 0;
+  }
+  .hn-scroll-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hn-scroll-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .hn-scroll-tabs > * {
+    flex-shrink: 0;
+  }
+
+  /* Long forms: the save bar sticks to the bottom edge of the screen on phones (above the home indicator). */
+  .hn-sticky-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    margin-inline: -0.75rem;
+    padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-slate-200);
+    background: rgb(255 255 255 / 0.96);
+  }
+  @media (width >= 48rem) {
+    .hn-sticky-actions {
+      position: static;
+      margin-inline: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+    }
+  }
+}
+
+/*
+ * Touch comfort for the back office: inputs at 16 px (iOS does not zoom on focus), targets at least 44 px.
+ * Unlayered on purpose so it wins over the Tailwind utilities of the shared controls; POS is excluded.
+ */
+@media (width < 48rem), (pointer: coarse) {
+  .hn-control:not(.hn-pos *),
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]):not(.hn-pos *),
+  select:not(.hn-pos *),
+  textarea:not(.hn-pos *) {
+    font-size: 16px;
+  }
+  .hn-control:not(.hn-pos *) {
+    min-height: 44px;
+  }
+  :is(button, a)[hnbutton]:not(.hn-pos *),
+  .hn-icon-btn:not(.hn-pos *),
+  .hn-tab:not(.hn-pos *),
+  .hn-nav-link:not(.hn-pos *) {
+    min-height: 44px;
+  }
+  .hn-icon-btn:not(.hn-pos *) {
+    min-width: 44px;
+  }
+}
+
+/* Dialogs become bottom sheets (small) or full-screen (lg/xl) on phones. */
+@media (width < 40rem) {
+  dialog.hn-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92dvh;
+    margin: auto 0 0 0;
+    border-radius: 1rem 1rem 0 0;
+    border-width: 1px 0 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  dialog.hn-sheet-full {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border-width: 0;
+    margin: 0;
+  }
+}

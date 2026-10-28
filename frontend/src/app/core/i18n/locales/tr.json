@@ -31,7 +31,9 @@
     "filterOptions": "Seçenekleri filtrele",
     "noOptions": "Değer yok",
     "clearSelection": "Seçimi kaldır",
-    "selectedCount": "{count} seçili"
+    "selectedCount": "{count} seçili",
+    "moreActions": "Diğer işlemler",
+    "filters": "Filtreler"
   },
   "pagination": {
     "label": "Sayfa gezinmesi",

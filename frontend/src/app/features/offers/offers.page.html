@@ -4,6 +4,7 @@
   }
 </hn-page-header>
 
+<hn-filter-bar>
 <form class="mb-3 flex flex-wrap items-end gap-3" role="search" (submit)="$event.preventDefault(); applySearch(searchInput.value)">
   <hn-field [label]="'common.search' | t" for="offer-search" class="w-full max-w-xs">
     <input #searchInput hnInput id="offer-search" type="search" [placeholder]="'offers.searchPlaceholder' | t" (change)="applySearch(searchInput.value)" />
@@ -17,6 +18,7 @@
     </select>
   </hn-field>
 </form>
+</hn-filter-bar>
 
 @if (ownModeration.value()?.sellerBlocked) {
   <hn-banner class="mb-3" tone="warning" [heading]="'moderation.seller.bannerHeading' | t"
@@ -29,7 +31,7 @@
 }
 
 <hn-table [loading]="offers.loading()">
-  <table class="hn-table" data-testid="offers-table">
+  <table class="hn-table hn-stack" data-testid="offers-table">
     <thead>
       <tr>
         <th scope="col">{{ 'common.product' | t }}</th>
@@ -48,23 +50,23 @@
       @for (o of offers.value()?.items ?? []; track o.id) {
         @if (editingId() === o.id) {
           <tr class="bg-accent-50/60">
-            <td class="font-medium">{{ o.brand }} {{ o.productName }}</td>
-            <td class="hn-mono">{{ o.supplierSku }}</td>
-            <td>{{ o.quality | tEnum: 'quality' }}</td>
-            <td class="num">
+            <td [attr.data-label]="'common.product' | t" class="font-medium">{{ o.brand }} {{ o.productName }}</td>
+            <td [attr.data-label]="'common.sku' | t" class="hn-mono">{{ o.supplierSku }}</td>
+            <td [attr.data-label]="'common.quality' | t">{{ o.quality | tEnum: 'quality' }}</td>
+            <td [attr.data-label]="'offers.priceNet' | t" class="num">
               <label class="sr-only" for="edit-price">{{ 'offers.priceNet' | t }}</label>
               <input hnInput id="edit-price" class="ms-auto w-24 py-1 text-end" inputmode="decimal" [(ngModel)]="draft.price" name="price"
                 [attr.aria-invalid]="fieldError(editProblem(), 'price').length > 0" (keydown.enter)="saveEdit(o)" (keydown.escape)="cancelEdit()" />
             </td>
-            <td class="num">
+            <td [attr.data-label]="'marketplace.moq' | t" class="num">
               <label class="sr-only" for="edit-moq">{{ 'marketplace.moq' | t }}</label>
               <input hnInput id="edit-moq" class="ms-auto w-16 py-1 text-end" type="number" min="1" [(ngModel)]="draft.minOrderQuantity" name="moq" />
             </td>
-            <td class="num">
+            <td [attr.data-label]="'marketplace.delivery' | t" class="num">
               <label class="sr-only" for="edit-days">{{ 'marketplace.delivery' | t }}</label>
               <input hnInput id="edit-days" class="ms-auto w-16 py-1 text-end" type="number" min="0" [(ngModel)]="draft.deliveryDays" name="days" />
             </td>
-            <td>
+            <td [attr.data-label]="'common.condition' | t">
               <label class="sr-only" for="edit-condition">{{ 'common.condition' | t }}</label>
               <select hnSelect id="edit-condition" class="py-1" [(ngModel)]="draft.condition" name="condition">
                 @for (c of conditions; track c) {
@@ -72,8 +74,8 @@
                 }
               </select>
             </td>
-            <td class="num">{{ o.onHand }} / {{ o.reserved }}</td>
-            <td>
+            <td [attr.data-label]="'offers.stock' | t" class="num">{{ o.onHand }} / {{ o.reserved }}</td>
+            <td [attr.data-label]="'common.status' | t">
               <label class="sr-only" for="edit-status">{{ 'common.status' | t }}</label>
               <select hnSelect id="edit-status" class="py-1" [(ngModel)]="draft.status" name="status">
                 @if (o.status === 'Draft') {
@@ -91,21 +93,21 @@
           </tr>
         } @else {
           <tr>
-            <td>
+            <td [attr.data-label]="'common.product' | t">
               <span class="font-medium">{{ o.brand }} {{ o.productName }}</span>
               <span class="block text-xs text-slate-500">
                 @if (o.ean) { EAN {{ o.ean }} }
                 @if (o.mpn) { · MPN {{ o.mpn }} }
               </span>
             </td>
-            <td class="hn-mono">{{ o.supplierSku }}</td>
-            <td>{{ o.quality | tEnum: 'quality' }}</td>
-            <td class="num font-medium">{{ o.priceMinor | money: o.currency }}</td>
-            <td class="num">{{ o.minOrderQuantity }}</td>
-            <td class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
-            <td>{{ o.condition | tEnum: 'condition' }}</td>
-            <td class="num" [title]="'offers.stockTitle' | t">{{ o.onHand }} / {{ o.reserved }}</td>
-            <td [attr.data-blocked]="o.moderation?.blocked ?? false">
+            <td [attr.data-label]="'common.sku' | t" class="hn-mono">{{ o.supplierSku }}</td>
+            <td [attr.data-label]="'common.quality' | t">{{ o.quality | tEnum: 'quality' }}</td>
+            <td [attr.data-label]="'offers.priceNet' | t" class="num font-medium">{{ o.priceMinor | money: o.currency }}</td>
+            <td [attr.data-label]="'marketplace.moq' | t" class="num">{{ o.minOrderQuantity }}</td>
+            <td [attr.data-label]="'marketplace.delivery' | t" class="num">{{ 'marketplace.days' | t: { days: o.deliveryDays } }}</td>
+            <td [attr.data-label]="'common.condition' | t">{{ o.condition | tEnum: 'condition' }}</td>
+            <td [attr.data-label]="'offers.stock' | t" class="num" [title]="'offers.stockTitle' | t">{{ o.onHand }} / {{ o.reserved }}</td>
+            <td [attr.data-label]="'common.status' | t" [attr.data-blocked]="o.moderation?.blocked ?? false">
               <hn-status-badge [status]="o.status" kind="offerStatus" />
               @if (o.moderation?.blocked) {
                 <span class="mt-1 block" data-testid="offer-blocked">

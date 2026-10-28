@@ -10,18 +10,21 @@ import { ToastService, describeProblem } from '../../core/ui-state/toast.service
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'mb-4 flex flex-wrap items-end justify-between gap-3' },
   template: `
-    <div class="min-w-0">
-      <h1 class="text-xl">{{ title() }}</h1>
+    <div class="min-w-0 max-sm:w-full">
+      <h1 class="text-xl wrap-break-word">{{ title() }}</h1>
       @if (description()) {
         <p class="mt-0.5 text-sm text-slate-500">{{ description() }}</p>
       }
     </div>
-    <div class="flex flex-wrap items-center gap-2"><ng-content /></div>
+    <div class="flex flex-wrap items-center gap-2 max-sm:w-full" [class]="stickyActions() ? STICKY : ''"><ng-content /></div>
   `,
 })
 export class PageHeaderComponent {
   readonly title = input.required<string>();
   readonly description = input<string | null>(null);
+  /** Long form: on a phone the actions (Cancel / Save) stick to the bottom edge of the screen. */
+  readonly stickyActions = input(false);
+  protected readonly STICKY = 'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:w-auto max-md:flex-nowrap max-md:justify-end max-md:border-t max-md:border-slate-200 max-md:bg-white max-md:px-3 max-md:pt-3 max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]';
 }
 
 @Component({
@@ -171,7 +174,7 @@ export class ToastHostComponent {
     <dialog
       #dialog
       class="m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40"
-      [class]="widthClass()"
+      [class]="widthClass() + ' ' + sheetClass()"
       [attr.aria-labelledby]="titleId"
       [attr.data-testid]="testId()"
       (cancel)="onCancel($event)"
@@ -202,6 +205,8 @@ export class DialogComponent {
   readonly guardClose = input(false);
   readonly closed = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  /** Phone: small dialogs are bottom sheets, wide ones (lg/xl/wide) take the whole screen (see responsive.css). */
+  protected readonly sheetClass = computed(() => (this.size() !== 'md' || this.wide() ? 'hn-sheet hn-sheet-full' : 'hn-sheet'));
   protected readonly widthClass = computed(() => {
     if (this.wide() && this.size() === 'md') return 'w-[min(56rem,calc(100vw-2rem))]';
     switch (this.size()) {
