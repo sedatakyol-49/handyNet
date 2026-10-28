@@ -357,7 +357,7 @@ Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
 - App frame (`pos-app.ts`, state in `pos-context.ts`): top bar with register, session state, cashier, online/offline
   indicator (`navigator.onLine`), clock and a menu (selling, receipts, sessions, cash in/out & closing, register
   selection, theme System/Hell/Dunkel stored in `localStorage`, language, back to the back office). Touch-first
-  (targets ≥ 44 px), responsive (desktop, tablet landscape/portrait; below 768 px one pane with a products/cart switch),
+  (targets ≥ 44 px), responsive (desktop, tablet landscape/portrait; below 768 px a full-screen product grid with a sticky bottom bar (count, total, pay) and the cart as a full-height sheet),
   RTL via logical properties (the numpads keep the keypad digit order). Dark mode remaps the Tailwind palette variables
   inside `.hn-pos-dark` (`styles.css`, screen only; the receipt stays paper-white).
 - `/kasse`: entry screen – registers (session open/closed, warehouse, next receipt number), "Kasse öffnen". With
