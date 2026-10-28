@@ -58,7 +58,7 @@ export class PosFiscalStatus {
       <span class="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold" [class]="toneClass()" role="status"
         [attr.title]="s.tseSerialNumber ? ('pos.tse.serial' | t) + ': ' + s.tseSerialNumber : null" data-testid="pos-tse-status" [attr.data-state]="s.state">
         <span class="inline-block size-2 rounded-full" [class]="dotClass()" aria-hidden="true"></span>
-        <span>{{ 'pos.tse.state.' + s.state | t }}</span>
+        <span class="max-sm:sr-only">{{ 'pos.tse.state.' + s.state | t }}</span>
       </span>
     }
   `,

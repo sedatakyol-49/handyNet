@@ -45,9 +45,14 @@
   <div class="grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)] md:grid-rows-1 xl:grid-cols-[28.5rem_minmax(0,1fr)]"
     [class.hidden]="screen() !== 'products'" data-testid="pos-sell">
     <!-- ---------------------------------------------------------------- cart -->
-    <section class="min-h-0 flex-col border-pos-line bg-pos-panel md:border-e" [class]="pane() === 'cart' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-cart-heading">
-      <div class="flex shrink-0 items-center gap-2 border-b border-pos-line ps-4 pe-1.5">
-        <h2 id="pos-cart-heading" class="min-w-0 flex-1 truncate text-sm font-bold">
+    <!-- Below md the cart is a full-height sheet over the products (opened from the bottom bar); from md it is the start pane. -->
+    <section id="pos-cart-pane" class="hn-pos-sheet min-h-0 flex-col border-pos-line bg-pos-panel max-md:fixed max-md:inset-0 max-md:z-30 md:border-e"
+      [class]="pane() === 'cart' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-cart-heading" data-testid="pos-cart-pane">
+      <div class="flex shrink-0 items-center gap-2 border-b border-pos-line ps-1.5 pe-1.5 md:ps-4">
+        <button type="button" class="pos-back me-1 md:hidden" (click)="closeCart()" data-testid="pos-pane-products">
+          <span class="inline-block rtl:-scale-x-100" aria-hidden="true">←</span> {{ 'pos.sell.products' | t }}
+        </button>
+        <h2 id="pos-cart-heading" class="min-w-0 flex-1 truncate text-sm font-bold" tabindex="-1">
           {{ 'pos.sell.ticket' | t: { number: order().seq } }}
           <span class="font-medium text-pos-muted">· {{ 'pos.till.items' | t: { count: totals().itemCount } }}</span>
           <span class="sr-only">({{ 'pos.till.cart' | t }})</span>
@@ -210,7 +215,7 @@
     </section>
 
     <!-- ---------------------------------------------------------------- products, search, scan -->
-    <section class="min-h-0 flex-col" [class]="pane() === 'products' ? 'flex' : 'hidden md:flex'" aria-labelledby="pos-products-heading">
+    <section class="flex min-h-0 flex-col" aria-labelledby="pos-products-heading">
       <h2 id="pos-products-heading" class="sr-only">{{ 'pos.sell.products' | t }}</h2>
       <form (ngSubmit)="submitCode()" novalidate class="flex shrink-0 gap-2 px-3.5 pt-3.5 pb-3" role="search">
         <label for="pos-code" class="sr-only">{{ 'pos.sell.searchLabel' | t }}</label>
@@ -251,14 +256,19 @@
       </details>
     </section>
 
-    <!-- ---------------------------------------------------------------- narrow screens: pane switch -->
-    <nav class="flex gap-2 border-t border-pos-line bg-pos-panel p-2 md:hidden" [attr.aria-label]="'pos.sell.view' | t">
-      <button type="button" class="pos-mode flex-1" [attr.aria-pressed]="pane() === 'products'" (click)="pane.set('products')" data-testid="pos-pane-products">{{ 'pos.sell.products' | t }}</button>
-      <button type="button" class="pos-mode flex-1" [attr.aria-pressed]="pane() === 'cart'" (click)="pane.set('cart')" data-testid="pos-pane-cart">
-        {{ 'pos.till.cart' | t }} · {{ totals().itemCount }}
+    <!-- ---------------------------------------------------------------- narrow screens: sticky bottom bar (cart sheet + pay) -->
+    <nav class="hn-pos-safe-bottom flex items-center gap-2 border-t border-pos-line bg-pos-panel px-2 pt-2 md:hidden" [attr.aria-label]="'pos.sell.view' | t" data-testid="pos-bottom-bar">
+      <button #cartOpener type="button" class="pos-soft min-h-12 min-w-0 flex-1 justify-between px-3" (click)="openCart()" [attr.aria-expanded]="pane() === 'cart'" aria-controls="pos-cart-pane"
+        [attr.aria-label]="'pos.sell.openCart' | t: { count: totals().itemCount, total: (totals().totalMinor | money) }" data-testid="pos-pane-cart">
+        <span class="flex min-w-0 items-center gap-2">
+          <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2M9 20h.01M17 20h.01" /></svg>
+          <span class="truncate">{{ 'pos.till.cart' | t }}</span>
+          <span class="grid min-w-6 place-items-center rounded-full bg-pos-accent px-1.5 text-xs font-bold text-pos-accent-ink tabular-nums" data-testid="pos-bar-count">{{ totals().itemCount }}</span>
+        </span>
+        <span class="shrink-0 text-base font-bold tabular-nums" data-testid="pos-bar-total">{{ totals().totalMinor | money }}</span>
       </button>
-      <button type="button" class="flex-1 justify-center text-base!" [class]="pane() === 'cart' ? 'pos-soft pos-soft-accent' : 'pos-pay-btn min-h-11!'" [disabled]="!lines().length" (click)="openPayment()">
-        <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
+      <button type="button" class="pos-pay-btn min-h-12! w-auto! shrink-0 justify-center px-5! text-base!" [disabled]="!lines().length" (click)="openPayment()" data-testid="pos-bar-pay">
+        {{ 'pos.sell.payment' | t }}
       </button>
     </nav>
   </div>
@@ -357,11 +367,11 @@
         <div class="pos-card space-y-3 self-start p-3 md:col-span-2 lg:col-span-1">
           <hn-pos-numpad variant="payment" [label]="'pos.numpad.label' | t" (key)="onPayKey($event)" (add)="addToPayment($event)" />
           @if (checkoutError()) {
-            <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
+            <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger max-md:hidden" role="alert" data-testid="pos-checkout-error">{{ checkoutError() }}</p>
           } @else if (payments().length && settlement().error) {
-            <p class="text-sm text-pos-warn" data-testid="pos-settle-hint">{{ 'pos.till.settle.' + settlement().error | t }}</p>
+            <p class="text-sm text-pos-warn max-md:hidden" data-testid="pos-settle-hint">{{ 'pos.till.settle.' + settlement().error | t }}</p>
           }
-          <button type="button" class="pos-pay-btn" [disabled]="paying()" (click)="validate()" [attr.aria-busy]="paying() || null" data-testid="pos-validate">
+          <button type="button" class="pos-pay-btn max-md:hidden" [disabled]="paying()" (click)="validate()" [attr.aria-busy]="paying() || null" data-testid="pos-validate">
             <span>{{ 'pos.sell.validate' | t }}<small class="ms-1.5 text-xs font-semibold opacity-75">F9</small></span>
             @if (paying()) {
               <span class="size-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
@@ -370,6 +380,23 @@
             }
           </button>
         </div>
+      </div>
+
+      <!-- phones: the validate button stays reachable below the scrolling payment area -->
+      <div class="hn-pos-safe-bottom shrink-0 space-y-2 border-t border-pos-line bg-pos-panel px-2 pt-2 md:hidden" data-testid="pos-pay-footer">
+        @if (checkoutError()) {
+          <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-checkout-error-bar">{{ checkoutError() }}</p>
+        } @else if (payments().length && settlement().error) {
+          <p class="text-sm text-pos-warn" data-testid="pos-settle-hint-bar">{{ 'pos.till.settle.' + settlement().error | t }}</p>
+        }
+        <button type="button" class="pos-pay-btn min-h-14!" [disabled]="paying()" (click)="validate()" [attr.aria-busy]="paying() || null" data-testid="pos-validate-bar">
+          <span>{{ 'pos.sell.validate' | t }}</span>
+          @if (paying()) {
+            <span class="size-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
+          } @else {
+            <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
+          }
+        </button>
       </div>
     </section>
   } @else if (screen() === 'receipt') {

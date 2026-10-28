@@ -33,7 +33,7 @@ export function looksLikeEmail(value: string): boolean {
     <section class="pos-card space-y-3 p-4" aria-labelledby="pos-ereceipt-heading" data-testid="pos-ereceipt">
       <h2 id="pos-ereceipt-heading" class="text-sm font-bold">{{ 'pos.ereceipt.title' | t }}</h2>
       <form class="flex flex-wrap items-end gap-2" (submit)="$event.preventDefault(); send(false)" novalidate>
-        <hn-field class="min-w-0 flex-1" [label]="'pos.ereceipt.email' | t" for="pos-ereceipt-email" [errors]="error()">
+        <hn-field class="min-w-0 grow basis-56" [label]="'pos.ereceipt.email' | t" for="pos-ereceipt-email" [errors]="error()">
           <input hnInput id="pos-ereceipt-email" name="email" type="email" autocomplete="off" inputmode="email" class="min-h-11" [value]="email()"
             (input)="email.set($any($event.target).value); error.set(null)" data-testid="pos-ereceipt-email" />
         </hn-field>

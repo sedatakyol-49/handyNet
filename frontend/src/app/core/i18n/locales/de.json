@@ -2528,6 +2528,7 @@
       "searchHelp": "Text filtert die Produkte, Enter übernimmt einen einzelnen Treffer. Scanner: Code + Enter.",
       "shortcutEnter": "Code übernehmen oder einzigen Treffer hinzufügen; im Zahlenfeld zurück zum Scannen",
       "view": "Ansicht",
+      "openCart": "Warenkorb öffnen: {count} Artikel, {total}",
       "back": "Zurück",
       "methods": "Zahlungsart",
       "removePayment": "Zahlung {method} entfernen",
