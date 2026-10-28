@@ -1395,7 +1395,7 @@
     },
     "fiscal": {
       "subtitle": "İşletme ve kasa başına mali mod (TSE), test TSE davranışı, TSE durumu ve arızalar.",
-      "disclaimer": "Test TSE simüledir ve sertifikalı değildir – gerçek işletim için değildir. fiskaly adaptörü gerçek hizmete karşı doğrulanmamıştır. Vergi danışmanınca incelenmemiştir.",
+      "disclaimer": "Test TSE simüledir ve sertifikalı değildir – gerçek işletim için değildir. fiskaly bağdaştırıcısı fiskaly TEST ortamında başarıyla çalıştırıldı; LIVE erişim bilgileriyle işletim henüz yapılmadı. Vergi danışmanınca incelenmemiştir.",
       "organizations": "Kasa modülü olan işletmeler",
       "registerCount": "{count} kasa",
       "outageCount": "{count} arıza",
@@ -1415,7 +1415,7 @@
       "latency": "Yapay gecikme (ms)",
       "failureRate": "Hata oranı (%)",
       "forcedOutage": "TSE arızasını zorla",
-      "fiskalyUnverified": "fiskaly bağdaştırıcısı: yayımlanan API belirtimine (SIGN DE v2) göre denetlendi; gerçek TEST ortamında çalıştırma henüz yapılmadı. Erişim bilgileri şifreli saklanır ve asla gösterilmez.",
+      "fiskalyUnverified": "fiskaly bağdaştırıcısı: API belirtimine (SIGN DE v2) göre denetlendi ve gerçek TEST ortamında başarıyla çalıştırıldı (TSS oluşturma, kasa kaydı, fiş imzalama). TEST fişleri vergi açısından geçerli değildir. Erişim bilgileri şifreli saklanır ve asla gösterilmez.",
       "tssId": "TSS kimliği (UUID)",
       "environment": "Ortam",
       "credentialReference": "Erişim bilgisi referansı",

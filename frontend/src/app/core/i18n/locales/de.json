@@ -1395,7 +1395,7 @@
     },
     "fiscal": {
       "subtitle": "Fiskalmodus (TSE) je Unternehmen und Kasse, Verhalten der Test-TSE, TSE-Status und Ausfälle.",
-      "disclaimer": "Die Test-TSE ist simuliert und nicht zertifiziert – nicht für den Echtbetrieb. Der fiskaly-Adapter ist nicht gegen den echten Dienst geprüft. Keine Prüfung durch eine Steuerberatung.",
+      "disclaimer": "Die Test-TSE ist simuliert und nicht zertifiziert – nicht für den Echtbetrieb. Der fiskaly-Adapter wurde in der fiskaly-TEST-Umgebung erfolgreich durchlaufen; ein Betrieb mit LIVE-Zugangsdaten steht noch aus. Keine Prüfung durch eine Steuerberatung.",
       "organizations": "Unternehmen mit Kassenmodul",
       "registerCount": "{count} Kassen",
       "outageCount": "{count} Ausfall/Ausfälle",
@@ -1415,7 +1415,7 @@
       "latency": "Künstliche Verzögerung (ms)",
       "failureRate": "Fehlerquote (%)",
       "forcedOutage": "TSE-Ausfall erzwingen",
-      "fiskalyUnverified": "fiskaly-Adapter: gegen die veröffentlichte API-Spezifikation (SIGN DE v2) geprüft; ein Lauf gegen die echte TEST-Umgebung steht noch aus. Zugangsdaten werden verschlüsselt gespeichert und nie angezeigt.",
+      "fiskalyUnverified": "fiskaly-Adapter: gegen die API-Spezifikation (SIGN DE v2) geprüft und in der echten TEST-Umgebung erfolgreich durchlaufen (TSS anlegen, Kasse registrieren, Beleg signieren). TEST-Belege sind steuerlich nicht gültig. Zugangsdaten werden verschlüsselt gespeichert und nie angezeigt.",
       "tssId": "TSS-ID (UUID)",
       "environment": "Umgebung",
       "credentialReference": "Zugangsdaten-Referenz",

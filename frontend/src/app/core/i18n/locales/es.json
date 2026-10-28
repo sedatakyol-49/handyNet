@@ -1395,7 +1395,7 @@
     },
     "fiscal": {
       "subtitle": "Modo fiscal (TSE) por empresa y caja, comportamiento de la TSE de prueba, estado de la TSE y fallos.",
-      "disclaimer": "La TSE de prueba es simulada y no está certificada: no apta para uso real. El adaptador de fiskaly no se ha verificado con el servicio real. No revisado por un asesor fiscal.",
+      "disclaimer": "La TSE de prueba es simulada y no está certificada: no apta para uso real. El adaptador de fiskaly se ejecutó con éxito en el entorno TEST de fiskaly; falta el funcionamiento con credenciales LIVE. No revisado por un asesor fiscal.",
       "organizations": "Empresas con módulo de caja",
       "registerCount": "{count} cajas",
       "outageCount": "{count} fallo(s)",
@@ -1415,7 +1415,7 @@
       "latency": "Retardo artificial (ms)",
       "failureRate": "Tasa de fallos (%)",
       "forcedOutage": "Forzar fallo de la TSE",
-      "fiskalyUnverified": "Adaptador de fiskaly: comprobado con la especificación pública de la API (SIGN DE v2); falta una prueba en el entorno TEST real. Las credenciales se guardan cifradas y nunca se muestran.",
+      "fiskalyUnverified": "Adaptador de fiskaly: comprobado con la especificación de la API (SIGN DE v2) y ejecutado con éxito en el entorno TEST real (crear TSS, registrar caja, firmar ticket). Los tickets TEST no tienen validez fiscal. Las credenciales se guardan cifradas y nunca se muestran.",
       "tssId": "ID de TSS (UUID)",
       "environment": "Entorno",
       "credentialReference": "Referencia de credenciales",

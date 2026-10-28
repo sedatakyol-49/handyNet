@@ -1395,7 +1395,7 @@
     },
     "fiscal": {
       "subtitle": "Fiscal mode (TSE) per organization and register, test TSE behaviour, TSE status and outages.",
-      "disclaimer": "The test TSE is simulated and not certified – not for real operation. The fiskaly adapter is not verified against the real service. Not reviewed by a tax adviser.",
+      "disclaimer": "The test TSE is simulated and not certified – not for real operation. The fiskaly adapter ran successfully in the fiskaly TEST environment; operation with LIVE credentials is still pending. Not reviewed by a tax adviser.",
       "organizations": "Organizations with the POS module",
       "registerCount": "{count} registers",
       "outageCount": "{count} outage(s)",
@@ -1415,7 +1415,7 @@
       "latency": "Artificial latency (ms)",
       "failureRate": "Failure rate (%)",
       "forcedOutage": "Force TSE outage",
-      "fiskalyUnverified": "fiskaly adapter: checked against the published API specification (SIGN DE v2); a run against the real TEST environment is still pending. Credentials are stored encrypted and never shown.",
+      "fiskalyUnverified": "fiskaly adapter: checked against the API specification (SIGN DE v2) and run successfully in the real TEST environment (create TSS, register till, sign receipt). TEST receipts are not valid for tax purposes. Credentials are stored encrypted and never shown.",
       "tssId": "TSS id (UUID)",
       "environment": "Environment",
       "credentialReference": "Credential reference",
