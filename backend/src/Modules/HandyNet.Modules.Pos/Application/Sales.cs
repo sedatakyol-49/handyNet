@@ -103,7 +103,8 @@ public sealed record ReceiptDto(
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
-    IReadOnlyList<string> PaymentMethods, int ReprintCount);
+    IReadOnlyList<string> PaymentMethods, int ReprintCount,
+    string? FiscalStatus = null, bool FiscalIsTest = false, Guid? InvoiceId = null, string? InvoiceNumber = null);
 
 /// <summary>A recorded reprint: the copy number to print ("Kopie n") and the unchanged original receipt.</summary>
 public sealed record ReprintDto(int Sequence, DateTimeOffset PrintedAt, Guid PrintedBy, ReceiptDto Receipt);
@@ -437,7 +438,9 @@ internal sealed partial class SaleService(
         var rows = await query.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Number).Skip((p - 1) * size).Take(size)
             .Select(r => new
             {
-                r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind, r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor, r.CreatedBy, r.CustomerId,
+                r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind, r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor, r.CreatedBy, r.CustomerId, r.FiscalStatus, r.FiscalIsTest,
+                InvoiceId = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => (Guid?)i.Id).FirstOrDefault(),
+                InvoiceNumber = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => i.Number).FirstOrDefault(),
                 Methods = db.Set<ReceiptPayment>().Where(x => x.ReceiptId == r.Id).Select(x => x.Method).ToList(),
                 Reprints = db.Set<ReceiptReprint>().Count(x => x.ReceiptId == r.Id),
             })
@@ -448,7 +451,8 @@ internal sealed partial class SaleService(
         var customers = await db.Set<Customer>().AsNoTracking().Where(c => customerIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name, ct);
         var items = rows.Select(r => new ReceiptSummaryDto(r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, r.CreatedAt,
             r.TotalGrossMinor, r.CreatedBy, people.GetValueOrDefault(r.CreatedBy)?.DisplayName, r.CustomerId,
-            r.CustomerId is { } c ? customers.GetValueOrDefault(c) : null, r.Methods.Order().Select(m => m.ToString()).ToList(), r.Reprints)).ToList();
+            r.CustomerId is { } c ? customers.GetValueOrDefault(c) : null, r.Methods.Order().Select(m => m.ToString()).ToList(), r.Reprints,
+            r.FiscalStatus?.ToString(), r.FiscalIsTest == true, r.InvoiceId, r.InvoiceNumber)).ToList();
         return new PagedResult<ReceiptSummaryDto>(items, p, size, total);
     }
 

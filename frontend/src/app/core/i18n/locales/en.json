@@ -74,7 +74,7 @@
     "pos": "Till",
     "invoices": "Invoices",
     "company": "Company",
-    "salesDocuments": "Invoices & quotations",
+    "salesDocuments": "Invoices, quotations & receipts",
     "overdueInvoices": "{count} overdue invoices",
     "dailyReport": "Daily report",
     "units": "Devices (IMEI)"
@@ -3723,7 +3723,7 @@
     }
   },
   "sales": {
-    "switch": "Quotations or invoices",
+    "switch": "Invoices, quotations or till receipts",
     "quotations": {
       "title": "Quotations",
       "description": "Price proposals for customers – validity, email and conversion into an invoice.",
@@ -3928,6 +3928,19 @@
     "warnings": {
       "customer_vat_id_missing": "Business customer without VAT ID – required for intra-EU supplies or reverse charge.",
       "reverse_charge_check": "Reverse charge is set: please check with your tax adviser before issuing."
+    },
+    "receipts": {
+      "title": "Till receipts",
+      "description": "All receipts of your company's registers – sales, voids, returns and invoice payments with TSE status and the related invoice.",
+      "register": "Register",
+      "allRegisters": "All registers",
+      "tse": "TSE",
+      "invoice": "Invoice",
+      "empty": "No receipts found.",
+      "tseSigned": "Signed",
+      "tseTest": "Signed (test TSE)",
+      "tseOutage": "TSE outage",
+      "tseNone": "No TSE"
     }
   },
   "reports": {

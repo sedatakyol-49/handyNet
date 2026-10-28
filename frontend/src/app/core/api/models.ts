@@ -1850,6 +1850,11 @@ export interface ReceiptSummary {
   customerName?: string | null;
   paymentMethods?: PosPaymentMethod[];
   reprintCount?: number;
+  /** Signed / Failed (TSE outage) / null (no fiscal layer). */
+  fiscalStatus?: string | null;
+  fiscalIsTest?: boolean;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
 }
 
 // ---------------------------------------------------------------- Invoicing (commission invoices, ADR-0009)

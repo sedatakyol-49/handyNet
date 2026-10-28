@@ -74,7 +74,7 @@
     "pos": "Caja",
     "invoices": "Facturas",
     "company": "Empresa",
-    "salesDocuments": "Facturas y presupuestos",
+    "salesDocuments": "Facturas, presupuestos y tickets",
     "overdueInvoices": "{count} facturas vencidas",
     "dailyReport": "Informe diario",
     "units": "Dispositivos (IMEI)"
@@ -3723,7 +3723,7 @@
     }
   },
   "sales": {
-    "switch": "Presupuestos o facturas",
+    "switch": "Facturas, presupuestos o tickets de caja",
     "quotations": {
       "title": "Presupuestos",
       "description": "Propuestas de precio para clientes: validez, envío por correo y conversión en factura.",
@@ -3928,6 +3928,19 @@
     "warnings": {
       "customer_vat_id_missing": "Cliente empresa sin NIF-IVA: necesario en entregas intracomunitarias o inversión del sujeto pasivo.",
       "reverse_charge_check": "Inversión del sujeto pasivo activada: compruébelo con su asesor fiscal antes de emitir."
+    },
+    "receipts": {
+      "title": "Tickets de caja",
+      "description": "Todos los tickets de las cajas de su empresa: ventas, anulaciones, devoluciones y pagos de facturas, con estado TSE y factura asociada.",
+      "register": "Caja",
+      "allRegisters": "Todas las cajas",
+      "tse": "TSE",
+      "invoice": "Factura",
+      "empty": "No se encontraron tickets.",
+      "tseSigned": "Firmado",
+      "tseTest": "Firmado (TSE de prueba)",
+      "tseOutage": "Fallo de TSE",
+      "tseNone": "Sin TSE"
     }
   },
   "reports": {

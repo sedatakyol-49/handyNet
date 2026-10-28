@@ -267,6 +267,13 @@ public sealed class PosSalesDocumentsTests(HandyNetFixture fixture)
         Assert.Equal($"RE-{Year}-000001", Str(posInvoice, "number"));
         Assert.Equal(9, await AvailableAsync(shop, ean, register));
 
+        // The back-office receipt list (all registers) shows the invoice number and the TSE state of the receipt.
+        var listed = (await shop.GetAsync("/api/pos/sales")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray()
+            .Single(i => Str(i!, "id") == Id(receipt).ToString())!;
+        Assert.Equal($"RE-{Year}-000001", Str(listed, "invoiceNumber"));
+        Assert.Equal(Id(posInvoice).ToString(), Str(listed, "invoiceId"));
+        Assert.False(listed["fiscalIsTest"]!.GetValue<bool>() && listed["fiscalStatus"] is null);
+
         // 2. A sales invoice: 3 cables + a §25a device + a free text line.
         var draft = await DraftAsync(shop, customer,
             [Line(product, quantity: 3, price: 11_90), Line(imei: imei, price: 350_00), Line(description: "Versand", price: 5_95)]);

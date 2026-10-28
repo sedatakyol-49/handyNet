@@ -99,6 +99,11 @@ export const routes: Routes = [
       ...salesRoutes('verkauf/angebote', 'quotation', false).map((r) => ({ ...r, canActivate: [accessGuard('Pos', 'pos.sell')] })),
       ...salesRoutes('verkauf/rechnungen', 'invoice', false).map((r) => ({ ...r, canActivate: [accessGuard('Pos', 'pos.sell')] })),
       {
+        path: 'verkauf/kassenbelege',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/sales/sales-receipts.page').then((m) => m.SalesReceiptsPage),
+      },
+      {
         path: 'lager',
         canActivate: [accessGuard('Inventory')],
         loadComponent: () => import('./features/inventory/inventory.page').then((m) => m.InventoryPage),

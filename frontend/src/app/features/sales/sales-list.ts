@@ -36,6 +36,9 @@ type Kind = 'quotations' | 'invoices';
           }
         }
       </a>
+      @if (nav().receipts; as receipts) {
+        <a [routerLink]="receipts" class="pos-chip" aria-pressed="false" data-testid="sales-tab-receipts">{{ 'sales.receipts.title' | t }}</a>
+      }
     </nav>
 
     <form class="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5" role="search" (submit)="$event.preventDefault(); apply()">
