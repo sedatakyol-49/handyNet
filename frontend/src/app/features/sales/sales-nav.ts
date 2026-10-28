@@ -8,6 +8,8 @@ export interface SalesNav {
   registerId: string | null;
   quotations: string[];
   invoices: string[];
+  /** Till receipts view (back office only). */
+  receipts?: string[];
 }
 
 export function posSalesNav(registerId: string): SalesNav {
@@ -19,6 +21,7 @@ export const OFFICE_SALES_NAV: SalesNav = {
   registerId: null,
   quotations: ['/app/verkauf/angebote'],
   invoices: ['/app/verkauf/rechnungen'],
+  receipts: ['/app/verkauf/kassenbelege'],
 };
 
 export function receiptLink(id: string): string[] {

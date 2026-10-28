@@ -74,7 +74,7 @@
     "pos": "Kasa",
     "invoices": "Faturalar",
     "company": "Şirket",
-    "salesDocuments": "Faturalar ve teklifler",
+    "salesDocuments": "Faturalar, teklifler ve fişler",
     "overdueInvoices": "{count} vadesi geçmiş fatura",
     "dailyReport": "Günlük rapor",
     "units": "Cihazlar (IMEI)"
@@ -3723,7 +3723,7 @@
     }
   },
   "sales": {
-    "switch": "Teklifler veya faturalar",
+    "switch": "Faturalar, teklifler veya kasa fişleri",
     "quotations": {
       "title": "Teklifler",
       "description": "Müşteriler için fiyat teklifleri – geçerlilik, e-posta ile gönderim ve faturaya dönüştürme.",
@@ -3928,6 +3928,19 @@
     "warnings": {
       "customer_vat_id_missing": "KDV kimlik numarası olmayan kurumsal müşteri – AB içi teslimat veya ters ibrazda gereklidir.",
       "reverse_charge_check": "Ters ibraz seçili: düzenlemeden önce vergi danışmanınızla kontrol edin."
+    },
+    "receipts": {
+      "title": "Kasa fişleri",
+      "description": "Şirketinizin tüm kasalarının fişleri – satışlar, iptaller, iadeler ve fatura ödemeleri; TSE durumu ve ilgili fatura ile.",
+      "register": "Kasa",
+      "allRegisters": "Tüm kasalar",
+      "tse": "TSE",
+      "invoice": "Fatura",
+      "empty": "Fiş bulunamadı.",
+      "tseSigned": "İmzalı",
+      "tseTest": "İmzalı (test TSE)",
+      "tseOutage": "TSE arızası",
+      "tseNone": "TSE yok"
     }
   },
   "reports": {

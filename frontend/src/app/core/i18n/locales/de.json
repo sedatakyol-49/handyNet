@@ -74,7 +74,7 @@
     "pos": "Kasse",
     "invoices": "Rechnungen",
     "company": "Unternehmen",
-    "salesDocuments": "Rechnungen & Angebote",
+    "salesDocuments": "Rechnungen, Angebote & Belege",
     "overdueInvoices": "{count} überfällige Rechnungen",
     "dailyReport": "Tagesbericht",
     "units": "Geräte (IMEI)"
@@ -3723,7 +3723,7 @@
     }
   },
   "sales": {
-    "switch": "Angebote oder Rechnungen",
+    "switch": "Rechnungen, Angebote oder Kassenbelege",
     "quotations": {
       "title": "Angebote",
       "description": "Preisvorschläge für Kunden – Gültigkeit, Versand per E-Mail und Umwandlung in eine Rechnung.",
@@ -3928,6 +3928,19 @@
     "warnings": {
       "customer_vat_id_missing": "Geschäftskunde ohne USt-IdNr. – bei innergemeinschaftlichen Lieferungen oder Reverse Charge erforderlich.",
       "reverse_charge_check": "Reverse Charge ist gesetzt: bitte vor dem Ausstellen mit der Steuerberatung prüfen."
+    },
+    "receipts": {
+      "title": "Kassenbelege",
+      "description": "Alle Belege der Kassen Ihres Unternehmens – Verkäufe, Stornos, Rückgaben und Rechnungszahlungen mit TSE-Status und zugehöriger Rechnung.",
+      "register": "Kasse",
+      "allRegisters": "Alle Kassen",
+      "tse": "TSE",
+      "invoice": "Rechnung",
+      "empty": "Keine Belege gefunden.",
+      "tseSigned": "Signiert",
+      "tseTest": "Signiert (Test-TSE)",
+      "tseOutage": "TSE-Ausfall",
+      "tseNone": "Ohne TSE"
     }
   },
   "reports": {
