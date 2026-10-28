@@ -2526,6 +2526,7 @@
       "searchHelp": "Metin ürünleri filtreler, Enter tek eşleşmeyi ekler. Tarayıcı: kod + Enter.",
       "shortcutEnter": "Kodu al veya tek eşleşmeyi ekle; sayı alanında taramaya dön",
       "view": "Görünüm",
+      "openCart": "Sepeti aç: {count} ürün, {total}",
       "back": "Geri",
       "methods": "Ödeme yöntemi",
       "removePayment": "{method} ödemesini kaldır",

@@ -139,6 +139,7 @@ export class TillPage {
   protected readonly customerSummary = customerSummary;
 
   private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeField');
+  private readonly cartOpener = viewChild<ElementRef<HTMLButtonElement>>('cartOpener');
   private readonly grid = viewChild(PosProductGridComponent);
   private readonly ticketsTpl = viewChild<TemplateRef<unknown>>('ticketsTpl');
   private readonly lastPrices = new LastPrices(browserStorage('session'), this.store.organizationId() ?? 'none');
@@ -194,7 +195,14 @@ export class TillPage {
   protected readonly code = signal('');
   protected readonly scanError = signal<string | null>(null);
   protected readonly lookups = signal(0);
-  /** Below the md breakpoint only one pane is visible. */
+  /**
+   * Layout by width (Odoo POS style):
+   * - below md (< 768 px, phones): the product grid fills the screen with a sticky bottom bar (items, total, cart, pay);
+   *   `pane() === 'cart'` shows the cart as a full-height sheet over it;
+   * - from md (≥ 768 px): products and cart side by side. Tablet portrait (768–1024 px, e.g. 820 × 1180) keeps the split
+   *   on purpose: the cart pane (19–24 rem) plus a 2–3 column product grid fit, and the tall screen leaves room for the
+   *   cart lines above the numpad, so the cashier never has to open/close a sheet on the primary till device.
+   */
   protected readonly pane = signal<'products' | 'cart'>('products');
 
   // ---- selected line + numpad
@@ -782,6 +790,7 @@ export class TillPage {
   // =============================================================== receipt
   protected startNextOrder(): void {
     this.lastReceipt.set(null);
+    this.pane.set('products');
     this.screen.set('products');
     this.focusCode();
   }
@@ -839,6 +848,7 @@ export class TillPage {
     e.preventDefault();
     if (this.screen() === 'receipt') return this.startNextOrder();
     if (this.screen() === 'payment') return this.backToProducts();
+    if (this.pane() === 'cart' && narrowScreen()) return this.closeCart();
     if (this.code()) {
       this.code.set('');
       this.scanError.set(null);
@@ -855,8 +865,24 @@ export class TillPage {
     this.focusCode();
   }
 
+  /**
+   * Focuses the scan/search field. Touch-only devices skip it (it would pop up the on-screen keyboard after every
+   * action); a barcode scanner still works there because printable keys are routed to the field (onKeydown).
+   */
   protected focusCode(): void {
+    if (touchOnly()) return;
     afterNextRender(() => this.codeInput()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  // ---- phones: the cart is a full-height sheet over the products (opened from the bottom bar)
+  protected openCart(): void {
+    this.pane.set('cart');
+    this.focusId('pos-cart-heading');
+  }
+
+  protected closeCart(): void {
+    this.pane.set('products');
+    afterNextRender(() => this.cartOpener()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private focusNumpad(): void {
@@ -891,6 +917,16 @@ function isPrintableKey(e: KeyboardEvent): boolean {
 function isEditable(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   return !!el?.closest?.('input, textarea, select, [contenteditable="true"], dialog, [role="menu"]');
+}
+
+/** Below the md breakpoint (phones): one pane, the cart is a sheet. */
+function narrowScreen(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 767.98px)').matches;
+}
+
+/** A device used by touch only (no hover, coarse pointer): phones and tablets without keyboard/mouse. */
+function touchOnly(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
 }
 
 function isInsideDialog(target: EventTarget | null): boolean {

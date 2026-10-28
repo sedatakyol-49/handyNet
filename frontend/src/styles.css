@@ -564,6 +564,74 @@
   --color-amber-50: oklch(98.7% 0.022 95.277);
 }
 
+/*
+ * POS responsive / touch layer (screen only; unlayered so it wins over the utility classes of shared components).
+ * - The back office uses a 14 px root, so Tailwind's spacing scale (min-h-11, size-11, min-h-12 …) would give 38.5 px
+ *   targets. The POS runs on a 4 px spacing step instead: min-h-11 = 44 px, pos-key (min-h-12) = 48 px. The printed /
+ *   previewed receipt keeps the original scale.
+ * - Below md (phones) dialogs are full-screen sheets (dynamic viewport height, so the on-screen keyboard does not hide
+ *   the bottom of the form) with safe-area padding for notched devices; from md they stay centred.
+ * - Touch screens and phones: form fields use 16 px text so iOS does not zoom in on focus.
+ */
+@media screen {
+  .hn-pos {
+    --spacing: 4px;
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
+  .hn-pos .hn-receipt {
+    --spacing: 0.25rem;
+  }
+  .hn-pos-safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .hn-pos-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Horizontal strips (register tabs, tickets, categories): scroll sideways, never wrap; thin scrollbar. */
+  .hn-pos-scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media screen and (max-width: 767.98px) {
+  .hn-pos dialog[open] {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+    overscroll-behavior: contain;
+  }
+  .hn-pos-sheet {
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+@media screen and (max-width: 767.98px), screen and (pointer: coarse) {
+  .hn-pos :is(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
+    --text-xs: 16px;
+    --text-sm: 16px;
+    --text-base: 16px;
+  }
+  /* Shared controls used inside the POS (buttons, pagination, dialog close, checkboxes) get finger-sized targets. */
+  .hn-pos :is([hnButton], hn-pagination button, .hn-icon-btn) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .hn-pos :is(input[type="checkbox"], input[type="radio"]) {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
 /* Company logo on receipts (screen); printed in grayscale for thermal printers (see the print block below). */
 .hn-receipt-logo {
   max-height: 4.5rem;

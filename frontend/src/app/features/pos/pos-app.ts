@@ -32,13 +32,14 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
     '[class.hn-pos-dark]': 'ctx.dark()',
     '[attr.data-theme]': 'ctx.dark() ? "dark" : "light"',
     '(document:click)': 'onDocumentClick($event)',
+    '(focusin)': 'onFocusIn($event)',
   },
   template: `
     <a href="#pos-main" class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow">
       {{ 'shell.skipToContent' | t }}
     </a>
-    <header class="hn-no-print flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-pos-line bg-pos-panel px-2 sm:gap-x-3.5 sm:px-3.5" data-testid="pos-topbar">
-      <a routerLink="/kasse" class="flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-0.5 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
+    <header class="hn-no-print hn-pos-safe-top flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-pos-line bg-pos-panel px-2 sm:gap-x-3.5 sm:px-3.5" data-testid="pos-topbar">
+      <a routerLink="/kasse" class="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-0.5 font-semibold" [attr.aria-label]="'pos.app.registerSelection' | t">
         <span class="grid size-[30px] place-items-center rounded-lg bg-pos-accent text-xs font-extrabold text-pos-accent-ink" aria-hidden="true">SH</span>
         @if (branding.logoUrl(); as logo) {
           <span class="flex h-9 items-center rounded-md bg-white px-1.5 ring-1 ring-pos-line" data-testid="pos-topbar-logo">
@@ -51,7 +52,7 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
       </a>
 
       @if (ctx.registerId()) {
-        <div class="min-w-0 shrink leading-tight">
+        <div class="min-w-0 flex-1 basis-0 leading-tight sm:flex-initial sm:basis-auto">
           <p class="truncate text-sm font-bold" data-testid="pos-topbar-register">{{ ctx.registerName() ?? '…' }}</p>
           <p class="flex items-center gap-1.5 truncate text-xs text-pos-muted" data-testid="pos-topbar-session">
             <span class="inline-block size-[7px] shrink-0 rounded-full" [class]="sessionDot()" aria-hidden="true"></span>
@@ -59,7 +60,7 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
           </p>
         </div>
         @if (!onTill()) {
-          <a [routerLink]="['/kasse', ctx.registerId()]" class="pos-soft pos-soft-accent ms-1" data-testid="pos-topbar-sell">
+          <a [routerLink]="['/kasse', ctx.registerId()]" class="pos-soft pos-soft-accent ms-1 max-sm:hidden" data-testid="pos-topbar-sell">
             {{ 'pos.app.sell' | t }}
           </a>
         }
@@ -93,7 +94,7 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
           </span>
         }
         @if (ctx.registerId()) {
-          <button type="button" class="pos-soft min-h-11 px-2.5 text-[13px]" (click)="openSwitch()" data-testid="pos-switch-cashier">
+          <button type="button" class="pos-soft min-h-11 min-w-11 px-2.5 text-[13px]" (click)="openSwitch()" data-testid="pos-switch-cashier">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
               <path d="M16 3l3 3-3 3M19 6H9a4 4 0 0 0-4 4M8 21l-3-3 3-3M5 18h10a4 4 0 0 0 4-4" />
             </svg>
@@ -331,6 +332,19 @@ export class PosAppComponent {
     e.stopPropagation();
     e.preventDefault();
     this.closeMenu(true);
+  }
+
+  /**
+   * Touch devices: once the on-screen keyboard has opened (and shrunk the visual viewport), keep the focused field
+   * visible instead of hidden behind the keyboard.
+   */
+  protected onFocusIn(e: FocusEvent): void {
+    const el = e.target as HTMLElement | null;
+    if (!el?.matches?.('input, textarea, select') || typeof window === 'undefined') return;
+    if (!window.matchMedia?.('(pointer: coarse)').matches) return;
+    setTimeout(() => {
+      if (document.activeElement === el) el.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+    }, 300);
   }
 
   protected onDocumentClick(e: MouseEvent): void {

@@ -2526,6 +2526,7 @@
       "searchHelp": "Text filters the products, Enter adds a single match. Scanner: code + Enter.",
       "shortcutEnter": "Take the code or add the only match; in the number field back to scanning",
       "view": "View",
+      "openCart": "Open cart: {count} items, {total}",
       "back": "Back",
       "methods": "Payment method",
       "removePayment": "Remove {method} payment",
