@@ -1,6 +1,7 @@
 <hn-page-header [title]="'admin.title' | t" [description]="'adminMgmt.companies.subtitle' | t" />
 <hn-admin-tabs />
 
+<hn-filter-bar>
 <form class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" role="search" (submit)="$event.preventDefault(); applyFilters()" data-testid="admin-filters">
   <hn-field [label]="'common.search' | t" for="admin-search" class="sm:col-span-2">
     <input hnInput id="admin-search" name="search" type="search" [(ngModel)]="form.search" [placeholder]="'admin.searchPlaceholder' | t"
@@ -50,6 +51,7 @@
     }
   </div>
 </form>
+</hn-filter-bar>
 
 @if (!reasonFor() && !modulesFor()) {
   <hn-banner class="mb-3" [error]="actionError()" />

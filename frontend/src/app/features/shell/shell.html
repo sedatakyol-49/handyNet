@@ -4,10 +4,10 @@
   >{{ 'shell.skipToContent' | t }}</a
 >
 
-<header class="fixed inset-x-0 top-0 z-30 flex h-12 items-center gap-2 border-b border-slate-200 bg-white px-3">
+<header class="fixed inset-x-0 top-0 z-30 flex h-[calc(3rem+env(safe-area-inset-top))] items-center gap-2 border-b border-slate-200 bg-white px-3 pt-[env(safe-area-inset-top)]">
   <button
     type="button"
-    class="rounded p-1.5 text-slate-700 hover:bg-slate-100 lg:hidden"
+    class="hn-icon-btn -ms-1 size-[44px] text-slate-700 lg:hidden" data-testid="nav-toggle"
     [attr.aria-expanded]="navOpen()"
     aria-controls="side-nav"
     (click)="navOpen.set(!navOpen())"
@@ -20,7 +20,7 @@
     <span class="hidden sm:inline">SEHA</span>
   </a>
   @if (branding.logoUrl(); as logo) {
-    <a routerLink="/app/unternehmen" class="me-1 flex h-9 shrink-0 items-center rounded px-1 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-accent-600"
+    <a routerLink="/app/unternehmen" class="me-1 hidden h-9 shrink-0 items-center rounded px-1 sm:flex hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-accent-600"
       [attr.aria-label]="'company.logo.topbarLabel' | t: { name: session.membership()?.organizationName ?? '' }" data-testid="shell-company-logo">
       <img [src]="logo" alt="" class="h-7 w-auto max-w-[6rem] object-contain" />
     </a>
@@ -30,7 +30,7 @@
     <label for="org-switcher" class="sr-only">{{ 'shell.organization' | t }}</label>
     <select
       id="org-switcher"
-      class="hn-control max-w-[14rem] py-1 sm:max-w-xs"
+      class="hn-control min-w-0 max-w-[14rem] flex-1 py-1 sm:max-w-xs sm:flex-none"
       [value]="session.organizationId()"
       (change)="switchOrganization($any($event.target).value)"
       data-testid="org-switcher"
@@ -43,9 +43,9 @@
     </select>
   }
 
-  <div class="ms-auto flex items-center gap-2">
+  <div class="ms-auto flex shrink-0 items-center gap-2">
     <label for="lang-switcher" class="sr-only">{{ 'shell.language' | t }}</label>
-    <select id="lang-switcher" class="hn-control w-auto py-1" [value]="i18n.lang()" (change)="setLanguage($any($event.target).value)">
+    <select id="lang-switcher" class="hn-control hidden w-auto py-1 md:block" [value]="i18n.lang()" (change)="setLanguage($any($event.target).value)">
       @for (l of i18n.languages; track l.code) {
         <option [value]="l.code" [selected]="l.code === i18n.lang()">{{ l.label }}</option>
       }
@@ -54,7 +54,7 @@
     <div class="relative" (keydown.escape)="userMenuOpen.set(false)">
       <button
         type="button"
-        class="flex items-center gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
+        class="flex min-h-[44px] items-center gap-2 rounded px-1.5 text-sm text-slate-700 hover:bg-slate-100"
         aria-haspopup="menu"
         [attr.aria-expanded]="userMenuOpen()"
         (click)="userMenuOpen.set(!userMenuOpen())"
@@ -74,10 +74,18 @@
               <p class="mt-1 text-slate-500">{{ m.role | tEnum: 'role' }} · {{ m.organizationName }}</p>
             }
           </div>
-          <a routerLink="/app/konto" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100" data-testid="account-link">
+          <div class="border-b border-slate-100 px-3 py-2 md:hidden">
+            <label for="lang-switcher-menu" class="mb-1 block text-xs font-medium text-slate-700">{{ 'shell.language' | t }}</label>
+            <select id="lang-switcher-menu" class="hn-control py-1" [value]="i18n.lang()" (change)="setLanguage($any($event.target).value)" data-testid="lang-switcher-menu">
+              @for (l of i18n.languages; track l.code) {
+                <option [value]="l.code" [selected]="l.code === i18n.lang()">{{ l.label }}</option>
+              }
+            </select>
+          </div>
+          <a routerLink="/app/konto" role="menuitem" class="block w-full px-3 py-3 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100 md:py-2" data-testid="account-link">
             {{ 'shell.account' | t }}
           </a>
-          <button type="button" role="menuitem" class="block w-full px-3 py-2 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100" (click)="logout()" data-testid="logout">
+          <button type="button" role="menuitem" class="block w-full px-3 py-3 text-start text-sm hover:bg-slate-100 focus-visible:bg-slate-100 md:py-2" (click)="logout()" data-testid="logout">
             {{ 'shell.logout' | t }}
           </button>
         </div>
@@ -92,7 +100,8 @@
 
 <nav
   id="side-nav"
-  class="fixed bottom-0 start-0 top-12 z-20 w-56 overflow-y-auto border-e border-slate-200 bg-white px-2 py-3 lg:block"
+  data-testid="side-nav"
+  class="fixed bottom-0 start-0 top-[calc(3rem+env(safe-area-inset-top))] z-20 w-72 max-w-[85vw] overflow-y-auto overscroll-contain border-e border-slate-200 bg-white px-2 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:block lg:w-56"
   [class.hidden]="!navOpen()"
   [attr.aria-label]="'shell.mainNavigation' | t"
 >
@@ -141,7 +150,7 @@
   }
 </nav>
 
-<main id="main" class="px-3 pt-16 pb-10 sm:px-5 lg:ms-56" tabindex="-1">
+<main id="main" class="px-3 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-5 lg:ms-56" tabindex="-1">
   <hn-email-verification-banner class="mb-4" />
   @for (key of outletKey(); track key) {
     <router-outlet />

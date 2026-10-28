@@ -1,7 +1,9 @@
 <hn-page-header [title]="'inventory.title' | t" [description]="'inventory.subtitle' | t">
   @if (canManage) {
-    <a hnButton routerLink="/app/lager/geraete" data-testid="inventory-units-link">{{ 'nav.units' | t }}</a>
-    <button hnButton type="button" (click)="openWarehouse()">{{ 'inventory.newWarehouse' | t }}</button>
+    <hn-actions-menu>
+      <a hnButton routerLink="/app/lager/geraete" data-testid="inventory-units-link">{{ 'nav.units' | t }}</a>
+      <button hnButton type="button" (click)="openWarehouse()">{{ 'inventory.newWarehouse' | t }}</button>
+    </hn-actions-menu>
     <button hnButton variant="primary" type="button" (click)="entryOpen.set(true)" data-testid="entry-open">{{ 'inventory.entry.open' | t }}</button>
   }
 </hn-page-header>

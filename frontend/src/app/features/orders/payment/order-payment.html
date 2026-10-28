@@ -145,7 +145,7 @@
     @if (history().length) {
       <details class="text-xs">
         <summary class="cursor-pointer text-slate-600">{{ 'payment.history' | t: { n: history().length } }}</summary>
-        <table class="hn-table mt-1">
+        <table class="hn-table mt-1 hn-stack">
           <thead>
             <tr>
               <th scope="col">{{ 'payment.createdAt' | t }}</th>
@@ -156,9 +156,9 @@
           <tbody>
             @for (h of history(); track h.id) {
               <tr>
-                <td>{{ h.createdAt | hnDate }}</td>
-                <td><hn-status-badge [status]="h.status" kind="paymentStatus" /></td>
-                <td class="num">{{ h.amountMinor | money: h.currency }}</td>
+                <td [attr.data-label]="'payment.createdAt' | t">{{ h.createdAt | hnDate }}</td>
+                <td [attr.data-label]="'common.status' | t"><hn-status-badge [status]="h.status" kind="paymentStatus" /></td>
+                <td [attr.data-label]="'payment.amount' | t" class="num">{{ h.amountMinor | money: h.currency }}</td>
               </tr>
             }
           </tbody>

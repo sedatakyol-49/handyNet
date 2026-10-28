@@ -146,7 +146,7 @@
     </div>
     <hn-banner class="mb-2" [error]="rows.error()" />
     <hn-table [loading]="rows.loading()">
-      <table class="hn-table" data-testid="import-rows">
+      <table class="hn-table hn-stack" data-testid="import-rows">
         <thead>
           <tr>
             <th scope="col" class="num">{{ 'imports.row' | t }}</th>
@@ -163,10 +163,10 @@
         <tbody>
           @for (r of rows.value()?.items ?? []; track r.rowNumber) {
             <tr [class]="r.status === 'Error' ? 'bg-red-50' : r.status === 'Conflict' ? 'bg-amber-50' : ''">
-              <td class="num text-slate-500">{{ r.rowNumber }}</td>
-              <td><hn-status-badge [status]="r.status" kind="rowStatus" /></td>
-              <td class="hn-mono">{{ r.sku ?? '–' }}</td>
-              <td class="min-w-48">
+              <td [attr.data-label]="'imports.row' | t" class="num text-slate-500">{{ r.rowNumber }}</td>
+              <td [attr.data-label]="'common.status' | t"><hn-status-badge [status]="r.status" kind="rowStatus" /></td>
+              <td [attr.data-label]="'common.sku' | t" class="hn-mono">{{ r.sku ?? '–' }}</td>
+              <td [attr.data-label]="'common.product' | t" class="min-w-48">
                 <span class="font-medium">{{ r.brand }} {{ r.name }}</span>
                 <span class="block text-xs text-slate-500">
                   @if (r.ean) { EAN {{ r.ean }} }
@@ -174,26 +174,26 @@
                   @if (r.category) { · {{ r.category | tEnum: 'category' }} }
                 </span>
               </td>
-              <td>{{ r.quality | tEnum: 'quality' }}</td>
-              <td class="num">
+              <td [attr.data-label]="'common.quality' | t">{{ r.quality | tEnum: 'quality' }}</td>
+              <td [attr.data-label]="'imports.price' | t" class="num">
                 @if (r.oldPriceMinor !== null && r.oldPriceMinor !== r.priceMinor) {
                   <span class="text-slate-500 line-through">{{ r.oldPriceMinor | money }}</span>
                   <span aria-hidden="true"> → </span><span class="sr-only">{{ 'imports.changedTo' | t }}</span>
                 }
                 <span class="font-medium">{{ r.priceMinor | money }}</span>
               </td>
-              <td class="num">
+              <td [attr.data-label]="'imports.quantity' | t" class="num">
                 @if (r.oldQuantity !== null && r.oldQuantity !== r.quantity) {
                   <span class="text-slate-500">{{ r.oldQuantity }}</span>
                   <span aria-hidden="true"> → </span><span class="sr-only">{{ 'imports.changedTo' | t }}</span>
                 }
                 <span class="font-medium">{{ r.quantity ?? '–' }}</span>
               </td>
-              <td class="text-xs whitespace-nowrap">
+              <td [attr.data-label]="'imports.action' | t" class="text-xs whitespace-nowrap">
                 {{ r.productAction | tEnum: 'productAction' }}<br />
                 <span class="text-slate-500">{{ r.offerAction | tEnum: 'offerAction' }}</span>
               </td>
-              <td class="text-xs" [class.text-red-800]="r.status === 'Error'" [class.text-amber-900]="r.status === 'Conflict'">
+              <td [attr.data-label]="'imports.messages' | t" class="text-xs" [class.text-red-800]="r.status === 'Error'" [class.text-amber-900]="r.status === 'Conflict'">
                 @for (m of r.messages; track $index) {
                   <span class="block">{{ m }}</span>
                 }

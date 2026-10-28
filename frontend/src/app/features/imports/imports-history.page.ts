@@ -16,7 +16,7 @@ import { UI } from '../../shared/ui';
     <hn-banner class="mb-3" [error]="history.error()" />
 
     <hn-table [loading]="history.loading()">
-      <table class="hn-table">
+      <table class="hn-table hn-stack">
         <thead>
           <tr>
             <th scope="col">{{ 'imports.file' | t }}</th>
@@ -34,21 +34,21 @@ import { UI } from '../../shared/ui';
         <tbody>
           @for (b of history.value()?.items ?? []; track b.id) {
             <tr>
-              <td>
+              <td [attr.data-label]="'imports.file' | t">
                 <a class="hn-link" [routerLink]="['/app/importe', b.id]">{{ b.fileName }}</a>
                 @if (b.duplicateOfCommittedFile) {
                   <span class="ms-1 text-xs text-amber-700">({{ 'imports.duplicateShort' | t }})</span>
                 }
               </td>
-              <td class="whitespace-nowrap">{{ b.createdAt | hnDate }}</td>
-              <td><hn-status-badge [status]="b.status" kind="importStatus" /></td>
-              <td class="num">{{ b.summary.totalRows }}</td>
-              <td class="num">{{ b.summary.validRows }}</td>
-              <td class="num" [class.text-red-700]="b.summary.errorRows > 0">{{ b.summary.errorRows }}</td>
-              <td class="num" [class.text-amber-700]="b.summary.conflictRows > 0">{{ b.summary.conflictRows }}</td>
-              <td class="num">{{ b.summary.newOffers }}</td>
-              <td class="num">{{ b.summary.updatedOffers }}</td>
-              <td class="whitespace-nowrap">{{ b.completedAt | hnDate }}</td>
+              <td [attr.data-label]="'imports.createdAt' | t" class="whitespace-nowrap">{{ b.createdAt | hnDate }}</td>
+              <td [attr.data-label]="'common.status' | t"><hn-status-badge [status]="b.status" kind="importStatus" /></td>
+              <td [attr.data-label]="'imports.summary.totalRows' | t" class="num">{{ b.summary.totalRows }}</td>
+              <td [attr.data-label]="'imports.summary.validRows' | t" class="num">{{ b.summary.validRows }}</td>
+              <td [attr.data-label]="'imports.summary.errorRows' | t" class="num" [class.text-red-700]="b.summary.errorRows > 0">{{ b.summary.errorRows }}</td>
+              <td [attr.data-label]="'imports.summary.conflictRows' | t" class="num" [class.text-amber-700]="b.summary.conflictRows > 0">{{ b.summary.conflictRows }}</td>
+              <td [attr.data-label]="'imports.summary.newOffers' | t" class="num">{{ b.summary.newOffers }}</td>
+              <td [attr.data-label]="'imports.summary.updatedOffers' | t" class="num">{{ b.summary.updatedOffers }}</td>
+              <td [attr.data-label]="'imports.completedAt' | t" class="whitespace-nowrap">{{ b.completedAt | hnDate }}</td>
             </tr>
           } @empty {
             @if (!history.loading()) {

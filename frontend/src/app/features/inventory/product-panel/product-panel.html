@@ -320,7 +320,7 @@
         <section id="panel-sec-stock" role="tabpanel" aria-labelledby="panel-tab-stock" class="space-y-4" data-testid="panel-stock">
           <hn-banner [error]="stockError()" />
           <hn-table [loading]="stockLoading()">
-            <table class="hn-table">
+            <table class="hn-table hn-stack">
               <caption class="sr-only">{{ 'inventory.panel.perWarehouse' | t }}</caption>
               <thead>
                 <tr>
@@ -337,11 +337,11 @@
               <tbody>
                 @for (s of stockRows(); track s.warehouseId) {
                   <tr [class.hn-row-selected]="s.warehouseId === r.warehouseId" data-testid="panel-stock-row">
-                    <td>{{ warehouseLabel(s.warehouseId) }}</td>
-                    <td class="num">{{ s.onHand }}</td>
-                    <td class="num">{{ s.reserved }}</td>
-                    <td class="num font-semibold" [class.text-red-700]="s.available <= 0">{{ s.available }}</td>
-                    <td class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
+                    <td [attr.data-label]="'inventory.warehouse' | t">{{ warehouseLabel(s.warehouseId) }}</td>
+                    <td [attr.data-label]="'inventory.onHand' | t" class="num">{{ s.onHand }}</td>
+                    <td [attr.data-label]="'inventory.reserved' | t" class="num">{{ s.reserved }}</td>
+                    <td [attr.data-label]="'inventory.available' | t" class="num font-semibold" [class.text-red-700]="s.available <= 0">{{ s.available }}</td>
+                    <td [attr.data-label]="'common.updatedAt' | t" class="whitespace-nowrap text-slate-600">{{ s.updatedAt | hnDate }}</td>
                     @if (access().adjustStock) {
                       <td class="hn-actions">
                         <button hnButton size="sm" type="button" (click)="adjustRow(s)"
@@ -378,7 +378,7 @@
             </div>
             <hn-banner class="mb-2" [error]="movementsError()" />
             <hn-table [loading]="movementsLoading()">
-              <table class="hn-table" data-testid="panel-movements">
+              <table class="hn-table hn-stack" data-testid="panel-movements">
                 <thead>
                   <tr>
                     <th scope="col">{{ 'inventory.occurredAt' | t }}</th>
@@ -393,15 +393,15 @@
                 <tbody>
                   @for (m of movements(); track m.id) {
                     <tr>
-                      <td class="whitespace-nowrap">{{ m.occurredAt | hnDate }}</td>
-                      <td>{{ m.type | tEnum: 'movementType' }}</td>
-                      <td>{{ warehouseLabel(m.warehouseId) }}</td>
-                      <td class="num font-medium" [class.text-emerald-700]="m.quantity > 0" [class.text-red-700]="m.quantity < 0">
+                      <td [attr.data-label]="'inventory.occurredAt' | t" class="whitespace-nowrap">{{ m.occurredAt | hnDate }}</td>
+                      <td [attr.data-label]="'inventory.type' | t">{{ m.type | tEnum: 'movementType' }}</td>
+                      <td [attr.data-label]="'inventory.warehouse' | t">{{ warehouseLabel(m.warehouseId) }}</td>
+                      <td [attr.data-label]="'inventory.quantity' | t" class="num font-medium" [class.text-emerald-700]="m.quantity > 0" [class.text-red-700]="m.quantity < 0">
                         <bdi dir="ltr">{{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}</bdi>
                       </td>
-                      <td class="num">{{ m.onHandAfter }}</td>
-                      <td class="num"><bdi dir="ltr">{{ m.unitCostMinor != null ? (m.unitCostMinor | money) : '–' }}</bdi></td>
-                      <td class="text-slate-600">{{ m.reference ?? '–' }}</td>
+                      <td [attr.data-label]="'inventory.onHandAfter' | t" class="num">{{ m.onHandAfter }}</td>
+                      <td [attr.data-label]="'inventory.panel.ek' | t" class="num"><bdi dir="ltr">{{ m.unitCostMinor != null ? (m.unitCostMinor | money) : '–' }}</bdi></td>
+                      <td [attr.data-label]="'inventory.reference' | t" class="text-slate-600">{{ m.reference ?? '–' }}</td>
                     </tr>
                   } @empty {
                     @if (movementsLoading()) {

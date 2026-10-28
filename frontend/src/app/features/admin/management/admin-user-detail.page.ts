@@ -170,7 +170,7 @@ interface PendingUserAction {
           {{ 'adminMgmt.users.organizations' | t }}
         </h2>
         <hn-table>
-          <table class="hn-table" data-testid="user-memberships">
+          <table class="hn-table hn-stack" data-testid="user-memberships">
             <thead>
               <tr>
                 <th scope="col">{{ 'admin.organization' | t }}</th>
@@ -182,16 +182,16 @@ interface PendingUserAction {
             <tbody>
               @for (m of u.memberships; track m.organizationId) {
                 <tr>
-                  <td>
+                  <td [attr.data-label]="'admin.organization' | t">
                     <a
                       class="hn-link font-medium"
                       [routerLink]="['/app/administration/unternehmen', m.organizationId]"
                       ><bdi>{{ m.organizationName }}</bdi></a
                     >
                   </td>
-                  <td>{{ m.role | tEnum: 'role' }}</td>
-                  <td><hn-status-badge [status]="m.organizationStatus" kind="orgStatus" /></td>
-                  <td class="whitespace-nowrap text-xs">{{ m.joinedAt | hnDate }}</td>
+                  <td [attr.data-label]="'team.role' | t">{{ m.role | tEnum: 'role' }}</td>
+                  <td [attr.data-label]="'common.status' | t"><hn-status-badge [status]="m.organizationStatus" kind="orgStatus" /></td>
+                  <td [attr.data-label]="'team.since' | t" class="whitespace-nowrap text-xs">{{ m.joinedAt | hnDate }}</td>
                 </tr>
               } @empty {
                 <tr>

@@ -17,7 +17,7 @@ import { formatBillingMonth, formatDateOnly, formatVatRate, isPlaceholderParty, 
   template: `
     @let inv = invoice.value();
     <hn-page-header [title]="inv ? (inv.kind | tEnum: 'invoiceKind') + ' ' + inv.number : ('invoices.title' | t)" [description]="'invoices.detail.subtitle' | t">
-      <a hnButton routerLink="/app/finanzen/rechnungen" data-testid="invoice-back">{{ 'invoices.back' | t }}</a>
+      <hn-actions-menu><a hnButton routerLink="/app/finanzen/rechnungen" data-testid="invoice-back">{{ 'invoices.back' | t }}</a></hn-actions-menu>
       @if (inv) {
         <button hnButton variant="primary" type="button" [loading]="pdf.busyId() === inv.id" [disabled]="!!pdf.busyId()" (click)="pdf.download(inv)"
           data-testid="invoice-detail-pdf">
@@ -90,7 +90,7 @@ import { formatBillingMonth, formatDateOnly, formatVatRate, isPlaceholderParty, 
           {{ (inv.kind === 'CreditNote' ? 'invoices.detail.correctionNote' : 'invoices.detail.serviceText') | t: { number: inv.referencedInvoiceNumber ?? '' } }}
         </p>
         <hn-table>
-          <table class="hn-table" data-testid="invoice-lines">
+          <table class="hn-table hn-stack" data-testid="invoice-lines">
             <thead>
               <tr>
                 <th scope="col" class="num">{{ 'invoices.detail.line' | t }}</th>
@@ -104,16 +104,16 @@ import { formatBillingMonth, formatDateOnly, formatVatRate, isPlaceholderParty, 
             <tbody>
               @for (l of inv.lines; track l.lineNumber) {
                 <tr [attr.data-order-number]="l.orderNumber">
-                  <td class="num">{{ l.lineNumber }}</td>
-                  <td>
+                  <td [attr.data-label]="'invoices.detail.line' | t" class="num">{{ l.lineNumber }}</td>
+                  <td [attr.data-label]="'invoices.detail.order' | t">
                     <a class="hn-link hn-mono text-xs" [routerLink]="['/app/bestellungen', l.orderId]" [attr.aria-label]="'finance.openOrderNumber' | t: { number: l.orderNumber }"
                       ><bdi>{{ l.orderNumber }}</bdi></a
                     >
                   </td>
-                  <td class="whitespace-nowrap">{{ l.paidAt | hnDate }}</td>
-                  <td class="num"><bdi dir="ltr">{{ l.netMinor | money: inv.currency }}</bdi></td>
-                  <td class="num"><bdi dir="ltr">{{ l.vatMinor | money: inv.currency }}</bdi></td>
-                  <td class="num"><bdi dir="ltr">{{ l.grossMinor | money: inv.currency }}</bdi></td>
+                  <td [attr.data-label]="'invoices.detail.paidAt' | t" class="whitespace-nowrap">{{ l.paidAt | hnDate }}</td>
+                  <td [attr.data-label]="'invoices.net' | t" class="num"><bdi dir="ltr">{{ l.netMinor | money: inv.currency }}</bdi></td>
+                  <td [attr.data-label]="'invoices.vat' | t" class="num"><bdi dir="ltr">{{ l.vatMinor | money: inv.currency }}</bdi></td>
+                  <td [attr.data-label]="'invoices.gross' | t" class="num"><bdi dir="ltr">{{ l.grossMinor | money: inv.currency }}</bdi></td>
                 </tr>
               }
             </tbody>

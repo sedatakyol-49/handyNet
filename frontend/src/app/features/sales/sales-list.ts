@@ -26,7 +26,7 @@ type Kind = 'quotations' | 'invoices';
       </a>
     </hn-page-header>
 
-    <nav class="mb-3 flex flex-wrap gap-1.5" [attr.aria-label]="'sales.switch' | t">
+    <nav class="hn-scroll-tabs mb-3" [attr.aria-label]="'sales.switch' | t">
       <a [routerLink]="nav().quotations" class="pos-chip" [attr.aria-pressed]="kind() === 'quotations'" data-testid="sales-tab-quotations">{{ 'sales.quotations.title' | t }}</a>
       <a [routerLink]="nav().invoices" class="pos-chip" [attr.aria-pressed]="kind() === 'invoices'" data-testid="sales-tab-invoices">
         {{ 'sales.invoices.title' | t }}
@@ -41,6 +41,7 @@ type Kind = 'quotations' | 'invoices';
       }
     </nav>
 
+    <hn-filter-bar>
     <form class="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5" role="search" (submit)="$event.preventDefault(); apply()">
       <div class="lg:col-span-2">
         <label for="sales-search" class="mb-1 block text-xs font-medium text-slate-700">{{ 'sales.list.search' | t }}</label>
@@ -76,6 +77,7 @@ type Kind = 'quotations' | 'invoices';
         <button hnButton variant="ghost" type="button" class="min-h-11" (click)="reset()">{{ 'sales.list.reset' | t }}</button>
       </div>
     </form>
+    </hn-filter-bar>
 
     @if (activeError(); as e) {
       <hn-banner class="mb-3" [error]="e" />

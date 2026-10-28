@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -27,7 +27,7 @@ interface AdminTab {
       [attr.aria-label]="'admin.tabs.label' | t"
       data-testid="admin-tabs"
     >
-      <div class="flex min-w-max gap-1 border-b border-slate-200">
+      <div class="flex min-w-max gap-1 border-b border-slate-200" data-testid="admin-tabs-strip">
         @for (tab of tabs; track tab.path) {
           <a
             [routerLink]="tab.path"
@@ -35,7 +35,7 @@ interface AdminTab {
             [class.border-accent-700]="isActive(tab)"
             [class.text-slate-900]="isActive(tab)"
             [class.font-semibold]="isActive(tab)"
-            class="-mb-px rounded-t border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-accent-600"
+            class="-mb-px rounded-t border-b-2 border-transparent px-3 py-3 text-sm md:py-2 whitespace-nowrap text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-accent-600"
             >{{ tab.labelKey | t }}</a
           >
         }
@@ -43,7 +43,8 @@ interface AdminTab {
     </nav>
   `,
 })
-export class AdminTabsComponent {
+export class AdminTabsComponent implements AfterViewInit {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly router = inject(Router);
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -103,6 +104,12 @@ export class AdminTabsComponent {
       exact: false,
     },
   ];
+
+  /** On a phone the strip scrolls: bring the current tab into view. */
+  ngAfterViewInit(): void {
+    const active = this.host.nativeElement.querySelector<HTMLElement>('[aria-current="page"]');
+    active?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+  }
 
   protected isActive(tab: AdminTab): boolean {
     const path = (this.url() ?? '').split(/[?#]/)[0];

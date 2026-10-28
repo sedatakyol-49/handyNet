@@ -211,6 +211,8 @@ test.describe.serial('Lager bulk entry (multi-select)', () => {
     await expect(page.getByTestId('entry-close-confirm')).toBeVisible();
     await page.getByTestId('entry-close-discard').click();
     await expect(page.getByTestId('entry-dialog')).toBeHidden();
-    await page.locator('#lang-switcher').selectOption('de');
+    // phone: the language selector lives in the user menu
+    await page.getByTestId('user-menu').click();
+    await page.getByTestId('lang-switcher-menu').selectOption('de');
   });
 });

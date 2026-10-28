@@ -20,6 +20,7 @@ import { EMPTY_USER_FILTERS, UserFilters, userBadges, userQuery } from './admin-
     <hn-page-header [title]="'admin.title' | t" [description]="'adminMgmt.users.subtitle' | t" />
     <hn-admin-tabs />
 
+    <hn-filter-bar>
     <form
       class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
       role="search"
@@ -64,6 +65,7 @@ import { EMPTY_USER_FILTERS, UserFilters, userBadges, userQuery } from './admin-
         }
       </div>
     </form>
+    </hn-filter-bar>
 
     <hn-banner class="mb-3" [error]="users.error()" />
     <!-- phone: cards; md+: table -->

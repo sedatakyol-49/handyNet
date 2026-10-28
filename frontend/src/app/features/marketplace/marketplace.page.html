@@ -4,6 +4,7 @@
   }
 </hn-page-header>
 
+<hn-filter-bar>
 <form class="hn-card mb-2 p-3" role="search" [attr.aria-label]="'marketplace.filters.label' | t" (submit)="$event.preventDefault(); applySearch(); applyModel(); applyPrice()" data-testid="marketplace-filters">
   <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.2fr_1fr]">
     <hn-field [label]="'marketplace.search' | t" for="mp-search" [hint]="'marketplace.searchHint' | t">
@@ -124,6 +125,7 @@
     </div>
   </div>
 </form>
+</hn-filter-bar>
 
 <div class="mb-3 flex min-h-8 flex-wrap items-center gap-1.5" data-testid="filter-chips">
   <p class="me-1 text-sm text-slate-600" aria-live="polite" data-testid="result-count">
@@ -148,7 +150,7 @@
 }
 
 <hn-table [loading]="results.loading()">
-  <table class="hn-table" data-testid="marketplace-results">
+  <table class="hn-table hn-stack" data-testid="marketplace-results">
     <caption class="sr-only">{{ 'marketplace.title' | t }} – {{ 'marketplace.rowHint' | t }}</caption>
     <thead>
       <tr>
@@ -183,7 +185,7 @@
               <span class="block size-10 rounded border border-dashed border-slate-200 bg-slate-50" aria-hidden="true"></span>
             }
           </td>
-          <td class="min-w-48">
+          <td [attr.data-label]="'common.product' | t" class="min-w-48">
             <button type="button" class="text-start font-medium hover:text-accent-800 hover:underline" (click)="openOffer(l)" data-testid="offer-open">
               {{ l.brand }} {{ l.productName }}
             </button>
@@ -194,15 +196,15 @@
               @if (l.mpn) { · MPN {{ l.mpn }} }
             </span>
           </td>
-          <td class="whitespace-nowrap">{{ l.quality | tEnum: 'quality' }}</td>
-          <td class="whitespace-nowrap">{{ l.condition | tEnum: 'condition' }}</td>
-          <td class="min-w-32 max-w-48">
+          <td [attr.data-label]="'common.quality' | t" class="whitespace-nowrap">{{ l.quality | tEnum: 'quality' }}</td>
+          <td [attr.data-label]="'common.condition' | t" class="whitespace-nowrap">{{ l.condition | tEnum: 'condition' }}</td>
+          <td [attr.data-label]="'marketplace.seller' | t" class="min-w-32 max-w-48">
             {{ l.sellerName }}<span class="block text-xs text-slate-500">{{ l.sellerCity }}</span>
           </td>
-          <td class="num font-semibold">{{ l.priceMinor | money: l.currency }}</td>
-          <td class="num" [class.text-red-700]="l.available < l.minOrderQuantity">{{ l.available }}</td>
-          <td class="num">{{ 'marketplace.days' | t: { days: l.deliveryDays } }}</td>
-          <td class="num">{{ l.minOrderQuantity }}</td>
+          <td [attr.data-label]="'marketplace.netPrice' | t" class="num font-semibold">{{ l.priceMinor | money: l.currency }}</td>
+          <td [attr.data-label]="'marketplace.available' | t" class="num" [class.text-red-700]="l.available < l.minOrderQuantity">{{ l.available }}</td>
+          <td [attr.data-label]="'marketplace.delivery' | t" class="num">{{ 'marketplace.days' | t: { days: l.deliveryDays } }}</td>
+          <td [attr.data-label]="'marketplace.moq' | t" class="num">{{ l.minOrderQuantity }}</td>
           <td class="hn-actions cursor-default text-start" data-row-ignore (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
             @if (isOwn(l)) {
               <span class="text-xs text-slate-500">{{ 'marketplace.ownOffer' | t }}</span>

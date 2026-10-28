@@ -31,7 +31,9 @@
     "filterOptions": "Filtrar opciones",
     "noOptions": "No hay valores",
     "clearSelection": "Quitar selección",
-    "selectedCount": "{count} seleccionados"
+    "selectedCount": "{count} seleccionados",
+    "moreActions": "Más acciones",
+    "filters": "Filtros"
   },
   "pagination": {
     "label": "Paginación",

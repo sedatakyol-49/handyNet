@@ -48,15 +48,55 @@ type PendingAction =
           <h2 id="mod-sellers-heading" class="text-sm">{{ 'moderation.sellers.heading' | t }}</h2>
           <p class="text-xs text-slate-600">{{ 'moderation.sellers.hint' | t }}</p>
         </div>
-        <form class="flex items-end gap-2" role="search" (submit)="$event.preventDefault(); sellerSearch.set(sellerSearchInput.value.trim())">
-          <hn-field [label]="'moderation.sellers.search' | t" for="mod-seller-search" class="w-64">
+        <form class="flex w-full items-end gap-2 md:w-auto" role="search" (submit)="$event.preventDefault(); sellerSearch.set(sellerSearchInput.value.trim())">
+          <hn-field [label]="'moderation.sellers.search' | t" for="mod-seller-search" class="w-full md:w-64">
             <input #sellerSearchInput hnInput id="mod-seller-search" type="search" (change)="sellerSearch.set(sellerSearchInput.value.trim())"
               data-testid="mod-seller-search" />
           </hn-field>
         </form>
       </div>
       <hn-banner class="mb-2" [error]="sellers.error()" />
-      <hn-table [loading]="sellers.loading()" [scrollY]="true">
+      <ul class="space-y-2 md:hidden" data-testid="mod-sellers-cards">
+        @for (s of sellers.value() ?? []; track s.organizationId) {
+          <li class="hn-card p-3" [class.border-red-300]="s.blocked" [class.bg-red-50]="s.blocked">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-medium wrap-break-word"><bdi>{{ s.name }}</bdi></p>
+                <p class="text-xs text-slate-500"><bdi>{{ s.city }}</bdi></p>
+              </div>
+              <hn-status-badge [status]="s.verification" kind="orgStatus" />
+            </div>
+            <dl class="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <div><dt class="text-slate-500">{{ 'moderation.sellers.offers' | t }}</dt><dd class="font-semibold tabular-nums">{{ s.offerCount }}</dd></div>
+              <div><dt class="text-slate-500">{{ 'moderation.sellers.published' | t }}</dt><dd class="font-semibold tabular-nums">{{ s.publishedCount }}</dd></div>
+              <div><dt class="text-slate-500">{{ 'moderation.sellers.blockedOffers' | t }}</dt><dd class="font-semibold tabular-nums">{{ s.blockedOfferCount }}</dd></div>
+            </dl>
+            <div class="mt-2">
+              @if (s.blocked) {
+                <hn-status-badge status="Blocked" kind="moderation.sellerState" tone="danger" />
+                @if (s.blockReason) {
+                  <span class="mt-0.5 block text-xs text-slate-600"><bdi>{{ s.blockReason }}</bdi></span>
+                }
+              } @else {
+                <hn-status-badge status="Visible" kind="moderation.sellerState" tone="success" />
+              }
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button hnButton size="sm" variant="ghost" type="button" (click)="showSellerOffers(s)" data-testid="mod-card-seller-show">{{ 'moderation.sellers.showOffers' | t }}</button>
+              @if (s.blocked) {
+                <button hnButton size="sm" type="button" (click)="ask({ kind: 'unblockSeller', seller: s })" [disabled]="busy()" data-testid="mod-card-seller-unblock">{{ 'moderation.sellers.unblockAll' | t }}</button>
+              } @else {
+                <button hnButton size="sm" variant="danger" type="button" (click)="ask({ kind: 'blockSeller', seller: s })" [disabled]="busy()" data-testid="mod-card-seller-block">{{ 'moderation.sellers.blockAll' | t }}</button>
+              }
+            </div>
+          </li>
+        } @empty {
+          @if (!sellers.loading()) {
+            <li><hn-empty-state [title]="'moderation.sellers.empty' | t" /></li>
+          }
+        }
+      </ul>
+      <hn-table class="hidden md:block" [loading]="sellers.loading()" [scrollY]="true">
         <table class="hn-table" data-testid="mod-sellers-table">
           <thead>
             <tr>
@@ -121,6 +161,7 @@ type PendingAction =
     <!-- Offers -->
     <section aria-labelledby="mod-offers-heading">
       <h2 id="mod-offers-heading" class="mb-2 text-sm">{{ 'moderation.offers.heading' | t }}</h2>
+      <hn-filter-bar>
       <form class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" role="search" (submit)="$event.preventDefault(); applyFilters()" data-testid="mod-filters">
         <hn-field [label]="'moderation.offers.seller' | t" for="mod-f-seller">
           <select hnSelect id="mod-f-seller" name="seller" [(ngModel)]="form.sellerId" (ngModelChange)="applyFilters()" data-testid="mod-filter-seller">
@@ -160,6 +201,7 @@ type PendingAction =
           <button hnButton variant="ghost" type="button" (click)="resetFilters()">{{ 'moderation.offers.reset' | t }}</button>
         </div>
       </form>
+      </hn-filter-bar>
 
       <div class="mb-2 flex min-h-8 flex-wrap items-center gap-2" data-testid="mod-bulk-bar">
         <span class="text-xs text-slate-600" aria-live="polite" data-testid="mod-selected-count">{{ 'moderation.offers.selected' | t: { count: selected().size } }}</span>
@@ -177,7 +219,53 @@ type PendingAction =
       </div>
 
       <hn-banner class="mb-2" [error]="offers.error()" />
-      <hn-table [loading]="offers.loading()">
+      <div class="mb-2 flex min-h-11 items-center gap-2 md:hidden">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" class="hn-checkbox size-5" [checked]="headerState() === 'all'" [indeterminate]="headerState() === 'some'"
+            [disabled]="!pageIds().length" (change)="selectPage()" data-testid="mod-card-select-page" />
+          {{ 'moderation.offers.selectPage' | t }}
+        </label>
+      </div>
+      <ul class="space-y-2 md:hidden" data-testid="mod-offers-cards">
+        @for (o of offers.value()?.items ?? []; track o.offerId) {
+          <li class="hn-card flex gap-3 p-3" [class.bg-accent-50]="selected().has(o.offerId)">
+            <input type="checkbox" class="hn-checkbox mt-1 size-5 shrink-0" [checked]="selected().has(o.offerId)" (change)="toggle(o.offerId)"
+              [attr.aria-label]="'moderation.offers.selectRow' | t: { product: o.brand + ' ' + o.productName }" data-testid="mod-card-select" />
+            <div class="min-w-0 flex-1">
+              <p class="font-medium wrap-break-word"><bdi>{{ o.brand }} {{ o.productName }}</bdi></p>
+              <p class="text-xs text-slate-500"><bdi>{{ o.sellerName }}</bdi> · <bdi>{{ o.sellerCity }}</bdi></p>
+              <p class="text-xs text-slate-500"><bdi dir="ltr" class="hn-mono">{{ o.supplierSku }}</bdi></p>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="text-sm font-semibold tabular-nums"><bdi dir="ltr">{{ o.priceMinor | money: o.currency }}</bdi></span>
+                <hn-status-badge [status]="o.status" kind="offerStatus" />
+                @if (o.moderation === 'Blocked') {
+                  <hn-status-badge status="Blocked" kind="moderation.offerState" tone="danger" />
+                } @else if (o.sellerBlocked) {
+                  <hn-status-badge status="SellerBlocked" kind="moderation.offerState" tone="warning" />
+                } @else {
+                  <hn-status-badge status="Visible" kind="moderation.offerState" tone="success" />
+                }
+              </div>
+              @if (o.moderation === 'Blocked' && o.moderationReason) {
+                <p class="mt-1 text-xs text-slate-600"><bdi>{{ o.moderationReason }}</bdi></p>
+              }
+              <div class="mt-3">
+                @if (o.moderation === 'Blocked') {
+                  <button hnButton size="sm" type="button" (click)="ask({ kind: 'unblockOffer', offer: o })" [disabled]="busy()" data-testid="mod-card-offer-unblock">{{ 'moderation.offers.unblock' | t }}</button>
+                } @else {
+                  <button hnButton size="sm" variant="danger" type="button" (click)="ask({ kind: 'blockOffer', offer: o })" [disabled]="busy()" data-testid="mod-card-offer-block">{{ 'moderation.offers.block' | t }}</button>
+                }
+              </div>
+            </div>
+          </li>
+        } @empty {
+          @if (!offers.loading()) {
+            <li><hn-empty-state [title]="'moderation.offers.empty' | t" /></li>
+          }
+        }
+      </ul>
+      <hn-pagination class="md:hidden" [page]="page()" [pageSize]="pageSize" [totalCount]="offers.value()?.totalCount ?? 0" (pageChange)="goTo($event)" />
+      <hn-table class="hidden md:block" [loading]="offers.loading()">
         <table class="hn-table" data-testid="mod-offers-table">
           <thead>
             <tr>

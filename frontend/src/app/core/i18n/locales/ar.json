@@ -31,7 +31,9 @@
     "filterOptions": "تصفية الخيارات",
     "noOptions": "لا توجد قيم",
     "clearSelection": "إلغاء التحديد",
-    "selectedCount": "تم تحديد {count}"
+    "selectedCount": "تم تحديد {count}",
+    "moreActions": "المزيد من الإجراءات",
+    "filters": "عوامل التصفية"
   },
   "pagination": {
     "label": "التنقل بين الصفحات",
