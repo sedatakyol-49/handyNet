@@ -114,6 +114,10 @@ services:
     logging: *logging
     environment:
       HN_API_URL: http://api:8080
+      # Angular SSR rejects unknown Host headers (SSRF guard). localhost/127.0.0.1 keep the healthcheck working.
+      NG_ALLOWED_HOSTS: ${DOMAIN},localhost,127.0.0.1
+      # Only Caddy can reach this container; it sets these headers itself and discards client-supplied values.
+      NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto,x-forwarded-for
     depends_on:
       api:
         condition: service_healthy
