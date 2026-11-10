@@ -69,6 +69,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      # Multi-arch images: linux/amd64 (Hetzner, most VPS) and linux/arm64 (e.g. Oracle Cloud Ampere free tier).
+      # Compilation runs natively ($BUILDPLATFORM in the Dockerfiles); QEMU only runs the small runtime-stage steps.
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -83,6 +86,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: backend
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-api:${{ github.sha }}
@@ -92,6 +96,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: frontend
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-web:${{ github.sha }}

@@ -15,6 +15,9 @@ Internet -> Caddy :443 --/api/*, /health/*--> api:8080 --> postgres (handynet_ap
 - Hetzner Cloud **CX32** (4 vCPU shared, 8 GB RAM, 80 GB) is a comfortable start; CX22 (2 vCPU / 4 GB) works for a
   pilot. Check current pricing (roughly EUR 5-15 per month). Image: Ubuntu 24.04. Add your SSH key, enable Hetzner
   backups (about +20 percent) as a second safety net, keep the location in the EU.
+- Free alternative for a test system: Oracle Cloud "Always Free" Ampere A1 (ARM, up to 4 OCPU / 24 GB) in
+  Germany Central (Frankfurt). The images are multi-arch (amd64 + arm64), so the same steps apply. Also open 80/443
+  in the subnet's Security List; without a domain, `DOMAIN=<public-ip>.sslip.io` gives Caddy a valid hostname.
 - Resource limits in the compose file add up to roughly 3 GB RAM (postgres 1 GB, api 1 GB, web 512 MB, caddy/backup 256 MB each).
 
 Harden and install Docker:
@@ -38,7 +41,9 @@ start; Caddy obtains the Let's Encrypt certificate on first start and needs port
 ## 3. Images (CI)
 
 On every push to `main`, `.github/workflows/ci.yml` runs the tests and then builds and pushes
-`ghcr.io/<owner>/handynet-api:<commit-sha>` and `handynet-web:<commit-sha>` (plus `:latest`). Pull requests only build.
+`ghcr.io/<owner>/handynet-api:<commit-sha>` and `handynet-web:<commit-sha>` (plus `:latest`) as multi-arch images
+for `linux/amd64` and `linux/arm64`; Docker on the server pulls the matching one. The .NET and Angular builds run
+natively on the CI runner and cross-target the architecture (`$BUILDPLATFORM`/`$TARGETARCH` in the Dockerfiles). Pull requests only build.
 No secret is baked into an image: all configuration comes from the environment at runtime (`.dockerignore` files also
 exclude `.env*`, keys and `*.local.json` from the build context).
 

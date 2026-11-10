@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS build
+# Build output is plain JS, so the build stage runs natively on the CI machine for every target platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
