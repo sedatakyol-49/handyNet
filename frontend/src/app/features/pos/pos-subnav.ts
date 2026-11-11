@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { PosApi } from '../../core/api/handynet-api';
 import { SessionStore } from '../../core/auth/session.store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { createQuery } from '../../shared/data/query';
 import { PosContext } from './pos-context';
+import { PosOfflineData } from './offline/offline-data.service';
+import { OfflineQueueService } from './offline/offline-queue.service';
 
 /**
  * Tabs of one register on the POS app's secondary pages (selling, receipts, sessions). Also tells the top bar which
@@ -28,7 +29,6 @@ import { PosContext } from './pos-context';
   `,
 })
 export class PosSubnavComponent {
-  private readonly api = inject(PosApi);
   private readonly ctx = inject(PosContext);
 
   readonly registerId = input.required<string>();
@@ -42,19 +42,27 @@ export class PosSubnavComponent {
     { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
     { id: 'ankauf', path: ['ankauf'], label: 'pos.subnav.ankauf', manage: false, module: 'Ankauf' as const },
     { id: 'printers', path: ['drucker'], label: 'pos.subnav.printers', manage: false },
+    { id: 'terminals', path: ['kartenterminal'], label: 'pos.subnav.terminals', manage: false },
+    { id: 'offline', path: ['offline'], label: 'pos.subnav.offline', manage: false, offline: true },
   ];
+  private readonly offlineData = inject(PosOfflineData);
+  private readonly queue = inject(OfflineQueueService);
+  /** The Offline tab exists for registers in offline mode and whenever this device still holds entries of the register. */
+  private readonly showOffline = computed(() => !!this.register.value()?.offlineMode || this.queue.entries().some((e) => e.registerId === this.registerId()));
   /** Price maintenance only with `pos.manage`; Ankauf only with the module. */
   protected readonly visibleTabs = computed(() =>
-    this.tabs.filter((t) => (!t.manage || this.store.can('pos.manage')) && (!('module' in t) || !t.module || this.store.hasModule(t.module))),
+    this.tabs.filter(
+      (t) => (!t.manage || this.store.can('pos.manage')) && (!('module' in t) || !t.module || this.store.hasModule(t.module)) && (!('offline' in t) || this.showOffline()),
+    ),
   );
 
   private readonly register = createQuery(
     () => this.registerId(),
-    (id) => this.api.register(id),
+    (id) => this.offlineData.register(id),
   );
   private readonly session = createQuery(
     () => this.registerId(),
-    (id) => this.api.currentSession(id),
+    (id) => this.offlineData.currentSession(id),
   );
   private readonly sessionLoaded = computed(() => !this.session.loading());
 

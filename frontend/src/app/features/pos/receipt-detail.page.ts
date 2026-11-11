@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
-import { POS_PAYMENT_METHODS, PosPaymentMethod, Receipt } from '../../core/api/models';
+import { POS_PAYMENT_METHODS, PosPaymentMethod, Receipt, ReturnRequest } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
@@ -32,6 +33,9 @@ import { ReceiptViewComponent } from './receipt-view';
 import { PosEReceiptComponent } from './pos-ereceipt';
 import { PosInvoiceComponent } from './pos-invoice';
 import { PrinterService } from './printing/printer.service';
+import { OrderCard } from './terminals/card-flow';
+import { TerminalService } from './terminals/terminal.service';
+import { formatMoney } from '../../core/format/money';
 
 /** One receipt as issued (printable) with Storno (`pos.manage`) and Return (select lines/quantities). */
 @Component({
@@ -234,6 +238,7 @@ export class PosReceiptDetailPage {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly printer = inject(PrinterService);
+  private readonly terminals = inject(TerminalService);
 
   readonly id = input.required<string>();
 
@@ -279,6 +284,10 @@ export class PosReceiptDetailPage {
   });
   protected readonly returnError = signal<string | null>(null);
   private pendingReturn: PendingAttempt | null = null;
+  /** Refund the terminal approved for this return and that no receipt uses yet (kept for a retry of the same return). */
+  private refundCard: OrderCard | null = null;
+  /** The terminal's answer to the refund was lost; the cashier confirms the next attempt after checking the terminal. */
+  private refundManual = false;
 
   protected stornoReason = '';
   protected readonly stornoReasonError = signal<string | null>(null);
@@ -339,21 +348,59 @@ export class PosReceiptDetailPage {
   protected async confirmReturn(r: Receipt): Promise<void> {
     const c = this.check();
     if (c.error) return;
-    const body = { lines: c.lines, refundMethod: this.refundMethod, reason: this.returnReason.trim() };
-    const attempt = attemptFor(this.pendingReturn, JSON.stringify(body), newIdempotencyKey);
-    this.pendingReturn = attempt;
+    const body: ReturnRequest = { lines: c.lines, refundMethod: this.refundMethod, reason: this.returnReason.trim() };
     await this.run(async () => {
+      // Card refund inside the till: run it on the terminal first (the back office has no terminal → confirmed by hand).
+      if (this.refundMethod === 'Card' && this.ctx) {
+        const cardId = await this.refundOnTerminal(r, c.refundMinor);
+        if (cardId) body.cardTransactionId = cardId;
+      }
+      const attempt = attemptFor(this.pendingReturn, JSON.stringify(body), newIdempotencyKey);
+      this.pendingReturn = attempt;
       try {
         const created = await firstValueFrom(this.api.returnItems(r.id, body, attempt.key));
         this.pendingReturn = null;
+        this.refundCard = null;
+        this.refundManual = false;
         this.toast.success(this.i18n.t('pos.detail.returnDone', { number: created.number }));
         this.returning.set(false);
         await this.router.navigate(['/kasse/belege', created.id]);
       } catch (e) {
         if (!keepAttemptAfter(problemStatus(e))) this.pendingReturn = null;
+        // The refund already went to the card: say so. It stays stored and is reused when this return is confirmed again.
+        if (this.refundCard) throw new Error(this.i18n.t('pos.terminals.flow.refundKept', { reason: posErrorText(this.i18n, e) ?? '', amount: formatMoney(this.refundCard.amountMinor) }));
         throw e;
       }
     });
+  }
+
+  /**
+   * Runs the card refund on the device's terminal. Returns the card transaction to send with the return, or null when
+   * the refund is confirmed by hand (no terminal). Throws with a text for the dialog when the return must not continue.
+   */
+  private async refundOnTerminal(r: Receipt, refundMinor: number): Promise<string | null> {
+    let card = this.refundCard;
+    if (card && card.amountMinor !== refundMinor) {
+      throw new Error(this.i18n.t('pos.terminals.flow.refundAmountChanged', { amount: formatMoney(card.amountMinor) }));
+    }
+    if (!card) {
+      if (this.refundManual) return null;
+      const run = await this.terminals.charge(r.registerId, 'Refund', refundMinor);
+      if (run.kind === 'manual') return null;
+      if (run.kind === 'uncertain') {
+        this.refundManual = true;
+        throw new Error(`${run.text} ${this.i18n.t('pos.terminals.flow.refundUncertain')}`);
+      }
+      if (run.kind !== 'approved') throw new Error(run.text);
+      card = this.refundCard = run.card;
+    }
+    if (!card.reported && card.pendingResult) {
+      if (!(await this.terminals.report(card.transactionId, card.pendingResult))) {
+        throw new Error(this.i18n.t('pos.terminals.flow.unreported', { amount: formatMoney(card.amountMinor) }));
+      }
+      card = this.refundCard = { ...card, reported: true, pendingResult: null };
+    }
+    return card.transactionId;
   }
 
   // ---- storno
@@ -386,7 +433,8 @@ export class PosReceiptDetailPage {
       await fn();
       this.dialog.set(null);
     } catch (e) {
-      this.dialogError.set(posErrorText(this.i18n, e));
+      // Plain errors carry a ready text (card terminal); API errors are translated.
+      this.dialogError.set(e instanceof Error && !(e instanceof HttpErrorResponse) ? e.message : posErrorText(this.i18n, e));
       this.query.reload();
     } finally {
       this.busy.set(false);

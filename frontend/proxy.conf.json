@@ -3,5 +3,10 @@
     "target": "http://localhost:5170",
     "secure": false,
     "changeOrigin": true
+  },
+  "/health": {
+    "target": "http://localhost:5170",
+    "secure": false,
+    "changeOrigin": true
   }
 }

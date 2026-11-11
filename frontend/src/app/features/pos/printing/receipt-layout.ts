@@ -2,6 +2,7 @@ import { ReceiptDocument } from '../../../core/api/models';
 import { formatMoney, formatSignedMoney } from '../../../core/format/money';
 import { hasTseBlock, shortSignature } from '../fiscal.logic';
 import { Align, Codepage, columns, toPrintable, wrap } from './escpos';
+import { receiptCardLines } from '../terminals/card-flow';
 
 /**
  * Printer-independent receipt layout (pure): the stored receipt document (unchanged fiscal data) as lines that already fit
@@ -137,6 +138,7 @@ export function receiptLayout(d: ReceiptDocument, o: ReceiptLayoutOptions): Prin
       const method = t(`posPaymentMethod.${p.method}`);
       if (p.tenderedMinor !== null && p.tenderedMinor !== p.amountMinor) b.pair(t('pos.receipt.tendered', { method }), money(p.tenderedMinor));
       else b.pair(method, money(p.amountMinor));
+      for (const line of receiptCardLines(p.card, t)) b.text(line);
     }
     if (d.roundingMinor) b.pair(t('pos.rounding.label'), formatSignedMoney(d.roundingMinor, d.currency));
     if (d.changeMinor) b.pair(t('pos.receipt.change'), money(d.changeMinor), { bold: true });

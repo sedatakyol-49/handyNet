@@ -1412,6 +1412,8 @@ export interface PosRegister {
   autoLockMinutes?: number | null;
   /** Round cash totals to 0.05 € on this register. */
   cashRounding?: boolean;
+  /** The till may record sales while the API is unreachable and book them on reconnect. */
+  offlineMode?: boolean;
 }
 
 export interface CashMovement {
@@ -1686,6 +1688,14 @@ export interface SaleLineRequest {
 export interface SalePayment {
   method: PosPaymentMethod;
   amountMinor: number;
+  /** Card payments run on a terminal: the approved card transaction of exactly this amount (absent = confirmed by the cashier). */
+  cardTransactionId?: string | null;
+}
+
+/** A sale the till recorded while the API was unreachable: device time and device reference (`OFF-<device>-<n>`). */
+export interface OfflineSale {
+  recordedAt: string;
+  reference: string;
 }
 
 export interface CreateSaleRequest {
@@ -1693,6 +1703,8 @@ export interface CreateSaleRequest {
   lines: SaleLineRequest[];
   payments: SalePayment[];
   customerId?: string | null;
+  /** Only for sales recorded offline (the register needs offline mode). */
+  offline?: OfflineSale | null;
 }
 
 export interface ReturnRequest {
@@ -1700,6 +1712,8 @@ export interface ReturnRequest {
   refundMethod: PosPaymentMethod;
   reason: string;
   registerId?: string | null;
+  /** Card refunds run on a terminal: the approved card transaction (kind Refund) of exactly the refund amount. */
+  cardTransactionId?: string | null;
 }
 
 export interface ReceiptLine {
@@ -1723,10 +1737,23 @@ export interface ReceiptLine {
   note?: string | null;
 }
 
+/** Terminal data of a card payment (printed under the payment); null/absent when the cashier confirmed it by hand. */
+export interface ReceiptPaymentCard {
+  cardName: string | null;
+  maskedPan: string | null;
+  traceNumber: string | null;
+  authCode: string | null;
+  terminalId: string | null;
+  terminalReceiptNumber: string | null;
+  /** Simulated terminal: no card was charged. */
+  isTest?: boolean;
+}
+
 export interface ReceiptPayment {
   method: PosPaymentMethod;
   amountMinor: number;
   tenderedMinor: number | null;
+  card?: ReceiptPaymentCard | null;
 }
 
 export interface ReceiptVat {
@@ -1833,6 +1860,8 @@ export interface Receipt {
   /** Manager approval used for this receipt (who approved), if any. */
   approval?: PosApprovalInfo | null;
   roundingMinor?: number;
+  /** Recorded offline on the till and booked (numbered, signed) later. */
+  offline?: OfflineSale | null;
 }
 
 export interface ReceiptSummary {
@@ -1855,6 +1884,8 @@ export interface ReceiptSummary {
   fiscalIsTest?: boolean;
   invoiceId?: string | null;
   invoiceNumber?: string | null;
+  /** Recorded offline on the till and booked later. */
+  offline?: boolean;
 }
 
 // ---------------------------------------------------------------- Invoicing (commission invoices, ADR-0009)

@@ -124,6 +124,25 @@ export class PrinterService {
     return { ...r, fellBack: true };
   }
 
+  /**
+   * Prints a layout that is not a stored receipt (the provisional receipt of an offline sale) with the device's profile.
+   * Like receipts: the browser connection and every printer error print the block shown on the page (`hn-print-area`).
+   * Offline the profiles are only known if they were loaded before the connection dropped; otherwise the dialog opens.
+   */
+  async printOther(registerId: string, build: (profile: PrinterProfile) => PrintLayout): Promise<PrintOutcome> {
+    const profile = await this.effective(registerId);
+    if (!profile || profile.connection === 'Browser') {
+      this.printPage(profile?.paperWidthMm ?? 80);
+      return { ok: true, via: 'Browser' };
+    }
+    const r = await this.send(profile, build(profile), { ...this.renderOptions(profile), copies: 1 });
+    if (r.ok) return r;
+    this.toast.error(this.i18n.t('pos.printers.fallbackNotice', { reason: this.errorText(r.code, r.detail) }));
+    this.lastFallback.set({ at: Date.now(), code: r.code });
+    this.printPage(profile.paperWidthMm);
+    return { ...r, fellBack: true };
+  }
+
   /** Test page for a profile; on failure the same page opens in the print dialog. */
   async testPrint(profile: PrinterProfile): Promise<PrintOutcome> {
     const layout = testPageLayout({

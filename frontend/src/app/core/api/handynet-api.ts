@@ -863,7 +863,7 @@ export class PosApi {
     return this.http.post<PosRegister>(`${this.url}/registers`, body);
   }
 
-  updateRegister(id: string, body: { name: string; isActive: boolean; autoLockMinutes?: number | null; cashRounding?: boolean }): Observable<PosRegister> {
+  updateRegister(id: string, body: { name: string; isActive: boolean; autoLockMinutes?: number | null; cashRounding?: boolean; offlineMode?: boolean }): Observable<PosRegister> {
     return this.http.put<PosRegister>(`${this.url}/registers/${id}`, body);
   }
 

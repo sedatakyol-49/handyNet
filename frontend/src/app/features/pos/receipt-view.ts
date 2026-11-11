@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { OrganizationApi } from '../../core/api/handynet-api';
-import { ReceiptBranding, ReceiptDocument } from '../../core/api/models';
+import { ReceiptBranding, ReceiptDocument, ReceiptPaymentCard } from '../../core/api/models';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 import { receiptLines } from '../company/company.logic';
 import { UI } from '../../shared/ui';
 import { hasTseBlock, shortSignature } from './fiscal.logic';
 import { QrCodeComponent } from './qr-code';
+import { receiptCardLines } from './terminals/card-flow';
 
 /**
  * The receipt exactly as issued (the API's stored document). Marked `hn-print-area`: when printed, only this block is
@@ -127,6 +129,9 @@ import { QrCodeComponent } from './qr-code';
               <dt>{{ p.method | tEnum: 'posPaymentMethod' }}</dt>
               <dd class="text-end tabular-nums">{{ p.amountMinor | money: d.currency }}</dd>
             }
+            @for (line of cardLines(p.card); track $index) {
+              <dt class="col-span-2 text-[11px] leading-tight break-words" data-testid="receipt-card-line">{{ line }}</dt>
+            }
           }
           @if (d.roundingMinor) {
             <dt>{{ 'pos.rounding.label' | t }}</dt>
@@ -232,6 +237,11 @@ export class ReceiptViewComponent {
   readonly branding = input<ReceiptBranding | null | undefined>(undefined);
   private readonly api = inject(OrganizationApi);
   private readonly own = inject(CompanyBrandingStore);
+  private readonly i18n = inject(I18nService);
+  /** Terminal data printed under a card payment (card, terminal, trace, authorisation). */
+  protected cardLines(card: ReceiptPaymentCard | null | undefined): string[] {
+    return receiptCardLines(card, (key, params) => this.i18n.t(key, params));
+  }
   private readonly effectiveBranding = computed(() => {
     const b = this.branding();
     return b === undefined ? this.own.receiptBranding() : b;

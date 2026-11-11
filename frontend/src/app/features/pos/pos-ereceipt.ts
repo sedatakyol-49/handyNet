@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { PosApi } from '../../core/api/handynet-api';
@@ -87,6 +87,8 @@ export class PosEReceiptComponent {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly receipt = input.required<Receipt>();
+  /** Full URL of the public receipt link once the cashier created it (the customer display shows it as a QR code). */
+  readonly linkUrl = output<string>();
   private readonly branding = inject(CompanyBrandingStore);
   protected readonly languages = LANGUAGES;
   /** Chosen for this send; null = the company's email language. */
@@ -145,6 +147,8 @@ export class PosEReceiptComponent {
     this.linkError.set(null);
     try {
       this.link.set(await firstValueFrom(this.api.receiptLink(this.receipt().id)));
+      const url = this.url();
+      if (url) this.linkUrl.emit(url);
     } catch (e) {
       this.linkError.set(posErrorText(this.i18n, e));
     } finally {

@@ -1,10 +1,14 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../api/api-config';
 import { EmailLanguage, Me, RegistrationRequest, TokenResponse } from '../api/models';
 import { SessionStore } from './session.store';
+import { StorageService } from '../storage.service';
+
+/** Last /api/me of this browser profile, used only while the API is unreachable (see loadMe). */
+const ME_CACHE_KEY = 'hn.me';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -12,6 +16,7 @@ export class AuthService {
   private readonly base = inject(API_BASE_URL);
   private readonly session = inject(SessionStore);
   private readonly router = inject(Router);
+  private readonly storage = inject(StorageService);
   private mePromise: Promise<Me | null> | null = null;
 
   async login(email: string, password: string): Promise<void> {
@@ -37,11 +42,27 @@ export class AuthService {
     this.mePromise = firstValueFrom(this.http.get<Me>(`${this.base}/api/me`))
       .then((me) => {
         this.session.setMe(me);
+        this.storage.setJson(ME_CACHE_KEY, me);
         return me;
       })
-      .catch(() => null)
+      .catch((error: unknown) => this.cachedMe(error))
       .finally(() => (this.mePromise = null));
     return this.mePromise;
+  }
+
+  /**
+   * The API did not answer (no connection, dead gateway): keep working with the last known /api/me of the same user, so
+   * a reload while offline does not throw a signed-in cashier out (the till's offline mode depends on it). The API
+   * checks every permission again as soon as it is reachable; an answer from the API (401, 403, …) never uses this.
+   */
+  private cachedMe(error: unknown): Me | null {
+    const status = error instanceof HttpErrorResponse ? error.status : -1;
+    if (status !== 0 && status !== 502 && status !== 503 && status !== 504) return null;
+    const cached = this.storage.getJson<Me>(ME_CACHE_KEY);
+    const userId = this.session.userId();
+    if (!cached || !Array.isArray(cached.memberships) || !userId || cached.userId !== userId) return null;
+    this.session.setMe(cached);
+    return cached;
   }
 
   /**
@@ -51,6 +72,7 @@ export class AuthService {
   logout(): void {
     const refreshToken = this.session.refreshToken();
     this.session.clear();
+    this.storage.set(ME_CACHE_KEY, null);
     if (refreshToken) {
       this.http.post(`${this.base}/api/auth/logout`, { refreshToken }).subscribe({ error: () => undefined });
     }

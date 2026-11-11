@@ -13,7 +13,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { CatalogApi, PosApi } from '../../core/api/handynet-api';
+import { CatalogApi } from '../../core/api/handynet-api';
+import { PosOfflineData } from './offline/offline-data.service';
 import { PosCategoryCount, PosProduct } from '../../core/api/models';
 import { UI } from '../../shared/ui';
 import { gridSearch, initials, mergeProductPages } from './pos.logic';
@@ -168,7 +169,8 @@ export function categoryTint(category: string): number {
   `,
 })
 export class PosProductGridComponent {
-  private readonly api = inject(PosApi);
+  /** API with the cached copy as fallback while the till is offline. */
+  private readonly data = inject(PosOfflineData);
   protected readonly catalog = inject(CatalogApi);
 
   readonly registerId = input.required<string>();
@@ -314,7 +316,7 @@ export class PosProductGridComponent {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const result = await firstValueFrom(this.api.products(registerId, this.queryFor(page)));
+      const result = await firstValueFrom(this.data.products(registerId, this.queryFor(page)));
       if (token !== this.loadToken || this.destroyed) return;
       this.items.set(page === 1 ? result.items : mergeProductPages(this.items(), result.items));
       this.total.set(result.totalCount);
@@ -333,7 +335,7 @@ export class PosProductGridComponent {
       let all: PosProduct[] = [];
       let total = 0;
       for (let page = 1; page <= pages; page++) {
-        const result = await firstValueFrom(this.api.products(registerId, this.queryFor(page)));
+        const result = await firstValueFrom(this.data.products(registerId, this.queryFor(page)));
         all = mergeProductPages(all, result.items);
         total = result.totalCount;
         if (all.length >= total || !result.items.length) break;
@@ -361,7 +363,7 @@ export class PosProductGridComponent {
 
   private async loadCategories(registerId: string): Promise<void> {
     try {
-      const list = await firstValueFrom(this.api.productCategories(registerId));
+      const list = await firstValueFrom(this.data.productCategories(registerId));
       if (!this.destroyed) this.categories.set(list);
     } catch {
       /* chips are optional: the grid still works without them */

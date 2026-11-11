@@ -2,6 +2,7 @@ import { DestroyRef, Injectable, PLATFORM_ID, TemplateRef, computed, inject, sig
 import { isPlatformBrowser } from '@angular/common';
 import { CashSession } from '../../core/api/models';
 import { StorageService } from '../../core/storage.service';
+import { ReachabilityService } from './offline/reachability.service';
 
 export type PosTheme = 'system' | 'light' | 'dark';
 const THEME_KEY = 'hn.pos.theme';
@@ -27,7 +28,9 @@ export class PosContext {
   private readonly systemDark = signal(false);
   readonly dark = computed(() => (this.theme() === 'system' ? this.systemDark() : this.theme() === 'dark'));
 
-  readonly online = signal(true);
+  private readonly reach = inject(ReachabilityService);
+  /** Whether the till reaches the API (browser online state, failed requests and a periodic probe). */
+  readonly online = this.reach.online;
   /** Minute-precision clock for the top bar. */
   readonly now = signal(new Date());
 
@@ -41,15 +44,10 @@ export class PosContext {
       media.addEventListener?.('change', onScheme);
       destroyRef.onDestroy(() => media.removeEventListener?.('change', onScheme));
     }
-    this.online.set(navigator.onLine !== false);
-    const onOnline = () => this.online.set(true);
-    const onOffline = () => this.online.set(false);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
+    const stopWatching = this.reach.watch();
     const timer = setInterval(() => this.now.set(new Date()), 15_000);
     destroyRef.onDestroy(() => {
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
+      stopWatching();
       clearInterval(timer);
     });
   }

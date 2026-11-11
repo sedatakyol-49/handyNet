@@ -49,6 +49,8 @@ export class SessionStore {
     return Number.isFinite(ms) ? ms : null;
   });
   readonly isAuthenticated = computed(() => this.tokenState() !== null);
+  /** User of the stored session (known before /api/me answered; null for sessions stored by older versions). */
+  readonly userId = computed(() => this.tokenState()?.userId ?? null);
   readonly isPlatformAdmin = computed(() => this.me()?.isPlatformAdmin ?? false);
   readonly memberships = computed(() => this.me()?.memberships ?? []);
 
