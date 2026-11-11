@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
@@ -10,6 +10,10 @@ import { ToastService } from '../../core/ui-state/toast.service';
 import { UI } from '../../shared/ui';
 import { CUSTOMER_LIMITS, CustomerField, CustomerForm, CustomerFormErrors, customerRequest, customerSummary, customerToForm, emptyCustomerForm, validateCustomer } from './customer-form';
 import { posErrorText } from './pos-error';
+import { PosCashierStore } from './pos-cashier.store';
+import { posRights } from './pos-rights';
+import { Pricelist, PricelistApi } from './pricelists/pricelist-api';
+import { PosCustomerLoyaltyComponent } from './loyalty/customer-loyalty';
 
 const PAGE_SIZE = 30;
 
@@ -20,7 +24,7 @@ const PAGE_SIZE = 30;
  */
 @Component({
   selector: 'hn-pos-customer-dialog',
-  imports: [...UI],
+  imports: [PosCustomerLoyaltyComponent, ...UI],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <hn-dialog [title]="(view() === 'form' ? (editing() ? 'pos.customers.editTitle' : 'pos.customers.newTitle') : 'pos.customers.title') | t" [open]="open()" [wide]="true" (closed)="close()">
@@ -43,7 +47,15 @@ const PAGE_SIZE = 30;
               @let attached = c.id === attachedId();
               <li class="flex items-stretch" [class.bg-accent-50]="attached" [attr.data-customer]="c.name">
                 <button type="button" class="min-h-14 min-w-0 flex-1 px-3 py-2 text-start hover:bg-slate-50" (click)="choose(c)" [attr.aria-pressed]="attached" data-testid="pos-cust-choose">
-                  <span class="block font-semibold text-slate-900">{{ c.name }}</span>
+                  <span class="block font-semibold text-slate-900">
+                    {{ c.name }}
+                    @if (c.pricelistName) {
+                      <span class="ms-1 rounded-full bg-accent-50 px-2 py-0.5 text-xs font-medium text-accent-800" data-testid="pos-cust-pricelist">{{ c.pricelistName }}</span>
+                    }
+                    @if (c.loyaltyPoints) {
+                      <span class="ms-1 text-xs font-medium text-slate-500">{{ 'pos.loyalty.pointsShort' | t: { points: c.loyaltyPoints } }}</span>
+                    }
+                  </span>
                   <span class="block truncate text-xs text-slate-600">{{ summary(c) }}</span>
                   @if (c.email || c.phone) {
                     <span class="block truncate text-xs text-slate-500">{{ c.email }}{{ c.email && c.phone ? ' · ' : '' }}{{ c.phone }}</span>
@@ -81,6 +93,19 @@ const PAGE_SIZE = 30;
                   [attr.data-testid]="'pos-cust-' + f.key" />
               </hn-field>
             }
+            <hn-field class="sm:col-span-2" [label]="'pos.pricelists.customerField' | t" for="pos-cust-pricelist"
+              [hint]="(canManage() ? 'pos.pricelists.customerHint' : 'pos.pricelists.customerReadOnly') | t">
+              <select hnSelect id="pos-cust-pricelist" name="pricelist" class="min-h-11" [disabled]="!canManage()" [value]="pricelistId()"
+                (change)="pricelistId.set($any($event.target).value)" aria-describedby="pos-cust-pricelist-hint" data-testid="pos-cust-pricelistId">
+                <option value="" [selected]="!pricelistId()">{{ 'pos.pricelists.none' | t }}</option>
+                @for (pl of pricelists(); track pl.id) {
+                  <option [value]="pl.id" [selected]="pl.id === pricelistId()">{{ pl.name }}{{ pl.currentlyValid ? '' : ' (' + ('pos.pricelists.notValid' | t) + ')' }}</option>
+                }
+                @if (pricelistId() && !knownPricelist()) {
+                  <option [value]="pricelistId()" selected>{{ editing()?.pricelistName ?? '…' }}</option>
+                }
+              </select>
+            </hn-field>
             <p class="text-xs text-slate-500 sm:col-span-2">{{ 'pos.customers.privacy' | t }}</p>
             <div class="flex flex-wrap justify-end gap-2 sm:col-span-2">
               <button hnButton type="button" class="min-h-11" (click)="backToList()">{{ 'pos.sell.back' | t }}</button>
@@ -89,6 +114,9 @@ const PAGE_SIZE = 30;
               </button>
             </div>
           </form>
+          @if (editing(); as c) {
+            <hn-pos-customer-loyalty class="mt-4" [customerId]="c.id" [canAdjust]="canManage()" />
+          }
         }
       }
     </hn-dialog>
@@ -138,6 +166,13 @@ export class PosCustomerDialogComponent {
   protected readonly formProblem = signal<string | null>(null);
   protected readonly busy = signal(false);
   protected readonly summary = customerSummary;
+  private readonly pricelistApi = inject(PricelistApi);
+  private readonly cashiers = inject(PosCashierStore);
+  /** Assigning a pricelist needs pos.manage (the API answers 403 otherwise); others see it read-only. */
+  protected readonly canManage = computed(() => posRights(this.cashiers.membership()).manage);
+  protected readonly pricelists = signal<Pricelist[]>([]);
+  protected readonly pricelistId = signal('');
+  protected readonly knownPricelist = computed(() => this.pricelists().some((p) => p.id === this.pricelistId()));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
@@ -215,6 +250,8 @@ export class PosCustomerDialogComponent {
 
   private openForm(c: PosCustomer | null, f: CustomerForm): void {
     this.editing.set(c);
+    this.pricelistId.set(c?.pricelistId ?? '');
+    if (!this.pricelists().length) void firstValueFrom(this.pricelistApi.list()).then((l) => this.pricelists.set(l), () => undefined);
     this.form.set(f);
     this.clientErrors.set({});
     this.serverProblem.set(null);
@@ -246,8 +283,9 @@ export class PosCustomerDialogComponent {
     this.busy.set(true);
     this.serverProblem.set(null);
     this.formProblem.set(null);
-    const body = customerRequest(this.form());
     const editing = this.editing();
+    // PricelistId null removes the list: send the current one when the user may not change it.
+    const body = { ...customerRequest(this.form()), pricelistId: this.canManage() ? this.pricelistId() || null : (editing?.pricelistId ?? null) };
     try {
       const saved = await firstValueFrom(editing ? this.api.updateCustomer(editing.id, body) : this.api.createCustomer(body));
       this.toast.success(this.i18n.t(editing ? 'pos.customers.updated' : 'pos.customers.created', { name: saved.name }));

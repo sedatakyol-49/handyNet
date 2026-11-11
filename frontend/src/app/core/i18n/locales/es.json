@@ -692,7 +692,36 @@
       "pos.offline_payment_not_allowed": "Las ventas registradas sin conexión solo pueden pagarse en efectivo o con tarjeta.",
       "pos.display_link_not_found": "Este enlace de pantalla no existe o ya no es válido.",
       "pos.display_state_invalid": "Los datos para la pantalla del cliente no son válidos.",
-      "pos.display_state_too_large": "Los datos para la pantalla del cliente son demasiado grandes (16 KiB como máximo)."
+      "pos.display_state_too_large": "Los datos para la pantalla del cliente son demasiado grandes (16 KiB como máximo).",
+      "pos.gift_card_not_found": "Código de tarjeta regalo desconocido.",
+      "pos.gift_card_not_usable": "Esta tarjeta regalo está anulada o caducada.",
+      "pos.gift_card_insufficient": "El saldo de la tarjeta regalo no alcanza.",
+      "pos.gift_card_already_redeemed": "La tarjeta ya se canjeó (en parte); la venta no se puede anular.",
+      "pos.gift_card_line_not_returnable": "Las tarjetas regalo vendidas no se pueden devolver.",
+      "pos.invoice_gift_card": "Las tarjetas regalo no son posibles en facturas.",
+      "pos.gift_card_amount": "El importe de la tarjeta regalo está fuera de los límites.",
+      "pos.gift_card_line": "Una línea de tarjeta regalo tiene cantidad 1 y sin descuento.",
+      "pos.gift_card_payment": "Un pago con tarjeta regalo necesita el código.",
+      "pos.gift_card_exceeds_total": "Los pagos con tarjeta regalo no pueden superar el total sin las tarjetas vendidas.",
+      "pos.gift_card_not_allowed": "Aquí no son posibles las tarjetas regalo.",
+      "pos.gift_card_restore": "No se pudo restituir el saldo.",
+      "pos.gift_card_status": "La tarjeta regalo no está activa.",
+      "pos.offline_gift_card_not_allowed": "Las ventas sin conexión no pueden vender tarjetas regalo.",
+      "pos.loyalty_disabled": "Los puntos no están activados.",
+      "pos.loyalty_insufficient_points": "El cliente no tiene suficientes puntos.",
+      "pos.loyalty_customer_required": "Los puntos solo se canjean con un cliente.",
+      "pos.loyalty_min_points": "Hay que canjear más puntos (mínimo).",
+      "pos.loyalty_exceeds_total": "El valor de los puntos supera la compra (sin tarjetas regalo).",
+      "pos.loyalty_points": "Número de puntos no válido.",
+      "pos.loyalty_settings": "Los ajustes de puntos no son válidos.",
+      "pos.pricelist_not_found": "Tarifa no encontrada.",
+      "pos.pricelist_name": "Introduzca un nombre para la tarifa (100 caracteres como máximo).",
+      "pos.pricelist_name_taken": "Ya existe una tarifa con este nombre.",
+      "pos.pricelist_version": "La tarifa se modificó entretanto. Vuelva a cargar.",
+      "pos.pricelist_validity": "«Válida hasta» no puede ser anterior a «Válida desde».",
+      "pos.pricelist_discount": "El descuento debe estar entre 0 y 100 %.",
+      "pos.pricelist_item_not_found": "Este artículo no tiene precio en la tarifa.",
+      "pos.pricelist_item_limit": "Una tarifa puede tener como máximo 5000 precios."
     },
     "validation": {
       "required": "Este campo es obligatorio.",
@@ -2452,7 +2481,8 @@
   },
   "posPaymentMethod": {
     "Cash": "Efectivo",
-    "Card": "Tarjeta"
+    "Card": "Tarjeta",
+    "GiftCard": "Tarjeta regalo"
   },
   "receiptKind": {
     "Sale": "Venta",
@@ -2584,7 +2614,10 @@
       "ankauf": "Compra de usados",
       "printers": "Impresoras",
       "terminals": "Terminal de tarjetas",
-      "offline": "Offline"
+      "offline": "Offline",
+      "giftCards": "Tarjetas regalo",
+      "loyalty": "Puntos",
+      "pricelists": "Tarifas"
     },
     "registers": {
       "title": "Caja",
@@ -2690,7 +2723,9 @@
         "noPayment": "Introduzca el importe del pago (efectivo o tarjeta).",
         "cardExceedsTotal": "El pago con tarjeta no puede superar el importe total.",
         "insufficient": "El pago no cubre el importe total.",
-        "cashNotNeeded": "El pago con tarjeta ya cubre el importe; no se necesita efectivo."
+        "cashNotNeeded": "El pago con tarjeta ya cubre el importe; no se necesita efectivo.",
+        "giftCardBalance": "Un importe de tarjeta regalo supera su saldo.",
+        "giftCardForGiftCard": "Las tarjetas regalo vendidas no pueden pagarse con tarjeta regalo."
       }
     },
     "errors": {
@@ -2751,7 +2786,8 @@
         "trace": "N.º de traza {trace}",
         "receipt": "N.º de recibo {number}",
         "auth": "Autorización {code}"
-      }
+      },
+      "loyaltyDiscount": "Puntos"
     },
     "receipts": {
       "title": "Tiques",
@@ -2901,7 +2937,11 @@
       "ankaufCount": "Número de compras (efectivo)",
       "ankaufCash": "Pagado en efectivo",
       "ankaufNote": "Las compras por transferencia no afectan a la caja; figuran en el informe diario.",
-      "ofWhichAnkauf": "de ellas compras"
+      "ofWhichAnkauf": "de ellas compras",
+      "giftCardsAndPoints": "Tarjetas regalo y puntos",
+      "giftCardsSold": "Tarjetas regalo vendidas",
+      "loyaltyDiscount": "Descuento por puntos",
+      "giftCardsNote": "Las tarjetas regalo vendidas no llevan IVA (surge al canjearlas); los canjes figuran en los medios de pago."
     },
     "cashCount": {
       "label": "Recuento por denominación",
@@ -2967,7 +3007,8 @@
       "sources": {
         "PosPrice": "Precio de caja propio",
         "Offer": "Oferta propia (neto + 19 % IVA)",
-        "None": "Sin precio: se introduce en caja"
+        "None": "Sin precio: se introduce en caja",
+        "Pricelist": "Tarifa del cliente"
       },
       "offerNet": "Precio de oferta neto",
       "updatedAt": "Último cambio",
@@ -3460,7 +3501,9 @@
         "noSession": "Solo se puede vender sin conexión si había una sesión de caja abierta en el último contacto con el servidor.",
         "noStorage": "Este navegador no ofrece almacenamiento permanente. La venta no puede guardarse de forma segura sin conexión: espere a que vuelva.",
         "payment": "Sin conexión solo se admite pago en efectivo o con tarjeta.",
-        "cardUnreported": "Hay un pago con tarjeta aprobado para este tique que el servidor aún no conoce. La venta solo podrá finalizarse con conexión: no vuelva a cobrar la tarjeta."
+        "cardUnreported": "Hay un pago con tarjeta aprobado para este tique que el servidor aún no conoce. La venta solo podrá finalizarse con conexión: no vuelva a cobrar la tarjeta.",
+        "giftCard": "Sin conexión no se pueden vender tarjetas regalo (el código lo crea el servidor). Quite la tarjeta del tique o espere a la conexión.",
+        "loyalty": "Sin conexión no se pueden canjear puntos. Quite el canje o espere a la conexión."
       },
       "storeFailed": "No se pudo guardar la venta en el dispositivo. El tique se conserva: inténtelo de nuevo.",
       "lookup": {
@@ -3520,6 +3563,191 @@
         "bookedMany": "{count} ventas sin conexión contabilizadas.",
         "refused": "El servidor rechazó una venta sin conexión. Compruébela en «Ventas sin conexión»."
       }
+    },
+    "giftCards": {
+      "title": "Tarjetas regalo",
+      "subtitle": "Todas las tarjetas regalo (bonos polivalentes) con su saldo. El código no se guarda: solo aparece una vez en la venta. Anular y reemitir requieren un motivo.",
+      "search": "Buscar",
+      "searchPlaceholder": "Últimos 4 caracteres, cliente …",
+      "status": "Estado",
+      "emptyTitle": "No hay tarjetas regalo",
+      "emptyText": "Las tarjetas regalo se venden en la caja con «Tarjeta regalo».",
+      "issued": "Vendida el {date}",
+      "of": "de {amount}",
+      "expired": "Caducada",
+      "used": "Agotada",
+      "details": "Detalles",
+      "detailTitle": "Tarjeta regalo {code}",
+      "balance": "Saldo",
+      "initial": "Importe inicial",
+      "history": "Historial",
+      "reason": "Motivo",
+      "reasonHint": "Obligatorio para anular o reemitir; queda en el historial.",
+      "reasonRequired": "Indique un motivo.",
+      "void": "Anular",
+      "voided": "Tarjeta regalo {code} anulada.",
+      "reissue": "Emitir código nuevo",
+      "reissued": "Código nuevo emitido: el anterior ya no sirve.",
+      "offline": "Las tarjetas regalo requieren conexión con el servidor.",
+      "lineDescription": "Tarjeta regalo",
+      "lineHint": "Código tras el pago · sin IVA · no se paga con tarjeta regalo ni puntos",
+      "sell": {
+        "button": "Tarjeta regalo",
+        "title": "Vender tarjeta regalo",
+        "hint": "Importe entre {min} y {max}. El código se muestra tras el pago y solo una vez.",
+        "quick": "Importes habituales",
+        "amount": "Importe",
+        "add": "Añadir al carrito",
+        "errors": {
+          "invalid": "Introduzca un importe válido.",
+          "tooLow": "Como mínimo {min}.",
+          "tooHigh": "Como máximo {max}."
+        }
+      },
+      "pay": {
+        "title": "Pagar con tarjeta regalo",
+        "code": "Código de la tarjeta",
+        "codeHint": "Escanéelo o escríbalo; los guiones no importan.",
+        "codeInvalid": "No es un código de tarjeta regalo válido (16 caracteres).",
+        "alreadyUsed": "Esta tarjeta regalo ya figura como pago.",
+        "check": "Consultar saldo",
+        "card": "Tarjeta regalo",
+        "balance": "Saldo",
+        "voided": "Esta tarjeta regalo está anulada y no se puede canjear.",
+        "expired": "Esta tarjeta regalo ha caducado y no se puede canjear.",
+        "amount": "Importe",
+        "amountHint": "Como máximo {max}",
+        "amountInvalid": "Introduzca un importe válido.",
+        "amountBalance": "A la tarjeta solo le quedan {balance}.",
+        "amountTotal": "Como máximo {max} (importe pendiente; las tarjetas vendidas no se pagan con tarjeta regalo).",
+        "use": "Usar"
+      },
+      "slip": {
+        "title": "Tarjeta regalo",
+        "titleMany": "Tarjetas regalo",
+        "once": "El código solo se muestra ahora y no se guarda en ninguna parte. Imprima el vale o anote el código para el cliente.",
+        "amount": "Valor",
+        "code": "Código",
+        "validUntil": "Válida hasta",
+        "receipt": "N.º de recibo",
+        "footer": "Canjeable en esta tienda como medio de pago, también en partes. Sin reembolso en efectivo. Guárdela bien: quien conozca el código puede canjearla.",
+        "print": "Imprimir tarjeta regalo",
+        "handedOver": "Tarjeta entregada: ocultar código"
+      }
+    },
+    "loyalty": {
+      "pointsShort": "{points} ptos.",
+      "due": "A pagar",
+      "redeem": {
+        "title": "Puntos de fidelidad",
+        "balance": "Saldo de puntos",
+        "worth": "valen {value}",
+        "points": "Puntos a canjear",
+        "limits": "Mínimo {min}, máximo {max} puntos",
+        "max": "Máximo",
+        "apply": "Canjear",
+        "applied": "{points} puntos canjeados: −{value}",
+        "offline": "Los puntos solo se canjean con conexión al servidor.",
+        "earn": "Esta compra sumará unos {points} puntos.",
+        "errors": {
+          "disabled": "Los puntos no están activados.",
+          "noCustomer": "Elija un cliente para canjear puntos.",
+          "invalid": "Introduzca un número entero de puntos.",
+          "belowMin": "Canjee al menos {min} puntos.",
+          "exceedsBalance": "El cliente solo tiene {balance} puntos.",
+          "exceedsTotal": "El valor supera la compra (sin tarjetas regalo); máximo {max} puntos."
+        }
+      },
+      "done": {
+        "redeemed": "{points} puntos canjeados (−{value}).",
+        "earned": "{points} puntos acumulados.",
+        "balance": "Saldo: {points}"
+      },
+      "history": {
+        "title": "Puntos de fidelidad",
+        "disabled": "Los puntos están desactivados; el historial se conserva.",
+        "empty": "Aún no hay puntos.",
+        "receipt": "Recibo {number}",
+        "adjustPoints": "Puntos (±)",
+        "adjustHint": "p. ej. +50 o -20",
+        "adjustReason": "Motivo",
+        "adjust": "Ajustar puntos",
+        "adjustInvalid": "Introduzca un número distinto de 0, p. ej. +50 o -20.",
+        "reasonRequired": "Indique un motivo."
+      },
+      "settings": {
+        "title": "Puntos de fidelidad",
+        "subtitle": "Los clientes con ficha acumulan puntos por euro completo (sin tarjetas regalo) y los canjean en la caja como descuento. Los ajustes valen para todas las cajas.",
+        "legal": "Los canjes reducen el precio (también el IVA). El tratamiento fiscal no ha sido revisado por un asesor fiscal.",
+        "enabled": "Activar puntos",
+        "enabledHint": "Desactivado, no se acumulan ni canjean puntos; los saldos se conservan.",
+        "pointsPerEuro": "Puntos por euro",
+        "pointsPerEuroHint": "De 0 a 100",
+        "pointValue": "Valor por punto",
+        "pointValueHint": "De 0,01 € a 1,00 €",
+        "minRedeem": "Canje mínimo",
+        "minRedeemHint": "Puntos; 0 = sin mínimo",
+        "example": "Ejemplo: una compra de 100,00 € suma {points} puntos, que valen {value} al canjearlos.",
+        "saved": "Ajustes guardados.",
+        "errors": {
+          "pointsPerEuro": "Número entero de 0 a 100.",
+          "pointValue": "Entre 0,01 € y 1,00 €.",
+          "minRedeem": "Número entero desde 0."
+        }
+      }
+    },
+    "pricelists": {
+      "title": "Tarifas",
+      "subtitle": "Precios de cliente: precios fijos por artículo y un descuento general sobre el precio de caja para el resto. Una tarifa se aplica a los clientes asignados mientras esté activa y vigente. Las tarifas no se borran, se desactivan.",
+      "new": "Nueva tarifa",
+      "newTitle": "Nueva tarifa",
+      "editTitle": "Editar tarifa",
+      "emptyTitle": "Aún no hay tarifas",
+      "emptyText": "Cree una tarifa y asígnela en la ficha del cliente.",
+      "valid": "Vigente",
+      "notValid": "No vigente",
+      "inactive": "Inactiva",
+      "discount": "Descuento",
+      "items": "Precios de artículos",
+      "customers": "Clientes",
+      "validity": "Vigencia",
+      "always": "Ilimitada",
+      "editItems": "Precios de artículos",
+      "saved": "Tarifa «{name}» guardada.",
+      "form": {
+        "discount": "Descuento general (%)",
+        "discountHint": "Para artículos sin precio propio en la tarifa; 0 = ninguno.",
+        "validFrom": "Válida desde",
+        "validTo": "Válida hasta",
+        "active": "Activa",
+        "activeHint": "Las tarifas inactivas no cambian precios; la asignación se mantiene.",
+        "errors": {
+          "name": "Introduzca un nombre (100 caracteres como máximo).",
+          "discount": "Porcentaje entre 0 y 100, como máximo dos decimales.",
+          "validity": "«Válida hasta» no puede ser anterior a «Válida desde»."
+        }
+      },
+      "itemsSubtitle": "Precios fijos de esta tarifa. El resto: precio de caja menos {percent} %.",
+      "addItem": "Añadir precio de artículo",
+      "itemTitle": "Precio de tarifa",
+      "searchItems": "Buscar artículos de la tarifa",
+      "noItemsTitle": "Sin precios de artículos",
+      "noItemsText": "Sin precios de artículos solo rige el descuento general.",
+      "basePrice": "Precio de caja",
+      "listPrice": "Precio de tarifa (bruto)",
+      "withDiscount": "con el descuento de la tarifa {price}",
+      "productSearch": "Buscar artículo",
+      "productSearchHint": "Introduzca nombre, marca o EAN.",
+      "priceInvalid": "Introduzca un precio mayor que 0.",
+      "itemSaved": "Precio de tarifa de «{name}» guardado.",
+      "itemRemoved": "Precio de tarifa de «{name}» eliminado.",
+      "removeItemFor": "Quitar precio de tarifa de {name}",
+      "customerField": "Tarifa",
+      "customerHint": "La caja cobra a este cliente los precios de la tarifa.",
+      "customerReadOnly": "Solo un responsable puede cambiar la tarifa.",
+      "none": "Ninguna (precios de caja)",
+      "linePrice": "Tarifa {name}",
+      "repriced": "Precios ajustados al cliente ({count} líneas)."
     }
   },
   "invoiceKind": {
@@ -4364,5 +4592,23 @@
     "added": "El IMEI {imei} se ha bloqueado.",
     "reasonRequired": "Indique un motivo.",
     "deactivated": "Se ha levantado el bloqueo del IMEI {imei}."
+  },
+  "giftCardStatus": {
+    "Active": "Activa",
+    "Voided": "Anulada"
+  },
+  "giftCardTransactionType": {
+    "Issue": "Vendida",
+    "Redeem": "Canjeada",
+    "Restore": "Restituida",
+    "Void": "Anulada",
+    "Reissue": "Código nuevo"
+  },
+  "loyaltyTransactionType": {
+    "Earn": "Acumulados",
+    "Redeem": "Canjeados",
+    "ReverseEarn": "Acumulación revertida",
+    "ReverseRedeem": "Canje revertido",
+    "Adjust": "Ajuste"
   }
 }

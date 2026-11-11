@@ -692,7 +692,36 @@
       "pos.offline_payment_not_allowed": "Sales recorded offline can only be paid in cash or by card.",
       "pos.display_link_not_found": "This display link does not exist or is no longer valid.",
       "pos.display_state_invalid": "The data for the customer display is invalid.",
-      "pos.display_state_too_large": "The data for the customer display is too large (at most 16 KiB)."
+      "pos.display_state_too_large": "The data for the customer display is too large (at most 16 KiB).",
+      "pos.gift_card_not_found": "Unknown gift card code.",
+      "pos.gift_card_not_usable": "This gift card is voided or expired.",
+      "pos.gift_card_insufficient": "The gift card balance is not enough.",
+      "pos.gift_card_already_redeemed": "The gift card was already (partly) redeemed; the sale cannot be cancelled.",
+      "pos.gift_card_line_not_returnable": "Gift cards sold cannot be returned.",
+      "pos.invoice_gift_card": "Gift cards are not possible on invoices.",
+      "pos.gift_card_amount": "The gift card amount is outside the allowed limits.",
+      "pos.gift_card_line": "A gift card line has quantity 1 and no discount.",
+      "pos.gift_card_payment": "A gift card payment needs the code.",
+      "pos.gift_card_exceeds_total": "Gift card payments must not exceed the total without the gift cards sold.",
+      "pos.gift_card_not_allowed": "Gift cards are not possible here.",
+      "pos.gift_card_restore": "The balance could not be restored.",
+      "pos.gift_card_status": "The gift card is not active.",
+      "pos.offline_gift_card_not_allowed": "Sales recorded offline cannot sell gift cards.",
+      "pos.loyalty_disabled": "Loyalty points are not enabled.",
+      "pos.loyalty_insufficient_points": "The customer does not have enough points.",
+      "pos.loyalty_customer_required": "Points can only be redeemed with a customer.",
+      "pos.loyalty_min_points": "More points must be redeemed (minimum).",
+      "pos.loyalty_exceeds_total": "The points value exceeds the purchase (without gift cards).",
+      "pos.loyalty_points": "Invalid number of points.",
+      "pos.loyalty_settings": "The loyalty settings are invalid.",
+      "pos.pricelist_not_found": "Pricelist not found.",
+      "pos.pricelist_name": "Please enter a name for the pricelist (at most 100 characters).",
+      "pos.pricelist_name_taken": "A pricelist with this name already exists.",
+      "pos.pricelist_version": "The pricelist was changed in the meantime. Please reload.",
+      "pos.pricelist_validity": "“Valid until” must not be before “Valid from”.",
+      "pos.pricelist_discount": "The discount must be between 0 and 100 %.",
+      "pos.pricelist_item_not_found": "This item has no price in the list.",
+      "pos.pricelist_item_limit": "A pricelist can have at most 5000 item prices."
     },
     "validation": {
       "required": "This field is required.",
@@ -2452,7 +2481,8 @@
   },
   "posPaymentMethod": {
     "Cash": "Cash",
-    "Card": "Card"
+    "Card": "Card",
+    "GiftCard": "Gift card"
   },
   "receiptKind": {
     "Sale": "Sale",
@@ -2584,7 +2614,10 @@
       "ankauf": "Buyback",
       "printers": "Printers",
       "terminals": "Card terminal",
-      "offline": "Offline"
+      "offline": "Offline",
+      "giftCards": "Gift cards",
+      "loyalty": "Loyalty",
+      "pricelists": "Pricelists"
     },
     "registers": {
       "title": "Till",
@@ -2690,7 +2723,9 @@
         "noPayment": "Please enter the payment amount (cash or card).",
         "cardExceedsTotal": "The card payment must not exceed the total.",
         "insufficient": "The payment does not cover the total.",
-        "cashNotNeeded": "The card payment already covers the total; no cash is needed."
+        "cashNotNeeded": "The card payment already covers the total; no cash is needed.",
+        "giftCardBalance": "A gift card amount is higher than its balance.",
+        "giftCardForGiftCard": "Gift cards being sold cannot be paid with a gift card."
       }
     },
     "errors": {
@@ -2751,7 +2786,8 @@
         "trace": "Trace no. {trace}",
         "receipt": "Receipt no. {number}",
         "auth": "Authorisation {code}"
-      }
+      },
+      "loyaltyDiscount": "Loyalty points"
     },
     "receipts": {
       "title": "Receipts",
@@ -2901,7 +2937,11 @@
       "ankaufCount": "Number of purchases (cash)",
       "ankaufCash": "Paid out in cash",
       "ankaufNote": "Purchases by bank transfer do not touch the till; they are listed in the daily report.",
-      "ofWhichAnkauf": "of which purchases"
+      "ofWhichAnkauf": "of which purchases",
+      "giftCardsAndPoints": "Gift cards and loyalty points",
+      "giftCardsSold": "Gift cards sold",
+      "loyaltyDiscount": "Discount from loyalty points",
+      "giftCardsNote": "Gift cards sold carry no VAT (VAT arises on redemption); redemptions appear under the payment methods."
     },
     "cashCount": {
       "label": "Count by denomination",
@@ -2967,7 +3007,8 @@
       "sources": {
         "PosPrice": "Own till price",
         "Offer": "Own offer (net + 19 % VAT)",
-        "None": "No price – entered at the till"
+        "None": "No price – entered at the till",
+        "Pricelist": "Customer’s pricelist"
       },
       "offerNet": "Offer price net",
       "updatedAt": "Last changed",
@@ -3460,7 +3501,9 @@
         "noSession": "Selling offline is only possible if a cash session was open when the server was last reached.",
         "noStorage": "This browser offers no permanent storage. The sale cannot be stored safely offline – please wait for the connection.",
         "payment": "Offline only cash and card payments are possible.",
-        "cardUnreported": "A card payment is approved for this ticket that the server does not know yet. The sale can only be finished once the connection is back – do not charge the card again."
+        "cardUnreported": "A card payment is approved for this ticket that the server does not know yet. The sale can only be finished once the connection is back – do not charge the card again.",
+        "giftCard": "Gift cards cannot be sold offline (the code is created by the server). Remove the gift card from the ticket or wait for the connection.",
+        "loyalty": "Loyalty points cannot be redeemed offline. Remove the redemption or wait for the connection."
       },
       "storeFailed": "The sale could not be stored on the device. The ticket is kept – please try again.",
       "lookup": {
@@ -3520,6 +3563,191 @@
         "bookedMany": "{count} offline sales booked.",
         "refused": "The server refused an offline sale. Please check under “Offline sales”."
       }
+    },
+    "giftCards": {
+      "title": "Gift cards",
+      "subtitle": "All gift cards (multi-purpose vouchers) with their remaining balance. The code is not stored – it appears only once at the sale. Voiding and reissuing need a reason.",
+      "search": "Search",
+      "searchPlaceholder": "Last 4 characters, customer …",
+      "status": "Status",
+      "emptyTitle": "No gift cards",
+      "emptyText": "Gift cards are sold at the till with “Gift card”.",
+      "issued": "Sold on {date}",
+      "of": "of {amount}",
+      "expired": "Expired",
+      "used": "Used up",
+      "details": "Details",
+      "detailTitle": "Gift card {code}",
+      "balance": "Balance",
+      "initial": "Original amount",
+      "history": "History",
+      "reason": "Reason",
+      "reasonHint": "Required to void or reissue; recorded in the history.",
+      "reasonRequired": "Please give a reason.",
+      "void": "Void",
+      "voided": "Gift card {code} voided.",
+      "reissue": "Issue new code",
+      "reissued": "New code issued – the old code no longer works.",
+      "offline": "Gift cards need a connection to the server.",
+      "lineDescription": "Gift card",
+      "lineHint": "Code after payment · no VAT · cannot be paid by gift card or points",
+      "sell": {
+        "button": "Gift card",
+        "title": "Sell gift card",
+        "hint": "Amount between {min} and {max}. The code is shown after payment, and only once.",
+        "quick": "Common amounts",
+        "amount": "Amount",
+        "add": "Add to cart",
+        "errors": {
+          "invalid": "Please enter a valid amount.",
+          "tooLow": "At least {min}.",
+          "tooHigh": "At most {max}."
+        }
+      },
+      "pay": {
+        "title": "Pay with gift card",
+        "code": "Gift card code",
+        "codeHint": "Scan or type it; dashes do not matter.",
+        "codeInvalid": "This is not a valid gift card code (16 characters).",
+        "alreadyUsed": "This gift card is already entered as a payment.",
+        "check": "Check balance",
+        "card": "Gift card",
+        "balance": "Balance",
+        "voided": "This gift card is voided and cannot be redeemed.",
+        "expired": "This gift card has expired and cannot be redeemed.",
+        "amount": "Amount",
+        "amountHint": "At most {max}",
+        "amountInvalid": "Please enter a valid amount.",
+        "amountBalance": "The gift card only has {balance} left.",
+        "amountTotal": "At most {max} (amount left; gift cards sold cannot be paid by gift card).",
+        "use": "Use"
+      },
+      "slip": {
+        "title": "Gift card",
+        "titleMany": "Gift cards",
+        "once": "The code is shown only now and is not stored anywhere. Print the voucher or write the code down for the customer.",
+        "amount": "Value",
+        "code": "Gift card code",
+        "validUntil": "Valid until",
+        "receipt": "Receipt no.",
+        "footer": "Redeemable at this shop as a means of payment, also in parts. No cash payout. Keep it safe – anyone who knows the code can redeem it.",
+        "print": "Print gift card",
+        "handedOver": "Gift card handed over – hide code"
+      }
+    },
+    "loyalty": {
+      "pointsShort": "{points} pts",
+      "due": "Amount due",
+      "redeem": {
+        "title": "Loyalty points",
+        "balance": "Balance",
+        "worth": "worth {value}",
+        "points": "Points to redeem",
+        "limits": "At least {min}, at most {max} points",
+        "max": "Maximum",
+        "apply": "Redeem",
+        "applied": "{points} points redeemed: −{value}",
+        "offline": "Points can only be redeemed with a connection to the server.",
+        "earn": "This purchase should earn {points} points.",
+        "errors": {
+          "disabled": "Loyalty points are not enabled.",
+          "noCustomer": "Choose a customer to redeem points.",
+          "invalid": "Please enter a whole number of points.",
+          "belowMin": "Redeem at least {min} points.",
+          "exceedsBalance": "The customer only has {balance} points.",
+          "exceedsTotal": "The value exceeds the purchase (gift cards excluded); at most {max} points."
+        }
+      },
+      "done": {
+        "redeemed": "{points} points redeemed (−{value}).",
+        "earned": "{points} points earned.",
+        "balance": "Balance: {points}"
+      },
+      "history": {
+        "title": "Loyalty points",
+        "disabled": "Loyalty points are switched off; the history is kept.",
+        "empty": "No points yet.",
+        "receipt": "Receipt {number}",
+        "adjustPoints": "Points (±)",
+        "adjustHint": "e.g. +50 or -20",
+        "adjustReason": "Reason",
+        "adjust": "Adjust points",
+        "adjustInvalid": "Enter a number other than 0, e.g. +50 or -20.",
+        "reasonRequired": "Please give a reason."
+      },
+      "settings": {
+        "title": "Loyalty points",
+        "subtitle": "Customers with a customer record earn points per full euro (gift cards excluded) and redeem them at the till as a price reduction. The settings apply to all tills.",
+        "legal": "Redemptions reduce the price (including VAT). The tax treatment has not been reviewed by a tax adviser.",
+        "enabled": "Enable loyalty points",
+        "enabledHint": "When off, no points are earned or redeemed; balances are kept.",
+        "pointsPerEuro": "Points per euro",
+        "pointsPerEuroHint": "0 to 100",
+        "pointValue": "Value per point",
+        "pointValueHint": "0.01 € to 1.00 €",
+        "minRedeem": "Minimum redemption",
+        "minRedeemHint": "Points; 0 = no minimum",
+        "example": "Example: a 100.00 € purchase earns {points} points, worth {value} when redeemed.",
+        "saved": "Settings saved.",
+        "errors": {
+          "pointsPerEuro": "Whole number from 0 to 100.",
+          "pointValue": "Between 0.01 € and 1.00 €.",
+          "minRedeem": "Whole number from 0."
+        }
+      }
+    },
+    "pricelists": {
+      "title": "Pricelists",
+      "subtitle": "Customer prices: fixed item prices and a general discount off the till price for all other items. A list applies to the customers it is assigned to while it is active and valid. Lists are not deleted but deactivated.",
+      "new": "New pricelist",
+      "newTitle": "New pricelist",
+      "editTitle": "Edit pricelist",
+      "emptyTitle": "No pricelists yet",
+      "emptyText": "Create a list and assign it in the customer form.",
+      "valid": "Valid",
+      "notValid": "Not valid now",
+      "inactive": "Inactive",
+      "discount": "Discount",
+      "items": "Item prices",
+      "customers": "Customers",
+      "validity": "Validity",
+      "always": "Unlimited",
+      "editItems": "Item prices",
+      "saved": "Pricelist “{name}” saved.",
+      "form": {
+        "discount": "General discount (%)",
+        "discountHint": "Applies to items without their own list price; 0 = none.",
+        "validFrom": "Valid from",
+        "validTo": "Valid until",
+        "active": "Active",
+        "activeHint": "Inactive lists change no prices; customers keep the assignment.",
+        "errors": {
+          "name": "Please enter a name (at most 100 characters).",
+          "discount": "Percent between 0 and 100, at most two decimals.",
+          "validity": "“Valid until” must not be before “Valid from”."
+        }
+      },
+      "itemsSubtitle": "Fixed prices of this list. All other items: till price less {percent} %.",
+      "addItem": "Add item price",
+      "itemTitle": "List price",
+      "searchItems": "Search items in the list",
+      "noItemsTitle": "No item prices",
+      "noItemsText": "Without item prices only the general discount applies.",
+      "basePrice": "Till price",
+      "listPrice": "List price (gross)",
+      "withDiscount": "with the list discount {price}",
+      "productSearch": "Search product",
+      "productSearchHint": "Enter name, brand or EAN.",
+      "priceInvalid": "Please enter a price above 0.",
+      "itemSaved": "List price for “{name}” saved.",
+      "itemRemoved": "List price for “{name}” removed.",
+      "removeItemFor": "Remove list price for {name}",
+      "customerField": "Pricelist",
+      "customerHint": "The till charges this customer the list’s prices.",
+      "customerReadOnly": "Only a manager can change the pricelist.",
+      "none": "None (till prices)",
+      "linePrice": "Pricelist {name}",
+      "repriced": "Prices adjusted to the customer ({count} lines)."
     }
   },
   "invoiceKind": {
@@ -4364,5 +4592,23 @@
     "added": "IMEI {imei} has been blocked.",
     "reasonRequired": "Please enter a reason.",
     "deactivated": "The block of IMEI {imei} has been lifted."
+  },
+  "giftCardStatus": {
+    "Active": "Active",
+    "Voided": "Voided"
+  },
+  "giftCardTransactionType": {
+    "Issue": "Sold",
+    "Redeem": "Redeemed",
+    "Restore": "Restored",
+    "Void": "Voided",
+    "Reissue": "New code"
+  },
+  "loyaltyTransactionType": {
+    "Earn": "Earned",
+    "Redeem": "Redeemed",
+    "ReverseEarn": "Earning reversed",
+    "ReverseRedeem": "Redemption reversed",
+    "Adjust": "Adjustment"
   }
 }

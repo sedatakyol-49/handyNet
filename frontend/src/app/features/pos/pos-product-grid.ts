@@ -177,6 +177,8 @@ export class PosProductGridComponent {
   /** Text of the search/scan field (codes are looked up by the till, not searched). */
   readonly search = input('');
   readonly canManagePrices = input(false);
+  /** The ticket's customer: tiles show the customer's pricelist prices. */
+  readonly customerId = input<string | null>(null);
   readonly pick = output<PosProduct>();
   readonly editPrice = output<PosProduct>();
 
@@ -227,6 +229,7 @@ export class PosProductGridComponent {
       this.appliedSearch();
       this.category();
       this.includeOutOfStock();
+      this.customerId();
       untracked(() => void this.loadFirst(registerId));
     });
     effect(() => {
@@ -356,6 +359,7 @@ export class PosProductGridComponent {
       search: this.appliedSearch() || null,
       category: this.category(),
       includeOutOfStock: this.includeOutOfStock() || undefined,
+      customerId: this.customerId(),
       page,
       pageSize: PAGE_SIZE,
     };

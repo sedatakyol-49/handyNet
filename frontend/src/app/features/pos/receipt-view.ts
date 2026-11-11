@@ -104,6 +104,9 @@ import { receiptCardLines } from './terminals/card-flow';
                 @if (l.discountMinor) {
                   <span class="block">{{ 'pos.receipt.discount' | t }} {{ -l.discountMinor | money: d.currency }}</span>
                 }
+                @if (l.loyaltyDiscountMinor) {
+                  <span class="block" data-testid="receipt-line-loyalty">{{ 'pos.receipt.loyaltyDiscount' | t }} {{ -l.loyaltyDiscountMinor | money: d.currency }}</span>
+                }
                 @if (l.note) {
                   <span class="block italic" data-testid="receipt-line-note">{{ l.note }}</span>
                 }

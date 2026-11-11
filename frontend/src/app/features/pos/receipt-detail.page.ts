@@ -34,6 +34,7 @@ import { PosEReceiptComponent } from './pos-ereceipt';
 import { PosInvoiceComponent } from './pos-invoice';
 import { PrinterService } from './printing/printer.service';
 import { OrderCard } from './terminals/card-flow';
+import { GiftCardSlipStore, GiftCardSlipsComponent } from './giftcards/gift-card-slips';
 import { TerminalService } from './terminals/terminal.service';
 import { formatMoney } from '../../core/format/money';
 
@@ -41,7 +42,7 @@ import { formatMoney } from '../../core/format/money';
 @Component({
   selector: 'hn-pos-receipt-detail-page',
   host: { class: 'pos-page block' },
-  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, PosEReceiptComponent, PosInvoiceComponent, ...UI],
+  imports: [FormsModule, RouterLink, PosSubnavComponent, ReceiptViewComponent, PosEReceiptComponent, PosInvoiceComponent, ...UI, GiftCardSlipsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (receipt(); as r) {
@@ -59,6 +60,14 @@ import { formatMoney } from '../../core/format/money';
     <hn-banner class="mb-3" [error]="reprintError()" />
 
     @if (receipt(); as r) {
+      @if (slips.for(r.id); as cards) {
+        @if (cards.length) {
+          <div class="hn-no-print mb-3">
+            <hn-gift-card-slips [cards]="cards" [registerId]="r.registerId" [receiptNumber]="r.number" />
+            <button type="button" class="pos-soft mt-2 min-h-11" (click)="slips.forget(r.id)" data-testid="pos-gift-card-slips-done">{{ 'pos.giftCards.slip.handedOver' | t }}</button>
+          </div>
+        }
+      }
       <div class="grid gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
         <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" [copy]="copy()" />
 
@@ -239,6 +248,7 @@ export class PosReceiptDetailPage {
   private readonly injector = inject(Injector);
   private readonly printer = inject(PrinterService);
   private readonly terminals = inject(TerminalService);
+  protected readonly slips = inject(GiftCardSlipStore);
 
   readonly id = input.required<string>();
 
@@ -359,6 +369,7 @@ export class PosReceiptDetailPage {
       this.pendingReturn = attempt;
       try {
         const created = await firstValueFrom(this.api.returnItems(r.id, body, attempt.key));
+        this.slips.remember(created.id, created.issuedGiftCards); // refund onto a new gift card: its code is shown once
         this.pendingReturn = null;
         this.refundCard = null;
         this.refundManual = false;

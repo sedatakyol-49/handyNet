@@ -1394,8 +1394,8 @@ export interface Intake {
 
 // ---------------------------------------------------------------- POS (Kasse)
 
-export type PosPaymentMethod = 'Cash' | 'Card';
-export const POS_PAYMENT_METHODS: PosPaymentMethod[] = ['Cash', 'Card'];
+export type PosPaymentMethod = 'Cash' | 'Card' | 'GiftCard';
+export const POS_PAYMENT_METHODS: PosPaymentMethod[] = ['Cash', 'Card', 'GiftCard'];
 export type ReceiptKind = 'Sale' | 'Storno' | 'Return' | 'InvoicePayment';
 export type TaxTreatment = 'Standard19' | 'Margin25a' | 'NotTaxable';
 export type CashMovementKind = 'Deposit' | 'Withdrawal';
@@ -1488,6 +1488,11 @@ export interface SessionSummary {
   /** Ankauf purchases paid out of this till (part of the withdrawals). */
   ankaufCount?: number;
   ankaufPayoutsMinor?: number;
+  /** Gift cards sold in the session (not taxable at sale). */
+  giftCardsSoldCount?: number;
+  giftCardsSoldMinor?: number;
+  /** Price reductions from redeemed loyalty points. */
+  loyaltyDiscountMinor?: number;
 }
 
 export interface CashSession {
@@ -1518,7 +1523,7 @@ export interface CashSession {
 }
 
 /** Where the till's price comes from: own POS price, own marketplace offer (net + 19 %), or none (cashier types it). */
-export type PriceSource = 'PosPrice' | 'Offer' | 'None';
+export type PriceSource = 'Pricelist' | 'PosPrice' | 'Offer' | 'None';
 
 /** `GET /api/pos/registers/{id}/products` — prices are gross cents. */
 export interface PosProduct {
@@ -1538,6 +1543,8 @@ export interface PosProduct {
   priceMinor: number | null;
   priceSource: PriceSource;
   posPriceMinor: number | null;
+  /** Till price without the customer's pricelist (when the grid was asked with a customerId). */
+  basePriceMinor?: number | null;
 }
 
 export interface PosCategoryCount {
@@ -1553,6 +1560,9 @@ export interface PosPrice {
   priceMinor: number | null;
   priceSource: PriceSource;
   updatedAt: string | null;
+  basePriceMinor?: number | null;
+  pricelistId?: string | null;
+  pricelistName?: string | null;
 }
 
 export interface PosCustomerInput {
@@ -1565,6 +1575,8 @@ export interface PosCustomerInput {
   city?: string | null;
   countryCode?: string | null;
   vatId?: string | null;
+  /** Changing it needs pos.manage; null removes the pricelist, so edits send the current value. */
+  pricelistId?: string | null;
 }
 
 export interface PosCustomer extends PosCustomerInput {
@@ -1579,6 +1591,9 @@ export interface PosCustomer extends PosCustomerInput {
   vatId: string | null;
   createdAt: string;
   updatedAt: string;
+  pricelistId?: string | null;
+  pricelistName?: string | null;
+  loyaltyPoints?: number;
 }
 
 /** The customer as printed on the receipt (snapshot; no email/phone). */
@@ -1673,9 +1688,12 @@ export interface PosLookup {
   /** Till price (gross cents) and its source; missing on older API versions. */
   priceMinor?: number | null;
   priceSource?: PriceSource;
+  basePriceMinor?: number | null;
 }
 
 export interface SaleLineRequest {
+  /** Sells a gift card of this amount (no product, quantity 1, not taxable). */
+  giftCardAmountMinor?: number | null;
   productId?: string | null;
   imei?: string | null;
   quantity: number;
@@ -1690,6 +1708,8 @@ export interface SalePayment {
   amountMinor: number;
   /** Card payments run on a terminal: the approved card transaction of exactly this amount (absent = confirmed by the cashier). */
   cardTransactionId?: string | null;
+  /** Method GiftCard: the code of the card to pay with. */
+  giftCardCode?: string | null;
 }
 
 /** A sale the till recorded while the API was unreachable: device time and device reference (`OFF-<device>-<n>`). */
@@ -1705,6 +1725,8 @@ export interface CreateSaleRequest {
   customerId?: string | null;
   /** Only for sales recorded offline (the register needs offline mode). */
   offline?: OfflineSale | null;
+  /** Loyalty points of the customer to redeem (a price reduction computed by the API). */
+  redeemPoints?: number | null;
 }
 
 export interface ReturnRequest {
@@ -1735,6 +1757,10 @@ export interface ReceiptLine {
   originalLineNumber: number | null;
   returnedQuantity: number;
   note?: string | null;
+  /** The gift card this line sold. */
+  giftCardId?: string | null;
+  /** Share of the loyalty price reduction (already deducted from lineGrossMinor). */
+  loyaltyDiscountMinor?: number;
 }
 
 /** Terminal data of a card payment (printed under the payment); null/absent when the cashier confirmed it by hand. */
@@ -1807,6 +1833,7 @@ export interface ReceiptDocumentLine {
   /** "A" (19 %) or "§25a". */
   taxLabel: string;
   note?: string | null;
+  loyaltyDiscountMinor?: number;
 }
 
 /** The printable receipt exactly as issued (stored with the receipt; a reprint always shows the original). */
@@ -1829,6 +1856,8 @@ export interface ReceiptDocument {
   customer?: ReceiptCustomer | null;
   /** Cash rounding to 0.05 € (payments = total + rounding); 0/absent without rounding. */
   roundingMinor?: number;
+  pricelistName?: string | null;
+  loyalty?: { pointsRedeemed: number; discountMinor: number; pointsEarned: number; balanceAfter: number | null } | null;
 }
 
 export interface Receipt {
@@ -1862,6 +1891,14 @@ export interface Receipt {
   roundingMinor?: number;
   /** Recorded offline on the till and booked (numbered, signed) later. */
   offline?: OfflineSale | null;
+  pricelistId?: string | null;
+  pricelistName?: string | null;
+  /** Gift cards this receipt issued; `code` only in the response of the creating request. */
+  issuedGiftCards?: { id: string; code: string | null; codeLast4: string; amountMinor: number; expiresOn: string | null }[];
+  loyaltyPointsRedeemed?: number;
+  loyaltyDiscountMinor?: number;
+  loyaltyPointsEarned?: number;
+  loyaltyBalanceAfter?: number | null;
 }
 
 export interface ReceiptSummary {

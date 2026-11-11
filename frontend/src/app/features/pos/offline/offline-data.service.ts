@@ -100,7 +100,7 @@ export class PosOfflineData {
     }
   }
 
-  products(registerId: string, q: { search?: string | null; category?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number }): Observable<Paged<PosProduct>> {
+  products(registerId: string, q: { search?: string | null; category?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number; customerId?: string | null }): Observable<Paged<PosProduct>> {
     return this.withFallback(
       () => this.api.products(registerId, q),
       async () => {
@@ -121,9 +121,9 @@ export class PosOfflineData {
   }
 
   /** EAN / IMEI scan. Offline only products of the cached grid can be found; devices (IMEI) need the API. */
-  lookup(code: string, registerId: string): Observable<PosLookup> {
+  lookup(code: string, registerId: string, customerId: string | null = null): Observable<PosLookup> {
     return this.withFallback(
-      () => this.api.lookup(code, registerId),
+      () => this.api.lookup(code, registerId, customerId),
       async () => {
         const all = await this.cachedProducts(registerId);
         if (!all) return undefined;

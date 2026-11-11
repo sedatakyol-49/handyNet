@@ -107,6 +107,17 @@
                   @if (issues().get(l.key); as issue) {
                     <span class="mt-0.5 block text-xs font-semibold text-pos-danger" data-testid="pos-line-issue">{{ issueText(issue) }}</span>
                   }
+                  @if (l.kind === 'GiftCard') {
+                    <span class="mt-0.5 block text-[11.5px] text-pos-muted" data-testid="pos-line-gift-card">{{ 'pos.giftCards.lineHint' | t }}</span>
+                  }
+                  @if (l.pricelistName && l.listPriceMinor !== null && l.listPriceMinor !== undefined && a.unitPriceMinor === l.listPriceMinor) {
+                    <span class="mt-0.5 block text-[11.5px] text-pos-accent-text" data-testid="pos-line-pricelist">
+                      {{ 'pos.pricelists.linePrice' | t: { name: l.pricelistName } }}
+                      @if (l.basePriceMinor && l.basePriceMinor !== l.listPriceMinor) {
+                        · <span class="sr-only">{{ 'pos.pricelists.basePrice' | t }}</span><s class="text-pos-muted" data-testid="pos-line-base-price">{{ l.basePriceMinor | money }}</s>
+                      }
+                    </span>
+                  }
                   @if (l.imei || l.taxTreatment === 'Margin25a' || (l.kind === 'Product' && l.available !== null)) {
                     <span class="mt-0.5 flex flex-wrap gap-x-2 text-[11.5px] text-pos-muted">
                       @if (l.imei) {
@@ -156,15 +167,32 @@
 
       <!-- customer, note, numpad, pay -->
       <div class="shrink-0 space-y-2 px-3 pb-3">
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
           <button type="button" class="pos-soft min-w-0 justify-start" [class.pos-soft-accent]="!!customer()" (click)="customerOpen.set(true)"
             [attr.aria-label]="customer() ? ('pos.customers.changeFor' | t: { name: customer()!.name }) : ('pos.customers.choose' | t)" data-testid="pos-customer">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
-            <span class="truncate" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
+            <span class="min-w-0 text-start leading-tight">
+              <span class="block truncate" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
+              @if (customer() && (loyaltyOn() || customer()!.pricelistName)) {
+                <span class="block truncate text-[11px] font-medium opacity-80" data-testid="pos-customer-extra">
+                  @if (loyaltyOn()) {
+                    {{ 'pos.loyalty.pointsShort' | t: { points: pointsBalance() } }}
+                  }
+                  @if (customer()!.pricelistName; as pl) {
+                    {{ loyaltyOn() ? '·' : '' }} {{ pl }}
+                  }
+                </span>
+              }
+            </span>
           </button>
-          <button type="button" class="pos-soft" [disabled]="!selectedLine()" (click)="openNote()" data-testid="pos-note">
+          <button type="button" class="pos-soft min-w-0" [disabled]="!selectedLine()" (click)="openNote()" data-testid="pos-note">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M8 9h8M8 13h5" /></svg>
-            {{ 'pos.note.button' | t }}
+            <span class="truncate">{{ 'pos.note.button' | t }}</span>
+          </button>
+          <button type="button" class="pos-soft min-w-0" [disabled]="offline()" [title]="offline() ? ('pos.giftCards.offline' | t) : ('pos.giftCards.sell.title' | t)"
+            (click)="giftCardSaleOpen.set(true)" data-testid="pos-sell-gift-card">
+            <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18M12 8v12M12 8c-1.5-3-5-3.5-5-1s3.5 1 5 1c1.5 0 5 1.5 5-1s-3.5-2-5 1" /></svg>
+            <span class="truncate">{{ 'pos.giftCards.sell.button' | t }}</span>
           </button>
         </div>
         @if (mode() === 'discount' && canDiscount() && rights().maxDiscountPercent < 100) {
@@ -243,7 +271,7 @@
       }
 
       @if (hasInventory() && register.value(); as reg) {
-        <hn-pos-product-grid class="min-h-0 flex-1" [registerId]="reg.id" [search]="code()" [canManagePrices]="rights().manage" (pick)="pickProduct($event)" (editPrice)="editPrice($event)" />
+        <hn-pos-product-grid class="min-h-0 flex-1" [registerId]="reg.id" [search]="code()" [canManagePrices]="rights().manage" [customerId]="customer()?.id ?? null" (pick)="pickProduct($event)" (editPrice)="editPrice($event)" />
       } @else {
         <p class="flex-1 px-6 py-10 text-center text-sm text-pos-muted">{{ 'pos.till.cartEmpty' | t }}</p>
       }
@@ -291,7 +319,10 @@
           <span class="truncate">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
         </button>
         <p class="ms-auto flex items-baseline gap-2 text-sm text-pos-muted">
-          {{ 'pos.till.total' | t }} <span class="text-[28px] leading-tight font-bold tracking-tight text-pos-ink tabular-nums" data-testid="pos-pay-total">{{ totals().totalMinor | money }}</span>
+          @if (redeemValue()) {
+            <s class="tabular-nums" data-testid="pos-pay-total-before">{{ totals().totalMinor | money }}</s>
+          }
+          {{ (redeemValue() ? 'pos.loyalty.due' : 'pos.till.total') | t }} <span class="text-[28px] leading-tight font-bold tracking-tight text-pos-ink tabular-nums" data-testid="pos-pay-total">{{ amountDue() | money }}</span>
         </p>
       </div>
 
@@ -300,10 +331,13 @@
         <div class="space-y-2" role="group" [attr.aria-label]="'pos.sell.methods' | t">
           <p class="pos-section-label" aria-hidden="true">{{ 'pos.sell.methods' | t }}</p>
           @for (m of methods; track m) {
-            <button type="button" class="pos-method" (click)="addPayment(m)" [attr.data-testid]="'pos-method-' + m">
+            <button type="button" class="pos-method disabled:cursor-not-allowed disabled:opacity-50" [disabled]="m === 'GiftCard' && offline()" (click)="chooseMethod(m)" [attr.data-testid]="'pos-method-' + m"
+              [title]="m === 'GiftCard' && offline() ? ('pos.giftCards.offline' | t) : ''">
               <span class="pos-method-icon" aria-hidden="true">
                 @if (m === 'Cash') {
                   <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="1.5" /><circle cx="12" cy="12" r="2.5" /><path d="M6 9.5v5M18 9.5v5" /></svg>
+                } @else if (m === 'GiftCard') {
+                  <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18M12 8v12M12 8c-1.5-3-5-3.5-5-1s3.5 1 5 1c1.5 0 5 1.5 5-1s-3.5-2-5 1" /></svg>
                 } @else {
                   <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="M2.5 9.5h19M6 15h4" /></svg>
                 }
@@ -354,6 +388,42 @@
             </div>
           }
 
+          @if (customer() && loyaltyOn()) {
+            <section class="rounded-xl border border-pos-line bg-pos-panel p-3" aria-labelledby="pos-loyalty-heading" data-testid="pos-loyalty">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 id="pos-loyalty-heading" class="text-sm font-bold">{{ 'pos.loyalty.redeem.title' | t }}</h3>
+                <p class="text-sm text-pos-muted">
+                  {{ 'pos.loyalty.redeem.balance' | t }} <strong class="text-pos-ink tabular-nums" data-testid="pos-loyalty-balance">{{ pointsBalance() }}</strong>
+                  · {{ 'pos.loyalty.redeem.worth' | t: { value: (redeemValueOf(pointsBalance()) | money) } }}
+                </p>
+              </div>
+              @if (redeemPoints()) {
+                <div class="mt-2 flex flex-wrap items-center gap-2 rounded-[10px] bg-pos-accent-soft px-3 py-2 text-sm text-pos-accent-text" data-testid="pos-loyalty-applied">
+                  <span class="min-w-0 flex-1 font-semibold">{{ 'pos.loyalty.redeem.applied' | t: { points: redeemPoints(), value: (redeemValue() | money) } }}</span>
+                  <button type="button" class="pos-soft min-h-11" (click)="removeRedeem()" data-testid="pos-loyalty-remove">{{ 'common.remove' | t }}</button>
+                </div>
+                @if (redeemProblem(); as problem) {
+                  <p class="mt-2 text-sm text-pos-danger" role="alert" data-testid="pos-loyalty-problem">{{ redeemErrorText(problem) }}</p>
+                }
+              } @else if (offline()) {
+                <p class="mt-2 text-sm text-pos-muted" data-testid="pos-loyalty-offline">{{ 'pos.loyalty.redeem.offline' | t }}</p>
+              } @else {
+                <form class="mt-2 flex flex-wrap items-end gap-2" (submit)="$event.preventDefault(); applyRedeem()" novalidate>
+                  <hn-field class="min-w-0 flex-1 basis-40" [label]="'pos.loyalty.redeem.points' | t" for="pos-loyalty-points"
+                    [hint]="'pos.loyalty.redeem.limits' | t: { min: (customerLoyalty() ?? loyaltySettings())?.minRedeemPoints ?? 0, max: maxRedeem() }" [errors]="redeemInputError()">
+                    <input hnInput id="pos-loyalty-points" name="points" inputmode="numeric" autocomplete="off" class="h-11 text-end tabular-nums" [(ngModel)]="redeemInput"
+                      aria-describedby="pos-loyalty-points-hint" data-testid="pos-loyalty-points" />
+                  </hn-field>
+                  <button type="button" class="pos-soft min-h-11" [disabled]="!maxRedeem()" (click)="applyRedeem(maxRedeem())" data-testid="pos-loyalty-max">{{ 'pos.loyalty.redeem.max' | t }}</button>
+                  <button type="submit" class="pos-soft pos-soft-accent min-h-11" data-testid="pos-loyalty-apply">{{ 'pos.loyalty.redeem.apply' | t }}</button>
+                </form>
+              }
+              @if (earnPreview()) {
+                <p class="mt-2 text-xs text-pos-muted" data-testid="pos-loyalty-earn">{{ 'pos.loyalty.redeem.earn' | t: { points: earnPreview() } }}</p>
+              }
+            </section>
+          }
+
           @if (payments().length) {
             <ul class="space-y-2" data-testid="pos-payment-lines">
               @for (p of payments(); track p.id) {
@@ -361,7 +431,12 @@
                 @let bad = settlement().invalidIds.includes(p.id);
                 <li class="flex items-center gap-2 rounded-xl border bg-pos-tile p-2" [class]="sel ? 'border-pos-accent shadow-[inset_0_0_0_1px_var(--pos-accent)]' : 'border-pos-line'"
                   (click)="selectPayment(p.id)" [attr.data-method]="p.method" data-testid="pos-payment-line">
-                  <label [for]="'pos-pay-' + p.id" class="w-24 shrink-0 ps-1.5 font-semibold">{{ p.method | tEnum: 'posPaymentMethod' }}</label>
+                  <label [for]="'pos-pay-' + p.id" class="w-24 shrink-0 ps-1.5 font-semibold leading-tight">
+                    {{ p.method | tEnum: 'posPaymentMethod' }}
+                    @if (p.giftCard; as gc) {
+                      <span class="block font-mono text-[11px] font-medium text-pos-muted" dir="ltr" data-testid="pos-pay-gift-card">{{ maskedGiftCard(gc.last4) }}</span>
+                    }
+                  </label>
                   <input [id]="'pos-pay-' + p.id" class="hn-control h-12 min-w-0 flex-1 rounded-[10px] text-end text-xl font-semibold tabular-nums" inputmode="decimal" autocomplete="off"
                     placeholder="0,00" [value]="p.input" (focus)="selectPayment(p.id)" (input)="setPaymentInput(p.id, $any($event.target))"
                     (keydown.enter)="$event.preventDefault(); validate()" [attr.aria-invalid]="bad" data-testid="pos-pay-amount" />
@@ -401,7 +476,7 @@
             @if (paying()) {
               <span class="size-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
             } @else {
-              <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
+              <span class="tabular-nums">{{ amountDue() | money }}</span>
             }
           </button>
         </div>
@@ -419,7 +494,7 @@
           @if (paying()) {
             <span class="size-5 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
           } @else {
-            <span class="tabular-nums">{{ totals().totalMinor | money }}</span>
+            <span class="tabular-nums">{{ amountDue() | money }}</span>
           }
         </button>
       </div>
@@ -486,6 +561,22 @@
               </button>
             </div>
             <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
+            @if (issuedCards().length) {
+              <hn-gift-card-slips [cards]="issuedCards()" [registerId]="r.registerId" [receiptNumber]="r.number" />
+            }
+            @if (r.loyaltyPointsEarned || r.loyaltyPointsRedeemed) {
+              <p class="pos-card px-4 py-3 text-sm" data-testid="pos-done-loyalty">
+                @if (r.loyaltyPointsRedeemed) {
+                  {{ 'pos.loyalty.done.redeemed' | t: { points: r.loyaltyPointsRedeemed, value: (r.loyaltyDiscountMinor ?? 0 | money) } }}
+                }
+                @if (r.loyaltyPointsEarned) {
+                  {{ 'pos.loyalty.done.earned' | t: { points: r.loyaltyPointsEarned } }}
+                }
+                @if (r.loyaltyBalanceAfter !== null && r.loyaltyBalanceAfter !== undefined) {
+                  <strong>{{ 'pos.loyalty.done.balance' | t: { points: r.loyaltyBalanceAfter } }}</strong>
+                }
+              </p>
+            }
             <hn-pos-ereceipt [receipt]="r" (linkUrl)="receiptUrl.set($event)" />
           </div>
           <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
@@ -564,3 +655,6 @@
     </div>
   }
 </hn-dialog>
+
+<hn-pos-gift-card-sale-dialog [open]="giftCardSaleOpen()" (closed)="giftCardSaleOpen.set(false); focusCode()" (chosen)="sellGiftCard($event)" />
+<hn-pos-gift-card-pay-dialog [open]="giftCardPayOpen()" [payableMinor]="giftCardPayable()" [usedCodes]="usedGiftCodes()" (closed)="giftCardPayOpen.set(false)" (chosen)="addGiftCardPayment($event)" />

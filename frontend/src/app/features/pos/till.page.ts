@@ -81,6 +81,9 @@ import {
   settlePayments,
   tillShortcut,
   updateOrder,
+  giftCardLine,
+  giftCardLinesMinor,
+  loyaltyEligibleMinor,
 } from './pos.logic';
 import { ReceiptViewComponent } from './receipt-view';
 import { PrinterService } from './printing/printer.service';
@@ -94,6 +97,13 @@ import { PaymentLinesSettlementLike, QueueEntry, offlineBlock } from './offline/
 import { OfflineQueueService } from './offline/offline-queue.service';
 import { ProvisionalReceiptComponent, provisionalLayout } from './offline/provisional-receipt';
 import { ReachabilityService, isUnreachable } from './offline/reachability.service';
+import { GiftCardSlipsComponent } from './giftcards/gift-card-slips';
+import { GiftCardPaymentChoice, PosGiftCardPayDialogComponent, PosGiftCardSaleDialogComponent } from './giftcards/pos-gift-card-dialogs';
+import { IssuedGiftCard, maskedGiftCard } from './giftcards/gift-card.logic';
+import { CustomerLoyalty, LoyaltyApi, LoyaltySettings } from './loyalty/loyalty-api';
+import { maxRedeemPoints, parsePoints, pointsEarned, redeemError, redeemValueMinor } from './loyalty/loyalty.logic';
+import { ResolvedPrice, repriceLines, repriceTargets } from './pricelists/pricing.logic';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { germanT } from './printing/printer.service';
 import { receiptLines } from '../company/company.logic';
 
@@ -121,6 +131,9 @@ type Screen = 'products' | 'payment' | 'receipt';
     ReceiptViewComponent,
     PosEReceiptComponent,
     ProvisionalReceiptComponent,
+    GiftCardSlipsComponent,
+    PosGiftCardSaleDialogComponent,
+    PosGiftCardPayDialogComponent,
     ...UI,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,6 +155,7 @@ export class TillPage {
   private readonly offlineData = inject(PosOfflineData);
   private readonly queue = inject(OfflineQueueService);
   private readonly reach = inject(ReachabilityService);
+  private readonly loyaltyApi = inject(LoyaltyApi);
   private readonly branding = inject(CompanyBrandingStore);
 
   readonly registerId = input.required<string>();
@@ -247,15 +261,54 @@ export class TillPage {
   protected readonly selectedPaymentId = signal<string | null>(null);
   protected readonly selectedPayment = computed(() => this.payments().find((p) => p.id === this.selectedPaymentId()) ?? null);
   private payFresh = true;
-  protected readonly settlement = computed(() => settlePayments(this.totals().totalMinor, this.payments(), this.register.value()?.cashRounding ?? false));
+  // ---- loyalty points and gift cards on the ticket
+  /** Settings of the organization (null until loaded or when the API is not reachable). */
+  protected readonly loyaltySettings = signal<LoyaltySettings | null>(null);
+  /** Points of the ticket's customer as the API reported them last. */
+  protected readonly customerLoyalty = signal<CustomerLoyalty | null>(null);
+  protected readonly loyaltyOn = computed(() => !!this.loyaltySettings()?.enabled);
+  protected readonly redeemPoints = computed(() => this.order().redeemPoints ?? 0);
+  protected readonly pointValueMinor = computed(() => this.customerLoyalty()?.pointValueMinor ?? this.loyaltySettings()?.pointValueMinor ?? 0);
+  protected readonly redeemValue = computed(() => redeemValueMinor(this.redeemPoints(), this.pointValueMinor()));
+  protected readonly eligibleMinor = computed(() => loyaltyEligibleMinor(this.lines()));
+  protected readonly giftLinesMinor = computed(() => giftCardLinesMinor(this.lines()));
+  /** Balance of the ticket's customer (fresh from the API, else as attached). */
+  protected readonly pointsBalance = computed(() => this.customerLoyalty()?.points ?? this.customer()?.loyaltyPoints ?? 0);
+  protected readonly maxRedeem = computed(() => maxRedeemPoints(this.pointsBalance(), this.pointValueMinor(), this.eligibleMinor()));
+  /** What is wrong with the points redeemed on this ticket (after the cart changed), or null. */
+  protected readonly redeemProblem = computed(() =>
+    this.redeemPoints() > 0
+      ? redeemError(this.redeemPoints(), {
+          rules: this.customerLoyalty() ?? this.loyaltySettings(),
+          hasCustomer: !!this.customer(),
+          balance: this.pointsBalance(),
+          eligibleMinor: this.eligibleMinor(),
+        })
+      : null,
+  );
+  /** What the customer pays: the cart total less the points redeemed. */
+  protected readonly amountDue = computed(() => Math.max(0, this.totals().totalMinor - this.redeemValue()));
+  protected readonly earnPreview = computed(() => pointsEarned(Math.max(0, this.eligibleMinor() - this.redeemValue()), this.loyaltySettings()?.pointsPerEuro ?? 0));
+  protected redeemInput = '';
+  protected readonly redeemInputError = signal<string | null>(null);
+  protected readonly giftCardSaleOpen = signal(false);
+  protected readonly giftCardPayOpen = signal(false);
+  protected readonly maskedGiftCard = maskedGiftCard;
+  /** Gift cards the last sale issued, with their codes (only from the creating response, kept in memory). */
+  protected readonly issuedCards = computed<IssuedGiftCard[]>(() => (this.lastReceipt()?.issuedGiftCards ?? []).filter((c) => !!c.code));
+
+  protected readonly settlement = computed(() => settlePayments(this.amountDue(), this.payments(), this.register.value()?.cashRounding ?? false, this.giftLinesMinor()));
   /** Next banknotes for the amount the cash line has to cover. */
   protected readonly cashQuick = computed(() => {
     const cashLine = this.payments().find((p) => p.method === 'Cash');
-    return cashSuggestions(remainingFor(this.totals().totalMinor, this.payments(), cashLine?.id ?? null), 5);
+    return cashSuggestions(remainingFor(this.amountDue(), this.payments(), cashLine?.id ?? null), 5);
   });
+  /** What may still be paid by gift card: the rest, without the gift cards sold on this ticket. */
+  protected readonly giftCardPayable = computed(() => Math.max(0, Math.min(remainingFor(this.amountDue(), this.payments()), this.amountDue() - this.giftLinesMinor() - this.settlement().giftCardMinor)));
+  protected readonly usedGiftCodes = computed(() => this.payments().filter((p) => p.giftCard).map((p) => p.giftCard!.code));
   protected readonly checkoutError = signal<string | null>(null);
   protected readonly paying = signal(false);
-  protected readonly methods: PosPaymentMethod[] = ['Cash', 'Card'];
+  protected readonly methods: PosPaymentMethod[] = ['Cash', 'Card', 'GiftCard'];
 
   // ---- offline mode
   /** The API is unreachable right now. */
@@ -285,7 +338,7 @@ export class TillPage {
   protected noteText = '';
   protected readonly customerOpen = signal(false);
   protected readonly priceTarget = signal<PriceTarget | null>(null);
-  private readonly dialogOpen = computed(() => this.confirmDiscard() || this.noteOpen() || this.customerOpen() || !!this.priceTarget() || !!this.cardUncertain() || !!this.terminals.active());
+  private readonly dialogOpen = computed(() => this.confirmDiscard() || this.noteOpen() || this.customerOpen() || !!this.priceTarget() || !!this.cardUncertain() || !!this.terminals.active() || this.giftCardSaleOpen() || this.giftCardPayOpen());
 
   constructor() {
     effect(() => {
@@ -316,6 +369,7 @@ export class TillPage {
         screen: this.screen(),
         lines: this.lines(),
         settlement: this.screen() === 'payment' ? this.settlement() : null,
+        loyalty: this.redeemPoints() ? { points: this.redeemPoints(), valueMinor: this.redeemValue() } : null,
         receipt: this.lastReceipt() ?? this.offlineDone(),
         receiptUrl: this.receiptUrl(),
         idleMessage: messageFromReceiptText(texts?.receiptHeader),
@@ -356,6 +410,20 @@ export class TillPage {
         });
       }
       wasOffline = offline;
+    });
+    // Loyalty settings of the organization (read once; a failure only means no point redemption at this till).
+    effect(() => {
+      if (this.session() && this.reach.online() && !untracked(() => this.loyaltySettings()))
+        untracked(() => firstValueFrom(this.loyaltyApi.settings()).then((s) => this.loyaltySettings.set(s), () => undefined));
+    });
+    // The ticket's customer changed (switching tickets, attach, detach): load their current points.
+    effect(() => {
+      const id = this.customer()?.id ?? null;
+      const enabled = this.loyaltyOn();
+      untracked(() => {
+        this.customerLoyalty.set(null);
+        if (id && enabled) void this.loadCustomerLoyalty(id);
+      });
     });
     // Scanner-ready as soon as the session is known.
     effect(() => {
@@ -488,7 +556,7 @@ export class TillPage {
     this.scanError.set(null);
     this.lookups.update((n) => n + 1);
     try {
-      this.addLookup(await firstValueFrom(this.offlineData.lookup(code, this.registerId())));
+      this.addLookup(await firstValueFrom(this.offlineData.lookup(code, this.registerId(), this.customer()?.id ?? null)));
     } catch (e) {
       const reason = e instanceof OfflineLookupError ? this.i18n.t('pos.offline.lookup.' + e.reason) : posErrorText(this.i18n, e);
       this.scanError.set(this.i18n.t('pos.till.scanFailed', { code }) + ' ' + reason);
@@ -508,7 +576,12 @@ export class TillPage {
       return;
     }
     const isNew = result.lines.length > this.lines().length;
-    this.setLines(result.lines);
+    // A pricelist price: remember the regular price and the list's name for the line.
+    const lines =
+      found.priceSource === 'Pricelist'
+        ? result.lines.map((l) => (l.key === result.key ? { ...l, basePriceMinor: found.basePriceMinor ?? null, pricelistName: this.customer()?.pricelistName ?? null } : l))
+        : result.lines;
+    this.setLines(lines);
     this.selectedKey.set(result.key);
     if (result.needsPrice) {
       this.mode.set('price');
@@ -539,6 +612,11 @@ export class TillPage {
   protected onNumpadKey(key: NumpadKey): void {
     const line = this.selectedLine();
     if (!line) return;
+    // A gift card line has a fixed amount: the numpad can only remove it.
+    if (line.kind === 'GiftCard') {
+      if (key === 'backspace' || key === 'clear') this.removeLine(line.key);
+      return;
+    }
     const mode = this.mode();
     if (mode === 'quantity' && line.kind === 'Unit' && key !== 'backspace') {
       this.scanError.set(this.i18n.t('pos.sell.unitQuantity'));
@@ -576,6 +654,7 @@ export class TillPage {
 
   /** Price changes need `pos.price_override` when the till knows a price; discounts need `pos.discount`. */
   private modeAllowed(line: CartLine, mode: NumpadMode): boolean {
+    if (line.kind === 'GiftCard') return false;
     if (mode === 'price') return canEditPrice(line, this.rights());
     if (mode === 'discount') return this.canDiscount();
     return true;
@@ -604,17 +683,119 @@ export class TillPage {
   // =============================================================== customer
   protected attachCustomer(c: PosCustomer): void {
     const order = this.order();
-    this.orders.update((s) => updateOrder(s, order.id, { customer: { id: c.id, name: c.name, company: c.company } }));
+    const otherCustomer = order.customer?.id !== c.id;
+    const otherList = otherCustomer || (order.customer?.pricelistName ?? null) !== (c.pricelistName ?? null);
+    this.orders.update((s) =>
+      updateOrder(s, order.id, {
+        customer: { id: c.id, name: c.name, company: c.company, loyaltyPoints: c.loyaltyPoints ?? 0, pricelistName: c.pricelistName ?? null },
+        redeemPoints: otherCustomer ? null : order.redeemPoints,
+      }),
+    );
     this.customerOpen.set(false);
     this.checkoutError.set(null);
+    if (otherList) void this.repriceFor(c.id);
     this.focusCode();
   }
 
   protected detachCustomer(): void {
     const order = this.order();
-    this.orders.update((s) => updateOrder(s, order.id, { customer: null }));
+    this.orders.update((s) => updateOrder(s, order.id, { customer: null, redeemPoints: null }));
     this.customerOpen.set(false);
+    void this.repriceFor(null);
     this.focusCode();
+  }
+
+  /**
+   * The customer changed: lines that still carry the till price follow the customer's pricelist (or the regular price
+   * again); prices the cashier typed stay. Without a connection the lines keep their prices (the API checks at the sale).
+   */
+  private async repriceFor(customerId: string | null): Promise<void> {
+    const orderId = this.order().id;
+    const targets = repriceTargets(this.lines());
+    if (!targets.length || this.offline()) return;
+    const prices = await firstValueFrom(
+      forkJoin(
+        targets.map((pid) =>
+          this.api.price(pid, this.registerId(), customerId).pipe(
+            map((p): [string, ResolvedPrice] => [pid, { priceMinor: p.priceMinor, priceSource: p.priceSource, basePriceMinor: p.basePriceMinor ?? null, pricelistName: p.pricelistName ?? null }]),
+            catchError(() => of(null)),
+          ),
+        ),
+      ),
+    );
+    const found = new Map(prices.filter((x): x is [string, ResolvedPrice] => !!x));
+    const order = this.orders().orders.find((o) => o.id === orderId);
+    if (!order || !found.size) return;
+    const r = repriceLines(order.lines, found);
+    this.orders.update((s) => updateOrder(s, orderId, { lines: r.lines }));
+    if (r.changed) this.toast.success(this.i18n.t('pos.pricelists.repriced', { count: r.changed }));
+  }
+
+  private async loadCustomerLoyalty(customerId: string): Promise<void> {
+    try {
+      const l = await firstValueFrom(this.loyaltyApi.customer(customerId, { pageSize: 1 }));
+      if (this.customer()?.id === customerId) this.customerLoyalty.set(l);
+    } catch {
+      /* the points on the attached customer are shown instead; the API checks the balance at the sale */
+    }
+  }
+
+  // =============================================================== gift cards and points
+  protected sellGiftCard(amountMinor: number): void {
+    this.giftCardSaleOpen.set(false);
+    if (this.screen() === 'receipt') this.startNextOrder();
+    const line = giftCardLine('g:' + newIdempotencyKey(), amountMinor, this.i18n.t('pos.giftCards.lineDescription'));
+    this.setLines([...this.lines(), line]);
+    this.selectedKey.set(line.key);
+    this.focusCode();
+  }
+
+  protected addGiftCardPayment(c: GiftCardPaymentChoice): void {
+    this.giftCardPayOpen.set(false);
+    const id = newIdempotencyKey();
+    this.setPayments([...this.payments(), { id, method: 'GiftCard', input: minorToPlain(c.amountMinor), giftCard: { code: c.code, last4: c.last4, balanceMinor: c.balanceMinor } }]);
+    this.selectedPaymentId.set(id);
+    this.payFresh = true;
+  }
+
+  protected chooseMethod(m: PosPaymentMethod): void {
+    if (m === 'GiftCard') this.giftCardPayOpen.set(true);
+    else this.addPayment(m);
+  }
+
+  protected applyRedeem(points: number | null = parsePoints(this.redeemInput)): void {
+    const problem = redeemError(points, {
+      rules: this.customerLoyalty() ?? this.loyaltySettings(),
+      hasCustomer: !!this.customer(),
+      balance: this.pointsBalance(),
+      eligibleMinor: this.eligibleMinor(),
+    });
+    if (problem) {
+      this.redeemInputError.set(this.redeemErrorText(problem));
+      return;
+    }
+    this.redeemInputError.set(null);
+    const order = this.order();
+    this.orders.update((s) => updateOrder(s, order.id, { redeemPoints: points }));
+    this.redeemInput = '';
+  }
+
+  protected redeemValueOf(points: number): number {
+    return redeemValueMinor(points, this.pointValueMinor());
+  }
+
+  protected removeRedeem(): void {
+    const order = this.order();
+    this.orders.update((s) => updateOrder(s, order.id, { redeemPoints: null }));
+  }
+
+  protected redeemErrorText(problem: string): string {
+    const rules = this.customerLoyalty() ?? this.loyaltySettings();
+    return this.i18n.t('pos.loyalty.redeem.errors.' + problem, {
+      min: rules?.minRedeemPoints ?? 0,
+      balance: this.pointsBalance(),
+      max: this.maxRedeem(),
+    });
   }
 
   protected closeCustomer(): void {
@@ -711,7 +892,7 @@ export class TillPage {
 
   protected addPayment(method: PosPaymentMethod): void {
     const id = newIdempotencyKey();
-    this.setPayments(addPaymentLine(this.payments(), method, this.totals().totalMinor, id));
+    this.setPayments(addPaymentLine(this.payments(), method, this.amountDue(), id));
     this.selectedPaymentId.set(id);
     this.payFresh = true;
     this.focusId('pos-pay-' + id);
@@ -780,7 +961,7 @@ export class TillPage {
   protected exactCash(): void {
     if (this.screen() !== 'payment' && !this.openPayment()) return;
     const cash = this.selectedPayment()?.method === 'Cash' ? this.selectedPayment() : this.payments().find((p) => p.method === 'Cash');
-    const rest = remainingFor(this.totals().totalMinor, this.payments(), cash?.id ?? null);
+    const rest = remainingFor(this.amountDue(), this.payments(), cash?.id ?? null);
     if (rest > 0) this.setCash(rest);
   }
 
@@ -788,7 +969,7 @@ export class TillPage {
   protected cardRest(): void {
     if (this.screen() !== 'payment' && !this.openPayment()) return;
     const card = this.payments().find((p) => p.method === 'Card');
-    const rest = remainingFor(this.totals().totalMinor, this.payments(), card?.id ?? null);
+    const rest = remainingFor(this.amountDue(), this.payments(), card?.id ?? null);
     if (rest <= 0) return;
     if (card) {
       this.setPayments(this.payments().map((p) => (p.id === card.id ? { ...p, input: minorToPlain(rest) } : p)));
@@ -814,6 +995,11 @@ export class TillPage {
     if (this.lines().some((l) => this.issues().has(l.key))) {
       this.backToProducts();
       this.openPayment();
+      return;
+    }
+    const redeem = this.redeemProblem();
+    if (redeem) {
+      this.checkoutError.set(this.redeemErrorText(redeem));
       return;
     }
     this.paying.set(true);
@@ -844,6 +1030,8 @@ export class TillPage {
       persistent: this.queue.persistent(),
       methods: s.payments.map((p) => p.method),
       cardUnreported: !!order.card && !order.card.reported,
+      sellsGiftCard: order.lines.some((l) => l.kind === 'GiftCard'),
+      redeemsPoints: !!order.redeemPoints,
     });
     if (block || !reg) {
       this.checkoutError.set(this.i18n.t('pos.offline.blocked.' + (block ?? 'noSession')));
@@ -855,7 +1043,7 @@ export class TillPage {
       return;
     }
     const payments = card ? withCardTransaction(s.payments, card.transactionId) : s.payments;
-    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null);
+    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null, order.redeemPoints ?? null);
     const online = JSON.stringify(body);
     // A request of exactly this sale may already have reached the API (its answer was lost): keep its key, so the
     // sync cannot book the sale twice.
@@ -994,7 +1182,7 @@ export class TillPage {
 
   private async sendSale(orderId: string, payments: SalePayment[], s: PaymentLinesSettlementLike): Promise<void> {
     const order = this.order();
-    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null);
+    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null, order.redeemPoints ?? null);
     const attempt = attemptFor(order.pending, JSON.stringify(body), newIdempotencyKey);
     this.orders.update((st) => updateOrder(st, order.id, { pending: attempt }));
     try {
@@ -1039,6 +1227,9 @@ export class TillPage {
 
   /** The sold ticket is removed; selling continues on a fresh ticket (parked ones stay parked). */
   private finishOrder(id: string): void {
+    this.customerLoyalty.set(null);
+    this.redeemInput = '';
+    this.redeemInputError.set(null);
     const now = new Date().toISOString();
     let next = removeOrder(this.orders(), id, newIdempotencyKey(), now);
     if (activeOrder(next).lines.length) next = addOrder(next, newIdempotencyKey(), now) ?? next;

@@ -68,6 +68,8 @@ export interface TillSnapshot {
     payments: readonly { method: string; amountMinor: number; tenderedMinor?: number | null }[];
   } | null;
   receiptUrl?: string | null;
+  /** Loyalty points redeemed on the ticket and the price reduction they give. */
+  loyalty?: { points: number; valueMinor: number } | null;
   idleMessage?: string | null;
   doneMessage?: string | null;
   locale: string;
@@ -114,13 +116,15 @@ export function displayStateFromTill(t: TillSnapshot): DisplayState {
     currency: 'EUR',
     locale: t.locale,
   };
+  const redeemed = t.loyalty && t.loyalty.points > 0 ? t.loyalty : null;
+  if (redeemed) state.loyalty = { points: redeemed.points, redeemValueMinor: redeemed.valueMinor };
   if (t.screen !== 'payment') return state;
   const s = t.settlement;
   return {
     ...state,
     phase: 'payment',
     payment: {
-      dueMinor: state.totalMinor + (s?.roundingMinor ?? 0),
+      dueMinor: state.totalMinor - (redeemed?.valueMinor ?? 0) + (s?.roundingMinor ?? 0),
       tenderedMinor: s?.paidMinor ?? 0,
       changeMinor: s?.changeMinor ?? 0,
       method: methodOf([...(s?.cashMinor ? ['Cash'] : []), ...(s?.cardMinor ? ['Card'] : [])]),
