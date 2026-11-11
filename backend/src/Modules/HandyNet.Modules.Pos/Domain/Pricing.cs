@@ -15,6 +15,9 @@ public enum PriceSource
 
     /// <summary>Derived from the organization's own marketplace offer (net B2B price + 19 % VAT).</summary>
     Offer,
+
+    /// <summary>From the customer's price list (ADR-0020): its item price, or the base price less its general discount.</summary>
+    Pricelist,
 }
 
 public sealed record EffectivePrice(long? GrossMinor, PriceSource Source)

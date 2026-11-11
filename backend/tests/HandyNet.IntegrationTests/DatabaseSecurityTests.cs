@@ -232,4 +232,43 @@ public sealed class DatabaseSecurityTests(HandyNetFixture fixture)
             "SELECT pg_get_function_result('pos.public_display(text)'::regprocedure)", owner);
         Assert.Equal("TABLE(register_id uuid, organization_id uuid, organization_name text, expires_at timestamp with time zone)", (string)(await columns.ExecuteScalarAsync())!);
     }
+
+    [Fact]
+    public async Task Price_list_tables_are_tenant_isolated()
+    {
+        var a = await _pos.ShopAsync("preisliste-a");
+        var b = await _pos.ShopAsync("preisliste-b");
+        var ids = new Dictionary<Guid, (Guid List, Guid Product)>();
+        foreach (var shop in new[] { a, b })
+        {
+            var product = await PosSupport.StockProductAsync(shop, 1);
+            var list = PosSupport.Id((await shop.PostAsync("/api/pos/pricelists", new { name = "Händler", discountBasisPoints = 500 })).Expect(HttpStatusCode.Created).Json);
+            (await shop.PutAsync($"/api/pos/pricelists/{list}/items/{product}", new { priceMinor = 9_00 })).Expect(HttpStatusCode.OK);
+            ids[shop.OrganizationId!.Value] = (list, product);
+        }
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+        var (listA, productA) = ids[orgA];
+
+        await AssertIsolatedAsync("pos.pricelists", orgA, orgB,
+            $"INSERT INTO pos.pricelists (id, organization_id, name, discount_basis_points, is_active, created_at, updated_at) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', 'Fremd', 0, true, now(), now())",
+            deletable: false, touch: "discount_basis_points = 10000");
+        await AssertIsolatedAsync("pos.pricelist_items", orgA, orgB,
+            $"INSERT INTO pos.pricelist_items (organization_id, pricelist_id, product_id, price_minor, updated_at, updated_by) "
+            + $"VALUES ('{orgA}', '{listA}', gen_random_uuid(), 1, now(), gen_random_uuid())",
+            deletable: true, touch: "price_minor = 1");
+
+        // Through the API: B cannot read or change A's list, put a price on it, or give it to one of its customers.
+        (await b.GetAsync($"/api/pos/pricelists/{listA}")).Expect(HttpStatusCode.NotFound);
+        (await b.GetAsync($"/api/pos/pricelists/{listA}/items")).Expect(HttpStatusCode.NotFound);
+        (await b.PutAsync($"/api/pos/pricelists/{listA}", new { name = "gekapert", version = 1 })).Expect(HttpStatusCode.NotFound);
+        (await b.PutAsync($"/api/pos/pricelists/{listA}/items/{productA}", new { priceMinor = 1 })).Expect(HttpStatusCode.NotFound);
+        (await PosSupport.DeleteAsync(b, $"/api/pos/pricelists/{listA}/items/{productA}")).Expect(HttpStatusCode.NotFound);
+        var stolen = await b.PostAsync("/api/pos/customers", new { name = "Kunde", pricelistId = listA });
+        Assert.Equal((HttpStatusCode.NotFound, "pos.pricelist_not_found"), (stolen.Status, stolen.Code));
+        // Even written directly, a customer of B cannot reference A's list (composite foreign key on organization + list).
+        var customerB = PosSupport.Id((await b.PostAsync("/api/pos/customers", new { name = "Kunde" })).Expect(HttpStatusCode.Created).Json);
+        Assert.Equal("23503", (await _pos.OwnerTryAsync($"UPDATE pos.customers SET pricelist_id = '{listA}' WHERE id = '{customerB}'"))?.SqlState);
+        Assert.Equal(9_00L, await _pos.OwnerScalarAsync<long>($"SELECT price_minor FROM pos.pricelist_items WHERE pricelist_id = '{listA}'"));
+    }
 }

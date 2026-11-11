@@ -100,7 +100,8 @@ public sealed record ReceiptHeader(
     string? IdempotencyKey = null,
     string? RequestHash = null,
     DocumentCustomer? Customer = null,
-    OfflineRecord? Offline = null);
+    OfflineRecord? Offline = null,
+    Guid? PricelistId = null);
 
 /// <summary>
 /// A sale recorded on the till while the API was unreachable (ADR-0022): when the device recorded it and the device's own
@@ -190,6 +191,9 @@ public sealed class Receipt
 
     /// <summary>Offline sale: the device's reference, unique per register (database index).</summary>
     public string? OfflineReference { get; private set; }
+
+    /// <summary>The customer's price list when one of its prices was applied to a line (ADR-0020); its name is printed (snapshot).</summary>
+    public Guid? PricelistId { get; private set; }
 
     public OfflineRecord? Offline => OfflineRecordedAt is { } at && OfflineReference is { } reference ? new OfflineRecord(at, reference) : null;
 
@@ -394,6 +398,7 @@ public sealed class Receipt
         _customer = h.Customer,
         OfflineRecordedAt = h.Offline?.RecordedAt.ToUniversalTime(),
         OfflineReference = h.Offline?.Reference,
+        PricelistId = h.PricelistId,
     };
 
     private void CopyCustomerOf(Receipt original)

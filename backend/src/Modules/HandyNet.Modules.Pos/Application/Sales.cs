@@ -113,7 +113,9 @@ public sealed record ReceiptDto(
     DateTimeOffset? LastReprintedAt,
     ApprovalInfoDto? Approval = null,
     long RoundingMinor = 0,
-    OfflineSaleDto? Offline = null);
+    OfflineSaleDto? Offline = null,
+    Guid? PricelistId = null,
+    string? PricelistName = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -144,7 +146,8 @@ public sealed record LookupDto(
     int? Available,
     bool RequiresImei,
     long? PriceMinor = null,
-    string PriceSource = "None");
+    string PriceSource = "None",
+    long? BasePriceMinor = null);
 
 internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
 {
@@ -241,6 +244,10 @@ internal sealed partial class SaleService(
                 return Error.NotFound("pos.customer_not_found", "Customer not found.");
             customer = found.ToDocument();
         }
+        // The customer's price list, if one applies today: its prices are "the till price" for the line policy (ADR-0020).
+        var pricelist = await prices.PricelistOfAsync(request.CustomerId, ct);
+        if (!pricelist.IsSuccess)
+            return pricelist.Error!;
         var offline = request.Offline is { } o ? new OfflineRecord(o.RecordedAt, o.Reference?.Trim() ?? string.Empty) : null;
         if (offline is not null && await CheckOfflineAsync(register, offline, request, ct) is { } offlineRefused)
             return offlineRefused;
@@ -285,15 +292,19 @@ internal sealed partial class SaleService(
             return Error.NotFound("pos.product_not_found", $"Product {missing} not found.");
 
         // Per-cashier rights: price other than the till price, discount and discount limit (403 with a stable code).
-        var tillPrices = await prices.ResolveAsync(register.WarehouseId, productIds, ct);
+        var tillPrices = await prices.ResolveAsync(register.WarehouseId, productIds, ct, pricelist.Value);
         var rights = Rights();
+        Pricelist? appliedPricelist = null;
         for (var i = 0; i < staged.Count; i++)
         {
             var (line, unit) = staged[i];
-            var allowed = LinePolicy.Check(i + 1, line.UnitPriceMinor, line.Quantity, line.DiscountMinor ?? 0,
-                tillPrices[unit?.ProductId ?? line.ProductId!.Value].Price, rights);
+            var tillPrice = tillPrices[unit?.ProductId ?? line.ProductId!.Value];
+            var allowed = LinePolicy.Check(i + 1, line.UnitPriceMinor, line.Quantity, line.DiscountMinor ?? 0, tillPrice.Price, rights);
             if (!allowed.IsSuccess)
                 return allowed.Error!;
+            // Recorded (and printed) only when a line really sells at the price list's price.
+            if (tillPrice.Pricelist is { } list && tillPrice.Price.GrossMinor == line.UnitPriceMinor)
+                appliedPricelist = list;
         }
 
         var inputs = staged.Select(s =>
@@ -307,7 +318,7 @@ internal sealed partial class SaleService(
         }).ToList();
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
-            idempotencyKey, requestHash, customer, offline);
+            idempotencyKey, requestHash, customer, offline, appliedPricelist?.Id);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
             register.CashRounding);
         if (!receipt.IsSuccess)
@@ -315,7 +326,7 @@ internal sealed partial class SaleService(
         if (LinkCard(card.Value, receipt.Value) is { } cardRefused)
             return cardRefused;
 
-        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct, new DocumentExtras(card.Value));
+        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct, new DocumentExtras(card.Value, appliedPricelist?.Name));
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -517,11 +528,14 @@ internal sealed partial class SaleService(
     }
 
     /// <summary>Scanned code: 15 digits = IMEI of an own in-stock device; otherwise an EAN/GTIN from the catalog.</summary>
-    public async Task<Result<LookupDto>> LookupAsync(string? code, Guid? registerId, CancellationToken ct)
+    public async Task<Result<LookupDto>> LookupAsync(string? code, Guid? registerId, CancellationToken ct, Guid? customerId = null)
     {
         var trimmed = code?.Trim() ?? string.Empty;
         if (trimmed.Length is 0 or > 20)
             return Error.Validation("pos.code", "Scan or enter an EAN or IMEI.");
+        var pricelist = await prices.PricelistOfAsync(customerId, ct);
+        if (!pricelist.IsSuccess)
+            return pricelist.Error!;
 
         Guid? warehouseId = null;
         if (registerId is { } id)
@@ -540,9 +554,10 @@ internal sealed partial class SaleService(
                     .WithDetails(new Dictionary<string, object?> { ["imei"] = unit.Imei });
             var device = (await catalog.GetAsync([unit.ProductId], ct))[unit.ProductId];
             var treatment = unit.TaxScheme == TaxScheme.Margin25a ? TaxTreatment.Margin25a : TaxTreatment.Standard19;
-            var unitPrice = (await prices.ResolveAsync(unit.WarehouseId, [unit.ProductId], ct))[unit.ProductId].Price;
+            var unitPrice = (await prices.ResolveAsync(unit.WarehouseId, [unit.ProductId], ct, pricelist.Value))[unit.ProductId];
             return new LookupDto("Unit", unit.ProductId, device.Brand, device.Name, device.Ean, unit.Imei, unit.UnitId, treatment.ToString(),
-                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0, false, unitPrice.GrossMinor, unitPrice.Source.ToString());
+                unit.WarehouseId, 1, 0, warehouseId is null || warehouseId == unit.WarehouseId ? 1 : 0, false, unitPrice.Price.GrossMinor,
+                unitPrice.Price.Source.ToString(), unitPrice.Base.GrossMinor);
         }
 
         if (await catalog.FindByEanAsync(trimmed, ct) is { } product)
@@ -554,10 +569,10 @@ internal sealed partial class SaleService(
                 level = (await inventory.GetLevelsAsync(w, [product.Id], ct)).GetValueOrDefault(product.Id) ?? new StockSnapshot(w, product.Id, 0, 0);
                 requiresImei = await inventory.HasSerializedStockAsync(w, product.Id, ct);
             }
-            var price = (await prices.ResolveAsync(warehouseId ?? Guid.Empty, [product.Id], ct))[product.Id].Price;
+            var price = (await prices.ResolveAsync(warehouseId ?? Guid.Empty, [product.Id], ct, pricelist.Value))[product.Id];
             return new LookupDto("Product", product.Id, product.Brand, product.Name, product.Ean, null, null, TaxTreatment.Standard19.ToString(),
-                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved, requiresImei, price.GrossMinor,
-                price.Source.ToString());
+                warehouseId, level?.OnHand, level?.Reserved, level is null ? null : level.OnHand - level.Reserved, requiresImei, price.Price.GrossMinor,
+                price.Price.Source.ToString(), price.Base.GrossMinor);
         }
 
         return Error.NotFound("pos.code_not_found", "No product with this EAN and no device with this IMEI in your stock.");
@@ -819,15 +834,18 @@ internal sealed partial class SaleService(
                 p.Method == PaymentMethod.Card ? cardInfo : null)).ToList(),
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
             (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor,
-            r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null);
+            r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null,
+            r.PricelistId, r.Document.PricelistName);
     }
 }
 
 /// <summary>What a receipt document shows beyond the receipt itself: the terminal data of its card payment (ADR-0021).</summary>
-internal sealed record DocumentExtras(CardTransaction? Card = null)
+internal sealed record DocumentExtras(CardTransaction? Card = null, string? PricelistName = null)
 {
     public ReceiptDocument Apply(ReceiptDocument document)
     {
+        if (PricelistName is not null)
+            document = document with { PricelistName = PricelistName, Notes = [.. document.Notes, $"Preisliste: {PricelistName}"] };
         if (Card is not null)
             document = document with
             {

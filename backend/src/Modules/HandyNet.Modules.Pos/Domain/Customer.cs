@@ -61,6 +61,15 @@ public sealed class Customer : IAuditable
     [PersonalData]
     public string? VatId { get; private set; }
 
+    /// <summary>The customer's price list (ADR-0020); null = regular till prices.</summary>
+    public Guid? PricelistId { get; private set; }
+
+    public void SetPricelist(Guid? pricelistId, DateTimeOffset now)
+    {
+        PricelistId = pricelistId;
+        UpdatedAt = now;
+    }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }

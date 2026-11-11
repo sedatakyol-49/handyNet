@@ -12,7 +12,8 @@ namespace HandyNet.Modules.Pos.Application;
 
 /// <summary>
 /// A product of the register's warehouse as the till shows it. Prices are gross cents. PriceMinor/PriceSource is the price
-/// the till uses (own POS price, else own offer net price + 19 % VAT, else none = cashier enters it). ImageUrl is the
+/// the till uses (own POS price, else own offer net price + 19 % VAT, else none = cashier enters it; with a customerId the
+/// customer's price list on top, source "Pricelist"). BasePriceMinor is the price without a price list. ImageUrl is the
 /// thumbnail of the catalog product's primary image (relative to the API base, public, immutable; null without images).
 /// Serialized = sold by IMEI.
 /// </summary>
@@ -31,13 +32,19 @@ public sealed record PosProductDto(
     int Available,
     long? PriceMinor,
     string PriceSource,
-    long? PosPriceMinor);
+    long? PosPriceMinor,
+    long? BasePriceMinor = null);
 
 public sealed record PosCategoryDto(string Category, int ProductCount);
 
 public sealed record SetPosPriceRequest(long? PriceMinor);
 
-public sealed record PosPriceDto(Guid ProductId, long? PosPriceMinor, long? OfferNetPriceMinor, long? PriceMinor, string PriceSource, DateTimeOffset? UpdatedAt);
+/// <summary>
+/// PriceMinor/PriceSource: what the till charges (with customerId: including the customer's price list, source "Pricelist");
+/// BasePriceMinor: the regular till price without a price list.
+/// </summary>
+public sealed record PosPriceDto(Guid ProductId, long? PosPriceMinor, long? OfferNetPriceMinor, long? PriceMinor, string PriceSource, DateTimeOffset? UpdatedAt,
+    long? BasePriceMinor = null, Guid? PricelistId = null, string? PricelistName = null);
 
 internal sealed class SetPosPriceValidator : AbstractValidator<SetPosPriceRequest>
 {
@@ -65,11 +72,40 @@ internal sealed class SellableStockRow
     public long? PosPriceMinor { get; set; }
 }
 
-/// <summary>Effective till prices: own POS price, else own offer (net → gross), else none.</summary>
-internal sealed class PriceResolver(HandyNetDbContext db, ITenantContext tenant, IOfferPriceSource offers)
+/// <summary>
+/// The till price of a product. Price: what the till charges (for a customer with a valid price list: the list's price);
+/// Base: the regular till price without a price list (own POS price, else own offer, else none); Pricelist: the list that
+/// changed the price (null when Price is the base).
+/// </summary>
+internal sealed record ResolvedPrice(EffectivePrice Price, long? PosPriceMinor, long? OfferNetMinor, EffectivePrice Base, Pricelist? Pricelist);
+
+/// <summary>
+/// Effective till prices: own POS price, else own offer (net → gross), else none — and on top the customer's price list
+/// (ADR-0020), when the customer has one that is active and valid today.
+/// </summary>
+internal sealed class PriceResolver(HandyNetDbContext db, ITenantContext tenant, IOfferPriceSource offers, IClock clock)
 {
-    public async Task<IReadOnlyDictionary<Guid, (EffectivePrice Price, long? PosPriceMinor, long? OfferNetMinor)>> ResolveAsync(Guid warehouseId,
-        IReadOnlyCollection<Guid> productIds, CancellationToken ct)
+    /// <summary>
+    /// The price list that applies to a customer today (null: no customer, none assigned, inactive or outside its validity).
+    /// Fails with 404 for a customer that is not the tenant's.
+    /// </summary>
+    public async Task<Result<Pricelist?>> PricelistOfAsync(Guid? customerId, CancellationToken ct)
+    {
+        if (customerId is not { } id)
+            return (Pricelist?)null;
+        var organizationId = tenant.RequiredOrganizationId;
+        var customer = await db.Set<Customer>().AsNoTracking().Where(c => c.Id == id && c.OrganizationId == organizationId)
+            .Select(c => new { c.PricelistId }).FirstOrDefaultAsync(ct);
+        if (customer is null)
+            return Error.NotFound("pos.customer_not_found", "Customer not found.");
+        if (customer.PricelistId is not { } pricelistId)
+            return (Pricelist?)null;
+        var pricelist = await db.Set<Pricelist>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == pricelistId && p.OrganizationId == organizationId, ct);
+        return pricelist is not null && pricelist.AppliesOn(BerlinTime.Today(clock.UtcNow)) ? pricelist : null;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, ResolvedPrice>> ResolveAsync(Guid warehouseId, IReadOnlyCollection<Guid> productIds, CancellationToken ct,
+        Pricelist? pricelist = null)
     {
         var organizationId = tenant.RequiredOrganizationId;
         var own = await db.Set<PosPrice>().AsNoTracking()
@@ -77,11 +113,17 @@ internal sealed class PriceResolver(HandyNetDbContext db, ITenantContext tenant,
             .ToDictionaryAsync(p => p.ProductId, p => p.PriceMinor, ct);
         var missing = productIds.Where(id => !own.ContainsKey(id)).ToList();
         var offer = missing.Count == 0 ? new Dictionary<Guid, long>() : await offers.GetNetPricesAsync(warehouseId, missing, ct);
+        var listPrices = pricelist is null
+            ? new Dictionary<Guid, long>()
+            : await db.Set<PricelistItem>().AsNoTracking().Where(i => i.PricelistId == pricelist.Id && productIds.Contains(i.ProductId))
+                .ToDictionaryAsync(i => i.ProductId, i => i.PriceMinor, ct);
         return productIds.Distinct().ToDictionary(id => id, id =>
         {
             var pos = own.GetValueOrDefault(id);
             long? net = offer.TryGetValue(id, out var n) ? n : null;
-            return (PosPricing.Resolve(pos, net), pos, net);
+            var basePrice = PosPricing.Resolve(pos, net);
+            var price = pricelist?.Resolve(basePrice, listPrices.TryGetValue(id, out var item) ? item : null) ?? basePrice;
+            return new ResolvedPrice(price, pos, net, basePrice, price.Source == PriceSource.Pricelist ? pricelist : null);
         });
     }
 }
@@ -104,19 +146,22 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
 
     /// <summary>Products of the register's warehouse: in stock (available &gt; 0) unless <paramref name="includeOutOfStock"/>.</summary>
     public async Task<Result<PagedResult<PosProductDto>>> ListAsync(Guid registerId, string? search, string? category, bool includeOutOfStock,
-        int? page, int? pageSize, CancellationToken ct)
+        int? page, int? pageSize, CancellationToken ct, Guid? customerId = null)
     {
         var warehouseId = await WarehouseOfAsync(registerId, ct);
         if (warehouseId is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");
-        return await ListInWarehouseAsync(warehouseId.Value, search, category, includeOutOfStock, page, pageSize, ct);
+        return await ListInWarehouseAsync(warehouseId.Value, search, category, includeOutOfStock, page, pageSize, ct, customerId);
     }
 
     /// <summary>Products of one of the organization's warehouses (quotations and invoices outside the till).</summary>
     public async Task<Result<PagedResult<PosProductDto>>> ListInWarehouseAsync(Guid warehouse, string? search, string? category, bool includeOutOfStock,
-        int? page, int? pageSize, CancellationToken ct)
+        int? page, int? pageSize, CancellationToken ct, Guid? customerId = null)
     {
         Guid? warehouseId = warehouse;
+        var pricelist = await prices.PricelistOfAsync(customerId, ct);
+        if (!pricelist.IsSuccess)
+            return pricelist.Error!;
         var query = Stock(warehouseId.Value, includeOutOfStock);
         if (!string.IsNullOrWhiteSpace(category))
         {
@@ -139,15 +184,15 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         var total = await query.CountAsync(ct);
         var rows = await query.OrderBy(s => s.Brand).ThenBy(s => s.Name).ThenBy(s => s.ProductId).Skip((p - 1) * size).Take(size).ToListAsync(ct);
         var productIds = rows.Select(r => r.ProductId).ToList();
-        var resolved = await prices.ResolveAsync(warehouseId.Value, productIds, ct);
+        var resolved = await prices.ResolveAsync(warehouseId.Value, productIds, ct, pricelist.Value);
         // Thumbnail of the primary image via the Catalog contract (one query for the page).
         var images = await catalog.GetImagesAsync(productIds, ct);
         var items = rows.Select(r =>
         {
-            var (price, pos, _) = resolved[r.ProductId];
+            var price = resolved[r.ProductId];
             return new PosProductDto(r.ProductId, r.Brand, r.Name, r.Category, r.Quality, r.Ean, r.Mpn, PrimaryThumbnail(images, r.ProductId), r.Serialized,
                 r.OnHand, r.Reserved,
-                r.Available, price.GrossMinor, price.Source.ToString(), pos);
+                r.Available, price.Price.GrossMinor, price.Price.Source.ToString(), price.PosPriceMinor, price.Base.GrossMinor);
         }).ToList();
         return new PagedResult<PosProductDto>(items, p, size, total);
     }
@@ -163,8 +208,11 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         return counts.OrderBy(c => c.Category).ToList();
     }
 
-    public async Task<Result<PosPriceDto>> GetPriceAsync(Guid productId, Guid? registerId, CancellationToken ct)
+    public async Task<Result<PosPriceDto>> GetPriceAsync(Guid productId, Guid? registerId, CancellationToken ct, Guid? customerId = null)
     {
+        var pricelist = await prices.PricelistOfAsync(customerId, ct);
+        if (!pricelist.IsSuccess)
+            return pricelist.Error!;
         if (!(await catalog.GetAsync([productId], ct)).ContainsKey(productId))
             return Error.NotFound("pos.product_not_found", "Product not found.");
         var warehouseId = Guid.Empty;
@@ -174,7 +222,7 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
                 return Error.NotFound("pos.register_not_found", "Register not found.");
             warehouseId = w;
         }
-        return await ToDtoAsync(productId, warehouseId, ct);
+        return await ToDtoAsync(productId, warehouseId, ct, pricelist.Value);
     }
 
     /// <summary>Sets (or with null clears) the organization's own POS price of a product. Changes are audited.</summary>
@@ -211,12 +259,14 @@ internal sealed class ProductService(HandyNetDbContext db, ITenantContext tenant
         return await ToDtoAsync(productId, Guid.Empty, ct);
     }
 
-    private async Task<PosPriceDto> ToDtoAsync(Guid productId, Guid warehouseId, CancellationToken ct)
+    private async Task<PosPriceDto> ToDtoAsync(Guid productId, Guid warehouseId, CancellationToken ct, Pricelist? pricelist = null)
     {
-        var (price, pos, net) = (await prices.ResolveAsync(warehouseId, [productId], ct))[productId];
+        var resolved = (await prices.ResolveAsync(warehouseId, [productId], ct, pricelist))[productId];
+        var (price, pos, net) = (resolved.Price, resolved.PosPriceMinor, resolved.OfferNetMinor);
         var updatedAt = await db.Set<PosPrice>().AsNoTracking().Where(p => p.OrganizationId == OrganizationId && p.ProductId == productId)
             .Select(p => (DateTimeOffset?)p.UpdatedAt).FirstOrDefaultAsync(ct);
-        return new PosPriceDto(productId, pos, net, price.GrossMinor, price.Source.ToString(), updatedAt);
+        return new PosPriceDto(productId, pos, net, price.GrossMinor, price.Source.ToString(), updatedAt, resolved.Base.GrossMinor,
+            resolved.Pricelist?.Id, resolved.Pricelist?.Name);
     }
 
     /// <summary>The primary image's thumbnail URL (relative to the API base), or null when the product has no image.</summary>

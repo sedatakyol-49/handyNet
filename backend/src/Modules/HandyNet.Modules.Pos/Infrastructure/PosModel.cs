@@ -134,6 +134,8 @@ public sealed class PosModel : IModuleModel
                 .HasPrincipalKey(s => new { s.OrganizationId, s.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Warehouse>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.WarehouseId })
                 .HasPrincipalKey(w => new { w.OrganizationId, w.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Pricelist>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.PricelistId })
+                .HasPrincipalKey(p => new { p.OrganizationId, p.Id }).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => x.SalesInvoiceId).HasFilter("sales_invoice_id IS NOT NULL");
             b.HasOne<SalesInvoice>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.SalesInvoiceId })
                 .HasPrincipalKey(i => new { i.OrganizationId, i.Id }).OnDelete(DeleteBehavior.Restrict);
@@ -202,6 +204,33 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.Version).IsRowVersion();
             b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
             b.HasIndex(x => new { x.OrganizationId, x.Name });
+            b.HasIndex(x => new { x.OrganizationId, x.PricelistId }).HasFilter("pricelist_id IS NOT NULL");
+            b.HasOne<Pricelist>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.PricelistId })
+                .HasPrincipalKey(p => new { p.OrganizationId, p.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Pricelist>(b =>
+        {
+            b.ToTable("pricelists", Schema, t =>
+            {
+                t.HasCheckConstraint("ck_pricelists_discount", $"discount_basis_points BETWEEN 0 AND {Pricelist.MaxDiscountBasisPoints}");
+                t.HasCheckConstraint("ck_pricelists_validity", "valid_from IS NULL OR valid_to IS NULL OR valid_from <= valid_to");
+            });
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(Pricelist.MaxNameLength).IsRequired();
+            b.Property(x => x.Version).IsRowVersion();
+            b.HasAlternateKey(x => new { x.OrganizationId, x.Id });
+            b.HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<PricelistItem>(b =>
+        {
+            b.ToTable("pricelist_items", Schema, t => t.HasCheckConstraint("ck_pricelist_items_price", "price_minor > 0"));
+            b.HasKey(x => new { x.PricelistId, x.ProductId });
+            b.HasIndex(x => new { x.OrganizationId, x.ProductId });
+            b.HasOne<Pricelist>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.PricelistId })
+                .HasPrincipalKey(p => new { p.OrganizationId, p.Id }).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CashierPin>(b =>

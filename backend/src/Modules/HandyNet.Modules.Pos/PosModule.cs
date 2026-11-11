@@ -89,6 +89,7 @@ public static class PosModule
         services.AddScoped<CardTransactionService>();
         services.AddSingleton<DisplayStateStore>();
         services.AddScoped<DisplayService>();
+        services.AddScoped<PricelistService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -147,14 +148,14 @@ public static class PosModule
 
         // ---- products and prices ------------------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/products", async (Guid id, string? search, string? category, bool? includeOutOfStock, int? page,
-                int? pageSize, ProductService service, CancellationToken ct) =>
-            (await service.ListAsync(id, search, category, includeOutOfStock ?? false, page, pageSize, ct)).ToHttp(Results.Ok));
+                int? pageSize, Guid? customerId, ProductService service, CancellationToken ct) =>
+            (await service.ListAsync(id, search, category, includeOutOfStock ?? false, page, pageSize, ct, customerId)).ToHttp(Results.Ok));
 
         sell.MapGet("/registers/{id:guid}/product-categories", async (Guid id, ProductService service, CancellationToken ct) =>
             (await service.CategoriesAsync(id, ct)).ToHttp(Results.Ok));
 
-        sell.MapGet("/prices/{productId:guid}", async (Guid productId, Guid? registerId, ProductService service, CancellationToken ct) =>
-            (await service.GetPriceAsync(productId, registerId, ct)).ToHttp(Results.Ok));
+        sell.MapGet("/prices/{productId:guid}", async (Guid productId, Guid? registerId, Guid? customerId, ProductService service, CancellationToken ct) =>
+            (await service.GetPriceAsync(productId, registerId, ct, customerId)).ToHttp(Results.Ok));
 
         manage.MapPut("/prices/{productId:guid}", async (Guid productId, SetPosPriceRequest request, IValidator<SetPosPriceRequest> validator,
                 ProductService service, CancellationToken ct) =>
@@ -218,8 +219,8 @@ public static class PosModule
             })
             .RequirePosPermission(Permissions.PosRefund);
 
-        sell.MapGet("/lookup", async (string? code, Guid? registerId, SaleService service, CancellationToken ct) =>
-            (await service.LookupAsync(code, registerId, ct)).ToHttp(Results.Ok));
+        sell.MapGet("/lookup", async (string? code, Guid? registerId, Guid? customerId, SaleService service, CancellationToken ct) =>
+            (await service.LookupAsync(code, registerId, ct, customerId)).ToHttp(Results.Ok));
 
         MapCashierEndpoints(pos, sell);
         MapDocumentEndpoints(app, sell);
@@ -227,6 +228,7 @@ public static class PosModule
         PrinterEndpoints.Map(sell, manage); // receipt printer profiles (ADR-0018)
         CardTerminalEndpoints.Map(sell, manage); // card terminal profiles and card transactions (ADR-0021)
         DisplayEndpoints.Map(app, sell); // customer display link, state and public long poll (ADR-0023)
+        PricelistEndpoints.Map(sell, manage); // price lists and customer-specific prices (ADR-0020)
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));

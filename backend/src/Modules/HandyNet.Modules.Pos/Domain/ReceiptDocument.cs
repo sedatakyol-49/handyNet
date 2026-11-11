@@ -90,7 +90,8 @@ public sealed record ReceiptDocument(
     DocumentFiscal Fiscal,
     DocumentCustomer? Customer = null,
     long RoundingMinor = 0,
-    DocumentOffline? Offline = null)
+    DocumentOffline? Offline = null,
+    string? PricelistName = null)
 {
     public const string StandardLabel = "A";
     public const string MarginLabel = "§25a";
