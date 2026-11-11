@@ -117,7 +117,13 @@ are out of scope for phone shops unless requested.
 - 🟡 **D. Customers & pricing**: customer master at POS, pricelists, customer-specific prices, discount tags,
   loyalty points / coupons / promotions, gift cards (sale + redemption), cash rounding. Backend ✅ customer master
   (RLS, `[PersonalData]` kept out of the audit log), optional customer on a sale, printed snapshot on the receipt,
-  per-organization POS price. Open: ⬜ pricelists/customer prices, ⬜ loyalty/coupons/gift cards, ✅ cash rounding to 0,05 € per register (receipt, Z-report; 2026-10-18),
+  per-organization POS price. 🟡 pricelists/customer prices, gift cards (sale + redemption) and loyalty points (2026-11-11, ADR-0020): backend ✅
+  (price lists with general discount and item prices, list price = till price for the customer; gift cards sold as
+  not-taxable lines with a one-time code, redeemed as a non-cash payment under a row lock, storno/return/void/reissue;
+  loyalty points earned per euro and redeemed as a price reduction across lines, reversed by storno/returns; unit and
+  integration tests incl. concurrency and RLS), frontend being built separately — status not verified here. Not reviewed
+  by a tax adviser (gift card VAT treatment, points as a price reduction). Open: ⬜ coupons/promotions (not in scope),
+  ⬜ discount tags, ✅ cash rounding to 0,05 € per register (receipt, Z-report; 2026-10-18),
   ⬜ customer retention/anonymization job; ✅ UI (customer picker, create/edit, on receipt).
 - 🟡 **E. Orders & documents**: order history with search/filter, refunds from an order, invoice for a POS sale,
   e-receipt by email/QR, reprint, ship-later / pick-up orders, quotation → POS order. Backend ✅ history filters
@@ -127,9 +133,16 @@ are out of scope for phone shops unless requested.
   differences, session report, all-orders analytics, product/cashier/payment reports. Backend ✅ denominations at
   opening/closing (stored, total = opening/counted cash), predefined + free-text reasons, closing difference, sales
   report by product/cashier/payment method per session or date range. ✅ UI (denomination counting, reasons, report page). ✅ gapless Z number per register at closing (DSFinV-K Z_NR; Z-report, sessions list; existing closings backfilled; 2026-10-25, ADR-0015). Open: ⬜ export (CSV/PDF).
-- ⬜ **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
+- 🟡 **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).
+  Backend ✅ 2026-11-11 for three items, frontend/bridge being built separately (status not verified here):
+  **customer display** (ADR-0023: revocable remote link per register, state in memory, anonymous long-poll endpoint),
+  **card terminal** (ADR-0021: terminal profiles per register, card transactions recorded before the terminal starts,
+  linked to the receipt of the sale/return; the ZVT bridge and any test on a real terminal are ⬜ on the backend side —
+  the server never talks to a terminal), **offline mode** (ADR-0022: per-register switch; sales recorded offline are
+  booked afterwards with server time, the next gapless number and the offline record on the receipt; the time until the
+  signature is without TSE protection — to be reviewed by a tax adviser). Open: ⬜ QR bank payment, ⬜ OPI.
   🟡 Fiscal layer (ADR-0012, 2026-10-18): ✅ fiscal mode per organization/register set by the platform admin
   ("Kassen & TSE"), ✅ simulated test TSE (ECDSA, counters, idempotent retries, latency/failure/outage injection,
   "Test-TSE – nicht für den Echtbetrieb"), ✅ outage path ("Sicherheitseinrichtung ausgefallen", outages recorded),
@@ -152,8 +165,10 @@ Dependencies: Phase 2 payments + invoicing.
   (GoBD), idempotent sales/returns, EAN/IMEI lookup, fiscal signer abstraction with a test signer that is refused in
   Production. ✅ POS touch UI (registers, till, receipts, sessions, Z-report). ✅ Fiscal layer (ADR-0012): simulated test
   TSE, TSE outage handling, QR code, basic DSFinV-K export (not certified). Open: 🟡 fiskaly TSE adapter — implemented
-  against the SIGN DE v2 shape, ⬜ verified in the fiskaly sandbox, ⬜ certified DSFinV-K (validator, missing files), ⬜ receipt printing (ESC/POS/PDF) and e-receipts, ⬜ card terminal integration (ZVT/OPI),
-  ⬜ till registration with the tax office, ⬜ reduced VAT rate/vouchers, ⬜ external compliance review. No fake
+  against the SIGN DE v2 shape, ⬜ verified in the fiskaly sandbox, ⬜ certified DSFinV-K (validator, missing files), ⬜ receipt printing (ESC/POS/PDF) and e-receipts, 🟡 card terminal integration (backend records and
+  receipt linkage ✅ ADR-0021; ZVT bridge/UI separate, not verified on hardware; OPI ⬜), 🟡 pricelists, gift cards (Mehrzweck-Gutschein) and loyalty
+  points (backend ✅ ADR-0020, UI separate), 🟡 offline sales (backend ✅ ADR-0022, device queue separate), 🟡 customer display (backend ✅ ADR-0023, UI separate),
+  ⬜ till registration with the tax office, ⬜ reduced VAT rate, ⬜ external compliance review (now also: gift card VAT, loyalty reductions, offline signing). No fake
   signatures, no compliance claimed.
 - ✅ Pricing & Ankauf (ADR-0007): monthly XLSX list, approval rules, immutable price versions (current list only), versioned condition policy with overrides and deductions, dealer quotes with preserved versions. Open: device intake + inspection to final price, §25a documentation, stock entry with IMEI, individual offers, frontend.
 - Repair management and the B2B repair network.

@@ -40,6 +40,14 @@ Not certified and not reviewed by a tax adviser. Non-secret settings:
 | `Pos:Fiscal:RetryDelayMs` | `200` | pause between attempts (× attempt number) |
 | `Pos:Fiskaly:BaseUrl` | `https://kassensichv-middleware.fiskaly.com/api/v2` | fiskaly SIGN DE v2 middleware (https only). Same URL for TEST and LIVE — the API key decides the environment, and client registration and transactions are "only available via Middleware" per the spec |
 | `Pos:Fiskaly:TimeoutSeconds` | `10` | HTTP timeout per fiskaly call |
+| `Pos:OfflineMaxAgeHours` | `72` | oldest offline sale (hours between recording on the till and booking) the API accepts (1–720; ADR-0022). Older ones answer `pos.offline_time_invalid` and stay in the device's queue |
+| `Pos:Terminal:AllowSimulatedInProduction` | `false` | **staging only**: allows the simulated card terminal (approves without a card) in the Production environment (ADR-0021) |
+| `Pos:DisplayLinkDays` | `30` | validity of a remote customer display link (1–3650; ADR-0023) |
+| `Pos:DisplayPollSeconds` | `20` | how long the public display endpoint holds a long-poll open when nothing changed (1–55). Keep it below the reverse proxy's read timeout |
+| `Pos:GiftCard:MinMinor` / `MaxMinor` | `500` / `50000` | range a gift card can be sold for, in cents (ADR-0020) |
+| `Pos:GiftCard:ValidityYears` | `3` | a gift card expires on 31 December of the issue year plus this many years (1–30) |
+| `RateLimits:GiftCardLookupPerMinute` | `30` | per signed-in user: gift card lookup by code at the till |
+| `RateLimits:PublicDisplayPerMinute` | `240` | per IP: anonymous customer display polls (a display re-polls after every change; several displays of a shop share one IP) |
 | `Pos:Fiskaly:AdministrationTimeoutSeconds` | `60` | timeout of slow TSS administration calls (30–300; the spec asks for ≥ 30 s when deploying a TSS) |
 | `Pos:Fiskaly:MaxRetries` | `2` | HTTP retries on timeouts, 429, 499 and 5xx (same request, idempotent) |
 | `Pos:Fiskaly:RetryBaseDelayMs` | `250` | exponential backoff base between those retries; a `Retry-After` header wins (capped at 5 s) |
@@ -171,3 +179,22 @@ Set `Invoicing:Issuer` (name, legal name, address, VAT id, tax number) before go
 month automatically (`Invoicing:AutoIssue`, checked every `Invoicing:AutoIssueCheckMinutes`); a platform admin can
 (re-)issue any completed month with `POST /api/admin/invoices/issue {"month":"YYYY-MM"}` — it is idempotent.
 `Invoicing:VatRateBasisPoints` must equal `Payments:CommissionVatBasisPoints`.
+
+## POS completion (ADR-0020 … 0023): things to know in operation
+
+- **Customer display state lives in the memory of one API instance.** A restart or deployment empties it (displays show
+  idle until the till pushes again). With more than one API instance behind a load balancer the till's push and the
+  display's poll can land on different instances: run one instance, or pin `/api/pos/registers/*/display-state` and
+  `/api/public/pos-display/*` to the same one. Long polls stay open up to `Pos:DisplayPollSeconds`; the proxy must not
+  buffer or time them out earlier.
+- **Card payments without a receipt**: `GET /api/pos/card-transactions?status=Approved&unlinked=true` lists terminal
+  charges that no receipt uses (the sale failed after the terminal approved). They must be reversed on the terminal or
+  booked; the API never reverses anything itself — it has no connection to terminals.
+- **Gift card codes cannot be recovered.** Only the SHA-256 and the last four characters are stored; a lost code is
+  replaced with "reissue" (new code, same balance). Database restores bring balances back to the backup's state like
+  every other table.
+- **Offline sales** arrive with their original Idempotency-Key; a retried sync never books twice. Rejected entries
+  (`pos.offline_time_invalid`, stock conflicts, closed session) stay on the device and need a decision there.
+- Nothing here is certified or reviewed: gift card VAT treatment, loyalty redemptions as price reductions and signing
+  offline sales after the fact need a tax adviser; the ZVT integration is not verified on hardware.
+
