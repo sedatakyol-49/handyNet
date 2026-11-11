@@ -30,6 +30,8 @@ import { DisplayState } from './display-state';
       @if (notice(); as n) {
         <p class="shrink-0 rounded-full bg-pos-warn-soft px-3 py-1 text-xs font-semibold text-pos-ink" role="status" data-testid="cd-notice">{{ n }}</p>
       }
+      <!-- Page controls (full screen); kept out of the customer's way in the header. -->
+      <ng-content select="[cdAction]" />
     </header>
 
     @if (s.phase === 'idle') {

@@ -224,7 +224,7 @@ test.describe.serial('POS offline mode', () => {
     // closing is blocked while the entry is unresolved
     const sessionId = await withApi(async (api) => (await api.call<{ id: string }>('GET', `/api/pos/registers/${registerId}/sessions/current`, orgId)).id);
     await page.goto(`/kasse/sitzungen/${sessionId}`);
-    await expect(page.getByTestId('pos-close-blocked')).toContainText('1 offline erfasste Verkäufe');
+    await expect(page.getByTestId('pos-close-blocked')).toContainText('nicht gebucht (Anzahl: 1)');
     await expect(page.getByTestId('pos-close-submit')).toHaveCount(0);
     await page.getByTestId('pos-close-blocked-link').click();
 

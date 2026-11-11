@@ -2,12 +2,17 @@ import { expect, test } from '@playwright/test';
 import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, hasAdmin, login, randomEan } from './support/handynet';
 
 /**
- * Local customer display against the real API: a second window of the same browser (`/kasse/:id/kundendisplay`) follows
+ * Customer display against the real API.
+ *
+ * Local: a second window of the same browser (`/kasse/:id/kundendisplay`) follows
  * the till over BroadcastChannel — idle, cart with total and discount, payment with tendered/change, thank-you screen
  * with change and the e-receipt QR — and never shows the attached customer or a line note. It also follows the till's
  * language (Arabic → right-to-left) and goes back to the welcome screen when the cashier leaves the selling screen.
+ *
+ * Remote: the till creates a link (QR) for another device; an anonymous browser opens `/kundendisplay/<token>` and
+ * follows the till through the API (state push + long-poll); a new link invalidates the old one, revoking ends it.
  */
-test.describe('POS customer display (local)', () => {
+test.describe('POS customer display', () => {
   test.skip(!hasAdmin, 'Set HN_ADMIN_EMAIL and HN_ADMIN_PASSWORD to run e2e tests against the API.');
 
   const shop = { ...company('shop'), name: `E2E Displayshop ${RUN}`, email: `display-${RUN}@e2e.handynet.test` };
@@ -134,5 +139,78 @@ test.describe('POS customer display (local)', () => {
     // ---- leaving by a full page load (or closing the tab): welcome screen as well
     await page.goto('/kasse');
     await expect(display.getByTestId('customer-display')).toHaveAttribute('data-phase', 'idle');
+  });
+
+  test('remote display: link from the till, anonymous device follows via the API, new link and revoke end the old one', async ({ page, browser }) => {
+    await login(page, shop.email, PASSWORD);
+    await page.goto(`/kasse/${registerId}`);
+    const tile = page.getByTestId('pos-product').filter({ hasText: product });
+    await tile.click();
+    await expect(page.getByTestId('pos-total')).toHaveText('12,50 €');
+
+    // ---- create the link in the till menu
+    await page.getByTestId('pos-menu').click();
+    await page.getByTestId('pos-menu-display').click();
+    const dialog = page.getByTestId('pos-display-dialog');
+    await expect(dialog.getByTestId('pos-display-none')).toBeVisible();
+    await dialog.getByTestId('pos-display-create').click();
+    await expect(dialog.getByTestId('pos-display-qr').getByTestId('qr-code')).toBeVisible();
+    const firstUrl = (await dialog.getByTestId('pos-display-url').innerText()).trim();
+    expect(firstUrl).toMatch(/\/kundendisplay\/[A-Za-z0-9_-]{20,}$/);
+
+    // ---- another device without a login opens it and sees the cart that is already on the till
+    const device = await browser.newContext({ locale: 'de-DE' });
+    const remote = await device.newPage();
+    await remote.goto(firstUrl);
+    const view = remote.getByTestId('customer-display');
+    await expect(view).toHaveAttribute('data-phase', 'cart');
+    await expect(remote.getByTestId('cd-shop')).toHaveText(shop.name);
+    await expect(remote.getByTestId('cd-total')).toHaveText('12,50 €');
+    await expect(remote).toHaveURL(/\/kundendisplay\//); // no redirect to the login page
+
+    // ---- it follows the till: cart, payment, receipt
+    await dialog.getByTestId('dialog-close').click();
+    await tile.click();
+    await expect(remote.getByTestId('cd-total')).toHaveText('25,00 €');
+    await page.getByTestId('pos-pay').click();
+    await page.getByTestId('pos-method-Cash').click();
+    await page.getByTestId('pos-pay-amount').fill('30');
+    await expect(view).toHaveAttribute('data-phase', 'payment');
+    await expect(remote.getByTestId('cd-change')).toHaveText('5,00 €');
+    await page.getByTestId('pos-validate').click();
+    await expect(page.getByTestId('pos-sale-done')).toBeVisible();
+    await expect(view).toHaveAttribute('data-phase', 'done');
+    await expect(remote.getByTestId('cd-done')).toContainText('Vielen Dank für Ihren Einkauf!');
+    await expect(remote.getByTestId('cd-change')).toHaveText('5,00 €');
+    await page.getByTestId('pos-new-sale').click();
+    await expect(view).toHaveAttribute('data-phase', 'idle');
+
+    // ---- the dialog knows about the active link but never shows the token again
+    await page.getByTestId('pos-menu').click();
+    await page.getByTestId('pos-menu-display').click();
+    await expect(dialog.getByTestId('pos-display-active')).toBeVisible();
+    await expect(dialog.getByTestId('pos-display-qr')).toHaveCount(0);
+
+    // ---- a new link invalidates the old one (the waiting device is told at once)
+    await dialog.getByTestId('pos-display-create').click();
+    const secondUrl = (await dialog.getByTestId('pos-display-url').innerText()).trim();
+    expect(secondUrl).not.toBe(firstUrl);
+    await expect(remote.getByTestId('cd-gone')).toBeVisible({ timeout: 30_000 });
+    await expect(remote.getByTestId('cd-gone')).toContainText('nicht mehr gültig');
+
+    // ---- the new link works (dark theme requested on the link), revoking ends it
+    const second = await device.newPage();
+    await second.goto(secondUrl + '?theme=dark');
+    await expect(second.getByTestId('customer-display')).toHaveAttribute('data-phase', 'idle');
+    await expect(second.getByTestId('customer-display')).toHaveAttribute('data-theme', 'dark');
+    await dialog.getByTestId('pos-display-revoke').click();
+    await expect(dialog.getByTestId('pos-display-none')).toBeVisible();
+    await expect(second.getByTestId('cd-gone')).toBeVisible({ timeout: 30_000 });
+
+    // ---- an unknown token gets the same answer
+    const unknown = await device.newPage();
+    await unknown.goto('/kundendisplay/' + 'x'.repeat(43));
+    await expect(unknown.getByTestId('cd-gone')).toBeVisible();
+    await device.close();
   });
 });

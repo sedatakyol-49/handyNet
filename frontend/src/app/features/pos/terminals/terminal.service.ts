@@ -145,7 +145,7 @@ export class TerminalService {
     const outcome = await this.runTerminal(profile, 'reversal', card.amountMinor, receiptNumber);
     if (outcome.status !== 'Approved') {
       this.active.set(null);
-      return { kind: 'failed', text: this.outcomeText(outcome) };
+      return { kind: 'failed', text: this.outcomeText(outcome, 'reversal') };
     }
     this.patch({ phase: 'saving' });
     const text = [outcome.test ? 'TEST' : null, outcome.resultText, outcome.traceNumber ? `Trace ${outcome.traceNumber}` : null].filter(Boolean).join(' · ') || null;
@@ -195,8 +195,8 @@ export class TerminalService {
   }
 
   /** Understandable text for an outcome that is not an approval. */
-  outcomeText(outcome: TerminalOutcome): string {
-    const text = this.i18n.t(outcomeMessageKey(outcome));
+  outcomeText(outcome: TerminalOutcome, operation: 'payment' | 'refund' | 'reversal' = 'payment'): string {
+    const text = this.i18n.t(outcomeMessageKey(outcome, operation));
     const detail = outcome.resultText?.trim();
     return detail ? `${text} (${detail})` : text;
   }

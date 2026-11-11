@@ -111,7 +111,11 @@ export function cardLabel(c: { cardName?: string | null; maskedPan?: string | nu
 }
 
 /** Translation key for a run that did not end in an approval (shown in the payment dialog). */
-export function outcomeMessageKey(o: Pick<TerminalOutcome, 'status' | 'uncertain' | 'errorCode'>): string {
+export function outcomeMessageKey(o: Pick<TerminalOutcome, 'status' | 'uncertain' | 'errorCode'>, operation: 'payment' | 'refund' | 'reversal' = 'payment'): string {
+  if (operation === 'reversal') {
+    if (o.uncertain) return 'pos.terminals.flow.reversalUncertain';
+    if (o.status === 'Declined' || o.status === 'Aborted') return 'pos.terminals.flow.reversalRefused';
+  }
   if (o.uncertain) return 'pos.terminals.flow.uncertain';
   if (o.status === 'Declined') return 'pos.terminals.flow.declined';
   if (o.status === 'Aborted') return 'pos.terminals.flow.aborted';

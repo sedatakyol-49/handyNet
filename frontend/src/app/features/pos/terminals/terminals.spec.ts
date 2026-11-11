@@ -228,6 +228,10 @@ describe('card payment flow rules', () => {
     expect(outcomeMessageKey({ status: 'Aborted', uncertain: false, errorCode: null })).toBe('pos.terminals.flow.aborted');
     expect(outcomeMessageKey({ status: 'Failed', uncertain: true, errorCode: 'timeout' })).toBe('pos.terminals.flow.uncertain');
     expect(outcomeMessageKey({ status: 'Failed', uncertain: false, errorCode: 'bridgeUnreachable' })).toBe('pos.terminals.errors.bridgeUnreachable');
+    // a reversal that did not go through is worded as such (not "use another card")
+    expect(outcomeMessageKey({ status: 'Declined', uncertain: false, errorCode: null }, 'reversal')).toBe('pos.terminals.flow.reversalRefused');
+    expect(outcomeMessageKey({ status: 'Failed', uncertain: true, errorCode: 'timeout' }, 'reversal')).toBe('pos.terminals.flow.reversalUncertain');
+    expect(outcomeMessageKey({ status: 'Failed', uncertain: false, errorCode: 'bridgeUnreachable' }, 'reversal')).toBe('pos.terminals.errors.bridgeUnreachable');
   });
 
   it('an approved payment travels with the parked ticket (reload) and an unreported one keeps its result', () => {

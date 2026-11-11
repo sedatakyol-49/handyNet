@@ -10,7 +10,8 @@ import { ADMIN_EMAIL, ADMIN_PASSWORD, Api, PASSWORD, RUN, company, hasAdmin, log
  * - no answer (outcome unknown): the cashier must check the terminal; "not booked" goes back, nothing is sold;
  * - approved but the API refuses the sale (stock gone): the card payment is reversed and the cashier is told so;
  * - reversal fails: the approved payment stays attached to the ticket, blocks discarding, survives a reload, shows up
- *   under "Kartenzahlungen ohne Beleg" and is reversed from there.
+ *   under "Kartenzahlungen ohne Beleg" and is reversed from there;
+ * - a return refunded to the card runs the refund on the terminal and links it to the return receipt.
  */
 test.describe.serial('POS card terminal (simulated)', () => {
   test.skip(!hasAdmin, 'Set HN_ADMIN_EMAIL and HN_ADMIN_PASSWORD to run e2e tests against the API.');
@@ -159,20 +160,20 @@ test.describe.serial('POS card terminal (simulated)', () => {
 
     await page.getByTestId('pos-validate').click();
     await dialog.getByTestId('pos-terminal-sim-decline').click();
-    await expect(error).toContainText('Kartenzahlung abgelehnt. Es wurde nichts abgebucht.');
+    await expect(error).toContainText('Vom Terminal abgelehnt. Es wurde nichts gebucht.');
     await expect(page.getByTestId('pos-payment')).toBeVisible(); // still in the payment dialog
     await expect(page.getByTestId('pos-card-attached')).toHaveCount(0);
 
     await page.getByTestId('pos-validate').click();
     await dialog.getByTestId('pos-terminal-sim-abort').click();
-    await expect(error).toContainText('Kartenzahlung abgebrochen. Es wurde nichts abgebucht.');
+    await expect(error).toContainText('Am Terminal abgebrochen. Es wurde nichts gebucht.');
 
     // no answer from the terminal: only a look at the terminal can tell
     await page.getByTestId('pos-validate').click();
     await dialog.getByTestId('pos-terminal-sim-timeout').click();
     const uncertain = page.getByTestId('pos-card-uncertain');
     await expect(uncertain).toBeVisible();
-    await expect(uncertain).toContainText('Das Ergebnis der Kartenzahlung ist unbekannt');
+    await expect(uncertain).toContainText('Das Ergebnis am Terminal ist unbekannt');
     await expect(uncertain).toContainText('Prüfen Sie am Terminal');
     await uncertain.getByTestId('pos-card-uncertain-no').click();
     await expect(uncertain).toBeHidden();
@@ -240,7 +241,8 @@ test.describe.serial('POS card terminal (simulated)', () => {
     await page.getByTestId('pos-discard').click();
     await expect(page.getByTestId('pos-discard-blocked')).toContainText('Kartenzahlung über 12,50 € genehmigt');
     await expect(page.getByTestId('pos-discard-confirm')).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    await page.locator('dialog[open]').getByTestId('dialog-close').click();
+    await expect(page.getByTestId('pos-discard-blocked')).toBeHidden();
 
     // changing the card amount is refused until the payment is reversed
     await page.getByTestId('pos-pay').click();
@@ -269,5 +271,40 @@ test.describe.serial('POS card terminal (simulated)', () => {
     const all = await transactions();
     expect(all.filter((t) => t.status === 'Approved' && !t.receiptId)).toHaveLength(0);
     expect(all.filter((t) => t.status === 'Reversed')).toHaveLength(2);
+  });
+
+  test('return with a card refund: the refund runs on the terminal and is linked to the return receipt', async ({ page }) => {
+    const api = await Api.login(shop.email, PASSWORD);
+    const sold = (await api.call<{ items: { id: string; number: number }[] }>('GET', `/api/pos/sales?registerId=${registerId}&pageSize=50`, orgId)).items.find((r) => r.number === 1)!;
+    await api.dispose();
+
+    await login(page, shop.email, PASSWORD);
+    await page.goto(`/kasse/belege/${sold.id}`);
+    await page.getByTestId('pos-start-return').click();
+    await page.getByTestId('pos-return-qty').fill('1');
+    await page.getByTestId('pos-refund-Card').check();
+    await page.getByTestId('pos-return-reason').fill('Kabel defekt');
+    await page.getByTestId('pos-return-submit').click();
+
+    // declined on the terminal: nothing is booked, the cashier is told in the dialog
+    await page.getByTestId('pos-return-confirm').click();
+    const dialog = page.getByTestId('pos-terminal-dialog');
+    await expect(dialog).toContainText('Gutschrift auf Karte');
+    await expect(dialog.getByTestId('pos-terminal-amount')).toHaveText('12,50 €');
+    await dialog.getByTestId('pos-terminal-sim-decline').click();
+    await expect(page.getByTestId('pos-return-dialog-error')).toContainText('Vom Terminal abgelehnt. Es wurde nichts gebucht.');
+
+    // approved: the return receipt is booked with the terminal data
+    await page.getByTestId('pos-return-confirm').click();
+    await dialog.getByTestId('pos-terminal-sim-approve').click();
+    await expect(page).not.toHaveURL(new RegExp(sold.id));
+    const receipt = page.getByTestId('receipt');
+    await expect(receipt).toContainText('-12,50 €');
+    await expect(receipt.getByTestId('receipt-card-line').first()).toContainText('TEST');
+
+    const refunds = (await transactions()).filter((t) => t.kind === 'Refund');
+    expect(refunds.map((t) => t.status).sort()).toEqual(['Approved', 'Declined']);
+    expect(refunds.find((t) => t.status === 'Approved')).toMatchObject({ amountMinor: 1250, isTest: true });
+    expect(refunds.find((t) => t.status === 'Approved')!.receiptId).toBeTruthy();
   });
 });

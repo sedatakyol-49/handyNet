@@ -3409,9 +3409,9 @@
       },
       "flow": {
         "notStarted": "El pago con tarjeta no se inició y no se contactó con el terminal: {reason}",
-        "declined": "Pago con tarjeta rechazado. No se ha cobrado nada. Use otra tarjeta u otro medio de pago.",
-        "aborted": "Pago con tarjeta cancelado. No se ha cobrado nada.",
-        "uncertain": "Se desconoce el resultado del pago con tarjeta: la conexión con el terminal se perdió después de enviar el importe.",
+        "declined": "Rechazado por el terminal. No se ha registrado ninguna operación. Use otra tarjeta u otro medio de pago.",
+        "aborted": "Cancelado en el terminal. No se ha registrado ninguna operación.",
+        "uncertain": "Se desconoce el resultado en el terminal: la conexión se perdió después de enviar el importe.",
         "uncertainTitle": "Resultado del pago con tarjeta desconocido",
         "uncertainHelp": "Compruebe en el terminal (pantalla, recibo o diario) si se han cobrado {amount}. Solo si el pago figura allí como realizado, confírmelo aquí: la venta se registrará sin datos del terminal. En caso contrario, vuelva al pago e inténtelo de nuevo.",
         "uncertainNo": "No cobrado: volver al pago",
@@ -3433,7 +3433,9 @@
         "discardBlocked": "Hay un pago con tarjeta de {amount} aprobado para este tique. Anúlelo primero en el diálogo de pago («Anular pago con tarjeta») y después podrá descartar el tique.",
         "refundKept": "La devolución no se registró: {reason} El abono de {amount} ya se realizó en el terminal y queda guardado; al confirmar de nuevo esta devolución se reutiliza. Si no funciona, informe al responsable («Pagos con tarjeta sin recibo»).",
         "refundAmountChanged": "Para esta devolución ya se realizó un abono de {amount} en el terminal. Vuelva a seleccionar exactamente las líneas de esa devolución o informe al responsable.",
-        "refundUncertain": "Compruebe en el terminal si el abono se realizó. Si es así, confirme de nuevo la devolución: se registrará sin terminal. Si no, cierre el diálogo y empiece la devolución de nuevo."
+        "refundUncertain": "Compruebe en el terminal si el abono se realizó. Si es así, confirme de nuevo la devolución: se registrará sin terminal. Si no, cierre el diálogo y empiece la devolución de nuevo.",
+        "reversalRefused": "El terminal no realizó la anulación.",
+        "reversalUncertain": "No se sabe si la anulación se realizó en el terminal (conexión perdida). Compruébelo en el terminal."
       }
     },
     "offline": {
@@ -3441,10 +3443,11 @@
       "settingHint": "Si falla la conexión, la caja guarda las ventas en el dispositivo y las contabiliza al reconectar. Hasta entonces el cliente recibe un recibo provisional sin número; la firma TSE se realiza después. El tiempo intermedio queda sin protección TSE: la revisión legal está pendiente, consulte antes con su asesor fiscal.",
       "modeBadge": "Modo sin conexión",
       "pill": "{count} en cola",
-      "pillLabel": "{count} ventas registradas sin conexión esperan en este dispositivo",
+      "pillLabel": "Ventas registradas sin conexión en este dispositivo y aún sin contabilizar: {count}",
       "banner": {
         "title": "Sin conexión con el servidor.",
-        "text": "Las cajas con modo sin conexión guardan las ventas en este dispositivo y las contabilizan al reconectar (recibos provisionales). No es posible: devoluciones, anulaciones, cierre de sesión, facturas, recompra ni pagos mediante un terminal de tarjetas conectado."
+        "text": "Las cajas con modo sin conexión guardan las ventas en este dispositivo y las contabilizan al reconectar (recibos provisionales). No es posible: devoluciones, anulaciones, cierre de sesión, facturas, recompra ni pagos mediante un terminal de tarjetas conectado.",
+        "short": "Las ventas se guardan en este dispositivo si la caja tiene modo sin conexión."
       },
       "noStorage": "Este navegador no ofrece almacenamiento permanente (IndexedDB). Por eso no son posibles las ventas sin conexión: no sobrevivirían a un reinicio.",
       "legal": "Las ventas registradas sin conexión son provisionales: el número de recibo y la firma TSE solo existen al contabilizarlas. La revisión legal de este procedimiento está pendiente.",
@@ -3479,7 +3482,7 @@
       "receiptBadge": "Offline",
       "receiptBadgeHint": "Registrado sin conexión, contabilizado y firmado después",
       "closeBlockedTitle": "No se puede cerrar",
-      "closeBlocked": "En este dispositivo aún esperan {count} ventas de esta caja registradas sin conexión. Primero deben contabilizarse o ser descartadas por un responsable.",
+      "closeBlocked": "En este dispositivo hay ventas de esta caja registradas sin conexión aún sin contabilizar (cantidad: {count}). Primero deben contabilizarse o ser descartadas por un responsable.",
       "status": {
         "queued": "Esperando conexión",
         "syncing": "Contabilizando …",

@@ -201,7 +201,8 @@ import { OfflineQueueService } from './offline/offline-queue.service';
       <div class="hn-no-print flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-pos-line bg-pos-warn-soft px-3.5 py-2 text-sm text-pos-ink" role="status" data-testid="pos-offline-banner">
         <p class="min-w-0 flex-1">
           <strong>{{ 'pos.offline.banner.title' | t }}</strong>
-          {{ 'pos.offline.banner.text' | t }}
+          <span class="max-sm:hidden">{{ 'pos.offline.banner.text' | t }}</span>
+          <span class="sm:hidden">{{ 'pos.offline.banner.short' | t }}</span>
         </p>
         @if (ctx.registerId(); as rid) {
           <a class="pos-soft min-h-9 shrink-0" [routerLink]="['/kasse', rid, 'offline']" data-testid="pos-offline-banner-link">{{ 'pos.offline.queue.title' | t }}</a>

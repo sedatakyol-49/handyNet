@@ -3409,9 +3409,9 @@
       },
       "flow": {
         "notStarted": "The card payment was not started and the terminal was not contacted: {reason}",
-        "declined": "Card payment declined. Nothing was charged. Please use another card or payment method.",
-        "aborted": "Card payment aborted. Nothing was charged.",
-        "uncertain": "The outcome of the card payment is unknown: the connection to the terminal was lost after the amount had been sent.",
+        "declined": "Declined by the terminal. Nothing was booked. Please use another card or payment method.",
+        "aborted": "Aborted on the terminal. Nothing was booked.",
+        "uncertain": "The outcome on the terminal is unknown: the connection was lost after the amount had been sent.",
         "uncertainTitle": "Outcome of the card payment unknown",
         "uncertainHelp": "Check on the terminal (display, receipt or journal) whether {amount} was booked. Only if the payment shows as completed there, confirm it here – the sale is then booked without terminal data. Otherwise go back to the payment and try again.",
         "uncertainNo": "Not booked – back to payment",
@@ -3433,7 +3433,9 @@
         "discardBlocked": "A card payment of {amount} is approved for this ticket. Reverse it first in the payment dialog (“Reverse card payment”), then the ticket can be discarded.",
         "refundKept": "The return was not booked: {reason} The refund of {amount} already went through on the terminal and stays stored – confirming this return again reuses it. If that does not work, tell the manager (“Card payments without a receipt”).",
         "refundAmountChanged": "A refund of {amount} already went through on the terminal for this return. Select exactly the items of that return again or tell the manager.",
-        "refundUncertain": "Check on the terminal whether the refund went through. If yes: confirm the return again – it is then booked without the terminal. If no: close the dialog and start the return again."
+        "refundUncertain": "Check on the terminal whether the refund went through. If yes: confirm the return again – it is then booked without the terminal. If no: close the dialog and start the return again.",
+        "reversalRefused": "The terminal did not carry out the reversal.",
+        "reversalUncertain": "Whether the reversal went through on the terminal is unknown (connection lost). Please check on the terminal."
       }
     },
     "offline": {
@@ -3441,10 +3443,11 @@
       "settingHint": "When the connection fails the till stores sales on the device and books them after reconnecting. Until then the customer gets a provisional receipt without a receipt number; the TSE signature is made afterwards. The time in between is without TSE protection – the legal review is pending, clarify the use with your tax adviser first.",
       "modeBadge": "Offline mode",
       "pill": "{count} queued",
-      "pillLabel": "{count} sales recorded offline are waiting on this device",
+      "pillLabel": "Sales recorded offline on this device and not booked yet: {count}",
       "banner": {
         "title": "No connection to the server.",
-        "text": "Tills in offline mode store sales on this device and book them after reconnecting (provisional receipts). Not possible: returns, cancellations, closing the session, invoices, buyback and payments through a connected card terminal."
+        "text": "Tills in offline mode store sales on this device and book them after reconnecting (provisional receipts). Not possible: returns, cancellations, closing the session, invoices, buyback and payments through a connected card terminal.",
+        "short": "Sales are stored on this device if the till has offline mode."
       },
       "noStorage": "This browser offers no permanent storage (IndexedDB). Offline sales are therefore not possible – they would not survive a restart.",
       "legal": "Sales recorded offline are provisional: receipt number and TSE signature exist only once they are booked. The legal review of this procedure is pending.",
@@ -3479,7 +3482,7 @@
       "receiptBadge": "Offline",
       "receiptBadgeHint": "Recorded offline, booked and signed afterwards",
       "closeBlockedTitle": "Closing not possible",
-      "closeBlocked": "{count} sales of this till recorded offline are still waiting on this device. They must be booked or discarded by a manager first.",
+      "closeBlocked": "Sales of this till recorded offline on this device are not booked yet (count: {count}). They must be booked or discarded by a manager first.",
       "status": {
         "queued": "Waiting for the connection",
         "syncing": "Being booked …",

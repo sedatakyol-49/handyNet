@@ -3409,9 +3409,9 @@
       },
       "flow": {
         "notStarted": "Kart ödemesi başlatılmadı, terminale istek gönderilmedi: {reason}",
-        "declined": "Kart ödemesi reddedildi. Tahsilat yapılmadı. Lütfen başka bir kart veya ödeme yöntemi seçin.",
-        "aborted": "Kart ödemesi iptal edildi. Tahsilat yapılmadı.",
-        "uncertain": "Kart ödemesinin sonucu bilinmiyor: tutar gönderildikten sonra terminalle bağlantı koptu.",
+        "declined": "Terminal reddetti. Hiçbir işlem yapılmadı. Lütfen başka bir kart veya ödeme yöntemi seçin.",
+        "aborted": "Terminalde iptal edildi. Hiçbir işlem yapılmadı.",
+        "uncertain": "Terminaldeki sonuç bilinmiyor: tutar gönderildikten sonra bağlantı koptu.",
         "uncertainTitle": "Kart ödemesinin sonucu bilinmiyor",
         "uncertainHelp": "Terminalde (ekran, fiş veya günlük) {amount} tutarının tahsil edilip edilmediğini kontrol edin. Yalnızca ödeme orada tamamlanmış görünüyorsa burada onaylayın; satış terminal verisi olmadan kaydedilir. Aksi halde ödemeye dönün ve yeniden deneyin.",
         "uncertainNo": "Tahsil edilmedi – ödemeye dön",
@@ -3433,7 +3433,9 @@
         "discardBlocked": "Bu adisyon için {amount} tutarında bir kart ödemesi onaylandı. Önce ödeme ekranında iptal edin (“Kart ödemesini iptal et”), sonra adisyon silinebilir.",
         "refundKept": "İade kaydedilmedi: {reason} {amount} tutarındaki iade terminalde zaten yapıldı ve kayıtlı kalır; bu iadeyi yeniden onayladığınızda tekrar kullanılır. Olmazsa yöneticiye bildirin (“Fişi olmayan kart ödemeleri”).",
         "refundAmountChanged": "Bu iade için terminalde {amount} tutarında bir iade zaten yapıldı. O iadenin kalemlerini aynen yeniden seçin veya yöneticiye bildirin.",
-        "refundUncertain": "Terminalde iadenin yapılıp yapılmadığını kontrol edin. Yapıldıysa iadeyi yeniden onaylayın; terminal olmadan kaydedilir. Yapılmadıysa pencereyi kapatıp iadeye yeniden başlayın."
+        "refundUncertain": "Terminalde iadenin yapılıp yapılmadığını kontrol edin. Yapıldıysa iadeyi yeniden onaylayın; terminal olmadan kaydedilir. Yapılmadıysa pencereyi kapatıp iadeye yeniden başlayın.",
+        "reversalRefused": "Terminal iptali gerçekleştirmedi.",
+        "reversalUncertain": "İptalin terminalde gerçekleşip gerçekleşmediği bilinmiyor (bağlantı koptu). Lütfen terminalde kontrol edin."
       }
     },
     "offline": {
@@ -3441,10 +3443,11 @@
       "settingHint": "Bağlantı kesildiğinde kasa satışları cihazda saklar ve bağlantı geri gelince işler. Müşteri o zamana kadar fiş numarası olmayan geçici bir fiş alır; TSE imzası sonradan atılır. Aradaki süre TSE korumasızdır; hukuki inceleme henüz yapılmadı, kullanmadan önce mali müşavirinizle görüşün.",
       "modeBadge": "Çevrimdışı mod",
       "pill": "{count} beklemede",
-      "pillLabel": "Bu cihazda çevrimdışı kaydedilmiş {count} satış bekliyor",
+      "pillLabel": "Bu cihazda çevrimdışı kaydedilmiş ve henüz işlenmemiş satışlar: {count}",
       "banner": {
         "title": "Sunucuyla bağlantı yok.",
-        "text": "Çevrimdışı modu açık kasalar satışları bu cihazda saklar ve bağlantı gelince işler (geçici fişler). Şunlar yapılamaz: iade, iptal, oturum kapatma, fatura, alım ve bağlı kart terminali üzerinden ödeme."
+        "text": "Çevrimdışı modu açık kasalar satışları bu cihazda saklar ve bağlantı gelince işler (geçici fişler). Şunlar yapılamaz: iade, iptal, oturum kapatma, fatura, alım ve bağlı kart terminali üzerinden ödeme.",
+        "short": "Kasada çevrimdışı mod açıksa satışlar bu cihazda saklanır."
       },
       "noStorage": "Bu tarayıcı kalıcı depolama (IndexedDB) sunmuyor. Bu nedenle çevrimdışı satış yapılamaz; satışlar yeniden başlatmada kaybolurdu.",
       "legal": "Çevrimdışı kaydedilen satışlar geçicidir: fiş numarası ve TSE imzası ancak işlendiğinde oluşur. Bu yöntemin hukuki incelemesi henüz yapılmadı.",
@@ -3479,7 +3482,7 @@
       "receiptBadge": "Offline",
       "receiptBadgeHint": "Çevrimdışı kaydedildi, sonradan işlendi ve imzalandı",
       "closeBlockedTitle": "Kapanış yapılamıyor",
-      "closeBlocked": "Bu cihazda bu kasaya ait çevrimdışı kaydedilmiş {count} satış bekliyor. Önce işlenmeli veya yönetici tarafından silinmelidir.",
+      "closeBlocked": "Bu cihazda bu kasaya ait çevrimdışı kaydedilmiş satışlar henüz işlenmedi (adet: {count}). Önce işlenmeli veya yönetici tarafından silinmelidir.",
       "status": {
         "queued": "Bağlantı bekleniyor",
         "syncing": "İşleniyor …",

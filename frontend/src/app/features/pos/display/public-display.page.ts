@@ -39,11 +39,11 @@ export function pollErrorOutcome(status: number): 'gone' | 'retry' {
         </div>
       </main>
     } @else {
-      <hn-customer-display-view [state]="state()" [shopName]="shopName()" [logoUrl]="logoUrl()" [dark]="dark()" [notice]="reconnecting() ? ('pos.display.reconnecting' | t) : null" />
-      @if (canFullscreen && !fullscreen()) {
-        <button type="button" class="hn-pos fixed end-3 bottom-3 z-10 min-h-11 rounded-full border border-pos-line bg-pos-panel px-4 text-sm font-semibold text-pos-muted opacity-80 shadow hover:opacity-100"
-          [class.hn-pos-dark]="dark()" (click)="enterFullscreen()" data-testid="cd-fullscreen">{{ 'pos.display.fullscreen' | t }}</button>
-      }
+      <hn-customer-display-view [state]="state()" [shopName]="shopName()" [logoUrl]="logoUrl()" [dark]="dark()" [notice]="reconnecting() ? ('pos.display.reconnecting' | t) : null">
+        @if (canFullscreen && !fullscreen()) {
+          <button cdAction type="button" class="pos-soft min-h-9 shrink-0 px-3 text-xs text-pos-muted" (click)="enterFullscreen()" data-testid="cd-fullscreen">{{ 'pos.display.fullscreen' | t }}</button>
+        }
+      </hn-customer-display-view>
     }
   `,
 })

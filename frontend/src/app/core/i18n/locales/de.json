@@ -3409,9 +3409,9 @@
       },
       "flow": {
         "notStarted": "Die Kartenzahlung wurde nicht gestartet, das Terminal wurde nicht angesprochen: {reason}",
-        "declined": "Kartenzahlung abgelehnt. Es wurde nichts abgebucht. Bitte andere Karte oder Zahlart wählen.",
-        "aborted": "Kartenzahlung abgebrochen. Es wurde nichts abgebucht.",
-        "uncertain": "Das Ergebnis der Kartenzahlung ist unbekannt: Die Verbindung zum Terminal ging verloren, nachdem der Betrag gesendet wurde.",
+        "declined": "Vom Terminal abgelehnt. Es wurde nichts gebucht. Bitte andere Karte oder Zahlart wählen.",
+        "aborted": "Am Terminal abgebrochen. Es wurde nichts gebucht.",
+        "uncertain": "Das Ergebnis am Terminal ist unbekannt: Die Verbindung ging verloren, nachdem der Betrag gesendet wurde.",
         "uncertainTitle": "Ergebnis der Kartenzahlung unbekannt",
         "uncertainHelp": "Prüfen Sie am Terminal (Anzeige, Beleg oder Journal), ob {amount} gebucht wurden. Nur wenn die Zahlung dort als erfolgt steht, bestätigen Sie sie hier – der Verkauf wird dann ohne Terminaldaten gebucht. Sonst zurück zur Zahlung und erneut versuchen.",
         "uncertainNo": "Nicht gebucht – zurück zur Zahlung",
@@ -3433,7 +3433,9 @@
         "discardBlocked": "Für diesen Bon ist eine Kartenzahlung über {amount} genehmigt. Stornieren Sie sie zuerst im Zahlungsdialog („Kartenzahlung stornieren“), dann kann der Bon verworfen werden.",
         "refundKept": "Die Rückgabe wurde nicht gebucht: {reason} Die Gutschrift über {amount} wurde am Terminal bereits ausgeführt und bleibt gespeichert – beim erneuten Bestätigen dieser Rückgabe wird sie wiederverwendet. Gelingt das nicht, informieren Sie die Kassenleitung („Kartenzahlungen ohne Beleg“).",
         "refundAmountChanged": "Für diese Rückgabe wurde bereits eine Gutschrift über {amount} am Terminal ausgeführt. Wählen Sie wieder genau die Positionen dieser Rückgabe oder informieren Sie die Kassenleitung.",
-        "refundUncertain": "Prüfen Sie am Terminal, ob die Gutschrift ausgeführt wurde. Wenn ja: Rückgabe erneut bestätigen – sie wird dann ohne Terminal gebucht. Wenn nein: Dialog schließen und die Rückgabe neu beginnen."
+        "refundUncertain": "Prüfen Sie am Terminal, ob die Gutschrift ausgeführt wurde. Wenn ja: Rückgabe erneut bestätigen – sie wird dann ohne Terminal gebucht. Wenn nein: Dialog schließen und die Rückgabe neu beginnen.",
+        "reversalRefused": "Das Terminal hat das Storno nicht ausgeführt.",
+        "reversalUncertain": "Ob das Storno am Terminal ausgeführt wurde, ist unbekannt (Verbindung verloren). Bitte am Terminal prüfen."
       }
     },
     "offline": {
@@ -3441,10 +3443,11 @@
       "settingHint": "Bei Verbindungsausfall speichert die Kasse Verkäufe auf dem Gerät und bucht sie nach der Wiederverbindung. Der Kunde erhält bis dahin einen vorläufigen Beleg ohne Belegnummer; die TSE-Signatur erfolgt nachträglich. Die Zeit dazwischen ist ohne TSE-Schutz – die rechtliche Prüfung steht aus, klären Sie den Einsatz vorher mit Ihrer Steuerberatung.",
       "modeBadge": "Offline-Modus",
       "pill": "{count} offline",
-      "pillLabel": "{count} offline erfasste Verkäufe warten auf diesem Gerät",
+      "pillLabel": "Offline erfasste, noch nicht gebuchte Verkäufe auf diesem Gerät: {count}",
       "banner": {
         "title": "Keine Verbindung zum Server.",
-        "text": "Kassen mit Offline-Modus speichern Verkäufe auf diesem Gerät und buchen sie nach der Wiederverbindung (vorläufige Belege). Nicht möglich sind Rückgaben, Storno, Sitzungsabschluss, Rechnungen, Ankauf und Zahlungen über ein angebundenes Kartenterminal."
+        "text": "Kassen mit Offline-Modus speichern Verkäufe auf diesem Gerät und buchen sie nach der Wiederverbindung (vorläufige Belege). Nicht möglich sind Rückgaben, Storno, Sitzungsabschluss, Rechnungen, Ankauf und Zahlungen über ein angebundenes Kartenterminal.",
+        "short": "Verkäufe werden auf diesem Gerät gespeichert, wenn die Kasse den Offline-Modus hat."
       },
       "noStorage": "Dieser Browser bietet keinen dauerhaften Speicher (IndexedDB). Offline-Verkäufe sind deshalb nicht möglich – sie würden einen Neustart nicht überstehen.",
       "legal": "Offline erfasste Verkäufe sind vorläufig: Belegnummer und TSE-Signatur entstehen erst beim Buchen. Die rechtliche Prüfung dieses Verfahrens steht aus.",
@@ -3479,7 +3482,7 @@
       "receiptBadge": "Offline",
       "receiptBadgeHint": "Offline erfasst, nachträglich gebucht und signiert",
       "closeBlockedTitle": "Abschluss nicht möglich",
-      "closeBlocked": "Auf diesem Gerät warten noch {count} offline erfasste Verkäufe dieser Kasse. Sie müssen zuerst gebucht oder von der Kassenleitung verworfen werden.",
+      "closeBlocked": "Auf diesem Gerät sind noch offline erfasste Verkäufe dieser Kasse nicht gebucht (Anzahl: {count}). Sie müssen zuerst gebucht oder von der Kassenleitung verworfen werden.",
       "status": {
         "queued": "Wartet auf Verbindung",
         "syncing": "Wird gebucht …",
