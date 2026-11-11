@@ -28,6 +28,14 @@ public sealed class PosOptions
 
     /// <summary>Oldest offline sale (hours between its recording on the device and its booking) the API accepts (default 72).</summary>
     public int OfflineMaxAgeHours { get; set; } = 72;
+
+    public TerminalOptions Terminal { get; set; } = new();
+}
+
+public sealed class TerminalOptions
+{
+    /// <summary>Staging only: allows the simulated card terminal in the Production environment. Never set for real operation.</summary>
+    public bool AllowSimulatedInProduction { get; set; }
 }
 
 public sealed class FiscalOptions

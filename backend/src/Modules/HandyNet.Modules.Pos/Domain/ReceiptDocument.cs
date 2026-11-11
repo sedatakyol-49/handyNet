@@ -29,7 +29,24 @@ public sealed record DocumentOffline(DateTimeOffset RecordedAt, string Reference
 /// <summary>VAT breakdown as printed: only regularly taxed lines. §25a VAT is never shown on the receipt.</summary>
 public sealed record DocumentVat(string Label, int RateBasisPoints, long GrossMinor, long NetMinor, long VatMinor);
 
-public sealed record DocumentPayment(string Method, long AmountMinor, long? TenderedMinor);
+public sealed record DocumentPayment(string Method, long AmountMinor, long? TenderedMinor, DocumentCard? Card = null);
+
+/// <summary>
+/// What the card terminal reported for a card payment (ADR-0021), printed under the payment. IsTest: simulated terminal,
+/// no card was charged. The card number is always masked.
+/// </summary>
+public sealed record DocumentCard(
+    string? CardName,
+    string? MaskedPan,
+    string? TraceNumber,
+    string? AuthCode,
+    string? TerminalId,
+    string? TerminalReceiptNumber,
+    bool IsTest = false)
+{
+    public static DocumentCard From(CardTransaction t) =>
+        new(t.CardName, t.MaskedPan, t.TraceNumber, t.AuthCode, t.TerminalId, t.TerminalReceiptNumber, t.IsTest);
+}
 
 public sealed record DocumentFiscal(
     string Status,

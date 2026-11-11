@@ -22,14 +22,17 @@ public sealed class PosSupport(HandyNetFixture fixture)
         return shop;
     }
 
-    public async Task<ApiClient> MemberAsync(ApiClient owner, string role)
+    public async Task<ApiClient> MemberAsync(ApiClient owner, string role) => (await MemberWithIdAsync(owner, role)).Member;
+
+    public async Task<(ApiClient Member, Guid UserId)> MemberWithIdAsync(ApiClient owner, string role)
     {
         var email = $"pos-{Scenario.UniqueSuffix()}@test.de";
-        (await owner.PostAsync("/api/organization/staff", new { email, displayName = role, password = StaffPassword, role })).Expect(HttpStatusCode.OK);
+        var userId = Id((await owner.PostAsync("/api/organization/staff", new { email, displayName = role, password = StaffPassword, role }))
+            .Expect(HttpStatusCode.OK).Json, "userId");
         var client = fixture.CreateClient();
         await client.LoginAsync(email, StaffPassword);
         client.OrganizationId = owner.OrganizationId;
-        return client;
+        return (client, userId);
     }
 
     public static async Task<Guid> DefaultWarehouseAsync(ApiClient shop)

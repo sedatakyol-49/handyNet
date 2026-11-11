@@ -83,6 +83,8 @@ public static class PosModule
         services.AddScoped<ICashPayouts, CashPayouts>();
         services.AddScoped<IPosDailyFigures, PosDailyFigures>();
         services.AddScoped<PrinterProfileService>();
+        services.AddScoped<TerminalProfileService>();
+        services.AddScoped<CardTransactionService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -219,6 +221,7 @@ public static class PosModule
         MapDocumentEndpoints(app, sell);
         MapSalesDocumentEndpoints(sell);
         PrinterEndpoints.Map(sell, manage); // receipt printer profiles (ADR-0018)
+        CardTerminalEndpoints.Map(sell, manage); // card terminal profiles and card transactions (ADR-0021)
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));

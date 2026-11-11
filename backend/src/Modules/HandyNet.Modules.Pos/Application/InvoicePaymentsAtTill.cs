@@ -37,6 +37,9 @@ internal sealed partial class SaleService
             return concurrentReplay.Map(r => new CollectInvoiceResult(r.Receipt, invoiceId, Replayed: true));
         if (await PosSql.LockOpenSessionAsync(db, register.Id, exclusive: false, ct) is not { } sessionId)
             return Error.Conflict("pos.no_open_session", "Open a cash session on this register first.");
+        var card = await LockCardTransactionAsync(request.Payments, register.Id, ct);
+        if (!card.IsSuccess)
+            return card.Error!;
 
         var invoice = await invoices.LockAsync(invoiceId, ct);
         if (invoice is null)
@@ -63,7 +66,9 @@ internal sealed partial class SaleService
             request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(), register.CashRounding);
         if (!receipt.IsSuccess)
             return receipt.Error!;
-        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct);
+        if (LinkCard(card.Value, receipt.Value) is { } cardRefused)
+            return cardRefused;
+        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct, new DocumentExtras(card.Value));
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -95,7 +100,7 @@ internal sealed partial class SaleService
     internal static string HashCollect(Guid invoiceId, CollectInvoiceRequest request)
     {
         var canonical = $"collect#{invoiceId:N}#{request.RegisterId:N}#{request.AmountMinor}#"
-                        + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(p => $"{p.Method}:{p.AmountMinor}"));
+                        + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(PaymentFingerprint));
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 }
