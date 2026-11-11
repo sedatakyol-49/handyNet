@@ -3830,6 +3830,65 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("customers", "pos");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.DisplayLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("RegisterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("register_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("token_hash")
+                        .IsFixedLength();
+
+                    b.HasKey("Id")
+                        .HasName("pk_display_links");
+
+                    b.HasIndex("RegisterId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_display_links_one_active")
+                        .HasFilter("revoked_at IS NULL");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_display_links_token_hash");
+
+                    b.HasIndex("OrganizationId", "RegisterId")
+                        .HasDatabaseName("ix_display_links_organization_id_register_id");
+
+                    b.ToTable("display_links", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_display_links_expiry", "expires_at > created_at");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalConfiguration", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7006,6 +7065,17 @@ namespace HandyNet.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_cashier_sessions_registers_organization_id_register_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.DisplayLink", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Register", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "RegisterId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_display_links_registers_organization_id_register_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.FiscalConfiguration", b =>

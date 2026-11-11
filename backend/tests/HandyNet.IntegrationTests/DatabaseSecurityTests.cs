@@ -201,4 +201,35 @@ public sealed class DatabaseSecurityTests(HandyNetFixture fixture)
         }, PosSupport.Key());
         Assert.Equal((HttpStatusCode.Conflict, "pos.card_transaction_invalid"), (stolen.Status, stolen.Code));
     }
+
+    [Fact]
+    public async Task Display_links_are_tenant_isolated_and_the_public_function_reveals_only_one_active_link()
+    {
+        var a = await _pos.ShopAsync("display-a");
+        var b = await _pos.ShopAsync("display-b");
+        var registerA = await PosSupport.RegisterAsync(a);
+        var registerB = await PosSupport.RegisterAsync(b);
+        var tokenA = (await a.PostAsync($"/api/pos/registers/{registerA}/display-link")).Expect(HttpStatusCode.Created).Json["token"]!.GetValue<string>();
+        (await b.PostAsync($"/api/pos/registers/{registerB}/display-link")).Expect(HttpStatusCode.Created);
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+
+        await AssertIsolatedAsync("pos.display_links", orgA, orgB,
+            $"INSERT INTO pos.display_links (id, organization_id, register_id, token_hash, created_at, expires_at, created_by) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{registerA}', repeat('c', 64), now(), now() + interval '1 day', gen_random_uuid())",
+            deletable: false, touch: "revoked_at = now()");
+
+        // Without a tenant the table is empty, but the SECURITY DEFINER function finds exactly the link whose hash is given.
+        await using var noTenant = await ConnectAsAppAsync(null);
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.display_links"));
+        Assert.Equal(1, await CountAsync(noTenant, $"SELECT count(*) FROM pos.public_display(encode(sha256('{tokenA}'::bytea), 'hex')) WHERE register_id = '{registerA}'"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display(repeat('0', 64))"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display('%')"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display(NULL)"));
+        // Its columns: nothing beyond register, organization, organization name and expiry.
+        await using var owner = new NpgsqlConnection(fixture.OwnerConnectionString);
+        await owner.OpenAsync();
+        await using var columns = new NpgsqlCommand(
+            "SELECT pg_get_function_result('pos.public_display(text)'::regprocedure)", owner);
+        Assert.Equal("TABLE(register_id uuid, organization_id uuid, organization_name text, expires_at timestamp with time zone)", (string)(await columns.ExecuteScalarAsync())!);
+    }
 }

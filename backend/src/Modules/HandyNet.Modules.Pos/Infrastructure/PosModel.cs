@@ -317,6 +317,18 @@ public sealed class PosModel : IModuleModel
             b.HasOne<Receipt>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.ReceiptId })
                 .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         });
+        modelBuilder.Entity<DisplayLink>(b =>
+        {
+            b.ToTable("display_links", Schema, t => t.HasCheckConstraint("ck_display_links_expiry", "expires_at > created_at"));
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TokenHash).HasMaxLength(64).IsFixedLength();
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            // A register has at most one link that was not revoked.
+            b.HasIndex(x => x.RegisterId).IsUnique().HasFilter("revoked_at IS NULL").HasDatabaseName("ux_display_links_one_active");
+            b.HasIndex(x => new { x.OrganizationId, x.RegisterId });
+            b.HasOne<Register>().WithMany().HasForeignKey(x => new { x.OrganizationId, x.RegisterId })
+                .HasPrincipalKey(r => new { r.OrganizationId, r.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
         ConfigureFiscal(modelBuilder);
         ConfigureSalesDocuments(modelBuilder);
 

@@ -102,6 +102,9 @@ public sealed class HandyNetFixture : IAsyncLifetime
             web.UseSetting("RateLimits:PosPinPerMinute", "10000");
             web.UseSetting("RateLimits:PublicReceiptsPerMinute", "10000");
             web.UseSetting("RateLimits:AnkaufCheckInPerMinute", "10000");
+            web.UseSetting("RateLimits:PublicDisplayPerMinute", "10000");
+            // The public customer display long-polls; tests wait one second instead of twenty for "nothing changed".
+            web.UseSetting("Pos:DisplayPollSeconds", "1");
             web.UseSetting("Shipping:EnabledCarriers:0", "Manual");
             web.UseSetting("Shipping:EnabledCarriers:1", "Simulated");
             web.UseSetting("Shipping:SimulatedTransitMinutes", "0");

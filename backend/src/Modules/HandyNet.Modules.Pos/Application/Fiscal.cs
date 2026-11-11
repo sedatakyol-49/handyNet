@@ -30,6 +30,12 @@ public sealed class PosOptions
     public int OfflineMaxAgeHours { get; set; } = 72;
 
     public TerminalOptions Terminal { get; set; } = new();
+
+    /// <summary>Validity of a remote customer display link in days (default 30).</summary>
+    public int DisplayLinkDays { get; set; } = 30;
+
+    /// <summary>How long the public display endpoint holds a long-poll request open when nothing changed (seconds, default 20).</summary>
+    public int DisplayPollSeconds { get; set; } = 20;
 }
 
 public sealed class TerminalOptions
