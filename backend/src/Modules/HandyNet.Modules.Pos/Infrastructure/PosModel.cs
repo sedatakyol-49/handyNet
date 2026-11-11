@@ -80,6 +80,9 @@ public sealed class PosModel : IModuleModel
             {
                 t.HasCheckConstraint("ck_receipts_number", "number >= 1");
                 t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
+                t.HasCheckConstraint("ck_receipts_offline",
+                    "(offline_recorded_at IS NULL AND offline_reference IS NULL) "
+                    + "OR (offline_recorded_at IS NOT NULL AND offline_reference ~ '^[A-Za-z0-9-]{1,40}$' AND kind = 'Sale')");
                 t.HasCheckConstraint("ck_receipts_totals", "total_net_minor + total_vat_minor = total_gross_minor AND change_minor >= 0");
                 t.HasCheckConstraint("ck_receipts_kind",
                     "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NULL) "
@@ -106,6 +109,11 @@ public sealed class PosModel : IModuleModel
             b.Property(x => x.FiscalPublicKey).HasMaxLength(500);
             b.Property(x => x.FiscalQrPayload).HasMaxLength(4000);
             b.Property(x => x.FiscalError).HasMaxLength(500);
+            b.Property(x => x.OfflineReference).HasMaxLength(OfflineRecord.MaxReferenceLength);
+            b.Ignore(x => x.Offline);
+            // The device's offline reference is booked at most once per register.
+            b.HasIndex(x => new { x.RegisterId, x.OfflineReference }).IsUnique().HasFilter("offline_reference IS NOT NULL")
+                .HasDatabaseName("ux_receipts_offline_reference");
             b.Ignore(x => x.IsSealed);
             b.Ignore(x => x.Fiscal);
             b.Ignore(x => x.Customer);

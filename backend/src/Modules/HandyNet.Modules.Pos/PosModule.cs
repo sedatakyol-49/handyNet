@@ -33,6 +33,7 @@ public static class PosModule
             .Validate(o => o.CashierSessionHours is >= 1 and <= 24, "Pos:CashierSessionHours must be between 1 and 24.")
             .Validate(o => o.ApprovalSeconds is >= 10 and <= 900, "Pos:ApprovalSeconds must be between 10 and 900.")
             .Validate(o => o.PublicReceiptLinkDays is >= 1 and <= 3650, "Pos:PublicReceiptLinkDays must be between 1 and 3650.")
+            .Validate(o => o.OfflineMaxAgeHours is >= 1 and <= 720, "Pos:OfflineMaxAgeHours must be between 1 and 720.")
             .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalMode.SimulatedTse || o.Fiscal.AllowSimulatedTseInProduction,
                 "The SimulatedTse fiscal signer (test TSE) must not be used in production unless Pos:Fiscal:AllowSimulatedTseInProduction is set (staging only).")
             .Validate(o => o.FiscalSigner != FiscalMode.FiskalyCloudTse,

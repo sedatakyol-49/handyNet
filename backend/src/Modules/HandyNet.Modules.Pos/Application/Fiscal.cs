@@ -25,6 +25,9 @@ public sealed class PosOptions
 
     /// <summary>Validity of a public (QR) receipt link in days (default 90).</summary>
     public int PublicReceiptLinkDays { get; set; } = 90;
+
+    /// <summary>Oldest offline sale (hours between its recording on the device and its booking) the API accepts (default 72).</summary>
+    public int OfflineMaxAgeHours { get; set; } = 72;
 }
 
 public sealed class FiscalOptions

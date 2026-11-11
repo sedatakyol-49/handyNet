@@ -23,6 +23,9 @@ public sealed record DocumentCustomer(
     string? CountryCode,
     string? VatId);
 
+/// <summary>Offline sale (ADR-0022): when and under which device reference it was recorded before it was booked.</summary>
+public sealed record DocumentOffline(DateTimeOffset RecordedAt, string Reference);
+
 /// <summary>VAT breakdown as printed: only regularly taxed lines. §25a VAT is never shown on the receipt.</summary>
 public sealed record DocumentVat(string Label, int RateBasisPoints, long GrossMinor, long NetMinor, long VatMinor);
 
@@ -69,7 +72,8 @@ public sealed record ReceiptDocument(
     IReadOnlyList<string> Notes,
     DocumentFiscal Fiscal,
     DocumentCustomer? Customer = null,
-    long RoundingMinor = 0)
+    long RoundingMinor = 0,
+    DocumentOffline? Offline = null)
 {
     public const string StandardLabel = "A";
     public const string MarginLabel = "§25a";
@@ -109,6 +113,8 @@ public sealed record ReceiptDocument(
             notes.Add(KassenSichV.OutageNotice);
         if (fiscal.IsTest)
             notes.Add(KassenSichV.TestTseNotice);
+        if (receipt.Offline is { } offline)
+            notes.Add(OfflineNote(offline));
 
         var title = receipt.Kind switch
         {
@@ -126,6 +132,26 @@ public sealed record ReceiptDocument(
                 fiscal.Signature, fiscal.StartedAt, fiscal.FinishedAt, fiscal.Mode, fiscal.IsTest, fiscal.ClientId, fiscal.SignatureAlgorithm,
                 fiscal.TimeFormat, fiscal.PublicKey, fiscal.ProcessType, fiscal.ProcessData, fiscal.QrPayload),
             receipt.Customer,
-            receipt.RoundingMinor);
+            receipt.RoundingMinor,
+            receipt.Offline is { } recorded ? new DocumentOffline(recorded.RecordedAt, recorded.Reference) : null);
+    }
+
+    private static readonly TimeZoneInfo Berlin = FindBerlin();
+
+    /// <summary>Printed on receipts of sales recorded offline: local (Europe/Berlin) recording time and the device reference.</summary>
+    public static string OfflineNote(OfflineRecord offline) =>
+        $"Offline erfasst am {TimeZoneInfo.ConvertTime(offline.RecordedAt, Berlin).ToString("dd.MM.yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)}"
+        + $" · Offline-Nr. {offline.Reference} · nachträglich gebucht und signiert";
+
+    private static TimeZoneInfo FindBerlin()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Utc;
+        }
     }
 }

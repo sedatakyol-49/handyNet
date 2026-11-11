@@ -4649,6 +4649,15 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("number");
 
+                    b.Property<DateTimeOffset?>("OfflineRecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("offline_recorded_at");
+
+                    b.Property<string>("OfflineReference")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("offline_reference");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
@@ -4746,6 +4755,11 @@ namespace HandyNet.Migrations.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_receipts_register_id_number");
 
+                    b.HasIndex("RegisterId", "OfflineReference")
+                        .IsUnique()
+                        .HasDatabaseName("ux_receipts_offline_reference")
+                        .HasFilter("offline_reference IS NOT NULL");
+
                     b.HasIndex("OrganizationId", "CreatedBy", "CreatedAt")
                         .HasDatabaseName("ix_receipts_organization_id_created_by_created_at");
 
@@ -4754,6 +4768,8 @@ namespace HandyNet.Migrations.Migrations
                             t.HasCheckConstraint("ck_receipts_kind", "(kind = 'Sale' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NULL) OR (kind = 'InvoicePayment' AND total_gross_minor > 0 AND referenced_receipt_id IS NULL AND sales_invoice_id IS NOT NULL) OR (kind IN ('Storno', 'Return') AND total_gross_minor <= 0 AND change_minor = 0 AND referenced_receipt_id IS NOT NULL AND sales_invoice_id IS NULL)");
 
                             t.HasCheckConstraint("ck_receipts_number", "number >= 1");
+
+                            t.HasCheckConstraint("ck_receipts_offline", "(offline_recorded_at IS NULL AND offline_reference IS NULL) OR (offline_recorded_at IS NOT NULL AND offline_reference ~ '^[A-Za-z0-9-]{1,40}$' AND kind = 'Sale')");
 
                             t.HasCheckConstraint("ck_receipts_rounding", "rounding_minor BETWEEN -2 AND 2");
 
@@ -5071,6 +5087,10 @@ namespace HandyNet.Migrations.Migrations
                     b.Property<long>("NextZNumber")
                         .HasColumnType("bigint")
                         .HasColumnName("next_z_number");
+
+                    b.Property<bool>("OfflineMode")
+                        .HasColumnType("boolean")
+                        .HasColumnName("offline_mode");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")

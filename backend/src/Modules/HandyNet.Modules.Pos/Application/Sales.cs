@@ -27,8 +27,14 @@ public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity
 
 public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor);
 
+/// <summary>A sale the till recorded while the API was unreachable (ADR-0022): device time and device reference (1–40 of A-Z a-z 0-9 -).</summary>
+public sealed record OfflineSaleRequest(DateTimeOffset RecordedAt, string Reference);
+
+/// <summary>What a receipt says about its offline recording.</summary>
+public sealed record OfflineSaleDto(DateTimeOffset RecordedAt, string Reference);
+
 public sealed record CreateSaleRequest(Guid RegisterId, IReadOnlyList<SaleLineRequest> Lines, IReadOnlyList<SalePaymentRequest> Payments,
-    Guid? CustomerId = null);
+    Guid? CustomerId = null, OfflineSaleRequest? Offline = null);
 
 /// <summary>Order history filters (all optional, combined with AND). Dates are inclusive from, exclusive to.</summary>
 public sealed record SaleQuery(
@@ -99,12 +105,13 @@ public sealed record ReceiptDto(
     int ReprintCount,
     DateTimeOffset? LastReprintedAt,
     ApprovalInfoDto? Approval = null,
-    long RoundingMinor = 0);
+    long RoundingMinor = 0,
+    OfflineSaleDto? Offline = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
     IReadOnlyList<string> PaymentMethods, int ReprintCount,
-    string? FiscalStatus = null, bool FiscalIsTest = false, Guid? InvoiceId = null, string? InvoiceNumber = null);
+    string? FiscalStatus = null, bool FiscalIsTest = false, Guid? InvoiceId = null, string? InvoiceNumber = null, bool Offline = false);
 
 /// <summary>A recorded reprint: the copy number to print ("Kopie n") and the unchanged original receipt.</summary>
 public sealed record ReprintDto(int Sequence, DateTimeOffset PrintedAt, Guid PrintedBy, ReceiptDto Receipt);
@@ -194,7 +201,8 @@ internal sealed partial class SaleService(
     IClock clock,
     ILogger<SaleService> logger,
     PosActor actor,
-    ApprovalService approvals)
+    ApprovalService approvals,
+    IOptions<PosOptions> options)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -226,6 +234,9 @@ internal sealed partial class SaleService(
                 return Error.NotFound("pos.customer_not_found", "Customer not found.");
             customer = found.ToDocument();
         }
+        var offline = request.Offline is { } o ? new OfflineRecord(o.RecordedAt, o.Reference?.Trim() ?? string.Empty) : null;
+        if (offline is not null && await CheckOfflineAsync(register, offline, request, ct) is { } offlineRefused)
+            return offlineRefused;
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
@@ -286,7 +297,7 @@ internal sealed partial class SaleService(
         }).ToList();
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
-            idempotencyKey, requestHash, customer);
+            idempotencyKey, requestHash, customer, offline);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
             register.CashRounding);
         if (!receipt.IsSuccess)
@@ -310,6 +321,10 @@ internal sealed partial class SaleService(
             db.ChangeTracker.Clear();
             logger.LogInformation("Concurrent duplicate POS sale for key {Key}", idempotencyKey);
             return await ReplayAsync(idempotencyKey, requestHash, ct) ?? Error.Conflict("pos.duplicate", "The sale could not be recorded. Try again.");
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_receipts_offline_reference"))
+        {
+            return OfflineReferenceUsed(offline!.Reference);
         }
         catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
         {
@@ -439,6 +454,7 @@ internal sealed partial class SaleService(
             .Select(r => new
             {
                 r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind, r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor, r.CreatedBy, r.CustomerId, r.FiscalStatus, r.FiscalIsTest,
+                Offline = r.OfflineReference != null,
                 InvoiceId = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => (Guid?)i.Id).FirstOrDefault(),
                 InvoiceNumber = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => i.Number).FirstOrDefault(),
                 Methods = db.Set<ReceiptPayment>().Where(x => x.ReceiptId == r.Id).Select(x => x.Method).ToList(),
@@ -452,7 +468,7 @@ internal sealed partial class SaleService(
         var items = rows.Select(r => new ReceiptSummaryDto(r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, r.CreatedAt,
             r.TotalGrossMinor, r.CreatedBy, people.GetValueOrDefault(r.CreatedBy)?.DisplayName, r.CustomerId,
             r.CustomerId is { } c ? customers.GetValueOrDefault(c) : null, r.Methods.Order().Select(m => m.ToString()).ToList(), r.Reprints,
-            r.FiscalStatus?.ToString(), r.FiscalIsTest == true, r.InvoiceId, r.InvoiceNumber)).ToList();
+            r.FiscalStatus?.ToString(), r.FiscalIsTest == true, r.InvoiceId, r.InvoiceNumber, r.Offline)).ToList();
         return new PagedResult<ReceiptSummaryDto>(items, p, size, total);
     }
 
@@ -525,6 +541,27 @@ internal sealed partial class SaleService(
     }
 
     // ---- internals ------------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Offline sales (ADR-0022) need the register's offline mode, a plausible recording time, cash or card payments only, and a
+    /// device reference that was not booked on this register before (the unique index decides under concurrency).
+    /// </summary>
+    private async Task<Error?> CheckOfflineAsync(Register register, OfflineRecord offline, CreateSaleRequest request, CancellationToken ct)
+    {
+        if (!register.OfflineMode)
+            return Error.Conflict("pos.offline_not_enabled", "Offline mode is not enabled for this register.");
+        if (offline.Check(clock.UtcNow, options.Value.OfflineMaxAgeHours) is { IsSuccess: false } invalid)
+            return invalid.Error!;
+        if (request.Payments.Any(p => p.Method is not (PaymentMethod.Cash or PaymentMethod.Card)))
+            return Error.Validation("pos.offline_payment_not_allowed", "Offline sales can only be paid in cash or by card.");
+        if (await db.Set<Receipt>().AnyAsync(r => r.RegisterId == register.Id && r.OfflineReference == offline.Reference, ct))
+            return OfflineReferenceUsed(offline.Reference);
+        return null;
+    }
+
+    private static Error OfflineReferenceUsed(string reference) =>
+        Error.Conflict("pos.offline_reference_used", $"The offline reference {reference} was already booked on this register.")
+            .WithDetails(new Dictionary<string, object?> { ["reference"] = reference });
 
     private CashierRights Rights() => new(actor.Has(Permissions.PosPriceOverride), actor.Has(Permissions.PosDiscount),
         actor.MaxDiscountPercent);
@@ -667,7 +704,10 @@ internal sealed partial class SaleService(
                             $"{l.ProductId:N}:{l.Imei?.Trim()}:{l.Quantity}:{l.UnitPriceMinor}:{l.DiscountMinor ?? 0}"
                             + (string.IsNullOrWhiteSpace(l.Note) ? "" : $":n{l.Note.Trim().Length}:{l.Note.Trim()}")))
                         + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(p => $"{p.Method}:{p.AmountMinor}"))
-                        + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "");
+                        + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "")
+                        + (request.Offline is { } offline
+                            ? $"#o:{offline.RecordedAt.ToUniversalTime():O}:{offline.Reference?.Trim().Length}:{offline.Reference?.Trim()}"
+                            : "");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
@@ -703,6 +743,7 @@ internal sealed partial class SaleService(
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
             r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
-            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor);
+            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor,
+            r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null);
     }
 }

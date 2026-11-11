@@ -14,13 +14,14 @@ public sealed record CreateRegisterRequest(string Name, Guid? WarehouseId);
 
 /// <summary>
 /// AutoLockMinutes: null = unchanged, 0 = off, 1–240 = lock the till after that many idle minutes. CashRounding: null =
-/// unchanged; true rounds cash totals to 0.05 €.
+/// unchanged; true rounds cash totals to 0.05 €. OfflineMode: null = unchanged; true lets the till book sales recorded offline.
 /// </summary>
-public sealed record UpdateRegisterRequest(string Name, bool IsActive, int? AutoLockMinutes = null, bool? CashRounding = null);
+public sealed record UpdateRegisterRequest(string Name, bool IsActive, int? AutoLockMinutes = null, bool? CashRounding = null, bool? OfflineMode = null);
 
 public sealed record RegisterDto(Guid Id, string Name, Guid WarehouseId, bool IsActive, long NextReceiptNumber, Guid? OpenSessionId, DateTimeOffset CreatedAt,
     int? AutoLockMinutes = null,
-    bool CashRounding = false);
+    bool CashRounding = false,
+    bool OfflineMode = false);
 
 /// <summary>Opening cash as an amount and/or as denomination counts (if both, they must agree).</summary>
 public sealed record OpenSessionRequest(long? OpeningCashMinor, IReadOnlyList<DenominationCount>? Denominations = null);
@@ -223,6 +224,8 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
             return invalidLock.Error!;
         if (request.CashRounding is { } rounding)
             register.SetCashRounding(rounding);
+        if (request.OfflineMode is { } offline)
+            register.SetOfflineMode(offline);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -245,7 +248,7 @@ internal sealed class RegisterService(HandyNetDbContext db, ITenantContext tenan
             .ToDictionaryAsync(s => s.RegisterId, s => (Guid?)s.Id, ct);
 
     private static RegisterDto ToDto(Register r, Guid? openSessionId) =>
-        new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt, r.AutoLockMinutes, r.CashRounding);
+        new(r.Id, r.Name, r.WarehouseId, r.IsActive, r.NextReceiptNumber, openSessionId, r.CreatedAt, r.AutoLockMinutes, r.CashRounding, r.OfflineMode);
 }
 
 internal sealed class SessionService(HandyNetDbContext db, ITenantContext tenant, PosActor actor, IUserAccounts users, IClock clock,
