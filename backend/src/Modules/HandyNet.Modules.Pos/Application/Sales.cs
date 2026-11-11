@@ -25,10 +25,20 @@ namespace HandyNet.Modules.Pos.Application;
 /// </summary>
 public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity, long UnitPriceMinor, long? DiscountMinor, string? Note = null);
 
-public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor);
+/// <summary>
+/// CardTransactionId (method Card only): the approved terminal transaction that settled this payment (ADR-0021). Without it
+/// the card payment is "confirmed by the cashier".
+/// </summary>
+public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor, Guid? CardTransactionId = null);
+
+/// <summary>A sale the till recorded while the API was unreachable (ADR-0022): device time and device reference (1–40 of A-Z a-z 0-9 -).</summary>
+public sealed record OfflineSaleRequest(DateTimeOffset RecordedAt, string Reference);
+
+/// <summary>What a receipt says about its offline recording.</summary>
+public sealed record OfflineSaleDto(DateTimeOffset RecordedAt, string Reference);
 
 public sealed record CreateSaleRequest(Guid RegisterId, IReadOnlyList<SaleLineRequest> Lines, IReadOnlyList<SalePaymentRequest> Payments,
-    Guid? CustomerId = null);
+    Guid? CustomerId = null, OfflineSaleRequest? Offline = null);
 
 /// <summary>Order history filters (all optional, combined with AND). Dates are inclusive from, exclusive to.</summary>
 public sealed record SaleQuery(
@@ -51,7 +61,9 @@ public sealed record StornoRequest(string Reason, Guid? RegisterId);
 
 public sealed record ReturnLineRequest(int LineNumber, int Quantity);
 
-public sealed record ReturnRequest(IReadOnlyList<ReturnLineRequest> Lines, PaymentMethod RefundMethod, string Reason, Guid? RegisterId);
+/// <summary>CardTransactionId (refund method Card only): the approved terminal refund that paid the customer back (ADR-0021).</summary>
+public sealed record ReturnRequest(IReadOnlyList<ReturnLineRequest> Lines, PaymentMethod RefundMethod, string Reason, Guid? RegisterId,
+    Guid? CardTransactionId = null);
 
 public sealed record ReceiptLineDto(
     int LineNumber,
@@ -70,7 +82,8 @@ public sealed record ReceiptLineDto(
     int ReturnedQuantity,
     string? Note);
 
-public sealed record ReceiptPaymentDto(string Method, long AmountMinor, long? TenderedMinor);
+/// <summary>Card: the terminal data of a card payment settled by a card transaction (null when the cashier confirmed it).</summary>
+public sealed record ReceiptPaymentDto(string Method, long AmountMinor, long? TenderedMinor, DocumentCard? Card = null);
 
 public sealed record ReceiptDto(
     Guid Id,
@@ -99,12 +112,13 @@ public sealed record ReceiptDto(
     int ReprintCount,
     DateTimeOffset? LastReprintedAt,
     ApprovalInfoDto? Approval = null,
-    long RoundingMinor = 0);
+    long RoundingMinor = 0,
+    OfflineSaleDto? Offline = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
     IReadOnlyList<string> PaymentMethods, int ReprintCount,
-    string? FiscalStatus = null, bool FiscalIsTest = false, Guid? InvoiceId = null, string? InvoiceNumber = null);
+    string? FiscalStatus = null, bool FiscalIsTest = false, Guid? InvoiceId = null, string? InvoiceNumber = null, bool Offline = false);
 
 /// <summary>A recorded reprint: the copy number to print ("Kopie n") and the unchanged original receipt.</summary>
 public sealed record ReprintDto(int Sequence, DateTimeOffset PrintedAt, Guid PrintedBy, ReceiptDto Receipt);
@@ -194,7 +208,8 @@ internal sealed partial class SaleService(
     IClock clock,
     ILogger<SaleService> logger,
     PosActor actor,
-    ApprovalService approvals)
+    ApprovalService approvals,
+    IOptions<PosOptions> options)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -226,6 +241,9 @@ internal sealed partial class SaleService(
                 return Error.NotFound("pos.customer_not_found", "Customer not found.");
             customer = found.ToDocument();
         }
+        var offline = request.Offline is { } o ? new OfflineRecord(o.RecordedAt, o.Reference?.Trim() ?? string.Empty) : null;
+        if (offline is not null && await CheckOfflineAsync(register, offline, request, ct) is { } offlineRefused)
+            return offlineRefused;
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
@@ -235,6 +253,9 @@ internal sealed partial class SaleService(
             return concurrentReplay;
         if (await PosSql.LockOpenSessionAsync(db, register.Id, exclusive: false, ct) is not { } sessionId)
             return Error.Conflict("pos.no_open_session", "Open a cash session on this register before selling.");
+        var card = await LockCardTransactionAsync(request.Payments, register.Id, ct);
+        if (!card.IsSuccess)
+            return card.Error!;
 
         var reference = $"pos:{register.Id}:{number}";
         var staged = new List<(SaleLineRequest Request, UnitSnapshot? Unit)>();
@@ -286,13 +307,15 @@ internal sealed partial class SaleService(
         }).ToList();
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
-            idempotencyKey, requestHash, customer);
+            idempotencyKey, requestHash, customer, offline);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
             register.CashRounding);
         if (!receipt.IsSuccess)
             return receipt.Error!;
+        if (LinkCard(card.Value, receipt.Value) is { } cardRefused)
+            return cardRefused;
 
-        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct);
+        var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct, new DocumentExtras(card.Value));
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -304,12 +327,20 @@ internal sealed partial class SaleService(
                 return approvalError; // disposing the transaction rolls back the receipt and its number
             await tx.CommitAsync(ct);
         }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_card_transactions_receipt"))
+        {
+            return CardTransaction.Invalid("linked");
+        }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ix_receipts_organization_id_idempotency_key"))
         {
             await tx.RollbackAsync(ct);
             db.ChangeTracker.Clear();
             logger.LogInformation("Concurrent duplicate POS sale for key {Key}", idempotencyKey);
             return await ReplayAsync(idempotencyKey, requestHash, ct) ?? Error.Conflict("pos.duplicate", "The sale could not be recorded. Try again.");
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_receipts_offline_reference"))
+        {
+            return OfflineReferenceUsed(offline!.Reference);
         }
         catch (DbUpdateException ex) when (ex.IsImeiBlacklisted())
         {
@@ -376,6 +407,11 @@ internal sealed partial class SaleService(
         if (!issuing.IsSuccess)
             return issuing.Error!;
         var (register, number, sessionId) = issuing.Value;
+        if (request.CardTransactionId is not null && request.RefundMethod != PaymentMethod.Card)
+            return Error.Validation("pos.card_transaction_payment", "A card transaction can only settle a card refund.");
+        var card = request.CardTransactionId is { } cardId ? await LockCardTransactionAsync(cardId, ct) : null;
+        if (card is { IsSuccess: false })
+            return card.Error!;
 
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, original.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash);
@@ -383,8 +419,10 @@ internal sealed partial class SaleService(
             request.RefundMethod, request.Reason, register.CashRounding);
         if (!returned.IsSuccess)
             return returned.Error!;
+        if (LinkCard(card?.Value, returned.Value) is { } cardRefused)
+            return cardRefused;
 
-        var completed = await CompleteRefundAsync(tx, returned.Value, original, register, ct);
+        var completed = await CompleteRefundAsync(tx, returned.Value, original, register, ct, new DocumentExtras(card?.Value));
         return completed.IsSuccess ? new SaleResult(completed.Value, Replayed: false) : completed.Error!;
     }
 
@@ -439,6 +477,7 @@ internal sealed partial class SaleService(
             .Select(r => new
             {
                 r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind, r.ReferencedReceiptId, r.CreatedAt, r.TotalGrossMinor, r.CreatedBy, r.CustomerId, r.FiscalStatus, r.FiscalIsTest,
+                Offline = r.OfflineReference != null,
                 InvoiceId = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => (Guid?)i.Id).FirstOrDefault(),
                 InvoiceNumber = db.Set<PosInvoice>().Where(i => i.ReceiptId == r.Id).Select(i => i.Number).FirstOrDefault(),
                 Methods = db.Set<ReceiptPayment>().Where(x => x.ReceiptId == r.Id).Select(x => x.Method).ToList(),
@@ -452,7 +491,7 @@ internal sealed partial class SaleService(
         var items = rows.Select(r => new ReceiptSummaryDto(r.Id, r.RegisterId, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, r.CreatedAt,
             r.TotalGrossMinor, r.CreatedBy, people.GetValueOrDefault(r.CreatedBy)?.DisplayName, r.CustomerId,
             r.CustomerId is { } c ? customers.GetValueOrDefault(c) : null, r.Methods.Order().Select(m => m.ToString()).ToList(), r.Reprints,
-            r.FiscalStatus?.ToString(), r.FiscalIsTest == true, r.InvoiceId, r.InvoiceNumber)).ToList();
+            r.FiscalStatus?.ToString(), r.FiscalIsTest == true, r.InvoiceId, r.InvoiceNumber, r.Offline)).ToList();
         return new PagedResult<ReceiptSummaryDto>(items, p, size, total);
     }
 
@@ -526,6 +565,63 @@ internal sealed partial class SaleService(
 
     // ---- internals ------------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Offline sales (ADR-0022) need the register's offline mode, a plausible recording time, cash or card payments only, and a
+    /// device reference that was not booked on this register before (the unique index decides under concurrency).
+    /// </summary>
+    private async Task<Error?> CheckOfflineAsync(Register register, OfflineRecord offline, CreateSaleRequest request, CancellationToken ct)
+    {
+        if (!register.OfflineMode)
+            return Error.Conflict("pos.offline_not_enabled", "Offline mode is not enabled for this register.");
+        if (offline.Check(clock.UtcNow, options.Value.OfflineMaxAgeHours) is { IsSuccess: false } invalid)
+            return invalid.Error!;
+        if (request.Payments.Any(p => p.Method is not (PaymentMethod.Cash or PaymentMethod.Card)))
+            return Error.Validation("pos.offline_payment_not_allowed", "Offline sales can only be paid in cash or by card.");
+        if (await db.Set<Receipt>().AnyAsync(r => r.RegisterId == register.Id && r.OfflineReference == offline.Reference, ct))
+            return OfflineReferenceUsed(offline.Reference);
+        return null;
+    }
+
+    /// <summary>
+    /// The card transaction named by a card payment (ADR-0021), row-locked until the receipt commits: an approved payment of
+    /// this register over exactly the card amount that no other receipt uses. Null when the cashier confirmed the payment.
+    /// </summary>
+    private async Task<Result<CardTransaction?>> LockCardTransactionAsync(IReadOnlyList<SalePaymentRequest> payments, Guid registerId, CancellationToken ct)
+    {
+        var named = payments.Where(p => p.CardTransactionId is not null).ToList();
+        if (named.Count == 0)
+            return (CardTransaction?)null;
+        if (named.Any(p => p.Method != PaymentMethod.Card) || payments.Count(p => p.Method == PaymentMethod.Card) != 1)
+            return Error.Validation("pos.card_transaction_payment", "A card transaction settles exactly one card payment of the receipt.");
+        var locked = await LockCardTransactionAsync(named[0].CardTransactionId!.Value, ct);
+        if (!locked.IsSuccess)
+            return locked.Error!;
+        var usable = locked.Value!.CheckUsable(registerId, CardTransactionKind.Payment, named[0].AmountMinor);
+        return usable.IsSuccess ? locked : usable.Error!;
+    }
+
+    private async Task<Result<CardTransaction?>> LockCardTransactionAsync(Guid id, CancellationToken ct) =>
+        await CardTransactionService.LockAsync(db, id, ct) is { } found && found.OrganizationId == OrganizationId
+            ? found
+            : CardTransaction.Invalid("not_found");
+
+    /// <summary>Links the locked card transaction to the receipt it settles (saved with the receipt). Checks kind, register and amount again.</summary>
+    private Error? LinkCard(CardTransaction? card, Receipt receipt)
+    {
+        if (card is null)
+            return null;
+        var payment = receipt.Payments.FirstOrDefault(p => p.Method == PaymentMethod.Card);
+        var kind = receipt.Kind == ReceiptKind.Return ? CardTransactionKind.Refund : CardTransactionKind.Payment;
+        var usable = card.CheckUsable(receipt.RegisterId, kind, Math.Abs(payment?.AmountMinor ?? 0));
+        if (!usable.IsSuccess)
+            return usable.Error!;
+        return card.LinkTo(receipt.Id, clock.UtcNow) is { IsSuccess: false } refused ? refused.Error! : null;
+    }
+
+    private static Error OfflineReferenceUsed(string reference) =>
+        Error.Conflict("pos.offline_reference_used", $"The offline reference {reference} was already booked on this register.")
+            .WithDetails(new Dictionary<string, object?> { ["reference"] = reference });
+
     private CashierRights Rights() => new(actor.Has(Permissions.PosPriceOverride), actor.Has(Permissions.PosDiscount),
         actor.MaxDiscountPercent);
 
@@ -549,7 +645,7 @@ internal sealed partial class SaleService(
     }
 
     private async Task<Result<ReceiptDto>> CompleteRefundAsync(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx,
-        Receipt refund, Receipt original, Register register, CancellationToken ct)
+        Receipt refund, Receipt original, Register register, CancellationToken ct, DocumentExtras? extras = null)
     {
         var cashOut = -refund.Payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.AmountMinor);
         if (cashOut > 0)
@@ -572,7 +668,7 @@ internal sealed partial class SaleService(
                 return restocked.Error!;
         }
 
-        var sealedResult = await SealAsync(refund, register.Name, original.Number, ct);
+        var sealedResult = await SealAsync(refund, register.Name, original.Number, ct, extras);
         if (!sealedResult.IsSuccess)
             return sealedResult.Error!;
 
@@ -584,6 +680,10 @@ internal sealed partial class SaleService(
             if (await approvals.ConsumeAsync(actor, use, refund.Id, null, null, ct) is { } approvalError)
                 return approvalError;
             await tx.CommitAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_card_transactions_receipt"))
+        {
+            return CardTransaction.Invalid("linked");
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation("ux_stock_units_imei_in_stock"))
         {
@@ -610,7 +710,7 @@ internal sealed partial class SaleService(
     }
 
     /// <summary>Fiscal signature (or the TSE outage marker, see <see cref="FiscalSealer"/>) and the printable document.</summary>
-    private async Task<Result> SealAsync(Receipt receipt, string registerName, long? referencedNumber, CancellationToken ct)
+    private async Task<Result> SealAsync(Receipt receipt, string registerName, long? referencedNumber, CancellationToken ct, DocumentExtras? extras = null)
     {
         if (await approvals.LockAsync(actor, ct) is { } approvalUnusable)
             return approvalUnusable; // checked before the TSE signs
@@ -625,6 +725,8 @@ internal sealed partial class SaleService(
         // A manager approval is printed with the receipt (who approved).
         if (actor.Approval is { ApproverName: { } approver })
             document = document with { Notes = [.. document.Notes, $"Freigabe: {approver}"] };
+        if (extras is not null)
+            document = extras.Apply(document);
         return receipt.Seal(signed.Value, document);
     }
 
@@ -666,16 +768,24 @@ internal sealed partial class SaleService(
                         + string.Join("|", request.Lines.Select(l =>
                             $"{l.ProductId:N}:{l.Imei?.Trim()}:{l.Quantity}:{l.UnitPriceMinor}:{l.DiscountMinor ?? 0}"
                             + (string.IsNullOrWhiteSpace(l.Note) ? "" : $":n{l.Note.Trim().Length}:{l.Note.Trim()}")))
-                        + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(p => $"{p.Method}:{p.AmountMinor}"))
-                        + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "");
+                        + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(PaymentFingerprint))
+                        + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "")
+                        + (request.Offline is { } offline
+                            ? $"#o:{offline.RecordedAt.ToUniversalTime():O}:{offline.Reference?.Trim().Length}:{offline.Reference?.Trim()}"
+                            : "");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
+
+    /// <summary>The card transaction is part of a payment's fingerprint only when present (existing fingerprints are unchanged).</summary>
+    internal static string PaymentFingerprint(SalePaymentRequest p) =>
+        $"{p.Method}:{p.AmountMinor}" + (p.CardTransactionId is { } card ? $":ct{card:N}" : "");
 
     internal static string HashReturn(Guid receiptId, ReturnRequest request)
     {
         var canonical = $"return#{receiptId:N}#{request.RegisterId:N}#{request.RefundMethod}#"
                         + string.Join("|", request.Lines.OrderBy(l => l.LineNumber).Select(l => $"{l.LineNumber}:{l.Quantity}"))
-                        + "#" + request.Reason.Trim();
+                        + "#" + request.Reason.Trim()
+                        + (request.CardTransactionId is { } card ? $"#ct:{card:N}" : "");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
@@ -699,10 +809,30 @@ internal sealed partial class SaleService(
         var reprints = await db.Set<ReceiptReprint>().AsNoTracking().Where(x => x.ReceiptId == r.Id)
             .GroupBy(x => x.ReceiptId).Select(g => new { Count = g.Count(), Last = g.Max(x => x.PrintedAt) }).FirstOrDefaultAsync(ct);
 
+        var cardInfo = await db.Set<CardTransaction>().AsNoTracking().Where(t => t.ReceiptId == r.Id).FirstOrDefaultAsync(ct) is { } linked
+            ? DocumentCard.From(linked)
+            : null;
+
         return new ReceiptDto(r.Id, r.RegisterId, registerName, r.SessionId, r.Number, r.Kind.ToString(), r.ReferencedReceiptId, referencedNumber, cancelledBy,
             r.CreatedAt, r.CreatedBy, (await users.GetAsync([r.CreatedBy], ct)).GetValueOrDefault(r.CreatedBy)?.DisplayName, r.Currency, r.TotalGrossMinor, r.ChangeMinor, r.Reason, lines,
-            r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor)).ToList(),
+            r.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.AmountMinor, p.TenderedMinor,
+                p.Method == PaymentMethod.Card ? cardInfo : null)).ToList(),
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
-            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor);
+            (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor,
+            r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null);
+    }
+}
+
+/// <summary>What a receipt document shows beyond the receipt itself: the terminal data of its card payment (ADR-0021).</summary>
+internal sealed record DocumentExtras(CardTransaction? Card = null)
+{
+    public ReceiptDocument Apply(ReceiptDocument document)
+    {
+        if (Card is not null)
+            document = document with
+            {
+                Payments = document.Payments.Select(p => p.Method == nameof(PaymentMethod.Card) ? p with { Card = DocumentCard.From(Card) } : p).ToList(),
+            };
+        return document;
     }
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using HandyNet.IntegrationTests.Infrastructure;
 using Npgsql;
 
@@ -110,5 +111,125 @@ public sealed class DatabaseSecurityTests(HandyNetFixture fixture)
         var count = await CountAsync(owner,
             $"SELECT count(*) FROM infra.audit_log WHERE entity_type = 'Organization' AND entity_id = '{supplier.OrganizationId}' AND changes ? 'Status'");
         Assert.True(count >= 2, "registration and verification should both be audited");
+    }
+
+    // ---- POS completion (ADR-0020 … 0023): every new tenant table is isolated by RLS, not by application code ------------------
+
+    private readonly PosSupport _pos = new(fixture);
+
+    /// <summary>
+    /// The owner of the rows sees them; another tenant and a session without tenant see none, cannot update them and cannot
+    /// move own rows into the other tenant (WITH CHECK). <paramref name="foreignInsert"/> inserts a row for the other tenant.
+    /// </summary>
+    private async Task AssertIsolatedAsync(string table, Guid owner, Guid other, string? foreignInsert, bool deletable, string touch)
+    {
+        await using (var asOwner = await ConnectAsAppAsync(owner))
+        {
+            Assert.True(await CountAsync(asOwner, $"SELECT count(*) FROM {table}") > 0, $"{table}: the owner sees its rows");
+            Assert.Equal(0, await CountAsync(asOwner, $"SELECT count(*) FROM {table} WHERE organization_id <> '{owner}'"));
+        }
+        await using (var asOther = await ConnectAsAppAsync(other))
+        {
+            Assert.Equal(0, await CountAsync(asOther, $"SELECT count(*) FROM {table} WHERE organization_id = '{owner}'"));
+            await using var update = new NpgsqlCommand($"UPDATE {table} SET {touch} WHERE organization_id = '{owner}'", asOther);
+            try
+            {
+                Assert.Equal(0, await update.ExecuteNonQueryAsync()); // invisible rows cannot be updated
+            }
+            catch (PostgresException ex) when (ex.SqlState == "42501")
+            {
+                // append-only table: not even the statement is allowed
+            }
+            if (foreignInsert is not null)
+                Assert.Equal("42501", await PosSupport.TryAsync(asOther, foreignInsert)); // new row violates row-level security policy
+            var delete = await PosSupport.TryAsync(asOther, $"DELETE FROM {table} WHERE organization_id = '{owner}'");
+            Assert.True(deletable ? delete is null : delete == "42501", $"{table}: DELETE as another tenant gave {delete ?? "success"}");
+        }
+        await using (var asOwnerAgain = await ConnectAsAppAsync(owner))
+        {
+            Assert.True(await CountAsync(asOwnerAgain, $"SELECT count(*) FROM {table}") > 0, $"{table}: rows survived the other tenant");
+            Assert.Equal("42501", await PosSupport.TryAsync(asOwnerAgain, $"TRUNCATE {table}"));
+        }
+        await using var noTenant = await ConnectAsAppAsync(null);
+        Assert.Equal(0, await CountAsync(noTenant, $"SELECT count(*) FROM {table}"));
+        await using var owned = new NpgsqlConnection(fixture.OwnerConnectionString);
+        await owned.OpenAsync();
+        Assert.Equal(1, await CountAsync(owned,
+            $"SELECT count(*) FROM pg_policies WHERE schemaname || '.' || tablename = '{table}' AND policyname = 'tenant_isolation' AND qual LIKE '%current_org%' AND with_check LIKE '%current_org%'"));
+        Assert.Equal(1, await CountAsync(owned, $"SELECT count(*) FROM pg_class WHERE oid = '{table}'::regclass AND relrowsecurity"));
+    }
+
+    [Fact]
+    public async Task Card_terminal_tables_are_tenant_isolated()
+    {
+        var a = await _pos.ShopAsync("terminal-a");
+        var b = await _pos.ShopAsync("terminal-b");
+        var registerA = await PosSupport.RegisterAsync(a);
+        var registerB = await PosSupport.RegisterAsync(b);
+        foreach (var (shop, register) in new[] { (a, registerA), (b, registerB) })
+        {
+            (await shop.PostAsync($"/api/pos/registers/{register}/terminals", new { name = "Simulation", connection = "Simulated" })).Expect(HttpStatusCode.Created);
+            (await shop.PostAsync($"/api/pos/registers/{register}/card-transactions", new { kind = "Payment", amountMinor = 10_00 })).Expect(HttpStatusCode.Created);
+        }
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+
+        await AssertIsolatedAsync("pos.terminal_profiles", orgA, orgB,
+            $"INSERT INTO pos.terminal_profiles (id, organization_id, register_id, name, connection, is_default, created_at, updated_at) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{registerA}', 'Fremd', 'Manual', false, now(), now())",
+            deletable: true, touch: "name = 'gekapert'");
+        await AssertIsolatedAsync("pos.card_transactions", orgA, orgB,
+            $"INSERT INTO pos.card_transactions (id, organization_id, register_id, is_test, kind, amount_minor, status, created_at, created_by) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{registerA}', false, 'Payment', 100, 'Pending', now(), gen_random_uuid())",
+            deletable: false, touch: "status = 'Approved', completed_at = now()");
+
+        // The API answers 404 for another tenant's profile and transaction (existence is not revealed).
+        var profileA = (await a.GetAsync($"/api/pos/registers/{registerA}/terminals")).Expect(HttpStatusCode.OK).Json.AsArray().Single()!["id"]!.GetValue<string>();
+        var transactionA = (await a.GetAsync("/api/pos/card-transactions")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray().Single()!["id"]!.GetValue<string>();
+        (await b.GetAsync($"/api/pos/terminals/{profileA}")).Expect(HttpStatusCode.NotFound);
+        (await b.GetAsync($"/api/pos/registers/{registerA}/terminals")).Expect(HttpStatusCode.NotFound);
+        (await b.GetAsync($"/api/pos/card-transactions/{transactionA}")).Expect(HttpStatusCode.NotFound);
+        (await b.PostAsync($"/api/pos/card-transactions/{transactionA}/result", new { status = "Approved" })).Expect(HttpStatusCode.NotFound);
+        (await b.PostAsync($"/api/pos/registers/{registerA}/card-transactions", new { kind = "Payment", amountMinor = 10_00 })).Expect(HttpStatusCode.NotFound);
+        // A sale of B cannot use A's approved transaction.
+        (await a.PostAsync($"/api/pos/card-transactions/{transactionA}/result", new { status = "Approved" })).Expect(HttpStatusCode.OK);
+        var product = await PosSupport.StockProductAsync(b, 1);
+        (await b.PostAsync($"/api/pos/registers/{registerB}/sessions", new { openingCashMinor = 0 })).Expect(HttpStatusCode.Created);
+        var stolen = await b.PostAsync("/api/pos/sales", new
+        {
+            registerId = registerB, lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 10_00 } },
+            payments = new[] { new { method = "Card", amountMinor = 10_00, cardTransactionId = transactionA } },
+        }, PosSupport.Key());
+        Assert.Equal((HttpStatusCode.Conflict, "pos.card_transaction_invalid"), (stolen.Status, stolen.Code));
+    }
+
+    [Fact]
+    public async Task Display_links_are_tenant_isolated_and_the_public_function_reveals_only_one_active_link()
+    {
+        var a = await _pos.ShopAsync("display-a");
+        var b = await _pos.ShopAsync("display-b");
+        var registerA = await PosSupport.RegisterAsync(a);
+        var registerB = await PosSupport.RegisterAsync(b);
+        var tokenA = (await a.PostAsync($"/api/pos/registers/{registerA}/display-link")).Expect(HttpStatusCode.Created).Json["token"]!.GetValue<string>();
+        (await b.PostAsync($"/api/pos/registers/{registerB}/display-link")).Expect(HttpStatusCode.Created);
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+
+        await AssertIsolatedAsync("pos.display_links", orgA, orgB,
+            $"INSERT INTO pos.display_links (id, organization_id, register_id, token_hash, created_at, expires_at, created_by) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{registerA}', repeat('c', 64), now(), now() + interval '1 day', gen_random_uuid())",
+            deletable: false, touch: "revoked_at = now()");
+
+        // Without a tenant the table is empty, but the SECURITY DEFINER function finds exactly the link whose hash is given.
+        await using var noTenant = await ConnectAsAppAsync(null);
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.display_links"));
+        Assert.Equal(1, await CountAsync(noTenant, $"SELECT count(*) FROM pos.public_display(encode(sha256('{tokenA}'::bytea), 'hex')) WHERE register_id = '{registerA}'"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display(repeat('0', 64))"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display('%')"));
+        Assert.Equal(0, await CountAsync(noTenant, "SELECT count(*) FROM pos.public_display(NULL)"));
+        // Its columns: nothing beyond register, organization, organization name and expiry.
+        await using var owner = new NpgsqlConnection(fixture.OwnerConnectionString);
+        await owner.OpenAsync();
+        await using var columns = new NpgsqlCommand(
+            "SELECT pg_get_function_result('pos.public_display(text)'::regprocedure)", owner);
+        Assert.Equal("TABLE(register_id uuid, organization_id uuid, organization_name text, expires_at timestamp with time zone)", (string)(await columns.ExecuteScalarAsync())!);
     }
 }

@@ -25,6 +25,23 @@ public sealed class PosOptions
 
     /// <summary>Validity of a public (QR) receipt link in days (default 90).</summary>
     public int PublicReceiptLinkDays { get; set; } = 90;
+
+    /// <summary>Oldest offline sale (hours between its recording on the device and its booking) the API accepts (default 72).</summary>
+    public int OfflineMaxAgeHours { get; set; } = 72;
+
+    public TerminalOptions Terminal { get; set; } = new();
+
+    /// <summary>Validity of a remote customer display link in days (default 30).</summary>
+    public int DisplayLinkDays { get; set; } = 30;
+
+    /// <summary>How long the public display endpoint holds a long-poll request open when nothing changed (seconds, default 20).</summary>
+    public int DisplayPollSeconds { get; set; } = 20;
+}
+
+public sealed class TerminalOptions
+{
+    /// <summary>Staging only: allows the simulated card terminal in the Production environment. Never set for real operation.</summary>
+    public bool AllowSimulatedInProduction { get; set; }
 }
 
 public sealed class FiscalOptions

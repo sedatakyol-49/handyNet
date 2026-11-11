@@ -35,6 +35,14 @@ public sealed class Register : IAuditable
 
     public void SetCashRounding(bool on) => CashRounding = on;
 
+    /// <summary>
+    /// Offline mode (ADR-0022): the till of this register may record sales while the API is unreachable and book them
+    /// afterwards (<see cref="Receipt.OfflineRecordedAt"/>). Off by default.
+    /// </summary>
+    public bool OfflineMode { get; private set; }
+
+    public void SetOfflineMode(bool on) => OfflineMode = on;
+
     /// <summary>Sets the auto-lock; 0 or null turns it off.</summary>
     public Result SetAutoLock(int? minutes)
     {

@@ -99,7 +99,33 @@ public sealed record ReceiptHeader(
     DateTimeOffset Now,
     string? IdempotencyKey = null,
     string? RequestHash = null,
-    DocumentCustomer? Customer = null);
+    DocumentCustomer? Customer = null,
+    OfflineRecord? Offline = null);
+
+/// <summary>
+/// A sale recorded on the till while the API was unreachable (ADR-0022): when the device recorded it and the device's own
+/// reference (unique per register). The receipt itself carries the server time and the next gapless number of its booking.
+/// </summary>
+public sealed record OfflineRecord(DateTimeOffset RecordedAt, string Reference)
+{
+    public const int MaxReferenceLength = 40;
+    public const int MaxFutureMinutes = 5;
+
+    public static bool IsReference(string? reference) =>
+        reference is { Length: >= 1 and <= MaxReferenceLength } && reference.All(c => char.IsAsciiLetterOrDigit(c) || c == '-');
+
+    /// <summary>The record must not lie in the future (beyond clock drift) and not be older than the configured maximum.</summary>
+    public Result Check(DateTimeOffset now, int maxAgeHours)
+    {
+        if (!IsReference(Reference))
+            return Error.Validation("pos.offline_reference", $"The offline reference has 1–{MaxReferenceLength} characters (letters, digits, '-').");
+        if (RecordedAt > now.AddMinutes(MaxFutureMinutes) || RecordedAt < now.AddHours(-maxAgeHours))
+            return Error.Validation("pos.offline_time_invalid",
+                    $"The offline sale was recorded at an implausible time (at most {MaxFutureMinutes} minutes ahead, at most {maxAgeHours} hours old).")
+                .WithDetails(new Dictionary<string, object?> { ["recordedAt"] = RecordedAt, ["maxAgeHours"] = maxAgeHours });
+        return Result.Success();
+    }
+}
 
 /// <summary>
 /// A till receipt (Kassenbeleg). Immutable once written (GoBD): the application role has no UPDATE/DELETE grant and a
@@ -158,6 +184,14 @@ public sealed class Receipt
     public string? Reason { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
+
+    /// <summary>Offline sale (ADR-0022): when the till recorded it. <see cref="CreatedAt"/> stays the server time of the booking.</summary>
+    public DateTimeOffset? OfflineRecordedAt { get; private set; }
+
+    /// <summary>Offline sale: the device's reference, unique per register (database index).</summary>
+    public string? OfflineReference { get; private set; }
+
+    public OfflineRecord? Offline => OfflineRecordedAt is { } at && OfflineReference is { } reference ? new OfflineRecord(at, reference) : null;
 
     public FiscalStatus? FiscalStatus { get; private set; }
     public string? FiscalNotice { get; private set; }
@@ -358,6 +392,8 @@ public sealed class Receipt
         CreatedBy = h.UserId,
         CustomerId = h.Customer?.Id,
         _customer = h.Customer,
+        OfflineRecordedAt = h.Offline?.RecordedAt.ToUniversalTime(),
+        OfflineReference = h.Offline?.Reference,
     };
 
     private void CopyCustomerOf(Receipt original)

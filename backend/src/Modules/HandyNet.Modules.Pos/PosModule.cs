@@ -33,6 +33,9 @@ public static class PosModule
             .Validate(o => o.CashierSessionHours is >= 1 and <= 24, "Pos:CashierSessionHours must be between 1 and 24.")
             .Validate(o => o.ApprovalSeconds is >= 10 and <= 900, "Pos:ApprovalSeconds must be between 10 and 900.")
             .Validate(o => o.PublicReceiptLinkDays is >= 1 and <= 3650, "Pos:PublicReceiptLinkDays must be between 1 and 3650.")
+            .Validate(o => o.OfflineMaxAgeHours is >= 1 and <= 720, "Pos:OfflineMaxAgeHours must be between 1 and 720.")
+            .Validate(o => o.DisplayLinkDays is >= 1 and <= 3650, "Pos:DisplayLinkDays must be between 1 and 3650.")
+            .Validate(o => o.DisplayPollSeconds is >= 1 and <= 55, "Pos:DisplayPollSeconds must be between 1 and 55.")
             .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalMode.SimulatedTse || o.Fiscal.AllowSimulatedTseInProduction,
                 "The SimulatedTse fiscal signer (test TSE) must not be used in production unless Pos:Fiscal:AllowSimulatedTseInProduction is set (staging only).")
             .Validate(o => o.FiscalSigner != FiscalMode.FiskalyCloudTse,
@@ -82,6 +85,10 @@ public static class PosModule
         services.AddScoped<ICashPayouts, CashPayouts>();
         services.AddScoped<IPosDailyFigures, PosDailyFigures>();
         services.AddScoped<PrinterProfileService>();
+        services.AddScoped<TerminalProfileService>();
+        services.AddScoped<CardTransactionService>();
+        services.AddSingleton<DisplayStateStore>();
+        services.AddScoped<DisplayService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -218,6 +225,8 @@ public static class PosModule
         MapDocumentEndpoints(app, sell);
         MapSalesDocumentEndpoints(sell);
         PrinterEndpoints.Map(sell, manage); // receipt printer profiles (ADR-0018)
+        CardTerminalEndpoints.Map(sell, manage); // card terminal profiles and card transactions (ADR-0021)
+        DisplayEndpoints.Map(app, sell); // customer display link, state and public long poll (ADR-0023)
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
@@ -300,6 +309,9 @@ public static class PosModule
             })
             .WithMetadata(new IgnoreCashierTokenMetadata());
     }
+
+    /// <summary>Anonymous customer display (long poll): per client IP and minute.</summary>
+    public const string PublicDisplayRateLimitPolicy = "pos-public-display";
 
     /// <summary>Anonymous public receipt view (QR link): per client IP and minute.</summary>
     public const string PublicReceiptRateLimitPolicy = "pos-public-receipt";

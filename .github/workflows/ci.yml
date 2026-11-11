@@ -103,3 +103,64 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-web:latest
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
+
+  # Continuous deployment (docs/deployment.md §5): after the images for this commit are in GHCR, run deploy.sh on the
+  # server over SSH (backup -> pull -> migrate -> start -> readiness check). Skipped until the DEPLOY_* secrets exist.
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+    steps:
+      - name: Check deployment secrets
+        id: cfg
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::warning::Deployment skipped: set the repository secrets DEPLOY_HOST, DEPLOY_USER and DEPLOY_SSH_KEY (docs/deployment.md)."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Configure SSH
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$DEPLOY_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS is not set: the server's host key is taken from the network unverified. Set it to the output of 'ssh-keyscan <host>'."
+            ssh-keyscan -p "${DEPLOY_PORT:-22}" "$DEPLOY_HOST" > ~/.ssh/known_hosts
+          fi
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy this commit
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "sh -s -- '${DEPLOY_PATH:-/opt/handynet}' '$GITHUB_SHA'" <<'REMOTE'
+          set -eu
+          cd "$1"
+          # compose.prod.yml, the Caddyfile and deploy.sh come from the repository: update them when the server has a clone.
+          if [ -d .git ]; then
+            git fetch --quiet origin main && git merge --quiet --ff-only "$2" \
+              || echo "WARNING: could not update the repository files on the server; deploying with the files present." >&2
+          fi
+          cd deploy
+          ./deploy.sh "$2"
+          REMOTE
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
