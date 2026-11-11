@@ -49,7 +49,7 @@ const PAGE_SIZE = 50;
       <ul class="pos-card divide-y divide-pos-line" data-testid="gc-list">
         @for (c of cards(); track c.id) {
           <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3" [attr.data-card]="c.codeLast4" data-testid="gc-row">
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
               <p class="font-mono font-bold" dir="ltr">{{ masked(c.codeLast4) }}</p>
               <p class="text-xs text-pos-muted">
                 {{ 'pos.giftCards.issued' | t: { date: (c.issuedAt | hnDate: 'date') } }}
@@ -64,7 +64,7 @@ const PAGE_SIZE = 50;
                 }
               </p>
             </div>
-            <span class="pos-pill" [class]="statusClass(c)" data-testid="gc-state">{{ statusText(c) }}</span>
+            <span class="pos-pill max-sm:me-auto" [class]="statusClass(c)" data-testid="gc-state">{{ statusText(c) }}</span>
             <div class="text-end">
               <p class="text-lg font-bold tabular-nums" data-testid="gc-balance">{{ c.balanceMinor | money }}</p>
               <p class="text-xs text-pos-muted">{{ 'pos.giftCards.of' | t: { amount: (c.initialMinor | money) } }}</p>

@@ -167,12 +167,12 @@
 
       <!-- customer, note, numpad, pay -->
       <div class="shrink-0 space-y-2 px-3 pb-3">
-        <div class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
           <button type="button" class="pos-soft min-w-0 justify-start" [class.pos-soft-accent]="!!customer()" (click)="customerOpen.set(true)"
             [attr.aria-label]="customer() ? ('pos.customers.changeFor' | t: { name: customer()!.name }) : ('pos.customers.choose' | t)" data-testid="pos-customer">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>
             <span class="min-w-0 text-start leading-tight">
-              <span class="block truncate" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
+              <span class="block truncate" dir="auto" data-testid="pos-customer-name">{{ customer()?.name ?? ('pos.customers.button' | t) }}</span>
               @if (customer() && (loyaltyOn() || customer()!.pricelistName)) {
                 <span class="block truncate text-[11px] font-medium opacity-80" data-testid="pos-customer-extra">
                   @if (loyaltyOn()) {
@@ -192,7 +192,7 @@
           <button type="button" class="pos-soft min-w-0" [disabled]="offline()" [title]="offline() ? ('pos.giftCards.offline' | t) : ('pos.giftCards.sell.title' | t)"
             (click)="giftCardSaleOpen.set(true)" data-testid="pos-sell-gift-card">
             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="1.5" /><path d="M3 12h18M12 8v12M12 8c-1.5-3-5-3.5-5-1s3.5 1 5 1c1.5 0 5 1.5 5-1s-3.5-2-5 1" /></svg>
-            <span class="truncate">{{ 'pos.giftCards.sell.button' | t }}</span>
+            <span class="truncate max-xl:sr-only">{{ 'pos.giftCards.sell.button' | t }}</span>
           </button>
         </div>
         @if (mode() === 'discount' && canDiscount() && rights().maxDiscountPercent < 100) {

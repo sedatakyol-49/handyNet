@@ -215,7 +215,7 @@ export class PosPricelistsPage {
       <ul class="pos-card divide-y divide-pos-line" data-testid="pl-items">
         @for (it of items(); track it.productId) {
           <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3" [attr.data-item]="it.name" data-testid="pl-item">
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
               <p class="font-semibold">{{ it.brand }} {{ it.name }}</p>
               <p class="text-xs text-pos-muted">{{ it.ean ?? '–' }}</p>
             </div>
@@ -223,7 +223,7 @@ export class PosPricelistsPage {
               <p class="text-lg font-bold tabular-nums" data-testid="pl-item-price">{{ it.priceMinor | money }}</p>
               <p class="text-xs text-pos-muted">{{ 'pos.pricelists.basePrice' | t }}: {{ it.basePriceMinor === null ? '–' : (it.basePriceMinor | money) }}</p>
             </div>
-            <div class="flex gap-2">
+            <div class="ms-auto flex gap-2">
               <button type="button" class="pos-soft" (click)="openEdit(it)" data-testid="pl-item-edit">{{ 'common.edit' | t }}</button>
               <button type="button" class="pos-soft text-pos-danger" (click)="remove(it)" [attr.aria-label]="'pos.pricelists.removeItemFor' | t: { name: it.name }" data-testid="pl-item-remove">{{ 'common.remove' | t }}</button>
             </div>
