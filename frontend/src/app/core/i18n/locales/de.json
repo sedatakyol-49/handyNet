@@ -692,7 +692,36 @@
       "pos.offline_payment_not_allowed": "Offline erfasste Verkäufe können nur bar oder mit Karte bezahlt werden.",
       "pos.display_link_not_found": "Dieser Display-Link existiert nicht oder ist nicht mehr gültig.",
       "pos.display_state_invalid": "Die Daten für das Kundendisplay sind ungültig.",
-      "pos.display_state_too_large": "Die Daten für das Kundendisplay sind zu groß (höchstens 16 KiB)."
+      "pos.display_state_too_large": "Die Daten für das Kundendisplay sind zu groß (höchstens 16 KiB).",
+      "pos.gift_card_not_found": "Unbekannter Gutscheincode.",
+      "pos.gift_card_not_usable": "Dieser Gutschein ist gesperrt oder abgelaufen.",
+      "pos.gift_card_insufficient": "Das Guthaben des Gutscheins reicht nicht.",
+      "pos.gift_card_already_redeemed": "Der Gutschein wurde bereits (teilweise) eingelöst; der Verkauf kann nicht storniert werden.",
+      "pos.gift_card_line_not_returnable": "Verkaufte Gutscheine können nicht zurückgegeben werden.",
+      "pos.invoice_gift_card": "Gutscheine sind auf Rechnungen nicht möglich.",
+      "pos.gift_card_amount": "Der Gutscheinbetrag liegt außerhalb der erlaubten Grenzen.",
+      "pos.gift_card_line": "Eine Gutscheinposition hat Menge 1 und keinen Rabatt.",
+      "pos.gift_card_payment": "Für eine Gutscheinzahlung fehlt der Code.",
+      "pos.gift_card_exceeds_total": "Gutscheinzahlungen dürfen den Betrag ohne verkaufte Gutscheine nicht übersteigen.",
+      "pos.gift_card_not_allowed": "Gutscheine sind hier nicht möglich.",
+      "pos.gift_card_restore": "Das Guthaben konnte nicht zurückgebucht werden.",
+      "pos.gift_card_status": "Der Gutschein ist nicht aktiv.",
+      "pos.offline_gift_card_not_allowed": "Offline erfasste Verkäufe können keine Gutscheine verkaufen.",
+      "pos.loyalty_disabled": "Treuepunkte sind nicht eingeschaltet.",
+      "pos.loyalty_insufficient_points": "Der Kunde hat nicht genug Punkte.",
+      "pos.loyalty_customer_required": "Punkte können nur mit einem Kunden eingelöst werden.",
+      "pos.loyalty_min_points": "Es müssen mehr Punkte eingelöst werden (Mindestmenge).",
+      "pos.loyalty_exceeds_total": "Der Punktewert übersteigt den Einkauf (ohne Gutscheine).",
+      "pos.loyalty_points": "Ungültige Punktzahl.",
+      "pos.loyalty_settings": "Die Einstellungen für Treuepunkte sind ungültig.",
+      "pos.pricelist_not_found": "Preisliste nicht gefunden.",
+      "pos.pricelist_name": "Bitte einen Namen für die Preisliste eingeben (höchstens 100 Zeichen).",
+      "pos.pricelist_name_taken": "Es gibt schon eine Preisliste mit diesem Namen.",
+      "pos.pricelist_version": "Die Preisliste wurde zwischenzeitlich geändert. Bitte neu laden.",
+      "pos.pricelist_validity": "„Gültig bis“ darf nicht vor „Gültig ab“ liegen.",
+      "pos.pricelist_discount": "Der Rabatt muss zwischen 0 und 100 % liegen.",
+      "pos.pricelist_item_not_found": "Dieser Artikel hat keinen Preis in der Liste.",
+      "pos.pricelist_item_limit": "Eine Preisliste kann höchstens 5000 Artikelpreise haben."
     },
     "validation": {
       "required": "Dieses Feld ist erforderlich.",
@@ -2452,7 +2481,8 @@
   },
   "posPaymentMethod": {
     "Cash": "Bar",
-    "Card": "Karte"
+    "Card": "Karte",
+    "GiftCard": "Gutschein"
   },
   "receiptKind": {
     "Sale": "Verkauf",
@@ -2584,7 +2614,10 @@
       "ankauf": "Ankauf",
       "printers": "Drucker",
       "terminals": "Kartenterminal",
-      "offline": "Offline"
+      "offline": "Offline",
+      "giftCards": "Gutscheine",
+      "loyalty": "Treuepunkte",
+      "pricelists": "Preislisten"
     },
     "registers": {
       "title": "Kasse",
@@ -2690,7 +2723,9 @@
         "noPayment": "Bitte geben Sie den Zahlbetrag ein (bar oder Karte).",
         "cardExceedsTotal": "Die Kartenzahlung darf den Gesamtbetrag nicht übersteigen.",
         "insufficient": "Die Zahlung deckt den Gesamtbetrag nicht.",
-        "cashNotNeeded": "Die Kartenzahlung deckt den Betrag bereits; Bargeld ist nicht nötig."
+        "cashNotNeeded": "Die Kartenzahlung deckt den Betrag bereits; Bargeld ist nicht nötig.",
+        "giftCardBalance": "Ein Gutschein-Betrag ist höher als sein Guthaben.",
+        "giftCardForGiftCard": "Verkaufte Gutscheine können nicht mit einem Gutschein bezahlt werden."
       }
     },
     "errors": {
@@ -2751,7 +2786,8 @@
         "trace": "Trace-Nr. {trace}",
         "receipt": "Beleg-Nr. {number}",
         "auth": "Autorisierung {code}"
-      }
+      },
+      "loyaltyDiscount": "Treuepunkte"
     },
     "receipts": {
       "title": "Belege",
@@ -2901,7 +2937,11 @@
       "ankaufCount": "Anzahl Ankäufe (bar)",
       "ankaufCash": "Bar ausgezahlt",
       "ankaufNote": "Ankäufe per Überweisung berühren die Kasse nicht; sie stehen im Tagesbericht.",
-      "ofWhichAnkauf": "davon Ankäufe"
+      "ofWhichAnkauf": "davon Ankäufe",
+      "giftCardsAndPoints": "Gutscheine und Treuepunkte",
+      "giftCardsSold": "Gutscheine verkauft",
+      "loyaltyDiscount": "Nachlass durch Treuepunkte",
+      "giftCardsNote": "Verkaufte Gutscheine sind nicht umsatzsteuerbar (Umsatzsteuer bei Einlösung); Einlösungen erscheinen bei den Zahlarten."
     },
     "cashCount": {
       "label": "Zählung nach Stückelung",
@@ -2967,7 +3007,8 @@
       "sources": {
         "PosPrice": "Eigener Kassenpreis",
         "Offer": "Eigenes Angebot (netto + 19 % USt)",
-        "None": "Kein Preis – Eingabe an der Kasse"
+        "None": "Kein Preis – Eingabe an der Kasse",
+        "Pricelist": "Preisliste des Kunden"
       },
       "offerNet": "Angebotspreis netto",
       "updatedAt": "Zuletzt geändert",
@@ -3460,7 +3501,9 @@
         "noSession": "Offline kann nur verkauft werden, wenn beim letzten Kontakt zum Server eine Kassensitzung offen war.",
         "noStorage": "Dieser Browser bietet keinen dauerhaften Speicher. Der Verkauf kann offline nicht sicher gespeichert werden – bitte auf die Verbindung warten.",
         "payment": "Offline sind nur Bar- und Kartenzahlung möglich.",
-        "cardUnreported": "Für diesen Bon ist eine Kartenzahlung genehmigt, die der Server noch nicht kennt. Der Verkauf kann erst mit Verbindung abgeschlossen werden – nicht erneut am Terminal zahlen lassen."
+        "cardUnreported": "Für diesen Bon ist eine Kartenzahlung genehmigt, die der Server noch nicht kennt. Der Verkauf kann erst mit Verbindung abgeschlossen werden – nicht erneut am Terminal zahlen lassen.",
+        "giftCard": "Offline können keine Gutscheine verkauft werden (der Code entsteht auf dem Server). Bitte den Gutschein aus dem Bon entfernen oder auf die Verbindung warten.",
+        "loyalty": "Offline können keine Treuepunkte eingelöst werden. Bitte die Einlösung entfernen oder auf die Verbindung warten."
       },
       "storeFailed": "Der Verkauf konnte nicht auf dem Gerät gespeichert werden. Der Bon bleibt erhalten – bitte erneut versuchen.",
       "lookup": {
@@ -3520,6 +3563,191 @@
         "bookedMany": "{count} Offline-Verkäufe gebucht.",
         "refused": "Ein Offline-Verkauf wurde vom Server abgelehnt. Bitte unter „Offline-Verkäufe“ prüfen."
       }
+    },
+    "giftCards": {
+      "title": "Gutscheine",
+      "subtitle": "Alle Gutscheine (Mehrzweck-Gutscheine) mit Restguthaben. Der Code ist nicht gespeichert – er erscheint nur einmal beim Verkauf. Sperren und Neuausgabe brauchen einen Grund.",
+      "search": "Suche",
+      "searchPlaceholder": "Letzte 4 Zeichen, Kunde …",
+      "status": "Zustand",
+      "emptyTitle": "Keine Gutscheine",
+      "emptyText": "Gutscheine werden an der Kasse mit „Gutschein“ verkauft.",
+      "issued": "Verkauft am {date}",
+      "of": "von {amount}",
+      "expired": "Abgelaufen",
+      "used": "Aufgebraucht",
+      "details": "Einzelheiten",
+      "detailTitle": "Gutschein {code}",
+      "balance": "Restguthaben",
+      "initial": "Ursprünglich",
+      "history": "Verlauf",
+      "reason": "Grund",
+      "reasonHint": "Pflicht für Sperren und Neuausgabe; steht im Verlauf.",
+      "reasonRequired": "Bitte einen Grund angeben.",
+      "void": "Sperren",
+      "voided": "Gutschein {code} gesperrt.",
+      "reissue": "Neuen Code ausgeben",
+      "reissued": "Neuer Code ausgegeben – der alte Code gilt nicht mehr.",
+      "offline": "Gutscheine gehen nur mit Verbindung zum Server.",
+      "lineDescription": "Gutschein",
+      "lineHint": "Code nach dem Bezahlen · nicht umsatzsteuerbar · nicht mit Gutschein oder Punkten bezahlbar",
+      "sell": {
+        "button": "Gutschein",
+        "title": "Gutschein verkaufen",
+        "hint": "Betrag zwischen {min} und {max}. Der Code wird nach dem Bezahlen angezeigt und nur einmal.",
+        "quick": "Häufige Beträge",
+        "amount": "Betrag",
+        "add": "In den Warenkorb",
+        "errors": {
+          "invalid": "Bitte einen gültigen Betrag eingeben.",
+          "tooLow": "Mindestens {min}.",
+          "tooHigh": "Höchstens {max}."
+        }
+      },
+      "pay": {
+        "title": "Mit Gutschein bezahlen",
+        "code": "Gutscheincode",
+        "codeHint": "Scannen oder eintippen; Bindestriche sind egal.",
+        "codeInvalid": "Das ist kein gültiger Gutscheincode (16 Zeichen).",
+        "alreadyUsed": "Dieser Gutschein ist schon als Zahlung erfasst.",
+        "check": "Guthaben prüfen",
+        "card": "Gutschein",
+        "balance": "Guthaben",
+        "voided": "Dieser Gutschein ist gesperrt und kann nicht eingelöst werden.",
+        "expired": "Dieser Gutschein ist abgelaufen und kann nicht eingelöst werden.",
+        "amount": "Betrag",
+        "amountHint": "Höchstens {max}",
+        "amountInvalid": "Bitte einen gültigen Betrag eingeben.",
+        "amountBalance": "Der Gutschein hat nur noch {balance}.",
+        "amountTotal": "Höchstens {max} (Restbetrag; verkaufte Gutscheine sind nicht mit Gutschein bezahlbar).",
+        "use": "Übernehmen"
+      },
+      "slip": {
+        "title": "Geschenkgutschein",
+        "titleMany": "Geschenkgutscheine",
+        "once": "Der Code wird nur jetzt angezeigt und nirgends gespeichert. Drucken Sie den Gutschein aus oder notieren Sie den Code für den Kunden.",
+        "amount": "Wert",
+        "code": "Gutscheincode",
+        "validUntil": "Gültig bis",
+        "receipt": "Beleg-Nr.",
+        "footer": "Einlösbar an dieser Kasse als Zahlungsmittel, auch in Teilbeträgen. Keine Barauszahlung. Bitte sicher aufbewahren – wer den Code kennt, kann ihn einlösen.",
+        "print": "Gutschein drucken",
+        "handedOver": "Gutschein übergeben – Code ausblenden"
+      }
+    },
+    "loyalty": {
+      "pointsShort": "{points} P.",
+      "due": "Zu zahlen",
+      "redeem": {
+        "title": "Treuepunkte",
+        "balance": "Punktestand",
+        "worth": "Wert {value}",
+        "points": "Punkte einlösen",
+        "limits": "Mindestens {min}, höchstens {max} Punkte",
+        "max": "Alle möglichen",
+        "apply": "Einlösen",
+        "applied": "{points} Punkte eingelöst: −{value}",
+        "offline": "Punkte können nur mit Verbindung zum Server eingelöst werden.",
+        "earn": "Dieser Einkauf bringt voraussichtlich {points} Punkte.",
+        "errors": {
+          "disabled": "Treuepunkte sind nicht eingeschaltet.",
+          "noCustomer": "Zum Einlösen bitte einen Kunden wählen.",
+          "invalid": "Bitte eine ganze Punktzahl eingeben.",
+          "belowMin": "Mindestens {min} Punkte einlösen.",
+          "exceedsBalance": "Der Kunde hat nur {balance} Punkte.",
+          "exceedsTotal": "Der Wert übersteigt den Einkauf (Gutscheine ausgenommen); höchstens {max} Punkte."
+        }
+      },
+      "done": {
+        "redeemed": "{points} Punkte eingelöst (−{value}).",
+        "earned": "{points} Punkte gesammelt.",
+        "balance": "Punktestand: {points}"
+      },
+      "history": {
+        "title": "Treuepunkte",
+        "disabled": "Treuepunkte sind derzeit ausgeschaltet; der Verlauf bleibt erhalten.",
+        "empty": "Noch keine Punkte.",
+        "receipt": "Beleg {number}",
+        "adjustPoints": "Punkte (±)",
+        "adjustHint": "z. B. +50 oder -20",
+        "adjustReason": "Grund",
+        "adjust": "Punkte korrigieren",
+        "adjustInvalid": "Bitte eine Zahl ungleich 0 eingeben, z. B. +50 oder -20.",
+        "reasonRequired": "Bitte einen Grund angeben."
+      },
+      "settings": {
+        "title": "Treuepunkte",
+        "subtitle": "Kunden mit Kundenkonto sammeln Punkte pro vollem Euro (ohne Gutscheine) und lösen sie an der Kasse als Preisnachlass ein. Die Einstellungen gelten für alle Kassen.",
+        "legal": "Einlösungen mindern den Preis (auch die Umsatzsteuer). Die steuerliche Behandlung ist nicht von einer Steuerberatung geprüft.",
+        "enabled": "Treuepunkte einschalten",
+        "enabledHint": "Ausgeschaltet werden keine Punkte gesammelt oder eingelöst; Punktestände bleiben erhalten.",
+        "pointsPerEuro": "Punkte pro Euro",
+        "pointsPerEuroHint": "0 bis 100",
+        "pointValue": "Wert pro Punkt",
+        "pointValueHint": "0,01 € bis 1,00 €",
+        "minRedeem": "Mindestens einlösen",
+        "minRedeemHint": "Punkte; 0 = keine Untergrenze",
+        "example": "Beispiel: 100,00 € Einkauf bringt {points} Punkte; sie sind beim Einlösen {value} wert.",
+        "saved": "Einstellungen gespeichert.",
+        "errors": {
+          "pointsPerEuro": "Ganze Zahl von 0 bis 100.",
+          "pointValue": "Zwischen 0,01 € und 1,00 €.",
+          "minRedeem": "Ganze Zahl ab 0."
+        }
+      }
+    },
+    "pricelists": {
+      "title": "Preislisten",
+      "subtitle": "Kundenpreise: feste Artikelpreise und ein allgemeiner Rabatt auf den Kassenpreis für alle übrigen Artikel. Eine Liste gilt für die Kunden, denen sie zugeordnet ist, solange sie aktiv und gültig ist. Listen werden nicht gelöscht, sondern deaktiviert.",
+      "new": "Preisliste anlegen",
+      "newTitle": "Neue Preisliste",
+      "editTitle": "Preisliste bearbeiten",
+      "emptyTitle": "Noch keine Preislisten",
+      "emptyText": "Legen Sie eine Liste an und ordnen Sie sie im Kundenformular zu.",
+      "valid": "Gültig",
+      "notValid": "Nicht gültig",
+      "inactive": "Inaktiv",
+      "discount": "Rabatt",
+      "items": "Artikelpreise",
+      "customers": "Kunden",
+      "validity": "Gültigkeit",
+      "always": "Unbegrenzt",
+      "editItems": "Artikelpreise",
+      "saved": "Preisliste „{name}“ gespeichert.",
+      "form": {
+        "discount": "Allgemeiner Rabatt (%)",
+        "discountHint": "Gilt für Artikel ohne eigenen Listenpreis; 0 = kein Rabatt.",
+        "validFrom": "Gültig ab",
+        "validTo": "Gültig bis",
+        "active": "Aktiv",
+        "activeHint": "Inaktive Listen ändern keine Preise; die Zuordnung zu Kunden bleibt.",
+        "errors": {
+          "name": "Bitte einen Namen eingeben (höchstens 100 Zeichen).",
+          "discount": "Prozent zwischen 0 und 100, höchstens zwei Nachkommastellen.",
+          "validity": "„Gültig bis“ darf nicht vor „Gültig ab“ liegen."
+        }
+      },
+      "itemsSubtitle": "Feste Preise dieser Liste. Alle anderen Artikel: Kassenpreis abzüglich {percent} %.",
+      "addItem": "Artikelpreis hinzufügen",
+      "itemTitle": "Listenpreis",
+      "searchItems": "Artikel in der Liste suchen",
+      "noItemsTitle": "Keine Artikelpreise",
+      "noItemsText": "Ohne Artikelpreise gilt nur der allgemeine Rabatt.",
+      "basePrice": "Kassenpreis",
+      "listPrice": "Listenpreis (brutto)",
+      "withDiscount": "mit Listenrabatt {price}",
+      "productSearch": "Artikel suchen",
+      "productSearchHint": "Name, Marke oder EAN eingeben.",
+      "priceInvalid": "Bitte einen Preis größer als 0 eingeben.",
+      "itemSaved": "Listenpreis für „{name}“ gespeichert.",
+      "itemRemoved": "Listenpreis für „{name}“ entfernt.",
+      "removeItemFor": "Listenpreis für {name} entfernen",
+      "customerField": "Preisliste",
+      "customerHint": "Die Kasse rechnet diesen Kunden mit den Preisen der Liste ab.",
+      "customerReadOnly": "Nur die Kassenleitung kann die Preisliste ändern.",
+      "none": "Keine (Kassenpreise)",
+      "linePrice": "Preisliste {name}",
+      "repriced": "Preise an den Kunden angepasst ({count} Positionen)."
     }
   },
   "invoiceKind": {
@@ -4364,5 +4592,23 @@
     "added": "IMEI {imei} wurde gesperrt.",
     "reasonRequired": "Bitte einen Grund angeben.",
     "deactivated": "Die Sperre von IMEI {imei} wurde aufgehoben."
+  },
+  "giftCardStatus": {
+    "Active": "Aktiv",
+    "Voided": "Gesperrt"
+  },
+  "giftCardTransactionType": {
+    "Issue": "Verkauft",
+    "Redeem": "Eingelöst",
+    "Restore": "Zurückgebucht",
+    "Void": "Gesperrt",
+    "Reissue": "Neuer Code"
+  },
+  "loyaltyTransactionType": {
+    "Earn": "Gesammelt",
+    "Redeem": "Eingelöst",
+    "ReverseEarn": "Gutschrift zurückgenommen",
+    "ReverseRedeem": "Einlösung zurückgebucht",
+    "Adjust": "Korrektur"
   }
 }

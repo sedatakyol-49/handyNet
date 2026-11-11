@@ -54,9 +54,10 @@ export function allocate(total: number, part: number, of: number): number {
 // ---------------------------------------------------------------- cart
 
 export interface CartLine {
-  /** productId for products (scanning again adds quantity), `u:<imei>` for devices. */
+  /** productId for products (scanning again adds quantity), `u:<imei>` for devices, `g:<uuid>` for gift cards. */
   key: string;
-  kind: 'Product' | 'Unit';
+  /** GiftCard: a gift card sold for `priceInput` (no product, quantity 1, no discount, not taxable). */
+  kind: 'Product' | 'Unit' | 'GiftCard';
   productId: string;
   imei: string | null;
   description: string;
@@ -75,6 +76,9 @@ export interface CartLine {
   priceSource?: PriceSource;
   /** Free text printed under the line on the receipt (max 200 characters). */
   note?: string;
+  /** Pricelist price: the regular till price and the list's name (shown on the line). */
+  basePriceMinor?: number | null;
+  pricelistName?: string | null;
 }
 
 export type LineError = 'price' | 'discount' | 'discountTooHigh' | null;
@@ -302,7 +306,7 @@ export function minorToPlain(minor: number): string {
 
 // ---------------------------------------------------------------- payment
 
-export type SettleError = 'emptyCart' | 'invalidAmount' | 'noPayment' | 'cardExceedsTotal' | 'insufficient' | 'cashNotNeeded' | null;
+export type SettleError = 'emptyCart' | 'invalidAmount' | 'noPayment' | 'cardExceedsTotal' | 'insufficient' | 'cashNotNeeded' | 'giftCardBalance' | 'giftCardForGiftCard' | null;
 
 export interface Settlement {
   cashMinor: number;
@@ -393,12 +397,14 @@ export function buildSaleRequest(
   lines: readonly CartLine[],
   payments: SalePayment[],
   customerId: string | null = null,
+  redeemPoints: number | null = null,
 ): CreateSaleRequest {
   const body: CreateSaleRequest = {
     registerId,
     lines: lines.map((l) => {
       const a = lineAmounts(l);
       const note = l.note?.trim() ? { note: l.note.trim().slice(0, POS_LIMITS.lineNoteLength) } : {};
+      if (l.kind === 'GiftCard') return { giftCardAmountMinor: a.unitPriceMinor!, quantity: 1, unitPriceMinor: a.unitPriceMinor! };
       return l.kind === 'Unit'
         ? { imei: l.imei, productId: l.productId, quantity: 1, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null, ...note }
         : { productId: l.productId, quantity: l.quantity, unitPriceMinor: a.unitPriceMinor!, discountMinor: a.discountMinor || null, ...note };
@@ -406,6 +412,7 @@ export function buildSaleRequest(
     payments,
   };
   if (customerId) body.customerId = customerId;
+  if (customerId && redeemPoints && redeemPoints > 0) body.redeemPoints = redeemPoints;
   return body;
 }
 
@@ -439,8 +446,9 @@ export function newIdempotencyKey(): string {
 
 // ---------------------------------------------------------------- receipts: storno and returns
 
-/** Quantity of a sale line that can still be returned. */
-export function returnableQuantity(line: Pick<ReceiptLine, 'quantity' | 'returnedQuantity'>): number {
+/** Quantity of a sale line that can still be returned (gift cards sold are never returned: `pos.gift_card_line_not_returnable`). */
+export function returnableQuantity(line: Pick<ReceiptLine, 'quantity' | 'returnedQuantity'> & { giftCardId?: string | null }): number {
+  if (line.giftCardId) return 0;
   return Math.max(line.quantity - line.returnedQuantity, 0);
 }
 
@@ -721,11 +729,15 @@ export interface PaymentLine {
   method: PosPaymentMethod;
   /** Amount as typed (numpad/keyboard), German decimal. */
   input: string;
+  /** Method GiftCard: the card as looked up (normalized code, last 4, balance when looked up). */
+  giftCard?: { code: string; last4: string; balanceMinor: number } | null;
 }
 
 export interface PaymentLinesSettlement extends Settlement {
-  /** Lines whose amount is empty, zero or invalid. */
+  /** Lines whose amount is empty, zero or invalid (or a gift card line above the card's balance). */
   invalidIds: string[];
+  /** Sum of the gift card payments (non-cash like the card). */
+  giftCardMinor: number;
 }
 
 function paymentMinor(p: PaymentLine): number | null {
@@ -733,20 +745,44 @@ function paymentMinor(p: PaymentLine): number | null {
   return minor !== null && minor > 0 ? minor : null;
 }
 
-/** Sums the payment lines per method and applies the API's rules (see `settle`). */
-export function settlePayments(totalMinor: number, lines: readonly PaymentLine[], cashRounding = false): PaymentLinesSettlement {
+/**
+ * Sums the payment lines per method and applies the API's rules (see `settle`). Gift card payments count as non-cash
+ * like the card (never more than the total, no change); each card is sent as its own payment with its code, never above
+ * its balance, and never for the part of the total that is itself a gift card sold now (`giftCardLinesMinor`).
+ */
+export function settlePayments(totalMinor: number, lines: readonly PaymentLine[], cashRounding = false, giftCardLinesMinor = 0): PaymentLinesSettlement {
   let cash = 0;
   let card = 0;
+  let gift = 0;
   const invalid: string[] = [];
+  const giftPayments: SalePayment[] = [];
+  let overBalance = false;
   for (const p of lines) {
     const minor = paymentMinor(p);
     if (minor === null) invalid.push(p.id);
     else if (p.method === 'Cash') cash += minor;
-    else card += minor;
+    else if (p.method === 'Card') card += minor;
+    else {
+      gift += minor;
+      giftPayments.push({ method: 'GiftCard', amountMinor: minor, giftCardCode: p.giftCard?.code ?? null });
+      if (!p.giftCard || minor > p.giftCard.balanceMinor) {
+        overBalance = true;
+        invalid.push(p.id);
+      }
+    }
   }
-  const result = settleMinor(totalMinor, cash, card, cashRounding);
-  if (invalid.length && result.error !== 'emptyCart') return { ...result, invalidIds: invalid, error: 'invalidAmount' };
-  return { ...result, invalidIds: invalid };
+  const base = settleMinor(totalMinor, cash, card + gift, cashRounding);
+  const payments: SalePayment[] = [
+    ...(cash > 0 ? [{ method: 'Cash' as PosPaymentMethod, amountMinor: cash }] : []),
+    ...(card > 0 ? [{ method: 'Card' as PosPaymentMethod, amountMinor: card }] : []),
+    ...giftPayments,
+  ];
+  const result: PaymentLinesSettlement = { ...base, cardMinor: card, giftCardMinor: gift, payments, invalidIds: invalid };
+  if (base.error === 'emptyCart') return result;
+  if (overBalance) return { ...result, error: 'giftCardBalance' };
+  if (invalid.length) return { ...result, error: 'invalidAmount' };
+  if (gift > 0 && gift > totalMinor - giftCardLinesMinor) return { ...result, error: 'giftCardForGiftCard' };
+  return result;
 }
 
 /** Amount still due, ignoring the line `excludeId` (e.g. the one being edited). */
@@ -771,6 +807,9 @@ export interface OrderCustomer {
   id: string;
   name: string;
   company: string | null;
+  /** Points when the customer was attached (refreshed on the payment screen). */
+  loyaltyPoints?: number;
+  pricelistName?: string | null;
 }
 
 export interface PosOrder {
@@ -784,6 +823,8 @@ export interface PosOrder {
   pending: PendingAttempt | null;
   /** Missing on tickets stored by older versions. */
   customer?: OrderCustomer | null;
+  /** Loyalty points of the customer redeemed on this ticket (price reduction, computed by the API). */
+  redeemPoints?: number | null;
   /** Card payment the terminal approved for this ticket, until the sale is booked (never lost on reload). */
   card?: OrderCard | null;
   /** The terminal's answer was lost and the cashier confirmed on the terminal that the payment went through. */
@@ -854,7 +895,8 @@ function isOrder(o: unknown): o is PosOrder {
     Array.isArray(x.lines) &&
     x.lines.every(isCartLine) &&
     Array.isArray(x.payments) &&
-    x.payments.every((p) => !!p && typeof p.id === 'string' && (p.method === 'Cash' || p.method === 'Card') && typeof p.input === 'string') &&
+    x.payments.every((p) => !!p && typeof p.id === 'string' && (p.method === 'Cash' || p.method === 'Card' || (p.method === 'GiftCard' && !!p.giftCard && typeof p.giftCard.code === 'string')) && typeof p.input === 'string') &&
+    (x.redeemPoints === undefined || x.redeemPoints === null || (Number.isSafeInteger(x.redeemPoints) && x.redeemPoints > 0)) &&
     (x.pending === null || (typeof x.pending === 'object' && typeof x.pending.key === 'string' && typeof x.pending.body === 'string')) &&
     (x.customer === undefined || x.customer === null || (typeof x.customer === 'object' && typeof x.customer.id === 'string' && typeof x.customer.name === 'string')) &&
     (x.card === undefined || x.card === null || isOrderCard(x.card)) &&
@@ -867,7 +909,7 @@ function isCartLine(l: unknown): l is CartLine {
   const x = l as CartLine;
   return (
     typeof x.key === 'string' &&
-    (x.kind === 'Product' || x.kind === 'Unit') &&
+    (x.kind === 'Product' || x.kind === 'Unit' || x.kind === 'GiftCard') &&
     typeof x.productId === 'string' &&
     typeof x.description === 'string' &&
     Number.isInteger(x.quantity) &&
@@ -899,7 +941,7 @@ export class OrdersStorage {
     try {
       // Nothing worth keeping: a single empty ticket without an open checkout attempt.
       const only = state.orders.length === 1 ? state.orders[0] : null;
-      if (only && !only.lines.length && !only.payments.length && !only.pending && !only.customer && !only.card) this.storage?.removeItem(this.key());
+      if (only && !only.lines.length && !only.payments.length && !only.pending && !only.customer && !only.card && !only.redeemPoints) this.storage?.removeItem(this.key());
       else this.storage?.setItem(this.key(), JSON.stringify(state));
     } catch {
       /* storage unavailable or full */
@@ -958,4 +1000,20 @@ export function lookupFromProduct(p: PosProduct): PosLookup {
 /** Scanner/keyboard entry that is looked up as EAN/IMEI instead of being used as a search text. */
 export function looksLikeCode(text: string): boolean {
   return /^\d{6,20}$/.test(text.trim());
+}
+
+// ---------------------------------------------------------------- gift card lines (sold at the till)
+
+export function giftCardLine(key: string, amountMinor: number, description: string): CartLine {
+  return { key, kind: 'GiftCard', productId: '', imei: null, description, quantity: 1, priceInput: minorToPlain(amountMinor), discountInput: '', available: null, taxTreatment: 'NotTaxable', listPriceMinor: null };
+}
+
+/** Gross of the gift cards sold on this ticket (they cannot be paid with a gift card and earn no points). */
+export function giftCardLinesMinor(lines: readonly CartLine[]): number {
+  return lines.filter((l) => l.kind === 'GiftCard').reduce((sum, l) => sum + (lineAmounts(l).grossMinor ?? 0), 0);
+}
+
+/** Total of the lines that loyalty points can reduce (all except gift cards). */
+export function loyaltyEligibleMinor(lines: readonly CartLine[]): number {
+  return lines.filter((l) => l.kind !== 'GiftCard').reduce((sum, l) => sum + (lineAmounts(l).grossMinor ?? 0), 0);
 }

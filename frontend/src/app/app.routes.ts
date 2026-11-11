@@ -306,6 +306,26 @@ export const routes: Routes = [
           { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },
           { path: ':registerId/preise', loadComponent: () => import('./features/pos/prices.page').then((m) => m.PosPricesPage) },
           { path: ':registerId/drucker', loadComponent: () => import('./features/pos/printing/printers.page').then((m) => m.PosPrintersPage) },
+          {
+            path: ':registerId/preislisten',
+            canActivate: [accessGuard('Pos', 'pos.manage')],
+            loadComponent: () => import('./features/pos/pricelists/pricelists.page').then((m) => m.PosPricelistsPage),
+          },
+          {
+            path: ':registerId/preislisten/:id',
+            canActivate: [accessGuard('Pos', 'pos.manage')],
+            loadComponent: () => import('./features/pos/pricelists/pricelists.page').then((m) => m.PosPricelistItemsPage),
+          },
+          {
+            path: ':registerId/gutscheine',
+            canActivate: [accessGuard('Pos', 'pos.manage')],
+            loadComponent: () => import('./features/pos/giftcards/gift-cards.page').then((m) => m.PosGiftCardsPage),
+          },
+          {
+            path: ':registerId/treuepunkte',
+            canActivate: [accessGuard('Pos', 'pos.manage')],
+            loadComponent: () => import('./features/pos/loyalty/loyalty-settings.page').then((m) => m.PosLoyaltySettingsPage),
+          },
           { path: ':registerId/offline', loadComponent: () => import('./features/pos/offline/offline-queue.page').then((m) => m.PosOfflineQueuePage) },
           { path: ':registerId/kartenterminal', loadComponent: () => import('./features/pos/terminals/terminals.page').then((m) => m.PosTerminalsPage) },
         ],

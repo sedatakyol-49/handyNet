@@ -128,6 +128,7 @@ export function receiptLayout(d: ReceiptDocument, o: ReceiptLayoutOptions): Prin
     if (l.imei) b.text(`IMEI ${l.imei}`);
     b.pair(`  ${l.quantity} x ${money(l.unitPriceMinor)}`, `${money(l.lineGrossMinor)} ${l.taxLabel}`);
     if (l.discountMinor) b.text(`  ${t('pos.receipt.discount')} ${money(-l.discountMinor)}`);
+    if (l.loyaltyDiscountMinor) b.text(`  ${t('pos.receipt.loyaltyDiscount')} ${money(-l.loyaltyDiscountMinor)}`);
     if (l.note) b.text(`  ${l.note}`);
   }
   b.rule();

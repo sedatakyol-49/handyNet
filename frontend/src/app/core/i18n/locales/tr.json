@@ -692,7 +692,36 @@
       "pos.offline_payment_not_allowed": "Çevrimdışı kaydedilen satışlar yalnızca nakit veya kartla ödenebilir.",
       "pos.display_link_not_found": "Bu ekran bağlantısı yok veya artık geçerli değil.",
       "pos.display_state_invalid": "Müşteri ekranı verileri geçersiz.",
-      "pos.display_state_too_large": "Müşteri ekranı verileri çok büyük (en fazla 16 KiB)."
+      "pos.display_state_too_large": "Müşteri ekranı verileri çok büyük (en fazla 16 KiB).",
+      "pos.gift_card_not_found": "Bilinmeyen hediye çeki kodu.",
+      "pos.gift_card_not_usable": "Bu hediye çeki iptal edilmiş veya süresi dolmuş.",
+      "pos.gift_card_insufficient": "Hediye çeki bakiyesi yetersiz.",
+      "pos.gift_card_already_redeemed": "Hediye çeki zaten (kısmen) kullanıldı; satış iptal edilemez.",
+      "pos.gift_card_line_not_returnable": "Satılan hediye çekleri iade edilemez.",
+      "pos.invoice_gift_card": "Faturalarda hediye çeki kullanılamaz.",
+      "pos.gift_card_amount": "Hediye çeki tutarı izin verilen sınırların dışında.",
+      "pos.gift_card_line": "Hediye çeki satırı 1 adettir ve indirimsizdir.",
+      "pos.gift_card_payment": "Hediye çeki ödemesi için kod gerekir.",
+      "pos.gift_card_exceeds_total": "Hediye çeki ödemeleri satılan çekler hariç toplamı aşamaz.",
+      "pos.gift_card_not_allowed": "Burada hediye çeki kullanılamaz.",
+      "pos.gift_card_restore": "Bakiye geri yüklenemedi.",
+      "pos.gift_card_status": "Hediye çeki aktif değil.",
+      "pos.offline_gift_card_not_allowed": "Çevrimdışı satışlarda hediye çeki satılamaz.",
+      "pos.loyalty_disabled": "Sadakat puanları açık değil.",
+      "pos.loyalty_insufficient_points": "Müşterinin yeterli puanı yok.",
+      "pos.loyalty_customer_required": "Puanlar yalnızca müşteriyle kullanılabilir.",
+      "pos.loyalty_min_points": "Daha fazla puan kullanılmalı (asgari).",
+      "pos.loyalty_exceeds_total": "Puan değeri alışverişi aşıyor (hediye çekleri hariç).",
+      "pos.loyalty_points": "Geçersiz puan sayısı.",
+      "pos.loyalty_settings": "Sadakat ayarları geçersiz.",
+      "pos.pricelist_not_found": "Fiyat listesi bulunamadı.",
+      "pos.pricelist_name": "Fiyat listesi için ad girin (en fazla 100 karakter).",
+      "pos.pricelist_name_taken": "Bu adla bir fiyat listesi zaten var.",
+      "pos.pricelist_version": "Fiyat listesi bu arada değişti. Lütfen yeniden yükleyin.",
+      "pos.pricelist_validity": "Bitiş tarihi başlangıçtan önce olamaz.",
+      "pos.pricelist_discount": "İndirim % 0 ile % 100 arasında olmalı.",
+      "pos.pricelist_item_not_found": "Bu ürünün listede fiyatı yok.",
+      "pos.pricelist_item_limit": "Bir fiyat listesinde en fazla 5000 ürün fiyatı olabilir."
     },
     "validation": {
       "required": "Bu alan zorunludur.",
@@ -2452,7 +2481,8 @@
   },
   "posPaymentMethod": {
     "Cash": "Nakit",
-    "Card": "Kart"
+    "Card": "Kart",
+    "GiftCard": "Hediye çeki"
   },
   "receiptKind": {
     "Sale": "Satış",
@@ -2584,7 +2614,10 @@
       "ankauf": "Alım",
       "printers": "Yazıcılar",
       "terminals": "Kart terminali",
-      "offline": "Offline"
+      "offline": "Offline",
+      "giftCards": "Hediye çekleri",
+      "loyalty": "Sadakat",
+      "pricelists": "Fiyat listeleri"
     },
     "registers": {
       "title": "Kasa",
@@ -2690,7 +2723,9 @@
         "noPayment": "Lütfen ödeme tutarını girin (nakit veya kart).",
         "cardExceedsTotal": "Kartla ödeme toplam tutarı aşamaz.",
         "insufficient": "Ödeme toplam tutarı karşılamıyor.",
-        "cashNotNeeded": "Kartla ödeme tutarı zaten karşılıyor; nakit gerekmiyor."
+        "cashNotNeeded": "Kartla ödeme tutarı zaten karşılıyor; nakit gerekmiyor.",
+        "giftCardBalance": "Bir hediye çeki tutarı bakiyesinden yüksek.",
+        "giftCardForGiftCard": "Satılan hediye çekleri hediye çekiyle ödenemez."
       }
     },
     "errors": {
@@ -2751,7 +2786,8 @@
         "trace": "İz no. {trace}",
         "receipt": "Fiş no. {number}",
         "auth": "Yetkilendirme {code}"
-      }
+      },
+      "loyaltyDiscount": "Sadakat puanı"
     },
     "receipts": {
       "title": "Fişler",
@@ -2901,7 +2937,11 @@
       "ankaufCount": "Alım sayısı (nakit)",
       "ankaufCash": "Nakit ödenen",
       "ankaufNote": "Havaleyle yapılan alımlar kasayı etkilemez; günlük raporda yer alır.",
-      "ofWhichAnkauf": "bunun alımları"
+      "ofWhichAnkauf": "bunun alımları",
+      "giftCardsAndPoints": "Hediye çekleri ve sadakat puanları",
+      "giftCardsSold": "Satılan hediye çekleri",
+      "loyaltyDiscount": "Sadakat puanı indirimi",
+      "giftCardsNote": "Satılan hediye çeklerinde KDV yoktur (KDV kullanımda doğar); kullanımlar ödeme yöntemlerinde görünür."
     },
     "cashCount": {
       "label": "Küpür sayımı",
@@ -2967,7 +3007,8 @@
       "sources": {
         "PosPrice": "Kendi kasa fiyatı",
         "Offer": "Kendi teklifi (net + %19 KDV)",
-        "None": "Fiyat yok – kasada girilir"
+        "None": "Fiyat yok – kasada girilir",
+        "Pricelist": "Müşterinin fiyat listesi"
       },
       "offerNet": "Teklif fiyatı net",
       "updatedAt": "Son değişiklik",
@@ -3460,7 +3501,9 @@
         "noSession": "Çevrimdışı satış yalnızca sunucuya son ulaşıldığında açık bir kasa oturumu varsa yapılabilir.",
         "noStorage": "Bu tarayıcı kalıcı depolama sunmuyor. Satış çevrimdışı güvenle saklanamaz; lütfen bağlantıyı bekleyin.",
         "payment": "Çevrimdışı yalnızca nakit ve kart ödemesi mümkündür.",
-        "cardUnreported": "Bu adisyon için sunucunun henüz bilmediği bir kart ödemesi onaylandı. Satış ancak bağlantı gelince tamamlanabilir; karttan tekrar tahsilat yapmayın."
+        "cardUnreported": "Bu adisyon için sunucunun henüz bilmediği bir kart ödemesi onaylandı. Satış ancak bağlantı gelince tamamlanabilir; karttan tekrar tahsilat yapmayın.",
+        "giftCard": "Çevrimdışı hediye çeki satılamaz (kod sunucuda oluşur). Çeki adisyondan çıkarın veya bağlantıyı bekleyin.",
+        "loyalty": "Çevrimdışı sadakat puanı kullanılamaz. Kullanımı kaldırın veya bağlantıyı bekleyin."
       },
       "storeFailed": "Satış cihaza kaydedilemedi. Adisyon saklanır; lütfen yeniden deneyin.",
       "lookup": {
@@ -3520,6 +3563,191 @@
         "bookedMany": "{count} çevrimdışı satış işlendi.",
         "refused": "Sunucu bir çevrimdışı satışı reddetti. Lütfen “Çevrimdışı satışlar” altında kontrol edin."
       }
+    },
+    "giftCards": {
+      "title": "Hediye çekleri",
+      "subtitle": "Kalan bakiyeleriyle tüm hediye çekleri (çok amaçlı kupon). Kod saklanmaz; yalnızca satışta bir kez görünür. İptal ve yeniden düzenleme için neden gerekir.",
+      "search": "Ara",
+      "searchPlaceholder": "Son 4 karakter, müşteri …",
+      "status": "Durum",
+      "emptyTitle": "Hediye çeki yok",
+      "emptyText": "Hediye çekleri kasada “Hediye çeki” ile satılır.",
+      "issued": "{date} tarihinde satıldı",
+      "of": "{amount} üzerinden",
+      "expired": "Süresi doldu",
+      "used": "Kullanıldı",
+      "details": "Ayrıntılar",
+      "detailTitle": "Hediye çeki {code}",
+      "balance": "Kalan bakiye",
+      "initial": "İlk tutar",
+      "history": "Geçmiş",
+      "reason": "Neden",
+      "reasonHint": "İptal ve yeniden düzenleme için zorunlu; geçmişe kaydedilir.",
+      "reasonRequired": "Lütfen bir neden yazın.",
+      "void": "İptal et",
+      "voided": "{code} hediye çeki iptal edildi.",
+      "reissue": "Yeni kod ver",
+      "reissued": "Yeni kod verildi; eski kod artık geçersiz.",
+      "offline": "Hediye çekleri için sunucu bağlantısı gerekir.",
+      "lineDescription": "Hediye çeki",
+      "lineHint": "Kod ödemeden sonra · KDV yok · hediye çeki veya puanla ödenemez",
+      "sell": {
+        "button": "Hediye çeki",
+        "title": "Hediye çeki sat",
+        "hint": "Tutar {min} ile {max} arasında. Kod ödemeden sonra ve yalnızca bir kez gösterilir.",
+        "quick": "Sık kullanılan tutarlar",
+        "amount": "Tutar",
+        "add": "Sepete ekle",
+        "errors": {
+          "invalid": "Lütfen geçerli bir tutar girin.",
+          "tooLow": "En az {min}.",
+          "tooHigh": "En fazla {max}."
+        }
+      },
+      "pay": {
+        "title": "Hediye çekiyle öde",
+        "code": "Hediye çeki kodu",
+        "codeHint": "Okutun veya yazın; tireler önemli değil.",
+        "codeInvalid": "Bu geçerli bir hediye çeki kodu değil (16 karakter).",
+        "alreadyUsed": "Bu hediye çeki zaten ödeme olarak girildi.",
+        "check": "Bakiyeyi kontrol et",
+        "card": "Hediye çeki",
+        "balance": "Bakiye",
+        "voided": "Bu hediye çeki iptal edildi ve kullanılamaz.",
+        "expired": "Bu hediye çekinin süresi doldu ve kullanılamaz.",
+        "amount": "Tutar",
+        "amountHint": "En fazla {max}",
+        "amountInvalid": "Lütfen geçerli bir tutar girin.",
+        "amountBalance": "Hediye çekinde yalnızca {balance} kaldı.",
+        "amountTotal": "En fazla {max} (kalan tutar; satılan hediye çekleri hediye çekiyle ödenemez).",
+        "use": "Kullan"
+      },
+      "slip": {
+        "title": "Hediye çeki",
+        "titleMany": "Hediye çekleri",
+        "once": "Kod yalnızca şimdi gösterilir ve hiçbir yerde saklanmaz. Çeki yazdırın veya kodu müşteri için not edin.",
+        "amount": "Değer",
+        "code": "Hediye çeki kodu",
+        "validUntil": "Son geçerlilik",
+        "receipt": "Fiş no.",
+        "footer": "Bu mağazada ödeme aracı olarak, kısmen de kullanılabilir. Nakit ödeme yapılmaz. Güvenle saklayın; kodu bilen herkes kullanabilir.",
+        "print": "Hediye çekini yazdır",
+        "handedOver": "Çek teslim edildi – kodu gizle"
+      }
+    },
+    "loyalty": {
+      "pointsShort": "{points} puan",
+      "due": "Ödenecek",
+      "redeem": {
+        "title": "Sadakat puanları",
+        "balance": "Puan bakiyesi",
+        "worth": "değeri {value}",
+        "points": "Kullanılacak puan",
+        "limits": "En az {min}, en fazla {max} puan",
+        "max": "Azami",
+        "apply": "Kullan",
+        "applied": "{points} puan kullanıldı: −{value}",
+        "offline": "Puanlar yalnızca sunucu bağlantısıyla kullanılabilir.",
+        "earn": "Bu alışveriş yaklaşık {points} puan kazandırır.",
+        "errors": {
+          "disabled": "Sadakat puanları açık değil.",
+          "noCustomer": "Puan kullanmak için müşteri seçin.",
+          "invalid": "Lütfen tam sayı olarak puan girin.",
+          "belowMin": "En az {min} puan kullanın.",
+          "exceedsBalance": "Müşterinin yalnızca {balance} puanı var.",
+          "exceedsTotal": "Değer alışverişi aşıyor (hediye çekleri hariç); en fazla {max} puan."
+        }
+      },
+      "done": {
+        "redeemed": "{points} puan kullanıldı (−{value}).",
+        "earned": "{points} puan kazanıldı.",
+        "balance": "Bakiye: {points}"
+      },
+      "history": {
+        "title": "Sadakat puanları",
+        "disabled": "Sadakat puanları şu an kapalı; geçmiş korunur.",
+        "empty": "Henüz puan yok.",
+        "receipt": "Fiş {number}",
+        "adjustPoints": "Puan (±)",
+        "adjustHint": "ör. +50 veya -20",
+        "adjustReason": "Neden",
+        "adjust": "Puanı düzelt",
+        "adjustInvalid": "0 dışında bir sayı girin, ör. +50 veya -20.",
+        "reasonRequired": "Lütfen bir neden yazın."
+      },
+      "settings": {
+        "title": "Sadakat puanları",
+        "subtitle": "Müşteri kaydı olanlar her tam euro için puan kazanır (hediye çekleri hariç) ve kasada indirim olarak kullanır. Ayarlar tüm kasalar için geçerlidir.",
+        "legal": "Kullanımlar fiyatı (KDV dahil) düşürür. Vergisel uygulama bir vergi danışmanınca incelenmedi.",
+        "enabled": "Sadakat puanlarını aç",
+        "enabledHint": "Kapalıyken puan kazanılmaz ve kullanılmaz; bakiyeler korunur.",
+        "pointsPerEuro": "Euro başına puan",
+        "pointsPerEuroHint": "0 ile 100 arası",
+        "pointValue": "Puan başına değer",
+        "pointValueHint": "0,01 € ile 1,00 € arası",
+        "minRedeem": "Asgari kullanım",
+        "minRedeemHint": "Puan; 0 = alt sınır yok",
+        "example": "Örnek: 100,00 € alışveriş {points} puan kazandırır; kullanımda değeri {value}.",
+        "saved": "Ayarlar kaydedildi.",
+        "errors": {
+          "pointsPerEuro": "0 ile 100 arasında tam sayı.",
+          "pointValue": "0,01 € ile 1,00 € arasında.",
+          "minRedeem": "0 veya üzeri tam sayı."
+        }
+      }
+    },
+    "pricelists": {
+      "title": "Fiyat listeleri",
+      "subtitle": "Müşteri fiyatları: sabit ürün fiyatları ve diğer tüm ürünler için kasa fiyatından genel indirim. Liste, atandığı müşteriler için aktif ve geçerli olduğu sürece uygulanır. Listeler silinmez, devre dışı bırakılır.",
+      "new": "Fiyat listesi ekle",
+      "newTitle": "Yeni fiyat listesi",
+      "editTitle": "Fiyat listesini düzenle",
+      "emptyTitle": "Henüz fiyat listesi yok",
+      "emptyText": "Bir liste oluşturup müşteri formunda atayın.",
+      "valid": "Geçerli",
+      "notValid": "Şu an geçerli değil",
+      "inactive": "Pasif",
+      "discount": "İndirim",
+      "items": "Ürün fiyatları",
+      "customers": "Müşteriler",
+      "validity": "Geçerlilik",
+      "always": "Süresiz",
+      "editItems": "Ürün fiyatları",
+      "saved": "“{name}” fiyat listesi kaydedildi.",
+      "form": {
+        "discount": "Genel indirim (%)",
+        "discountHint": "Kendi liste fiyatı olmayan ürünlere uygulanır; 0 = yok.",
+        "validFrom": "Başlangıç",
+        "validTo": "Bitiş",
+        "active": "Aktif",
+        "activeHint": "Pasif listeler fiyat değiştirmez; müşteri ataması kalır.",
+        "errors": {
+          "name": "Lütfen bir ad girin (en fazla 100 karakter).",
+          "discount": "0 ile 100 arasında yüzde, en fazla iki ondalık.",
+          "validity": "Bitiş tarihi başlangıçtan önce olamaz."
+        }
+      },
+      "itemsSubtitle": "Bu listenin sabit fiyatları. Diğer tüm ürünler: kasa fiyatı eksi % {percent}.",
+      "addItem": "Ürün fiyatı ekle",
+      "itemTitle": "Liste fiyatı",
+      "searchItems": "Listede ürün ara",
+      "noItemsTitle": "Ürün fiyatı yok",
+      "noItemsText": "Ürün fiyatı yoksa yalnızca genel indirim uygulanır.",
+      "basePrice": "Kasa fiyatı",
+      "listPrice": "Liste fiyatı (brüt)",
+      "withDiscount": "liste indirimiyle {price}",
+      "productSearch": "Ürün ara",
+      "productSearchHint": "Ad, marka veya EAN girin.",
+      "priceInvalid": "Lütfen 0’dan büyük bir fiyat girin.",
+      "itemSaved": "“{name}” için liste fiyatı kaydedildi.",
+      "itemRemoved": "“{name}” için liste fiyatı kaldırıldı.",
+      "removeItemFor": "{name} için liste fiyatını kaldır",
+      "customerField": "Fiyat listesi",
+      "customerHint": "Kasa bu müşteriye listenin fiyatlarını uygular.",
+      "customerReadOnly": "Fiyat listesini yalnızca yönetici değiştirebilir.",
+      "none": "Yok (kasa fiyatları)",
+      "linePrice": "Fiyat listesi {name}",
+      "repriced": "Fiyatlar müşteriye göre güncellendi ({count} satır)."
     }
   },
   "invoiceKind": {
@@ -4364,5 +4592,23 @@
     "added": "IMEI {imei} engellendi.",
     "reasonRequired": "Lütfen bir neden girin.",
     "deactivated": "IMEI {imei} engeli kaldırıldı."
+  },
+  "giftCardStatus": {
+    "Active": "Aktif",
+    "Voided": "İptal edildi"
+  },
+  "giftCardTransactionType": {
+    "Issue": "Satıldı",
+    "Redeem": "Kullanıldı",
+    "Restore": "Geri yüklendi",
+    "Void": "İptal edildi",
+    "Reissue": "Yeni kod"
+  },
+  "loyaltyTransactionType": {
+    "Earn": "Kazanıldı",
+    "Redeem": "Kullanıldı",
+    "ReverseEarn": "Kazanç geri alındı",
+    "ReverseRedeem": "Kullanım geri alındı",
+    "Adjust": "Düzeltme"
   }
 }

@@ -143,6 +143,26 @@ export class PrinterService {
     return { ...r, fellBack: true };
   }
 
+  /**
+   * Prints a document that has no block on the page (gift card voucher slip): thermal through the device's profile, else
+   * (no profile, browser connection, printer error) in a hidden frame through the print dialog.
+   */
+  async printLayout(registerId: string, title: string, build: (width: number, codepage: PrinterProfile['codepage']) => PrintLayout): Promise<PrintOutcome> {
+    const profile = await this.effective(registerId);
+    const frameProfile = { paperWidthMm: profile?.paperWidthMm ?? 80, name: title } as PrinterProfile;
+    const layout = build(profile?.charsPerLine ?? 48, profile?.codepage ?? 'Cp858');
+    if (!profile || profile.connection === 'Browser') {
+      this.printFrame(layout, frameProfile);
+      return { ok: true, via: 'Browser' };
+    }
+    const r = await this.send(profile, layout, { ...this.renderOptions(profile), copies: 1 });
+    if (r.ok) return r;
+    this.toast.error(this.i18n.t('pos.printers.fallbackNotice', { reason: this.errorText(r.code, r.detail) }));
+    this.lastFallback.set({ at: Date.now(), code: r.code });
+    this.printFrame(layout, frameProfile);
+    return { ...r, fellBack: true };
+  }
+
   /** Test page for a profile; on failure the same page opens in the print dialog. */
   async testPrint(profile: PrinterProfile): Promise<PrintOutcome> {
     const layout = testPageLayout({

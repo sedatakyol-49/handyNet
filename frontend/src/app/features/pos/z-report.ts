@@ -45,6 +45,20 @@ import { countTotal, denominationLabel, fromDenominations } from './cash-count';
           <dd class="text-end tabular-nums text-slate-600" data-testid="z-invoice-payments">{{ z.invoicePaymentCount }} · {{ (z.invoicePaymentsMinor ?? 0) | money }}</dd>
         }
       </dl>
+      @if (z.giftCardsSoldCount || z.loyaltyDiscountMinor) {
+        <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.giftCardsAndPoints' | t }}</h3>
+        <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1" data-testid="z-gift-loyalty">
+          @if (z.giftCardsSoldCount) {
+            <dt>{{ 'pos.z.giftCardsSold' | t }}</dt>
+            <dd class="text-end tabular-nums" data-testid="z-gift-cards-sold">{{ z.giftCardsSoldCount }} · {{ (z.giftCardsSoldMinor ?? 0) | money }}</dd>
+          }
+          @if (z.loyaltyDiscountMinor) {
+            <dt>{{ 'pos.z.loyaltyDiscount' | t }}</dt>
+            <dd class="text-end tabular-nums" data-testid="z-loyalty-discount">{{ -(z.loyaltyDiscountMinor ?? 0) | signedMoney }}</dd>
+          }
+        </dl>
+        <p class="mt-1 text-xs text-slate-500">{{ 'pos.z.giftCardsNote' | t }}</p>
+      }
 
       <h3 class="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ 'pos.z.revenue' | t }}</h3>
       <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">

@@ -907,7 +907,7 @@ export class PosApi {
   /** Products of the register's warehouse with till prices (in stock unless `includeOutOfStock`). */
   products(
     registerId: string,
-    q: { search?: string | null; category?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number },
+    q: { search?: string | null; category?: string | null; includeOutOfStock?: boolean; page?: number; pageSize?: number; customerId?: string | null },
   ): Observable<Paged<PosProduct>> {
     return this.http.get<Paged<PosProduct>>(`${this.url}/registers/${registerId}/products`, { params: queryParams(q) });
   }
@@ -916,8 +916,9 @@ export class PosApi {
     return this.http.get<PosCategoryCount[]>(`${this.url}/registers/${registerId}/product-categories`);
   }
 
-  price(productId: string, registerId?: string | null): Observable<PosPrice> {
-    return this.http.get<PosPrice>(`${this.url}/prices/${productId}`, { params: queryParams({ registerId }) });
+  /** With a customer: including the customer's pricelist (source "Pricelist", basePriceMinor = regular price). */
+  price(productId: string, registerId?: string | null, customerId?: string | null): Observable<PosPrice> {
+    return this.http.get<PosPrice>(`${this.url}/prices/${productId}`, { params: queryParams({ registerId, customerId }) });
   }
 
   /** `pos.manage`; null clears the own POS price (the till falls back to the offer price). */
@@ -950,8 +951,8 @@ export class PosApi {
 
   // ---- sales
   /** EAN (product) or 15-digit IMEI (own in-stock device); stock figures refer to the register's warehouse. */
-  lookup(code: string, registerId: string): Observable<PosLookup> {
-    return this.http.get<PosLookup>(`${this.url}/lookup`, { params: queryParams({ code, registerId }) });
+  lookup(code: string, registerId: string, customerId?: string | null): Observable<PosLookup> {
+    return this.http.get<PosLookup>(`${this.url}/lookup`, { params: queryParams({ code, registerId, customerId }) });
   }
 
   /** The idempotency key must be reused when retrying the same checkout attempt (a replay answers 200 with the original). */

@@ -464,6 +464,30 @@ Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
   when the API does not answer, so a reload keeps the cashier signed in. **No service worker**: a reload works only while
   the web server itself is reachable. Offline receipts are provisional and signed after the fact; the legal review is
   pending.
+- **Pricelists** (`features/pos/pricelists`, `/kasse/:registerId/preislisten`, `pos.manage`): lists with a general
+  discount (basis points) on the till price, fixed item prices, validity dates and an active flag; lists are deactivated,
+  never deleted (the API has no DELETE). A list is assigned in the customer form (select disabled without `pos.manage`;
+  edits always send the current `pricelistId`, because `null` removes the list). Price, lookup and product grid requests
+  carry `customerId`, so tiles show the customer's prices. Attaching, changing or removing the customer re-prices the
+  cart (`pricing.logic.ts`): lines with a manual price or discount keep it; re-priced lines show "Preisliste <name>" and
+  the regular price struck through. The receipt prints the list name. Offline, the cache holds only till prices: carts
+  are not re-priced while offline.
+- **Gift cards** (`features/pos/giftcards`, multi-purpose vouchers): "Gutschein verkaufen" in the till (amount pad,
+  5,00–500,00 €, quick amounts) adds a non-taxable line; the payment method "Gutschein" asks for the code (typed with or
+  without dashes, normalised), looks up the balance and pays at most the balance and the amount due; a gift card cannot
+  pay for gift cards sold on the same ticket. The full code exists only in the creating response (sale, return refunded
+  to a gift card, reissue): the voucher slip shows it once on screen and prints it (thermal via `printLayout`, otherwise
+  the print dialog); it is kept in memory only (`GiftCardSlipStore`) and never stored; everything else shows
+  `••••-<last 4>`. "Gutscheine" (`/kasse/:registerId/gutscheine`, `pos.manage`): search, status filter, detail with
+  history, void and reissue with a reason (the new code is shown once). Returns can refund to a new gift card.
+- **Loyalty points** (`features/pos/loyalty`): settings page `/kasse/:registerId/treuepunkte` (`pos.manage`: on/off,
+  points per full euro, value per point, minimum redemption, live example). The till shows the customer's points on the
+  customer button; the payment screen offers "Punkte einlösen" (amount or maximum, checked against balance, minimum and
+  amount due) and the expected points. Redemption is a price reduction spread over the lines by the API, not a payment;
+  points are earned on what is paid after the reduction, gift card lines excluded. Receipt (screen and thermal) shows
+  redeemed, earned and the balance. The customer form shows the history and, with `pos.manage`, adjustments with a
+  reason. Gift card sale and payment and point redemption are disabled while offline (the offline queue refuses them).
+- The Z-report shows gift cards sold (count, amount) and the loyalty reduction.
 - Money stays in integer cents (`parseMoneyToMinor`) and is displayed with Intl de-DE. `pos.*`, `stock.insufficient`
   (with the available quantity), `stock.serialized_requires_imei` and `unit.*` codes are translated.
 
@@ -574,7 +598,16 @@ worktrees), give each its own `HN_E2E_API_PORT`, `HN_E2E_WEB_PORT` and `HN_E2E_D
 - `e2e/pos-offline.spec.ts` – API cut by aborting `/api` and `/health` requests: offline mode on, cash and card sales
   queued with provisional receipts, reload while offline, sync after reconnect (receipts 1 and 2 with the offline
   record); a stock conflict stays "needs attention", blocks closing, is retried after restocking; a discard downloads
-  the record first.
+  the record first; gift card sale/payment and point redemption are disabled offline.
+- `e2e/pos-pricelists.spec.ts` – a manager creates a list (10 %, item price 39,90 €), assigns it in the customer form;
+  attaching the customer re-prices the line (regular price struck through), a manual price on another line is kept,
+  tiles show the list price, removing the customer restores the regular price; the receipt prints the list name.
+- `e2e/pos-gift-cards.spec.ts` – a 25,00 € gift card sold (limits checked), the code shown once on the slip and absent
+  from the receipt and the later API read; paid 19,90 € with it in the next sale → balance 5,10 €; unknown code refused;
+  a return refunded to a new gift card shows that code once and never after a reload; voided on "Gutscheine".
+- `e2e/pos-loyalty.spec.ts` – settings saved (1 point per euro, 0,01 € per point, min. 10); a sale with the customer
+  earns 49 points; the next sale redeems (minimum and balance errors, then maximum: −0,49 €, 24 points earned on the
+  rest), receipt lines; history (earn, redeem, earn) and a manual adjustment with a required reason → 39 points.
 
 - `e2e/invoices.spec.ts` – a new seller (B2BSales) opens "Rechnungen" from the navigation and from Finanzen (empty list
   from the real API, only that nav entry active), an unknown id shows "Rechnung nicht gefunden."; a buyer-only company

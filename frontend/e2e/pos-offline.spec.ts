@@ -85,6 +85,7 @@ test.describe.serial('POS offline mode', () => {
     for (let i = 0; i < quantity; i++) await tile.click();
     await page.getByTestId('pos-pay').click();
     await expect(page.getByTestId('pos-offline-pay-note')).toContainText('Offline');
+    await expect(page.getByTestId('pos-method-GiftCard')).toBeDisabled();
     await page.getByTestId(`pos-method-${method}`).click();
     if (cash) await page.getByTestId('pos-pay-amount').fill(cash);
     await page.getByTestId('pos-validate').click();
@@ -132,6 +133,7 @@ test.describe.serial('POS offline mode', () => {
     await expect(page.getByTestId('pos-offline-banner')).toContainText('Keine Verbindung zum Server.');
     await expect(page.getByTestId('pos-online')).toContainText('Offline');
     await expect(page.getByTestId('pos-offline-grid-note')).toContainText('Offline: Artikel, Preise und Bestände vom');
+    await expect(page.getByTestId('pos-sell-gift-card')).toBeDisabled(); // gift card codes come from the API
 
     // ---- cash sale: provisional receipt without receipt number and TSE
     const first = await sellOffline(page, 1, 'Cash', '50');
