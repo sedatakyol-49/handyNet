@@ -35,6 +35,7 @@ CORS on the API already allows `http://localhost:4200`).
 | `npm run test:watch` | Unit tests in watch mode |
 | `npm run e2e` | Playwright e2e tests on their own stack (API :5270, web :4270, database `handynet_e2e`; see below) |
 | `node scripts/check-i18n.mjs` | Verifies the translation keys of all seven locale files (see i18n) |
+| `npm run test:bridge` | Byte-level tests of the bridge's ZVT implementation against a fake terminal socket (`node --test`) |
 
 For SSR deployments the Angular server only accepts known `Host` headers (SSRF protection). `localhost` is allowed in
 `angular.json` (`security.allowedHosts`); add your production host there or set `NG_ALLOWED_HOSTS`.
@@ -435,6 +436,34 @@ Manager) and are hidden otherwise. Benchmark: Odoo 18 Point of Sale.
   (`409 staff.pos_rights_role` is translated). Changes apply to the cashier with the next request; the POS reads the
   rights from `/api/me`, so a running till shows them after a reload.
 - Not yet possible because the API lacks it: product images (`imageUrl` is always null), e-mail receipts, cashier PIN.
+- **Customer display** (`features/pos/display`): the till publishes a display state (pure reducer `display-state.ts`;
+  no customer data, notes, IMEIs or cashier) on `BroadcastChannel('hn.pos.display.<registerId>')`. Menu →
+  "Kundendisplay": open the local full-screen window `/kasse/:registerId/kundendisplay` (same browser, no backend), or
+  create a link for another device (`POST/GET/DELETE /api/pos/registers/{id}/display-link`, QR shown once; a new link
+  revokes the old one). With an active link the till pushes the state (`PUT …/display-state`, debounced, 30 s
+  keep-alive); the public page `/kundendisplay/:token` (no login) long-polls `GET /api/public/pos-display/{token}?since=`
+  and shows "link no longer valid" on 404. The display follows the till's language and theme (`?theme=dark|light` on a
+  remote link).
+- **Card terminals** (`features/pos/terminals`, `/kasse/:registerId/kartenterminal`): profiles Manual / Simulated (test
+  only, refused by the API in production) / ZvtBridge (ZVT over TCP through the SEHA bridge; **not verified on
+  hardware**), per-device choice in `localStorage` (`hn.pos.terminal.<registerId>`), connection test and terminal end of
+  day. Card payments with a non-manual terminal: `POST …/card-transactions` (Pending) → terminal → `…/result` → the sale
+  is sent with `cardTransactionId`. An approved payment is stored with the ticket (survives reloads, blocks discarding,
+  is reused when the sale is retried); if the API refuses the sale the till reverses it on the terminal and says so; an
+  unknown outcome (connection lost after the amount was sent) asks the cashier to check the terminal. Returns refunded
+  to the card run a `Refund` on the terminal. Managers see "Kartenzahlungen ohne Beleg" (approved, unlinked) and reverse
+  them on the terminal or record a reversal done by hand. Receipts print the terminal data under the card payment.
+- **Offline mode** (`features/pos/offline`, register setting "Offline-Modus", `pos.manage`): reachability from browser
+  events, API requests without an answer (interceptor) and a `/health/ready` probe (forwarded by the dev proxy and the
+  SSR server). While unreachable, registers in offline mode sell from a cached copy (IndexedDB: register + session seen
+  last, products with till prices, customers' name/company/city) and queue sales in IndexedDB with their
+  Idempotency-Key and `offline: { recordedAt, reference: OFF-<device>-<n> }`; the customer gets a provisional receipt
+  (no number, no TSE). On reconnect the queue syncs in order; refused entries stay as "needs attention" with the API's
+  code (queue page `/kasse/:registerId/offline`: retry, discard with reason after saving the entry as a JSON file).
+  Closing the session is blocked while the device holds unsynced sales. `/api/me` is cached (`hn.me`) and used only
+  when the API does not answer, so a reload keeps the cashier signed in. **No service worker**: a reload works only while
+  the web server itself is reachable. Offline receipts are provisional and signed after the fact; the legal review is
+  pending.
 - Money stays in integer cents (`parseMoneyToMinor`) and is displayed with Intl de-DE. `pos.*`, `stock.insufficient`
   (with the available quantity), `stock.serialized_requires_imei` and `unit.*` codes are translated.
 
@@ -536,6 +565,16 @@ worktrees), give each its own `HN_E2E_API_PORT`, `HN_E2E_WEB_PORT` and `HN_E2E_D
 - `e2e/pos-rights.spec.ts` – the owner restricts a staff member on the Team page (only "Rabatt geben", max. 10 %; 150 is
   refused client-side); the cashier's till locks the price (POS price 20,00 €), refuses 15 % before payment with the
   limit, sells with 10 % (18,00 €), and offers no cash in/out, closing, prices, report or return.
+- `e2e/pos-customer-display.spec.ts` – the local display window follows cart (discount), payment and receipt (QR after
+  the e-receipt link), never shows the customer or a note, follows the language (RTL) and goes idle when the cashier
+  leaves; the remote display follows via the API anonymously, a new link and revoking end the old one.
+- `e2e/pos-card-terminal.spec.ts` – terminal profiles page, simulated terminal: approved sale with terminal data on the
+  receipt; declined / aborted / unknown outcome; sale refused after approval → reversal; failed reversal → payment stays
+  with the ticket (reload, discard blocked) and is reversed from "Kartenzahlungen ohne Beleg"; card refund on a return.
+- `e2e/pos-offline.spec.ts` – API cut by aborting `/api` and `/health` requests: offline mode on, cash and card sales
+  queued with provisional receipts, reload while offline, sync after reconnect (receipts 1 and 2 with the offline
+  record); a stock conflict stays "needs attention", blocks closing, is retried after restocking; a discard downloads
+  the record first.
 
 - `e2e/invoices.spec.ts` – a new seller (B2BSales) opens "Rechnungen" from the navigation and from Finanzen (empty list
   from the real API, only that nav entry active), an unknown id shows "Rechnung nicht gefunden."; a buyer-only company
