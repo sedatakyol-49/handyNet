@@ -1686,6 +1686,8 @@ export interface SaleLineRequest {
 export interface SalePayment {
   method: PosPaymentMethod;
   amountMinor: number;
+  /** Card payments run on a terminal: the approved card transaction of exactly this amount (absent = confirmed by the cashier). */
+  cardTransactionId?: string | null;
 }
 
 export interface CreateSaleRequest {
@@ -1700,6 +1702,8 @@ export interface ReturnRequest {
   refundMethod: PosPaymentMethod;
   reason: string;
   registerId?: string | null;
+  /** Card refunds run on a terminal: the approved card transaction (kind Refund) of exactly the refund amount. */
+  cardTransactionId?: string | null;
 }
 
 export interface ReceiptLine {
@@ -1723,10 +1727,23 @@ export interface ReceiptLine {
   note?: string | null;
 }
 
+/** Terminal data of a card payment (printed under the payment); null/absent when the cashier confirmed it by hand. */
+export interface ReceiptPaymentCard {
+  cardName: string | null;
+  maskedPan: string | null;
+  traceNumber: string | null;
+  authCode: string | null;
+  terminalId: string | null;
+  terminalReceiptNumber: string | null;
+  /** Simulated terminal: no card was charged. */
+  isTest?: boolean;
+}
+
 export interface ReceiptPayment {
   method: PosPaymentMethod;
   amountMinor: number;
   tenderedMinor: number | null;
+  card?: ReceiptPaymentCard | null;
 }
 
 export interface ReceiptVat {

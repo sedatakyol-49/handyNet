@@ -16,6 +16,8 @@ import { PosApi } from '../../core/api/handynet-api';
 import { POS_CONFIGURABLE_PERMISSIONS, PosCashierOption } from '../../core/api/models';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { CompanyBrandingStore } from '../../core/company/company-branding.store';
+import { PosDisplayDialogComponent } from './display/pos-display-dialog';
+import { PosTerminalDialogComponent } from './terminals/pos-terminal-dialog';
 
 /**
  * Standalone, full-screen POS app (route `/kasse`, outside the back-office shell): a minimal top bar with register,
@@ -24,7 +26,7 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
  */
 @Component({
   selector: 'hn-pos-app',
-  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, TranslatePipe, PosTsePillComponent, PosTseBannerComponent, PosPinDialogComponent],
+  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, TranslatePipe, PosTsePillComponent, PosTseBannerComponent, PosPinDialogComponent, PosDisplayDialogComponent, PosTerminalDialogComponent],
   providers: [PosContext, PosFiscalStatus],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -147,6 +149,7 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
                 @if (session.hasModule('Ankauf')) {
                   <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'ankauf']" (click)="closeMenu()" data-testid="pos-menu-ankauf">{{ 'pos.app.ankauf' | t }}</a>
                 }
+                <button type="button" role="menuitem" class="pos-menu-item" (click)="closeMenu(); displayOpen.set(true)" data-testid="pos-menu-display">{{ 'pos.display.menu' | t }}</button>
               }
               @if (session.can('reports.read')) {
                 <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte/tag" (click)="closeMenu()" data-testid="pos-menu-daily">{{ 'pos.app.dailyReport' | t }}</a>
@@ -189,6 +192,10 @@ import { CompanyBrandingStore } from '../../core/company/company-branding.store'
       <router-outlet />
     </main>
 
+    @if (ctx.registerId(); as rid) {
+      <hn-pos-display-dialog [registerId]="rid" [open]="displayOpen()" (closed)="displayOpen.set(false)" />
+    }
+    <hn-pos-terminal-dialog />
     @if (pinRequired()) {
       <div class="fixed inset-x-0 top-14 bottom-0 z-30 bg-pos-surface/95" data-testid="pos-locked" aria-hidden="true"></div>
     }
@@ -218,6 +225,8 @@ export class PosAppComponent {
   protected readonly rights = computed(() => posRights(this.cashiers.membership()));
   protected readonly canReport = computed(() => canSeeSessionReport(this.rights()));
   protected readonly menuOpen = signal(false);
+  /** "Kundendisplay" dialog (local window, remote link). */
+  protected readonly displayOpen = signal(false);
 
   // ---- cashier switching / lock (shared device)
   protected readonly switchOpen = signal(false);

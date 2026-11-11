@@ -11,6 +11,7 @@ import {
   TaxTreatment,
 } from '../../core/api/models';
 import { formatMoney, parseMoneyToMinor } from '../../core/format/money';
+import { OrderCard, isOrderCard } from './terminals/card-flow';
 
 /** Limits of the API (Receipt.MaxQuantity, MaxLines, reason/name lengths, PosLimits.MaxAmountMinor). */
 export const POS_LIMITS = {
@@ -783,6 +784,10 @@ export interface PosOrder {
   pending: PendingAttempt | null;
   /** Missing on tickets stored by older versions. */
   customer?: OrderCustomer | null;
+  /** Card payment the terminal approved for this ticket, until the sale is booked (never lost on reload). */
+  card?: OrderCard | null;
+  /** The terminal's answer was lost and the cashier confirmed on the terminal that the payment went through. */
+  cardManual?: boolean;
 }
 
 export interface OrdersState {
@@ -851,7 +856,9 @@ function isOrder(o: unknown): o is PosOrder {
     Array.isArray(x.payments) &&
     x.payments.every((p) => !!p && typeof p.id === 'string' && (p.method === 'Cash' || p.method === 'Card') && typeof p.input === 'string') &&
     (x.pending === null || (typeof x.pending === 'object' && typeof x.pending.key === 'string' && typeof x.pending.body === 'string')) &&
-    (x.customer === undefined || x.customer === null || (typeof x.customer === 'object' && typeof x.customer.id === 'string' && typeof x.customer.name === 'string'))
+    (x.customer === undefined || x.customer === null || (typeof x.customer === 'object' && typeof x.customer.id === 'string' && typeof x.customer.name === 'string')) &&
+    (x.card === undefined || x.card === null || isOrderCard(x.card)) &&
+    (x.cardManual === undefined || typeof x.cardManual === 'boolean')
   );
 }
 
@@ -892,7 +899,7 @@ export class OrdersStorage {
     try {
       // Nothing worth keeping: a single empty ticket without an open checkout attempt.
       const only = state.orders.length === 1 ? state.orders[0] : null;
-      if (only && !only.lines.length && !only.payments.length && !only.pending && !only.customer) this.storage?.removeItem(this.key());
+      if (only && !only.lines.length && !only.payments.length && !only.pending && !only.customer && !only.card) this.storage?.removeItem(this.key());
       else this.storage?.setItem(this.key(), JSON.stringify(state));
     } catch {
       /* storage unavailable or full */

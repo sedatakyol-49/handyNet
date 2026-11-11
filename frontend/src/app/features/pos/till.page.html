@@ -329,6 +329,21 @@
             </p>
           </div>
 
+          @if (attachedCard(); as card) {
+            <div class="rounded-xl border border-pos-accent bg-pos-accent-soft p-3 text-sm text-pos-accent-text" role="status" data-testid="pos-card-attached">
+              <p class="font-semibold">
+                {{ 'pos.terminals.flow.attached' | t: { amount: (card.amountMinor | money), card: cardLabel(card) } }}
+                @if (card.test) {
+                  <span class="pos-pill ms-1 bg-pos-warn-soft text-pos-ink">{{ 'pos.terminals.testOnly' | t }}</span>
+                }
+              </p>
+              <p class="mt-1">{{ 'pos.terminals.flow.attachedHint' | t }}</p>
+              <button type="button" class="pos-soft mt-2 min-h-11" [disabled]="reversing() || paying()" [attr.aria-busy]="reversing() || null" (click)="reverseAttachedCard()" data-testid="pos-card-reverse">
+                {{ 'pos.terminals.flow.reverse' | t }}
+              </button>
+            </div>
+          }
+
           @if (payments().length) {
             <ul class="space-y-2" data-testid="pos-payment-lines">
               @for (p of payments(); track p.id) {
@@ -429,7 +444,7 @@
               </button>
             </div>
             <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
-            <hn-pos-ereceipt [receipt]="r" />
+            <hn-pos-ereceipt [receipt]="r" (linkUrl)="receiptUrl.set($event)" />
           </div>
           <hn-receipt-view [doc]="r.document" [cashier]="r.createdByName" />
         </div>
@@ -482,9 +497,28 @@
 <hn-pos-price-dialog [product]="priceTarget()" [registerId]="registerId()" (closed)="closePrice()" (saved)="onPriceSaved($event)" />
 
 <hn-dialog [title]="'pos.till.discardTitle' | t" [open]="confirmDiscard()" (closed)="confirmDiscard.set(false); focusCode()">
-  <p class="text-sm">{{ 'pos.till.discardText' | t: { count: lines().length } }}</p>
-  <div class="mt-4 flex justify-end gap-2">
-    <button hnButton type="button" class="min-h-11" (click)="confirmDiscard.set(false); focusCode()">{{ 'common.cancel' | t }}</button>
-    <button hnButton variant="danger" type="button" class="min-h-11" autofocus (click)="discardOrder()" data-testid="pos-discard-confirm">{{ 'pos.till.discard' | t }}</button>
-  </div>
+  @if (attachedCard(); as card) {
+    <p class="text-sm" role="alert" data-testid="pos-discard-blocked">{{ 'pos.terminals.flow.discardBlocked' | t: { amount: (card.amountMinor | money) } }}</p>
+    <div class="mt-4 flex justify-end gap-2">
+      <button hnButton type="button" class="min-h-11" (click)="confirmDiscard.set(false); focusCode()">{{ 'common.close' | t }}</button>
+    </div>
+  } @else {
+    <p class="text-sm">{{ 'pos.till.discardText' | t: { count: lines().length } }}</p>
+    <div class="mt-4 flex justify-end gap-2">
+      <button hnButton type="button" class="min-h-11" (click)="confirmDiscard.set(false); focusCode()">{{ 'common.cancel' | t }}</button>
+      <button hnButton variant="danger" type="button" class="min-h-11" autofocus (click)="discardOrder()" data-testid="pos-discard-confirm">{{ 'pos.till.discard' | t }}</button>
+    </div>
+  }
+</hn-dialog>
+
+<!-- The terminal's answer was lost: only a look at the terminal can tell whether the card was charged. -->
+<hn-dialog [title]="'pos.terminals.flow.uncertainTitle' | t" [open]="!!cardUncertain()" [guardClose]="true" testId="pos-card-uncertain" (closed)="cardUncertain.set(null)">
+  @if (cardUncertain(); as u) {
+    <p class="rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm font-semibold text-pos-ink" role="alert">{{ u.text }}</p>
+    <p class="mt-3 text-sm">{{ 'pos.terminals.flow.uncertainHelp' | t: { amount: (u.amountMinor | money) } }}</p>
+    <div class="mt-4 grid gap-2 sm:grid-cols-2">
+      <button type="button" class="pos-soft min-h-14" (click)="cardUncertain.set(null)" data-testid="pos-card-uncertain-no">{{ 'pos.terminals.flow.uncertainNo' | t }}</button>
+      <button type="button" class="pos-soft pos-soft-accent min-h-14" (click)="confirmCardManually()" data-testid="pos-card-uncertain-yes">{{ 'pos.terminals.flow.uncertainYes' | t }}</button>
+    </div>
+  }
 </hn-dialog>

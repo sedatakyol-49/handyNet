@@ -32,6 +32,11 @@ export const routes: Routes = [
     path: 'beleg/:token',
     loadComponent: () => import('./features/pos/public-receipt.page').then((m) => m.PublicReceiptPage),
   },
+  // Public customer display of a till (tablet / other device, link with a token from the till's "Kundendisplay" menu); no login.
+  {
+    path: 'kundendisplay/:token',
+    loadComponent: () => import('./features/pos/display/public-display.page').then((m) => m.PublicDisplayPage),
+  },
   // Public Ankauf self check-in (QR at the counter, short-lived single-use link); no login.
   {
     path: 'checkin/:token',
@@ -241,6 +246,19 @@ export const routes: Routes = [
     ],
   },
   {
+    // Local customer display (second screen of the till PC): full screen without the POS top bar, same login as the till.
+    // The access guard runs on the child so that authGuard has loaded /api/me first.
+    path: 'kasse/:registerId/kundendisplay',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard('Pos', 'pos.sell')],
+        loadComponent: () => import('./features/pos/display/customer-display.page').then((m) => m.CustomerDisplayPage),
+      },
+    ],
+  },
+  {
     // Standalone, full-screen POS app (not inside the back-office shell). Guards run after authGuard has loaded /api/me.
     path: 'kasse',
     canActivate: [authGuard],
@@ -288,6 +306,7 @@ export const routes: Routes = [
           { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },
           { path: ':registerId/preise', loadComponent: () => import('./features/pos/prices.page').then((m) => m.PosPricesPage) },
           { path: ':registerId/drucker', loadComponent: () => import('./features/pos/printing/printers.page').then((m) => m.PosPrintersPage) },
+          { path: ':registerId/kartenterminal', loadComponent: () => import('./features/pos/terminals/terminals.page').then((m) => m.PosTerminalsPage) },
         ],
       },
     ],

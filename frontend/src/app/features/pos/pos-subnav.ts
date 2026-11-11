@@ -42,6 +42,7 @@ export class PosSubnavComponent {
     { id: 'prices', path: ['preise'], label: 'pos.subnav.prices', manage: true },
     { id: 'ankauf', path: ['ankauf'], label: 'pos.subnav.ankauf', manage: false, module: 'Ankauf' as const },
     { id: 'printers', path: ['drucker'], label: 'pos.subnav.printers', manage: false },
+    { id: 'terminals', path: ['kartenterminal'], label: 'pos.subnav.terminals', manage: false },
   ];
   /** Price maintenance only with `pos.manage`; Ankauf only with the module. */
   protected readonly visibleTabs = computed(() =>

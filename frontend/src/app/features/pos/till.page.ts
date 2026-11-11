@@ -19,7 +19,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, firstValueFrom } from 'rxjs';
 import { toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
-import { PosCustomer, PosLookup, PosPaymentMethod, PosPrice, PosProduct, Receipt } from '../../core/api/models';
+import { PosCustomer, PosLookup, PosPaymentMethod, PosPrice, PosProduct, Receipt, SalePayment } from '../../core/api/models';
 import { SessionStore } from '../../core/auth/session.store';
 import { PosCashierStore } from './pos-cashier.store';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -84,6 +84,11 @@ import {
 } from './pos.logic';
 import { ReceiptViewComponent } from './receipt-view';
 import { PrinterService } from './printing/printer.service';
+import { CompanyBrandingStore } from '../../core/company/company-branding.store';
+import { DisplayPublisher } from './display/display-publisher';
+import { displayStateFromTill, idleDisplayState, messageFromReceiptText } from './display/display-state';
+import { afterSaleFailure, cardAmount, cardLabel, cardStep, withCardTransaction } from './terminals/card-flow';
+import { TerminalService } from './terminals/terminal.service';
 
 /** Codes after which the current session may have changed (closed elsewhere etc.) → reload it. */
 const RELOAD_SESSION_CODES = new Set(['pos.no_open_session', 'pos.session_closed', 'pos.register_inactive']);
@@ -124,6 +129,9 @@ export class TillPage {
   private readonly printer = inject(PrinterService);
   protected readonly ctx = inject(PosContext);
   private readonly fiscalStatus = inject(PosFiscalStatus, { optional: true });
+  private readonly display = inject(DisplayPublisher);
+  private readonly terminals = inject(TerminalService);
+  private readonly branding = inject(CompanyBrandingStore);
 
   readonly registerId = input.required<string>();
 
@@ -238,8 +246,18 @@ export class TillPage {
   protected readonly paying = signal(false);
   protected readonly methods: PosPaymentMethod[] = ['Cash', 'Card'];
 
+  // ---- card terminal
+  /** Card payment the terminal approved for this ticket and that no receipt uses yet. */
+  protected readonly attachedCard = computed(() => this.order().card ?? null);
+  protected readonly cardLabel = cardLabel;
+  /** The terminal's answer was lost: the cashier must check on the terminal (dialog). */
+  protected readonly cardUncertain = signal<{ text: string; amountMinor: number } | null>(null);
+  protected readonly reversing = signal(false);
+
   // ---- after the sale
   protected readonly lastReceipt = signal<Receipt | null>(null);
+  /** Public e-receipt link of the last receipt, once created (QR on the customer display). */
+  protected readonly receiptUrl = signal<string | null>(null);
   protected readonly confirmDiscard = signal(false);
 
   // ---- dialogs: line note, customer, price (pos.manage)
@@ -247,7 +265,7 @@ export class TillPage {
   protected noteText = '';
   protected readonly customerOpen = signal(false);
   protected readonly priceTarget = signal<PriceTarget | null>(null);
-  private readonly dialogOpen = computed(() => this.confirmDiscard() || this.noteOpen() || this.customerOpen() || !!this.priceTarget());
+  private readonly dialogOpen = computed(() => this.confirmDiscard() || this.noteOpen() || this.customerOpen() || !!this.priceTarget() || !!this.cardUncertain() || !!this.terminals.active());
 
   constructor() {
     effect(() => {
@@ -268,6 +286,32 @@ export class TillPage {
     effect(() => {
       const state = this.orders();
       untracked(() => this.ordersStorage().save(state));
+    });
+    // Customer display: publish what the customer may see (never the customer's data, notes or the cashier).
+    effect(() => {
+      const id = this.registerId();
+      const texts = this.branding.receiptBranding();
+      const state = displayStateFromTill({
+        sessionOpen: !!this.session(),
+        screen: this.screen(),
+        lines: this.lines(),
+        settlement: this.screen() === 'payment' ? this.settlement() : null,
+        receipt: this.lastReceipt(),
+        receiptUrl: this.receiptUrl(),
+        idleMessage: messageFromReceiptText(texts?.receiptHeader),
+        doneMessage: messageFromReceiptText(texts?.receiptFooter),
+        locale: this.i18n.lang(),
+      });
+      untracked(() => this.display.publish(id, state));
+    });
+    // Leaving the selling screen (in-app navigation, reload or closing the tab): the display shows the welcome screen.
+    const displayIdle = () =>
+      this.display.publish(this.registerId(), idleDisplayState(this.i18n.lang(), messageFromReceiptText(this.branding.receiptBranding()?.receiptHeader)));
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', displayIdle);
+    inject(DestroyRef).onDestroy(() => {
+      if (typeof window !== 'undefined') window.removeEventListener('pagehide', displayIdle);
+      displayIdle();
+      this.display.release(this.registerId());
     });
     // Scanner-ready as soon as the session is known.
     effect(() => {
@@ -356,6 +400,7 @@ export class TillPage {
   }
 
   protected discardOrder(): void {
+    if (this.order().card) return; // an approved card payment must be reversed first (the dialog says so)
     this.confirmDiscard.set(false);
     this.orders.set(removeOrder(this.orders(), this.order().id, newIdempotencyKey(), new Date().toISOString()));
     this.afterOrderSwitch();
@@ -726,14 +771,123 @@ export class TillPage {
       this.openPayment();
       return;
     }
-    const body = buildSaleRequest(this.registerId(), order.lines, s.payments, order.customer?.id ?? null);
-    const attempt = attemptFor(order.pending, JSON.stringify(body), newIdempotencyKey);
-    this.orders.update((st) => updateOrder(st, order.id, { pending: attempt }));
     this.paying.set(true);
     this.checkoutError.set(null);
     try {
+      // Card amount: run the terminal first (or reuse the payment it already approved for this ticket).
+      const payments = await this.settleCard(order.id, s.payments);
+      if (!payments) return;
+      await this.sendSale(order.id, payments);
+    } finally {
+      this.paying.set(false);
+    }
+  }
+
+  /**
+   * Card part of a checkout. Returns the payments to send (with the card transaction when a terminal approved it) or
+   * null when the checkout stops here — the reason is then shown in the payment dialog.
+   */
+  private async settleCard(orderId: string, payments: SalePayment[]): Promise<SalePayment[] | null> {
+    const cardMinor = cardAmount(payments);
+    let card = this.order().card ?? null;
+    const terminal = cardMinor > 0 && !card ? await this.terminals.effective(this.registerId()) : null;
+    const step = cardStep(card, cardMinor, terminal, !!this.order().cardManual);
+    if (step === 'none' || step === 'manual') return payments;
+    if (step === 'mismatch' || step === 'orphan') {
+      this.checkoutError.set(this.i18n.t('pos.terminals.flow.amountChanged', { amount: formatMoney(card!.amountMinor), card: cardLabel(card!) }));
+      return null;
+    }
+    if (step === 'charge') {
+      const run = await this.terminals.charge(this.registerId(), 'Payment', cardMinor);
+      if (run.kind === 'manual') return payments;
+      if (run.kind === 'uncertain') {
+        this.cardUncertain.set({ text: run.text, amountMinor: cardMinor });
+        return null;
+      }
+      if (run.kind !== 'approved') {
+        this.checkoutError.set(run.text);
+        return null;
+      }
+      card = run.card;
+      // Stored with the ticket right away: a reload or a failed sale must not lose an approved charge.
+      this.orders.update((st) => updateOrder(st, orderId, { card }));
+    }
+    if (card && !card.reported && card.pendingResult) {
+      if (!(await this.terminals.report(card.transactionId, card.pendingResult))) {
+        this.checkoutError.set(this.i18n.t('pos.terminals.flow.unreported', { amount: formatMoney(card.amountMinor) }));
+        return null;
+      }
+      card = { ...card, reported: true, pendingResult: null };
+      this.orders.update((st) => updateOrder(st, orderId, { card }));
+    }
+    return withCardTransaction(payments, card!.transactionId);
+  }
+
+  /** The terminal's answer was lost and the cashier checked the terminal: the payment went through → confirm by hand. */
+  protected confirmCardManually(): void {
+    const order = this.order();
+    this.cardUncertain.set(null);
+    this.orders.update((st) => updateOrder(st, order.id, { cardManual: true }));
+    void this.validate();
+  }
+
+  /** Reverses the card payment attached to this ticket on the terminal (the amount changed or the sale is given up). */
+  protected async reverseAttachedCard(): Promise<void> {
+    const order = this.order();
+    const card = order.card;
+    if (!card || this.reversing() || this.paying()) return;
+    this.reversing.set(true);
+    this.checkoutError.set(null);
+    try {
+      const r = await this.terminals.reverse(this.registerId(), card);
+      if (r.kind === 'reversed') {
+        this.orders.update((st) => updateOrder(st, order.id, { card: null }));
+        this.toast.success(this.i18n.t('pos.terminals.flow.reversed', { amount: formatMoney(card.amountMinor) }));
+      } else if (r.kind === 'reversedUnreported') {
+        this.orders.update((st) => updateOrder(st, order.id, { card: null }));
+        this.checkoutError.set(r.text);
+      } else if (r.kind === 'notReversible') {
+        this.orders.update((st) => updateOrder(st, order.id, { card: null }));
+        this.checkoutError.set(this.i18n.t('pos.terminals.flow.notReversible'));
+      } else {
+        this.checkoutError.set(this.i18n.t('pos.terminals.flow.reversalFailed', { amount: formatMoney(card.amountMinor), reason: r.text }));
+      }
+    } finally {
+      this.reversing.set(false);
+    }
+  }
+
+  /** The API refused the sale although the terminal had approved the card: reverse it and say plainly what happened. */
+  private async cardAfterSaleFailure(orderId: string, status: number, reason: string): Promise<string | null> {
+    const card = this.order().card;
+    if (!card) return null;
+    const amount = formatMoney(card.amountMinor);
+    if (afterSaleFailure(status) === 'keep') return `${reason} ${this.i18n.t('pos.terminals.flow.cardKept', { amount })}`;
+    const r = await this.terminals.reverse(this.registerId(), card);
+    switch (r.kind) {
+      case 'reversed':
+        this.orders.update((st) => updateOrder(st, orderId, { card: null }));
+        return this.i18n.t('pos.terminals.flow.saleFailedReversed', { reason, amount });
+      case 'reversedUnreported':
+        this.orders.update((st) => updateOrder(st, orderId, { card: null }));
+        return `${this.i18n.t('pos.terminals.flow.saleFailedReversed', { reason, amount })} ${r.text}`;
+      case 'notReversible':
+        this.orders.update((st) => updateOrder(st, orderId, { card: null }));
+        return `${reason} ${this.i18n.t('pos.terminals.flow.notReversible')}`;
+      case 'failed':
+        return this.i18n.t('pos.terminals.flow.saleFailedNotReversed', { reason, amount, detail: r.text });
+    }
+  }
+
+  private async sendSale(orderId: string, payments: SalePayment[]): Promise<void> {
+    const order = this.order();
+    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null);
+    const attempt = attemptFor(order.pending, JSON.stringify(body), newIdempotencyKey);
+    this.orders.update((st) => updateOrder(st, order.id, { pending: attempt }));
+    try {
       const receipt = await firstValueFrom(this.api.sell(body, attempt.key));
       this.lastPrices.remember(Object.fromEntries(body.lines.filter((l) => l.productId).map((l) => [l.productId!, l.unitPriceMinor])));
+      this.receiptUrl.set(null);
       this.lastReceipt.set(receipt);
       void this.fiscalStatus?.refresh(); // a signed receipt ends a TSE outage; a failed one starts it
       this.finishOrder(order.id);
@@ -747,7 +901,10 @@ export class TillPage {
       const keep = keepAttemptAfter(problemStatus(e));
       if (!keep) this.orders.update((st) => updateOrder(st, order.id, { pending: null }));
       const problem = toApiProblem(e);
-      this.checkoutError.set(posErrorText(this.i18n, e) + (keep ? ' ' + this.i18n.t('pos.till.retryHint') : ''));
+      const reason = posErrorText(this.i18n, e) + (keep ? ' ' + this.i18n.t('pos.till.retryHint') : '');
+      this.checkoutError.set(reason);
+      const withCard = await this.cardAfterSaleFailure(orderId, problemStatus(e), reason);
+      if (withCard) this.checkoutError.set(withCard);
       const productId = problemDetail(e, 'productId');
       const lineNumber = problemDetail(e, 'lineNumber');
       if (typeof productId === 'string') {
@@ -759,8 +916,6 @@ export class TillPage {
         this.sessionQuery.reload();
         this.register.reload();
       }
-    } finally {
-      this.paying.set(false);
     }
   }
 
