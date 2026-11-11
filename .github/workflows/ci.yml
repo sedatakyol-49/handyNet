@@ -143,7 +143,10 @@ jobs:
             printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
             echo "::warning::DEPLOY_KNOWN_HOSTS is not set: the server's host key is taken from the network unverified. Set it to the output of 'ssh-keyscan <host>'."
-            ssh-keyscan -p "${DEPLOY_PORT:-22}" "$DEPLOY_HOST" > ~/.ssh/known_hosts
+            if ! ssh-keyscan -T 20 -p "${DEPLOY_PORT:-22}" "$DEPLOY_HOST" > ~/.ssh/known_hosts || [ ! -s ~/.ssh/known_hosts ]; then
+              echo "::error::No SSH answer from the server on port ${DEPLOY_PORT:-22}. GitHub Actions runners connect from changing addresses, so the server's firewall (Oracle security list / NSG, iptables) must allow that port from 0.0.0.0/0. Also check that DEPLOY_HOST contains only the IP or host name."
+              exit 1
+            fi
           fi
           chmod 600 ~/.ssh/known_hosts
       - name: Deploy this commit
