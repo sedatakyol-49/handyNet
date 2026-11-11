@@ -319,4 +319,43 @@ public sealed class DatabaseSecurityTests(HandyNetFixture fixture)
         Assert.Equal(50_00L, await _pos.OwnerScalarAsync<long>($"SELECT balance_minor FROM pos.gift_cards WHERE id = '{cardA}'"));
         Assert.Single((await b.GetAsync("/api/pos/gift-cards")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray());
     }
+
+    [Fact]
+    public async Task Loyalty_tables_are_tenant_isolated()
+    {
+        var a = await _pos.ShopAsync("treue-a");
+        var b = await _pos.ShopAsync("treue-b");
+        var customers = new Dictionary<Guid, Guid>();
+        foreach (var shop in new[] { a, b })
+        {
+            (await shop.PutAsync("/api/pos/loyalty/settings", new { enabled = true, pointsPerEuro = 1, pointValueMinor = 1 })).Expect(HttpStatusCode.OK);
+            var customer = PosSupport.Id((await shop.PostAsync("/api/pos/customers", new { name = "Kunde" })).Expect(HttpStatusCode.Created).Json);
+            (await shop.PostAsync($"/api/pos/customers/{customer}/loyalty/adjustments", new { points = 100, reason = "Start" })).Expect(HttpStatusCode.OK);
+            customers[shop.OrganizationId!.Value] = customer;
+        }
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+        var customerA = customers[orgA];
+
+        await AssertIsolatedAsync("pos.loyalty_settings", orgA, orgB, foreignInsert: null, deletable: false, touch: "points_per_euro = 100");
+        await AssertIsolatedAsync("pos.loyalty_accounts", orgA, orgB, foreignInsert: null, deletable: false, touch: "points = 999999");
+        await AssertIsolatedAsync("pos.loyalty_transactions", orgA, orgB,
+            $"INSERT INTO pos.loyalty_transactions (id, organization_id, customer_id, type, points, balance_after, created_at, created_by) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{customerA}', 'Earn', 5, 105, now(), gen_random_uuid())",
+            deletable: false, touch: "points = 1");
+        // B cannot move one of its own rows into A either (WITH CHECK).
+        await using (var asB = await ConnectAsAppAsync(orgB))
+        {
+            Assert.Equal("42501", await PosSupport.TryAsync(asB, $"UPDATE pos.loyalty_settings SET organization_id = '{Guid.NewGuid()}'"));
+            Assert.Equal("42501", await PosSupport.TryAsync(asB, "DELETE FROM pos.loyalty_transactions"));
+            Assert.Equal("42501", await PosSupport.TryAsync(asB, "UPDATE pos.loyalty_transactions SET points = 1"));
+        }
+
+        // Through the API: B sees neither A's customer's points nor can it adjust them, and A's settings are untouched by B's.
+        (await b.GetAsync($"/api/pos/customers/{customerA}/loyalty")).Expect(HttpStatusCode.NotFound);
+        (await b.PostAsync($"/api/pos/customers/{customerA}/loyalty/adjustments", new { points = -100, reason = "fremd" })).Expect(HttpStatusCode.NotFound);
+        (await b.PutAsync("/api/pos/loyalty/settings", new { enabled = false, pointsPerEuro = 50, pointValueMinor = 50 })).Expect(HttpStatusCode.OK);
+        var settingsA = (await a.GetAsync("/api/pos/loyalty/settings")).Expect(HttpStatusCode.OK).Json;
+        Assert.Equal((true, 1), (settingsA["enabled"]!.GetValue<bool>(), settingsA["pointsPerEuro"]!.GetValue<int>()));
+        Assert.Equal(100L, await _pos.OwnerScalarAsync<int>($"SELECT points FROM pos.loyalty_accounts WHERE customer_id = '{customerA}'"));
+    }
 }

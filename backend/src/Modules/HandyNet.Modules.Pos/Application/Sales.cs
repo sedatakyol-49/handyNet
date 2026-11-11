@@ -43,8 +43,12 @@ public sealed record OfflineSaleRequest(DateTimeOffset RecordedAt, string Refere
 /// <summary>What a receipt says about its offline recording.</summary>
 public sealed record OfflineSaleDto(DateTimeOffset RecordedAt, string Reference);
 
+/// <param name="RedeemPoints">
+/// Loyalty points of the customer to redeem (ADR-0020): a price reduction of points × point value, spread by the server over
+/// the eligible lines (<c>loyaltyDiscountMinor</c>). Needs a customer, the programme enabled, the minimum and the balance.
+/// </param>
 public sealed record CreateSaleRequest(Guid RegisterId, IReadOnlyList<SaleLineRequest> Lines, IReadOnlyList<SalePaymentRequest> Payments,
-    Guid? CustomerId = null, OfflineSaleRequest? Offline = null);
+    Guid? CustomerId = null, OfflineSaleRequest? Offline = null, int? RedeemPoints = null);
 
 /// <summary>Order history filters (all optional, combined with AND). Dates are inclusive from, exclusive to.</summary>
 public sealed record SaleQuery(
@@ -87,7 +91,8 @@ public sealed record ReceiptLineDto(
     int? OriginalLineNumber,
     int ReturnedQuantity,
     string? Note,
-    Guid? GiftCardId = null);
+    Guid? GiftCardId = null,
+    long LoyaltyDiscountMinor = 0);
 
 /// <summary>Card: the terminal data of a card payment settled by a card transaction (null when the cashier confirmed it).</summary>
 public sealed record ReceiptPaymentDto(string Method, long AmountMinor, long? TenderedMinor, DocumentCard? Card = null);
@@ -123,7 +128,11 @@ public sealed record ReceiptDto(
     OfflineSaleDto? Offline = null,
     Guid? PricelistId = null,
     string? PricelistName = null,
-    IReadOnlyList<IssuedGiftCardDto>? IssuedGiftCards = null);
+    IReadOnlyList<IssuedGiftCardDto>? IssuedGiftCards = null,
+    int LoyaltyPointsRedeemed = 0,
+    long LoyaltyDiscountMinor = 0,
+    int LoyaltyPointsEarned = 0,
+    int? LoyaltyBalanceAfter = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -177,6 +186,7 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
             line.RuleFor(l => l.Note).MaximumLength(Receipt.MaxNoteLength);
         });
         RuleFor(x => x.CustomerId).NotEqual(Guid.Empty).When(x => x.CustomerId is not null);
+        RuleFor(x => x.RedeemPoints).InclusiveBetween(1, int.MaxValue / LoyaltySettings.MaxPointValueMinor).When(x => x.RedeemPoints is not null);
         RuleFor(x => x.Payments).NotNull().MaxCount(p => p!.Count, 10, "At most 10 payments.");
         RuleForEach(x => x.Payments).ChildRules(p =>
         {
@@ -223,7 +233,8 @@ internal sealed partial class SaleService(
     PosActor actor,
     ApprovalService approvals,
     IOptions<PosOptions> options,
-    GiftCardService giftCards)
+    GiftCardService giftCards,
+    LoyaltyService loyalty)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -262,6 +273,16 @@ internal sealed partial class SaleService(
         var offline = request.Offline is { } o ? new OfflineRecord(o.RecordedAt, o.Reference?.Trim() ?? string.Empty) : null;
         if (offline is not null && await CheckOfflineAsync(register, offline, request, ct) is { } offlineRefused)
             return offlineRefused;
+        // Loyalty points (ADR-0020): what the redemption is worth, or why it is not possible (balance and total are checked later).
+        var loyaltySettings = await loyalty.SettingsAsync(ct);
+        LoyaltyRedemption? redemption = null;
+        if (request.RedeemPoints is { } redeemPoints)
+        {
+            var redeemable = loyaltySettings.Redemption(redeemPoints, customer is not null);
+            if (!redeemable.IsSuccess)
+                return redeemable.Error!;
+            redemption = redeemable.Value;
+        }
         // Gift card lines (ADR-0020): no product, quantity 1, no discount, an amount inside the configured range.
         var giftRules = giftCards.Rules;
         for (var i = 0; i < request.Lines.Count; i++)
@@ -287,6 +308,11 @@ internal sealed partial class SaleService(
         var giftPayments = await LockGiftCardPaymentsAsync(request.Payments, ct);
         if (!giftPayments.IsSuccess)
             return giftPayments.Error!;
+        // The customer's points are locked while the programme is on: they may be redeemed and earned by this sale.
+        var loyaltyAccount = customer is not null && loyaltySettings.Enabled ? await loyalty.LockAccountAsync(customer.Id, ct) : null;
+        if (redemption is not null && redemption.Points > loyaltyAccount!.Points)
+            return Error.Conflict("pos.loyalty_insufficient_points", $"The customer has {loyaltyAccount.Points} points; {redemption.Points} cannot be redeemed.")
+                .WithDetails(new Dictionary<string, object?> { ["points"] = loyaltyAccount.Points });
 
         var reference = $"pos:{register.Id}:{number}";
         var staged = new List<(SaleLineRequest Request, UnitSnapshot? Unit, NewGiftCard? Gift)>();
@@ -351,11 +377,27 @@ internal sealed partial class SaleService(
         var header = new ReceiptHeader(OrganizationId, register.Id, sessionId, register.WarehouseId, number, actor.UserId, clock.UtcNow,
             idempotencyKey, requestHash, customer, offline, appliedPricelist?.Id);
         var receipt = Receipt.CreateSale(header, inputs, request.Payments.Select(p => new PaymentInput(p.Method, p.AmountMinor)).ToList(),
-            register.CashRounding);
+            register.CashRounding, redemption);
         if (!receipt.IsSuccess)
             return receipt.Error!;
         if (LinkCard(card.Value, receipt.Value) is { } cardRefused)
             return cardRefused;
+        // Loyalty: take the redeemed points, credit the points earned on what is paid for the eligible lines.
+        if (loyaltyAccount is not null)
+        {
+            if (redemption is not null)
+            {
+                var redeemed = loyaltyAccount.Redeem(redemption.Points, receipt.Value.Id, actor.UserId, clock.UtcNow);
+                if (!redeemed.IsSuccess)
+                    return redeemed.Error!;
+                db.Add(redeemed.Value);
+            }
+            var earned = loyaltySettings.PointsFor(receipt.Value.LoyaltyEligibleGrossMinor);
+            if (loyaltyAccount.Earn(earned, receipt.Value.Id, actor.UserId, clock.UtcNow) is { } earnedTransaction)
+                db.Add(earnedTransaction);
+            if (redemption is not null || earned > 0)
+                receipt.Value.SetLoyalty(earned, loyaltyAccount.Points);
+        }
         // Gift cards: issue the ones sold on this receipt, charge the ones it is paid with (same transaction as the receipt).
         var issued = staged.Where(s => s.Gift is not null).Select(s => s.Gift!).ToList();
         if (IssueGiftCards(issued, receipt.Value, request.CustomerId) is { } issueRefused)
@@ -434,6 +476,17 @@ internal sealed partial class SaleService(
             return storno.Error!;
         if (await ReverseGiftCardsAsync(original, storno.Value, ct) is { } giftCardRefused)
             return giftCardRefused;
+        // Loyalty: redeemed points go back, earned points are taken back (at most what the customer still has).
+        if (original.CustomerId is { } loyaltyCustomer && (original.LoyaltyPointsRedeemed > 0 || original.LoyaltyPointsEarned > 0))
+        {
+            var account = await loyalty.LockAccountAsync(loyaltyCustomer, ct);
+            if (account.ReverseRedeem(original.LoyaltyPointsRedeemed, storno.Value.Id, actor.UserId, clock.UtcNow) is { } restored)
+                db.Add(restored);
+            var taken = account.ReverseEarn(original.LoyaltyPointsEarned, storno.Value.Id, actor.UserId, clock.UtcNow);
+            if (taken is not null)
+                db.Add(taken);
+            storno.Value.SetLoyalty(taken?.Points ?? 0, account.Points, original.LoyaltyPointsRedeemed);
+        }
 
         return await CompleteRefundAsync(tx, storno.Value, original, register, ct);
     }
@@ -476,6 +529,23 @@ internal sealed partial class SaleService(
             return returned.Error!;
         if (LinkCard(card?.Value, returned.Value) is { } cardRefused)
             return cardRefused;
+        // Loyalty: earned points are taken back pro rata to what was returned; redeemed points are not restored (the refund is
+        // the reduced line gross).
+        if (original.CustomerId is { } loyaltyCustomer && original.LoyaltyPointsEarned > 0)
+        {
+            var returnedBefore = await db.Set<Receipt>().AsNoTracking().Where(r => r.ReferencedReceiptId == original.Id && r.Kind == ReceiptKind.Return)
+                .SumAsync(r => -r.TotalGrossMinor, ct);
+            var toReverse = LoyaltyMath.EarnedToReverse(original.LoyaltyPointsEarned, original.LoyaltyEligibleGrossMinor, returnedBefore,
+                -returned.Value.TotalGrossMinor);
+            if (toReverse > 0)
+            {
+                var account = await loyalty.LockAccountAsync(loyaltyCustomer, ct);
+                var taken = account.ReverseEarn(toReverse, returned.Value.Id, actor.UserId, clock.UtcNow);
+                if (taken is not null)
+                    db.Add(taken);
+                returned.Value.SetLoyalty(taken?.Points ?? 0, account.Points);
+            }
+        }
         // Refund onto a new gift card: issued with the return receipt, its code is returned once.
         var refundCards = returned.Value.Payments.Where(p => p.Method == PaymentMethod.GiftCard)
             .Select(p => new NewGiftCard(Guid.CreateVersion7(), GiftCardCode.New(), -p.AmountMinor)).ToList();
@@ -639,8 +709,8 @@ internal sealed partial class SaleService(
             return Error.Conflict("pos.offline_not_enabled", "Offline mode is not enabled for this register.");
         if (offline.Check(clock.UtcNow, options.Value.OfflineMaxAgeHours) is { IsSuccess: false } invalid)
             return invalid.Error!;
-        if (request.Payments.Any(p => p.Method is not (PaymentMethod.Cash or PaymentMethod.Card)))
-            return Error.Validation("pos.offline_payment_not_allowed", "Offline sales can only be paid in cash or by card.");
+        if (request.Payments.Any(p => p.Method is not (PaymentMethod.Cash or PaymentMethod.Card)) || request.RedeemPoints is not null)
+            return Error.Validation("pos.offline_payment_not_allowed", "Offline sales can only be paid in cash or by card; points cannot be redeemed offline.");
         // A gift card's code is generated by the server when the sale is booked: it cannot be handed out offline.
         if (request.Lines.Any(l => l.GiftCardAmountMinor is not null))
             return Error.Validation("pos.offline_gift_card_not_allowed", "Gift cards cannot be sold offline.");
@@ -924,6 +994,7 @@ internal sealed partial class SaleService(
                             + (l.GiftCardAmountMinor is { } gift ? $":g{gift}" : "")))
                         + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(PaymentFingerprint))
                         + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "")
+                        + (request.RedeemPoints is { } points ? $"#lp:{points}" : "")
                         + (request.Offline is { } offline
                             ? $"#o:{offline.RecordedAt.ToUniversalTime():O}:{offline.Reference?.Trim().Length}:{offline.Reference?.Trim()}"
                             : "");
@@ -959,7 +1030,7 @@ internal sealed partial class SaleService(
             l.Quantity, l.UnitPriceMinor, l.DiscountMinor, l.LineGrossMinor, l.TaxTreatment.ToString(), l.VatRateBasisPoints,
             // §25a VAT is not disclosed (it would reveal the purchase price and must not be shown to the customer).
             l.TaxTreatment == TaxTreatment.Margin25a ? null : l.VatMinor,
-            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber), l.Note, l.GiftCardId)).ToList();
+            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber), l.Note, l.GiftCardId, l.LoyaltyDiscountMinor)).ToList();
 
         var reprints = await db.Set<ReceiptReprint>().AsNoTracking().Where(x => x.ReceiptId == r.Id)
             .GroupBy(x => x.ReceiptId).Select(g => new { Count = g.Count(), Last = g.Max(x => x.PrintedAt) }).FirstOrDefaultAsync(ct);
@@ -975,7 +1046,8 @@ internal sealed partial class SaleService(
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
             (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor,
             r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null,
-            r.PricelistId, r.Document.PricelistName, await giftCards.IssuedByAsync(r.Id, ct));
+            r.PricelistId, r.Document.PricelistName, await giftCards.IssuedByAsync(r.Id, ct),
+            r.LoyaltyPointsRedeemed, r.LoyaltyDiscountMinor, r.LoyaltyPointsEarned, r.LoyaltyBalanceAfter);
     }
 }
 

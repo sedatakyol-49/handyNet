@@ -10,7 +10,11 @@ public sealed record DocumentLine(
     long DiscountMinor,
     long LineGrossMinor,
     string TaxLabel,
-    string? Note = null);
+    string? Note = null,
+    long LoyaltyDiscountMinor = 0);
+
+/// <summary>Loyalty points on a receipt as printed (ADR-0020): redeemed (and what they reduced the price by), earned, balance afterwards.</summary>
+public sealed record DocumentLoyalty(int PointsRedeemed, long DiscountMinor, int PointsEarned, int? BalanceAfter);
 
 /// <summary>The customer as printed on the receipt (no email or phone). Absent on receipts without a customer.</summary>
 public sealed record DocumentCustomer(
@@ -91,7 +95,8 @@ public sealed record ReceiptDocument(
     DocumentCustomer? Customer = null,
     long RoundingMinor = 0,
     DocumentOffline? Offline = null,
-    string? PricelistName = null)
+    string? PricelistName = null,
+    DocumentLoyalty? Loyalty = null)
 {
     public const string StandardLabel = "A";
     public const string MarginLabel = "§25a";
@@ -115,7 +120,7 @@ public sealed record ReceiptDocument(
     public static ReceiptDocument For(Receipt receipt, SellerInfo seller, string registerName, long? referencedReceiptNumber, FiscalData fiscal)
     {
         var lines = receipt.Lines.Select(l => new DocumentLine(l.Description, l.Imei, l.Quantity, l.UnitPriceMinor, l.DiscountMinor,
-            l.LineGrossMinor, LabelFor(l.TaxTreatment), l.Note)).ToList();
+            l.LineGrossMinor, LabelFor(l.TaxTreatment), l.Note, l.LoyaltyDiscountMinor)).ToList();
 
         var vat = receipt.Lines.Where(l => l.TaxTreatment == TaxTreatment.Standard19)
             .GroupBy(l => l.VatRateBasisPoints)
@@ -138,6 +143,9 @@ public sealed record ReceiptDocument(
             notes.Add(KassenSichV.TestTseNotice);
         if (receipt.Offline is { } offline)
             notes.Add(OfflineNote(offline));
+        var loyalty = LoyaltyOf(receipt);
+        if (loyalty is not null)
+            notes.AddRange(LoyaltyNotes(loyalty));
 
         var title = receipt.Kind switch
         {
@@ -156,7 +164,29 @@ public sealed record ReceiptDocument(
                 fiscal.TimeFormat, fiscal.PublicKey, fiscal.ProcessType, fiscal.ProcessData, fiscal.QrPayload),
             receipt.Customer,
             receipt.RoundingMinor,
-            receipt.Offline is { } recorded ? new DocumentOffline(recorded.RecordedAt, recorded.Reference) : null);
+            receipt.Offline is { } recorded ? new DocumentOffline(recorded.RecordedAt, recorded.Reference) : null,
+            Loyalty: loyalty);
+    }
+
+    private static DocumentLoyalty? LoyaltyOf(Receipt receipt) =>
+        receipt.LoyaltyPointsRedeemed != 0 || receipt.LoyaltyPointsEarned != 0 || receipt.LoyaltyDiscountMinor != 0
+            ? new DocumentLoyalty(receipt.LoyaltyPointsRedeemed, receipt.LoyaltyDiscountMinor, receipt.LoyaltyPointsEarned, receipt.LoyaltyBalanceAfter)
+            : null;
+
+    /// <summary>Printed lines about loyalty points (German, like the other notes).</summary>
+    public static IEnumerable<string> LoyaltyNotes(DocumentLoyalty loyalty)
+    {
+        static string Euro(long minor) => (Math.Abs(minor) / 100m).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("de-DE")) + " €";
+        if (loyalty.PointsRedeemed > 0)
+            yield return $"Treuepunkte eingelöst: {loyalty.PointsRedeemed} (Preisnachlass {Euro(loyalty.DiscountMinor)})";
+        if (loyalty.PointsRedeemed < 0)
+            yield return $"Treuepunkte zurückgebucht: {-loyalty.PointsRedeemed}";
+        if (loyalty.PointsEarned > 0)
+            yield return $"Treuepunkte gesammelt: {loyalty.PointsEarned}";
+        if (loyalty.PointsEarned < 0)
+            yield return $"Treuepunkte abgezogen: {-loyalty.PointsEarned}";
+        if (loyalty.BalanceAfter is { } balance)
+            yield return $"Punktestand: {balance}";
     }
 
     private static readonly TimeZoneInfo Berlin = FindBerlin();

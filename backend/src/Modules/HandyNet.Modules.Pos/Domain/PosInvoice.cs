@@ -122,7 +122,8 @@ public sealed class PosInvoice : IAuditable
 
         var number = FormatNumber(year, sequence);
         var lines = receipt.Lines.OrderBy(l => l.LineNumber).Select(l => new InvoiceLine(l.LineNumber, l.Description, l.Imei, l.Quantity, l.UnitPriceMinor,
-            l.DiscountMinor, l.LineGrossMinor, l.TaxTreatment == TaxTreatment.Margin25a ? ReceiptDocument.MarginLabel : ReceiptDocument.StandardLabel,
+            // A loyalty redemption is a price reduction like a discount: shown together, so quantity × price − discount = amount.
+            l.DiscountMinor + l.LoyaltyDiscountMinor, l.LineGrossMinor, l.TaxTreatment == TaxTreatment.Margin25a ? ReceiptDocument.MarginLabel : ReceiptDocument.StandardLabel,
             l.Note)).ToList();
         var standard = receipt.Lines.Where(l => l.TaxTreatment == TaxTreatment.Standard19).ToList();
         var vat = standard.GroupBy(l => l.VatRateBasisPoints).OrderBy(g => g.Key)

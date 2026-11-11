@@ -200,6 +200,18 @@ public sealed class Receipt
     /// <summary>Offline sale: the device's reference, unique per register (database index).</summary>
     public string? OfflineReference { get; private set; }
 
+    /// <summary>Loyalty points redeemed on this sale (ADR-0020); negative on a storno that gave them back.</summary>
+    public int LoyaltyPointsRedeemed { get; private set; }
+
+    /// <summary>The price reduction the redeemed points were worth: the sum of the lines' loyalty discounts (signed like the lines).</summary>
+    public long LoyaltyDiscountMinor { get; private set; }
+
+    /// <summary>Points earned by this sale; negative on a storno or return that took earned points back.</summary>
+    public int LoyaltyPointsEarned { get; private set; }
+
+    /// <summary>The customer's points after this receipt; null when loyalty played no part.</summary>
+    public int? LoyaltyBalanceAfter { get; private set; }
+
     /// <summary>The customer's price list when one of its prices was applied to a line (ADR-0020); its name is printed (snapshot).</summary>
     public Guid? PricelistId { get; private set; }
 
@@ -233,8 +245,12 @@ public sealed class Receipt
     public bool IsSealed => FiscalStatus is not null && Document is not null;
 
     /// <param name="cashRounding">The register rounds cash amounts to 0.05 € (see <see cref="CashRounding"/>).</param>
+    /// <param name="loyalty">
+    /// Loyalty points redeemed (ADR-0020): a price reduction, not a payment — spread over the eligible lines (all but gift
+    /// cards) pro rata, reducing their gross and VAT.
+    /// </param>
     public static Result<Receipt> CreateSale(ReceiptHeader header, IReadOnlyList<SaleLineInput> lines, IReadOnlyList<PaymentInput> payments,
-        bool cashRounding = false)
+        bool cashRounding = false, LoyaltyRedemption? loyalty = null)
     {
         if (lines.Count == 0)
             return Error.Validation("pos.empty_sale", "A sale needs at least one line.");
@@ -254,12 +270,47 @@ public sealed class Receipt
             receipt._lines.Add(line.Value);
         }
 
+        if (loyalty is not null)
+        {
+            var eligible = receipt._lines.Where(l => l.GiftCardId is null).ToList();
+            var eligibleTotal = eligible.Sum(l => l.LineGrossMinor);
+            if (loyalty.Points <= 0 || loyalty.ValueMinor <= 0)
+                return Error.Validation("pos.loyalty_points", "The number of points to redeem must be positive.");
+            if (loyalty.ValueMinor > eligibleTotal)
+                return Error.Validation("pos.loyalty_exceeds_total",
+                        $"The points are worth {loyalty.ValueMinor / 100m:0.00} €, more than the {eligibleTotal / 100m:0.00} € they can reduce.")
+                    .WithDetails(new Dictionary<string, object?> { ["eligibleTotalMinor"] = eligibleTotal, ["redeemValueMinor"] = loyalty.ValueMinor });
+            var parts = LoyaltyMath.Allocate(loyalty.ValueMinor, eligible.Select(l => l.LineGrossMinor).ToList());
+            for (var i = 0; i < eligible.Count; i++)
+                eligible[i].ApplyLoyaltyDiscount(parts[i]);
+            receipt.LoyaltyPointsRedeemed = loyalty.Points;
+            receipt.LoyaltyDiscountMinor = loyalty.ValueMinor;
+        }
+
         receipt.SumLines();
         if (receipt.TotalGrossMinor <= 0)
             return Error.Validation("pos.total_not_positive", "The receipt total must be positive.");
 
         var settled = receipt.SettleSale(payments, cashRounding);
         return settled.IsSuccess ? receipt : settled.Error!;
+    }
+
+    /// <summary>What loyalty points can be earned on or taken back for: every line except gift cards, after all discounts.</summary>
+    public long LoyaltyEligibleGrossMinor => _lines.Where(l => l.GiftCardId is null).Sum(l => l.LineGrossMinor);
+
+    /// <summary>
+    /// Records the points this receipt earned (refunds: took back, negative) and the customer's balance afterwards; for a
+    /// storno also the redeemed points it gave back (negative). Only before the receipt is issued.
+    /// </summary>
+    public Result SetLoyalty(int earned, int? balanceAfter, int? redeemedReversed = null)
+    {
+        if (IsSealed)
+            return Error.Conflict("pos.receipt_sealed", "The receipt is already issued and cannot be changed.");
+        LoyaltyPointsEarned = earned;
+        LoyaltyBalanceAfter = balanceAfter;
+        if (redeemedReversed is { } reversed)
+            LoyaltyPointsRedeemed = -reversed;
+        return Result.Success();
     }
 
     public const string InvoicePaymentPrefix = "Zahlung Rechnung ";
@@ -297,6 +348,7 @@ public sealed class Receipt
         receipt.CopyCustomerOf(original);
         foreach (var line in original.Lines)
             receipt._lines.Add(ReceiptLine.Refund(receipt, line.LineNumber, line, alreadyReturned: 0, quantity: line.Quantity));
+        receipt.LoyaltyDiscountMinor = receipt._lines.Sum(l => l.LoyaltyDiscountMinor);
         receipt.SumLines();
         foreach (var payment in original.Payments)
             receipt._payments.Add(new ReceiptPayment(receipt, payment.Method, -payment.AmountMinor, null));
@@ -345,6 +397,7 @@ public sealed class Receipt
             receipt._lines.Add(ReceiptLine.Refund(receipt, ++lineNumber, line, returned, quantity));
         }
 
+        receipt.LoyaltyDiscountMinor = receipt._lines.Sum(l => l.LoyaltyDiscountMinor);
         receipt.SumLines();
         if (receipt.TotalGrossMinor < 0)
         {
@@ -495,8 +548,25 @@ public sealed class ReceiptLine
     public int Quantity { get; private set; }
     public long UnitPriceMinor { get; private set; }
 
-    /// <summary>Invariant (CHECK constraint): line_gross = unit_price × quantity − discount.</summary>
+    /// <summary>Invariant (CHECK constraint): line_gross = unit_price × quantity − discount − loyalty_discount.</summary>
     public long DiscountMinor { get; private set; }
+
+    /// <summary>
+    /// This line's share of the price reduction from redeemed loyalty points (ADR-0020), computed by the server; signed like
+    /// the line. Separate from <see cref="DiscountMinor"/>: it is not the cashier's discount and not subject to its limit.
+    /// </summary>
+    public long LoyaltyDiscountMinor { get; private set; }
+
+    /// <summary>Reduces the line by its share of the loyalty redemption and recomputes gross, VAT (also the §25a margin) and net.</summary>
+    internal void ApplyLoyaltyDiscount(long amountMinor)
+    {
+        if (amountMinor < 0 || amountMinor > LineGrossMinor || Quantity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amountMinor));
+        LoyaltyDiscountMinor = amountMinor;
+        LineGrossMinor -= amountMinor;
+        VatMinor = VatCalculator.VatFor(TaxTreatment, LineGrossMinor, PurchasePriceMinor);
+        NetMinor = LineGrossMinor - VatMinor;
+    }
     public long LineGrossMinor { get; private set; }
     public TaxTreatment TaxTreatment { get; private set; }
     public int VatRateBasisPoints { get; private set; }
@@ -588,7 +658,9 @@ public sealed class ReceiptLine
                     - VatCalculator.Allocate(original.LineGrossMinor, alreadyReturned, original.Quantity);
         var vat = VatCalculator.Allocate(original.VatMinor, to, original.Quantity)
                   - VatCalculator.Allocate(original.VatMinor, alreadyReturned, original.Quantity);
-        var discount = checked(original.UnitPriceMinor * quantity) - gross;
+        var loyalty = VatCalculator.Allocate(original.LoyaltyDiscountMinor, to, original.Quantity)
+                      - VatCalculator.Allocate(original.LoyaltyDiscountMinor, alreadyReturned, original.Quantity);
+        var discount = checked(original.UnitPriceMinor * quantity) - gross - loyalty;
         return new ReceiptLine
         {
             OrganizationId = receipt.OrganizationId,
@@ -602,6 +674,7 @@ public sealed class ReceiptLine
             Quantity = -quantity,
             UnitPriceMinor = original.UnitPriceMinor,
             DiscountMinor = -discount,
+            LoyaltyDiscountMinor = -loyalty,
             LineGrossMinor = -gross,
             TaxTreatment = original.TaxTreatment,
             VatRateBasisPoints = original.VatRateBasisPoints,

@@ -36,7 +36,8 @@ public sealed record CustomerDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     Guid? PricelistId = null,
-    string? PricelistName = null);
+    string? PricelistName = null,
+    int LoyaltyPoints = 0);
 
 internal sealed class CustomerValidator : AbstractValidator<CustomerRequest>
 {
@@ -134,10 +135,15 @@ internal sealed class CustomerService(HandyNetDbContext db, ITenantContext tenan
         var names = pricelistIds.Count == 0
             ? new Dictionary<Guid, string>()
             : await db.Set<Pricelist>().AsNoTracking().Where(p => pricelistIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name, ct);
-        return customers.Select(c => ToDto(c, c.PricelistId is { } id ? names.GetValueOrDefault(id) : null)).ToList();
+        var customerIds = customers.Select(c => c.Id).ToList();
+        var points = customerIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await db.Set<LoyaltyAccount>().AsNoTracking().Where(a => a.OrganizationId == OrganizationId && customerIds.Contains(a.CustomerId))
+                .ToDictionaryAsync(a => a.CustomerId, a => a.Points, ct);
+        return customers.Select(c => ToDto(c, c.PricelistId is { } id ? names.GetValueOrDefault(id) : null, points.GetValueOrDefault(c.Id))).ToList();
     }
 
-    internal static CustomerDto ToDto(Customer c, string? pricelistName = null) =>
+    internal static CustomerDto ToDto(Customer c, string? pricelistName = null, int loyaltyPoints = 0) =>
         new(c.Id, c.Name, c.Company, c.Email, c.Phone, c.Street, c.PostalCode, c.City, c.CountryCode, c.VatId, c.CreatedAt, c.UpdatedAt, c.PricelistId,
-            pricelistName);
+            pricelistName, loyaltyPoints);
 }

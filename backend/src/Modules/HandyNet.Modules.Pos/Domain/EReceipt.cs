@@ -74,7 +74,7 @@ public sealed class ReceiptEmail : Entity, IAuditable
         d.ReceiptNumber,
         d.IssuedAt,
         d.Currency,
-        d.Lines.Select(l => new EReceiptLine(l.Description, l.Imei, l.Quantity, l.UnitPriceMinor, l.DiscountMinor, l.LineGrossMinor, l.TaxLabel, l.Note))
+        d.Lines.Select(l => new EReceiptLine(l.Description, l.Imei, l.Quantity, l.UnitPriceMinor, l.DiscountMinor + l.LoyaltyDiscountMinor, l.LineGrossMinor, l.TaxLabel, l.Note))
             .ToList(),
         d.Vat.Select(v => new EReceiptVat(v.Label, v.NetMinor, v.VatMinor, v.GrossMinor)).ToList(),
         d.TotalGrossMinor,

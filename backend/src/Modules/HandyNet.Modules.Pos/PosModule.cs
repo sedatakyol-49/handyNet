@@ -94,6 +94,7 @@ public static class PosModule
         services.AddScoped<DisplayService>();
         services.AddScoped<PricelistService>();
         services.AddScoped<GiftCardService>();
+        services.AddScoped<LoyaltyService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -234,6 +235,7 @@ public static class PosModule
         DisplayEndpoints.Map(app, sell); // customer display link, state and public long poll (ADR-0023)
         PricelistEndpoints.Map(sell, manage); // price lists and customer-specific prices (ADR-0020)
         GiftCardEndpoints.Map(sell, manage); // gift cards (ADR-0020)
+        LoyaltyEndpoints.Map(sell, manage); // loyalty points (ADR-0020)
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));

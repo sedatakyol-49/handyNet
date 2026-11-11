@@ -47,7 +47,8 @@ public sealed record SessionSummary(
     int AnkaufCount = 0,
     long AnkaufPayoutsMinor = 0,
     int GiftCardsSoldCount = 0,
-    long GiftCardsSoldMinor = 0);
+    long GiftCardsSoldMinor = 0,
+    long LoyaltyDiscountMinor = 0);
 
 public static class SessionCalculator
 {
@@ -96,7 +97,9 @@ public static class SessionCalculator
             movements.Where(m => m.ReasonCode == CashMovementReason.Ankauf).Sum(m => m.AmountMinor),
             // "Gutscheine verkauft": gift card lines, net of cancelled ones (a storno mirrors the line with quantity −1).
             lines.Where(l => l.GiftCardId is not null).Sum(l => l.Quantity),
-            lines.Where(l => l.GiftCardId is not null).Sum(l => l.LineGrossMinor));
+            lines.Where(l => l.GiftCardId is not null).Sum(l => l.LineGrossMinor),
+            // Price reductions from redeemed loyalty points (already inside the totals; shown for information).
+            lines.Sum(l => l.LoyaltyDiscountMinor));
     }
 }
 

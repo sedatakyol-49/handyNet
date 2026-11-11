@@ -4290,6 +4290,151 @@ namespace HandyNet.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.LoyaltyAccount", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer")
+                        .HasColumnName("points");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganizationId", "CustomerId")
+                        .HasName("pk_loyalty_accounts");
+
+                    b.ToTable("loyalty_accounts", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_accounts_points", "points >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.LoyaltySettings", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<int>("MinRedeemPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_redeem_points");
+
+                    b.Property<int>("PointValueMinor")
+                        .HasColumnType("integer")
+                        .HasColumnName("point_value_minor");
+
+                    b.Property<int>("PointsPerEuro")
+                        .HasColumnType("integer")
+                        .HasColumnName("points_per_euro");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("OrganizationId")
+                        .HasName("pk_loyalty_settings");
+
+                    b.ToTable("loyalty_settings", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_settings_values", "points_per_euro BETWEEN 0 AND 100 AND point_value_minor BETWEEN 1 AND 100 AND min_redeem_points BETWEEN 0 AND 1000000");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.LoyaltyTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BalanceAfter")
+                        .HasColumnType("integer")
+                        .HasColumnName("balance_after");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer")
+                        .HasColumnName("points");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_transactions");
+
+                    b.HasIndex("ReceiptId")
+                        .HasDatabaseName("ix_loyalty_transactions_receipt_id")
+                        .HasFilter("receipt_id IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_loyalty_transactions_organization_id_receipt_id");
+
+                    b.HasIndex("OrganizationId", "CustomerId", "CreatedAt")
+                        .HasDatabaseName("ix_loyalty_transactions_organization_id_customer_id_created_at");
+
+                    b.ToTable("loyalty_transactions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_transactions_points", "balance_after >= 0 AND points <> 0 AND ((type IN ('Earn', 'ReverseRedeem') AND points > 0) OR (type IN ('Redeem', 'ReverseEarn') AND points < 0) OR (type = 'Adjust' AND reason IS NOT NULL))");
+
+                            t.HasCheckConstraint("ck_loyalty_transactions_type", "type IN ('Earn', 'Redeem', 'ReverseEarn', 'ReverseRedeem', 'Adjust')");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5150,6 +5295,22 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
 
+                    b.Property<int?>("LoyaltyBalanceAfter")
+                        .HasColumnType("integer")
+                        .HasColumnName("loyalty_balance_after");
+
+                    b.Property<long>("LoyaltyDiscountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("loyalty_discount_minor");
+
+                    b.Property<int>("LoyaltyPointsEarned")
+                        .HasColumnType("integer")
+                        .HasColumnName("loyalty_points_earned");
+
+                    b.Property<int>("LoyaltyPointsRedeemed")
+                        .HasColumnType("integer")
+                        .HasColumnName("loyalty_points_redeemed");
+
                     b.Property<long>("Number")
                         .HasColumnType("bigint")
                         .HasColumnName("number");
@@ -5361,6 +5522,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("line_gross_minor");
 
+                    b.Property<long>("LoyaltyDiscountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("loyalty_discount_minor");
+
                     b.Property<long>("NetMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("net_minor");
@@ -5433,7 +5598,9 @@ namespace HandyNet.Migrations.Migrations
 
                     b.ToTable("receipt_lines", "pos", t =>
                         {
-                            t.HasCheckConstraint("ck_receipt_lines_amounts", "line_gross_minor = unit_price_minor * quantity - discount_minor AND net_minor + vat_minor = line_gross_minor");
+                            t.HasCheckConstraint("ck_receipt_lines_amounts", "line_gross_minor = unit_price_minor * quantity - discount_minor - loyalty_discount_minor AND net_minor + vat_minor = line_gross_minor");
+
+                            t.HasCheckConstraint("ck_receipt_lines_loyalty", "loyalty_discount_minor = 0 OR (sign(loyalty_discount_minor) = sign(quantity) AND gift_card_id IS NULL)");
 
                             t.HasCheckConstraint("ck_receipt_lines_margin", "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
 
@@ -7467,6 +7634,34 @@ namespace HandyNet.Migrations.Migrations
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_gift_card_transactions_receipts_organization_id_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.LoyaltyAccount", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_loyalty_accounts_customers_organization_id_customer_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.LoyaltyTransaction", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.LoyaltyAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_loyalty_transactions_loyalty_accounts_organization_id_custo");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_loyalty_transactions_receipts_organization_id_receipt_id");
                 });
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>

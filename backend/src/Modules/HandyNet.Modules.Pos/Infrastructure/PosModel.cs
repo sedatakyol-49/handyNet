@@ -114,6 +114,7 @@ public sealed class PosModel : IModuleModel
             // The device's offline reference is booked at most once per register.
             b.HasIndex(x => new { x.RegisterId, x.OfflineReference }).IsUnique().HasFilter("offline_reference IS NOT NULL")
                 .HasDatabaseName("ux_receipts_offline_reference");
+            b.Ignore(x => x.LoyaltyEligibleGrossMinor);
             b.Ignore(x => x.IsSealed);
             b.Ignore(x => x.Fiscal);
             b.Ignore(x => x.Customer);
@@ -155,7 +156,9 @@ public sealed class PosModel : IModuleModel
             {
                 t.HasCheckConstraint("ck_receipt_lines_quantity", "quantity <> 0 AND unit_price_minor > 0");
                 t.HasCheckConstraint("ck_receipt_lines_amounts",
-                    "line_gross_minor = unit_price_minor * quantity - discount_minor AND net_minor + vat_minor = line_gross_minor");
+                    "line_gross_minor = unit_price_minor * quantity - discount_minor - loyalty_discount_minor AND net_minor + vat_minor = line_gross_minor");
+                // The loyalty share has the sign of the line and never exceeds it.
+                t.HasCheckConstraint("ck_receipt_lines_loyalty", "loyalty_discount_minor = 0 OR (sign(loyalty_discount_minor) = sign(quantity) AND gift_card_id IS NULL)");
                 t.HasCheckConstraint("ck_receipt_lines_margin",
                     "tax_treatment <> 'Margin25a' OR (stock_unit_id IS NOT NULL AND purchase_price_minor IS NOT NULL)");
                 t.HasCheckConstraint("ck_receipt_lines_product",
@@ -586,5 +589,6 @@ public sealed class PosModel : IModuleModel
         PrinterProfileModel.Configure(modelBuilder);
         CardTerminalModel.Configure(modelBuilder);
         GiftCardModel.Configure(modelBuilder);
+        LoyaltyModel.Configure(modelBuilder);
     }
 }
