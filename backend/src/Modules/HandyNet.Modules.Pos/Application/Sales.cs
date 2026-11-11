@@ -23,13 +23,19 @@ namespace HandyNet.Modules.Pos.Application;
 /// price other than the product's POS price needs <c>pos.price_override</c>; a discount needs <c>pos.discount</c> within the
 /// cashier's limit. Note: free text printed under the line (max 200).
 /// </summary>
-public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity, long UnitPriceMinor, long? DiscountMinor, string? Note = null);
+/// <param name="GiftCardAmountMinor">
+/// Sells a gift card over this amount (ADR-0020): a line without product and IMEI, quantity 1, no discount; UnitPriceMinor is
+/// ignored (0 or the amount). The server generates the code and returns it once in <c>issuedGiftCards</c>.
+/// </param>
+public sealed record SaleLineRequest(Guid? ProductId, string? Imei, int Quantity, long UnitPriceMinor, long? DiscountMinor, string? Note = null,
+    long? GiftCardAmountMinor = null);
 
 /// <summary>
 /// CardTransactionId (method Card only): the approved terminal transaction that settled this payment (ADR-0021). Without it
 /// the card payment is "confirmed by the cashier".
 /// </summary>
-public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor, Guid? CardTransactionId = null);
+/// <param name="GiftCardCode">Method GiftCard: the code of the gift card to pay with (ADR-0020); separators and case do not matter.</param>
+public sealed record SalePaymentRequest(PaymentMethod Method, long AmountMinor, Guid? CardTransactionId = null, string? GiftCardCode = null);
 
 /// <summary>A sale the till recorded while the API was unreachable (ADR-0022): device time and device reference (1–40 of A-Z a-z 0-9 -).</summary>
 public sealed record OfflineSaleRequest(DateTimeOffset RecordedAt, string Reference);
@@ -80,7 +86,8 @@ public sealed record ReceiptLineDto(
     long? VatMinor,
     int? OriginalLineNumber,
     int ReturnedQuantity,
-    string? Note);
+    string? Note,
+    Guid? GiftCardId = null);
 
 /// <summary>Card: the terminal data of a card payment settled by a card transaction (null when the cashier confirmed it).</summary>
 public sealed record ReceiptPaymentDto(string Method, long AmountMinor, long? TenderedMinor, DocumentCard? Card = null);
@@ -115,7 +122,8 @@ public sealed record ReceiptDto(
     long RoundingMinor = 0,
     OfflineSaleDto? Offline = null,
     Guid? PricelistId = null,
-    string? PricelistName = null);
+    string? PricelistName = null,
+    IReadOnlyList<IssuedGiftCardDto>? IssuedGiftCards = null);
 
 public sealed record ReceiptSummaryDto(Guid Id, Guid RegisterId, Guid SessionId, long Number, string Kind, Guid? ReferencedReceiptId,
     DateTimeOffset CreatedAt, long TotalGrossMinor, Guid CreatedBy, string? CreatedByName, Guid? CustomerId, string? CustomerName,
@@ -157,13 +165,14 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
         RuleFor(x => x.Lines).NotEmpty().MaxCount(l => l!.Count, Receipt.MaxLines, $"At most {Receipt.MaxLines} lines.");
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
-            line.RuleFor(l => l).Must(l => l.ProductId is not null || !string.IsNullOrWhiteSpace(l.Imei))
+            line.RuleFor(l => l).Must(l => l.ProductId is not null || !string.IsNullOrWhiteSpace(l.Imei) || l.GiftCardAmountMinor is not null)
                 .WithName("Line").WithMessage("Each line needs a productId or an IMEI.").WithErrorCode("validation.lineProductOrImei");
             line.RuleFor(l => l.Imei).Must(i => i is null || (i.Trim().Length == 15 && i.Trim().All(char.IsAsciiDigit)))
                 .WithMessage("IMEI must have 15 digits.").WithErrorCode("validation.imei");
             line.RuleFor(l => l.Quantity).InclusiveBetween(1, Receipt.MaxQuantity);
             line.RuleFor(l => l.Quantity).Equal(1).When(l => !string.IsNullOrWhiteSpace(l.Imei)).WithMessage("A device (IMEI) is sold with quantity 1.").WithErrorCode("validation.imeiQuantity");
-            line.RuleFor(l => l.UnitPriceMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
+            line.RuleFor(l => l.UnitPriceMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor).When(l => l.GiftCardAmountMinor is null);
+            line.RuleFor(l => l.GiftCardAmountMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor).When(l => l.GiftCardAmountMinor is not null);
             line.RuleFor(l => l.DiscountMinor).GreaterThanOrEqualTo(0).When(l => l.DiscountMinor is not null);
             line.RuleFor(l => l.Note).MaximumLength(Receipt.MaxNoteLength);
         });
@@ -173,6 +182,7 @@ internal sealed class CreateSaleValidator : AbstractValidator<CreateSaleRequest>
         {
             p.RuleFor(x => x.Method).IsInEnum();
             p.RuleFor(x => x.AmountMinor).InclusiveBetween(1, PosLimits.MaxAmountMinor);
+            p.RuleFor(x => x.GiftCardCode).MaximumLength(64);
         });
     }
 }
@@ -212,7 +222,8 @@ internal sealed partial class SaleService(
     ILogger<SaleService> logger,
     PosActor actor,
     ApprovalService approvals,
-    IOptions<PosOptions> options)
+    IOptions<PosOptions> options,
+    GiftCardService giftCards)
 {
     public const int MaxIdempotencyKeyLength = 100;
 
@@ -251,6 +262,15 @@ internal sealed partial class SaleService(
         var offline = request.Offline is { } o ? new OfflineRecord(o.RecordedAt, o.Reference?.Trim() ?? string.Empty) : null;
         if (offline is not null && await CheckOfflineAsync(register, offline, request, ct) is { } offlineRefused)
             return offlineRefused;
+        // Gift card lines (ADR-0020): no product, quantity 1, no discount, an amount inside the configured range.
+        var giftRules = giftCards.Rules;
+        for (var i = 0; i < request.Lines.Count; i++)
+        {
+            if (request.Lines[i] is { GiftCardAmountMinor: { } giftAmount } giftLine
+                && giftRules.CheckLine(i + 1, giftAmount, giftLine.ProductId is not null || !string.IsNullOrWhiteSpace(giftLine.Imei), giftLine.Quantity,
+                    giftLine.DiscountMinor ?? 0, giftLine.UnitPriceMinor) is { IsSuccess: false } invalidGiftLine)
+                return invalidGiftLine.Error!;
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await PosSql.AllocateReceiptNumberAsync(db, register.Id, ct) is not { } number)
@@ -263,30 +283,36 @@ internal sealed partial class SaleService(
         var card = await LockCardTransactionAsync(request.Payments, register.Id, ct);
         if (!card.IsSuccess)
             return card.Error!;
+        // Gift cards paid with are row-locked until the receipt commits (after register and session, before stock).
+        var giftPayments = await LockGiftCardPaymentsAsync(request.Payments, ct);
+        if (!giftPayments.IsSuccess)
+            return giftPayments.Error!;
 
         var reference = $"pos:{register.Id}:{number}";
-        var staged = new List<(SaleLineRequest Request, UnitSnapshot? Unit)>();
+        var staged = new List<(SaleLineRequest Request, UnitSnapshot? Unit, NewGiftCard? Gift)>();
         foreach (var line in request.Lines)
         {
-            if (!string.IsNullOrWhiteSpace(line.Imei))
+            if (line.GiftCardAmountMinor is { } giftAmount)
+                staged.Add((line, null, new NewGiftCard(Guid.CreateVersion7(), GiftCardCode.New(), giftAmount)));
+            else if (!string.IsNullOrWhiteSpace(line.Imei))
             {
                 var unit = await inventory.StageSellUnitAsync(register.WarehouseId, line.Imei.Trim(), reference, ct);
                 if (!unit.IsSuccess)
                     return unit.Error!;
                 if (line.ProductId is { } expected && expected != unit.Value.ProductId)
                     return Error.Validation("pos.imei_product_mismatch", $"The device {line.Imei} is not of the selected product.");
-                staged.Add((line, unit.Value));
+                staged.Add((line, unit.Value, null));
             }
             else
             {
                 var sold = await inventory.StageSellAsync(register.WarehouseId, line.ProductId!.Value, line.Quantity, reference, ct);
                 if (!sold.IsSuccess)
                     return sold.Error!;
-                staged.Add((line, null));
+                staged.Add((line, null, null));
             }
         }
 
-        var productIds = staged.Select(s => s.Unit?.ProductId ?? s.Request.ProductId!.Value).Distinct().ToList();
+        var productIds = staged.Where(s => s.Gift is null).Select(s => s.Unit?.ProductId ?? s.Request.ProductId!.Value).Distinct().ToList();
         var products = await catalog.GetAsync(productIds, ct);
         if (productIds.FirstOrDefault(id => !products.ContainsKey(id)) is var missing && missing != Guid.Empty)
             return Error.NotFound("pos.product_not_found", $"Product {missing} not found.");
@@ -297,7 +323,9 @@ internal sealed partial class SaleService(
         Pricelist? appliedPricelist = null;
         for (var i = 0; i < staged.Count; i++)
         {
-            var (line, unit) = staged[i];
+            var (line, unit, gift) = staged[i];
+            if (gift is not null)
+                continue; // a gift card has no till price and takes no discount (checked above)
             var tillPrice = tillPrices[unit?.ProductId ?? line.ProductId!.Value];
             var allowed = LinePolicy.Check(i + 1, line.UnitPriceMinor, line.Quantity, line.DiscountMinor ?? 0, tillPrice.Price, rights);
             if (!allowed.IsSuccess)
@@ -309,6 +337,9 @@ internal sealed partial class SaleService(
 
         var inputs = staged.Select(s =>
         {
+            if (s.Gift is { } gift)
+                return new SaleLineInput(null, null, null, $"{GiftCardRules.LineDescription} {GiftCardCode.Masked(GiftCardCode.Last4(gift.Code))}", 1,
+                    gift.AmountMinor, 0, TaxTreatment.NotTaxable, null, s.Request.Note, gift.Id);
             var productId = s.Unit?.ProductId ?? s.Request.ProductId!.Value;
             var product = products[productId];
             var margin = s.Unit?.TaxScheme == TaxScheme.Margin25a;
@@ -325,6 +356,17 @@ internal sealed partial class SaleService(
             return receipt.Error!;
         if (LinkCard(card.Value, receipt.Value) is { } cardRefused)
             return cardRefused;
+        // Gift cards: issue the ones sold on this receipt, charge the ones it is paid with (same transaction as the receipt).
+        var issued = staged.Where(s => s.Gift is not null).Select(s => s.Gift!).ToList();
+        if (IssueGiftCards(issued, receipt.Value, request.CustomerId) is { } issueRefused)
+            return issueRefused;
+        foreach (var (giftCard, amount) in giftPayments.Value)
+        {
+            var redeemed = giftCard.Redeem(amount, receipt.Value.Id, giftCards.Today, actor.UserId, clock.UtcNow);
+            if (!redeemed.IsSuccess)
+                return redeemed.Error!;
+            db.Add(redeemed.Value);
+        }
 
         var sealedResult = await SealAsync(receipt.Value, register.Name, null, ct, new DocumentExtras(card.Value, appliedPricelist?.Name));
         if (!sealedResult.IsSuccess)
@@ -362,7 +404,7 @@ internal sealed partial class SaleService(
             return Error.Conflict("pos.stock_changed", "Stock changed while selling (e.g. the same device or the last units were sold at another register). Scan again.");
         }
 
-        return new SaleResult(await ToDtoAsync(receipt.Value, ct), Replayed: false);
+        return new SaleResult(WithCodes(await ToDtoAsync(receipt.Value, ct), issued), Replayed: false);
     }
 
     /// <summary>Cancels a whole sale with a new negative receipt; payments are mirrored and the stock (and IMEI units) goes back.</summary>
@@ -390,6 +432,8 @@ internal sealed partial class SaleService(
         var storno = Receipt.CreateStorno(header, original, hasReturns, request.Reason);
         if (!storno.IsSuccess)
             return storno.Error!;
+        if (await ReverseGiftCardsAsync(original, storno.Value, ct) is { } giftCardRefused)
+            return giftCardRefused;
 
         return await CompleteRefundAsync(tx, storno.Value, original, register, ct);
     }
@@ -432,9 +476,14 @@ internal sealed partial class SaleService(
             return returned.Error!;
         if (LinkCard(card?.Value, returned.Value) is { } cardRefused)
             return cardRefused;
+        // Refund onto a new gift card: issued with the return receipt, its code is returned once.
+        var refundCards = returned.Value.Payments.Where(p => p.Method == PaymentMethod.GiftCard)
+            .Select(p => new NewGiftCard(Guid.CreateVersion7(), GiftCardCode.New(), -p.AmountMinor)).ToList();
+        if (IssueGiftCards(refundCards, returned.Value, original.CustomerId) is { } issueRefused)
+            return issueRefused;
 
         var completed = await CompleteRefundAsync(tx, returned.Value, original, register, ct, new DocumentExtras(card?.Value));
-        return completed.IsSuccess ? new SaleResult(completed.Value, Replayed: false) : completed.Error!;
+        return completed.IsSuccess ? new SaleResult(WithCodes(completed.Value, refundCards), Replayed: false) : completed.Error!;
     }
 
     public async Task<Result<ReceiptDto>> GetAsync(Guid id, CancellationToken ct)
@@ -592,6 +641,9 @@ internal sealed partial class SaleService(
             return invalid.Error!;
         if (request.Payments.Any(p => p.Method is not (PaymentMethod.Cash or PaymentMethod.Card)))
             return Error.Validation("pos.offline_payment_not_allowed", "Offline sales can only be paid in cash or by card.");
+        // A gift card's code is generated by the server when the sale is booked: it cannot be handed out offline.
+        if (request.Lines.Any(l => l.GiftCardAmountMinor is not null))
+            return Error.Validation("pos.offline_gift_card_not_allowed", "Gift cards cannot be sold offline.");
         if (await db.Set<Receipt>().AnyAsync(r => r.RegisterId == register.Id && r.OfflineReference == offline.Reference, ct))
             return OfflineReferenceUsed(offline.Reference);
         return null;
@@ -632,6 +684,92 @@ internal sealed partial class SaleService(
             return usable.Error!;
         return card.LinkTo(receipt.Id, clock.UtcNow) is { IsSuccess: false } refused ? refused.Error! : null;
     }
+
+    /// <summary>
+    /// The gift cards a sale is paid with (ADR-0020): one entry per card (several payments with the same code are added up),
+    /// each row-locked in the order of its code hash so concurrent sales cannot deadlock. Unknown codes answer 404.
+    /// </summary>
+    private async Task<Result<IReadOnlyList<(GiftCard Card, long AmountMinor)>>> LockGiftCardPaymentsAsync(IReadOnlyList<SalePaymentRequest> payments,
+        CancellationToken ct)
+    {
+        if (payments.Any(p => p.Method != PaymentMethod.GiftCard && !string.IsNullOrWhiteSpace(p.GiftCardCode)))
+            return Error.Validation("pos.gift_card_payment", "Only a gift card payment carries a gift card code.");
+        var byHash = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var payment in payments.Where(p => p.Method == PaymentMethod.GiftCard))
+        {
+            if (string.IsNullOrWhiteSpace(payment.GiftCardCode))
+                return Error.Validation("pos.gift_card_payment", "A gift card payment needs the gift card's code.");
+            if (GiftCardCode.Normalize(payment.GiftCardCode) is not { } normalized)
+                return GiftCardService.NotFound;
+            var hash = GiftCardCode.HashOf(normalized);
+            byHash[hash] = checked(byHash.GetValueOrDefault(hash) + payment.AmountMinor);
+        }
+        var locked = new List<(GiftCard, long)>();
+        foreach (var (hash, amount) in byHash)
+        {
+            if (await giftCards.LockByHashAsync(hash, ct) is not { } giftCard)
+                return GiftCardService.NotFound;
+            locked.Add((giftCard, amount));
+        }
+        return locked;
+    }
+
+    /// <summary>Adds the gift cards a receipt issues (sold on a sale, refunded onto by a return) to the unit of work.</summary>
+    private Error? IssueGiftCards(IReadOnlyList<NewGiftCard> cards, Receipt receipt, Guid? customerId)
+    {
+        foreach (var card in cards)
+        {
+            var issued = GiftCard.Issue(card.Id, OrganizationId, card.Code, card.AmountMinor, receipt.Id, giftCards.NewExpiry(), customerId, actor.UserId,
+                clock.UtcNow);
+            if (!issued.IsSuccess)
+                return issued.Error!;
+            db.Add(issued.Value.Card);
+            db.Add(issued.Value.Transaction);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Storno and gift cards (ADR-0020): cards the cancelled sale sold are voided — only while nothing was redeemed — and what
+    /// the sale paid with gift cards goes back onto those cards. Cards are locked in id order.
+    /// </summary>
+    private async Task<Error?> ReverseGiftCardsAsync(Receipt original, Receipt storno, CancellationToken ct)
+    {
+        var soldIds = await db.Set<GiftCard>().AsNoTracking().Where(c => c.IssuedReceiptId == original.Id).Select(c => c.Id).ToListAsync(ct);
+        var redeemed = await db.Set<GiftCardTransaction>().AsNoTracking()
+            .Where(t => t.ReceiptId == original.Id && t.Type == GiftCardTransactionType.Redeem)
+            .GroupBy(t => t.GiftCardId).Select(g => new { CardId = g.Key, Amount = -g.Sum(t => t.AmountMinor) }).ToListAsync(ct);
+        foreach (var cardId in soldIds.Concat(redeemed.Select(r => r.CardId)).Distinct().Order())
+        {
+            if (await giftCards.LockByIdAsync(cardId, ct) is not { } giftCard)
+                return GiftCardService.NotFound;
+            if (soldIds.Contains(cardId))
+            {
+                var voided = giftCard.VoidForStorno(storno.Id, actor.UserId, clock.UtcNow);
+                if (!voided.IsSuccess)
+                    return voided.Error!;
+                db.Add(voided.Value);
+            }
+            if (redeemed.FirstOrDefault(r => r.CardId == cardId) is { } paid)
+            {
+                var restored = giftCard.Restore(paid.Amount, storno.Id, actor.UserId, clock.UtcNow);
+                if (!restored.IsSuccess)
+                    return restored.Error!;
+                db.Add(restored.Value);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The creating response (only) carries the codes of the gift cards it issued.</summary>
+    private static ReceiptDto WithCodes(ReceiptDto receipt, IReadOnlyList<NewGiftCard> issued) =>
+        issued.Count == 0
+            ? receipt
+            : receipt with
+            {
+                IssuedGiftCards = receipt.IssuedGiftCards!
+                    .Select(c => issued.FirstOrDefault(i => i.Id == c.Id) is { } created ? c with { Code = GiftCardCode.Format(created.Code) } : c).ToList(),
+            };
 
     private static Error OfflineReferenceUsed(string reference) =>
         Error.Conflict("pos.offline_reference_used", $"The offline reference {reference} was already booked on this register.")
@@ -674,7 +812,7 @@ internal sealed partial class SaleService(
         }
 
         var reference = $"pos:{register.Id}:{refund.Number}";
-        foreach (var line in refund.Lines)
+        foreach (var line in refund.Lines.Where(l => l.GiftCardId is null)) // gift card lines move no stock
         {
             var restocked = line.StockUnitId is { } unitId
                 ? await inventory.StageReturnUnitAsync(unitId, reference, ct)
@@ -782,7 +920,8 @@ internal sealed partial class SaleService(
         var canonical = $"sale#{request.RegisterId:N}#"
                         + string.Join("|", request.Lines.Select(l =>
                             $"{l.ProductId:N}:{l.Imei?.Trim()}:{l.Quantity}:{l.UnitPriceMinor}:{l.DiscountMinor ?? 0}"
-                            + (string.IsNullOrWhiteSpace(l.Note) ? "" : $":n{l.Note.Trim().Length}:{l.Note.Trim()}")))
+                            + (string.IsNullOrWhiteSpace(l.Note) ? "" : $":n{l.Note.Trim().Length}:{l.Note.Trim()}")
+                            + (l.GiftCardAmountMinor is { } gift ? $":g{gift}" : "")))
                         + "#" + string.Join("|", request.Payments.OrderBy(p => p.Method).ThenBy(p => p.AmountMinor).Select(PaymentFingerprint))
                         + (request.CustomerId is { } customer ? $"#c:{customer:N}" : "")
                         + (request.Offline is { } offline
@@ -793,7 +932,8 @@ internal sealed partial class SaleService(
 
     /// <summary>The card transaction is part of a payment's fingerprint only when present (existing fingerprints are unchanged).</summary>
     internal static string PaymentFingerprint(SalePaymentRequest p) =>
-        $"{p.Method}:{p.AmountMinor}" + (p.CardTransactionId is { } card ? $":ct{card:N}" : "");
+        $"{p.Method}:{p.AmountMinor}" + (p.CardTransactionId is { } card ? $":ct{card:N}" : "")
+        + (string.IsNullOrWhiteSpace(p.GiftCardCode) ? "" : $":gc{GiftCardCode.Normalize(p.GiftCardCode) ?? p.GiftCardCode.Trim()}");
 
     internal static string HashReturn(Guid receiptId, ReturnRequest request)
     {
@@ -819,7 +959,7 @@ internal sealed partial class SaleService(
             l.Quantity, l.UnitPriceMinor, l.DiscountMinor, l.LineGrossMinor, l.TaxTreatment.ToString(), l.VatRateBasisPoints,
             // §25a VAT is not disclosed (it would reveal the purchase price and must not be shown to the customer).
             l.TaxTreatment == TaxTreatment.Margin25a ? null : l.VatMinor,
-            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber), l.Note)).ToList();
+            l.OriginalLineNumber, returned.GetValueOrDefault(l.LineNumber), l.Note, l.GiftCardId)).ToList();
 
         var reprints = await db.Set<ReceiptReprint>().AsNoTracking().Where(x => x.ReceiptId == r.Id)
             .GroupBy(x => x.ReceiptId).Select(g => new { Count = g.Count(), Last = g.Max(x => x.PrintedAt) }).FirstOrDefaultAsync(ct);
@@ -835,7 +975,7 @@ internal sealed partial class SaleService(
             r.Document!.Vat, r.Fiscal, r.Document, r.CustomerId, r.Document.Customer, reprints?.Count ?? 0, reprints?.Last,
             (await approvals.ForReceiptsAsync([r.Id], ct)).GetValueOrDefault(r.Id), r.RoundingMinor,
             r.Offline is { } offline ? new OfflineSaleDto(offline.RecordedAt, offline.Reference) : null,
-            r.PricelistId, r.Document.PricelistName);
+            r.PricelistId, r.Document.PricelistName, await giftCards.IssuedByAsync(r.Id, ct));
     }
 }
 
@@ -854,3 +994,6 @@ internal sealed record DocumentExtras(CardTransaction? Card = null, string? Pric
         return document;
     }
 }
+
+/// <summary>A gift card about to be issued with a receipt: its id, its code (kept only in memory until the response) and its amount.</summary>
+internal sealed record NewGiftCard(Guid Id, string Code, long AmountMinor);

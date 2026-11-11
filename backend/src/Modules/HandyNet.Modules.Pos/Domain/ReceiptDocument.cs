@@ -102,6 +102,9 @@ public sealed record ReceiptDocument(
     public const string InvoicePaymentNote =
         "Zahlung auf eine Rechnung (Forderungsauflösung, nicht steuerbar): Die Umsatzsteuer ist in der Rechnung ausgewiesen.";
 
+    public const string GiftCardNote =
+        "Geschenkgutschein (Mehrzweck-Gutschein): Der Verkauf ist nicht steuerbar; die Umsatzsteuer entsteht bei Einlösung.";
+
     public static string LabelFor(TaxTreatment treatment) => treatment switch
     {
         TaxTreatment.Margin25a => MarginLabel,
@@ -125,6 +128,8 @@ public sealed record ReceiptDocument(
             notes.Add(InvoicePaymentNote);
         if (receipt.Lines.Any(l => l.TaxTreatment == TaxTreatment.Margin25a))
             notes.Add(MarginSchemeNote);
+        if (receipt.Lines.Any(l => l.GiftCardId is not null))
+            notes.Add(GiftCardNote);
         if (fiscal.Status == FiscalStatus.NotConnected)
             notes.Add(fiscal.Notice ?? NotConnectedNotice);
         if (fiscal.Status == FiscalStatus.Failed)

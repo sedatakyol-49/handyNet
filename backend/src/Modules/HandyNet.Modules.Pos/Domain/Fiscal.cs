@@ -68,9 +68,12 @@ public static class KassenSichV
         foreach (var total in vat)
             buckets[VatBucket(total.Treatment, total.VatRateBasisPoints)] += total.GrossMinor;
         var suffix = currency == Money.Eur ? "" : ":" + currency;
-        var paid = payments.Where(p => p.AmountMinor != 0)
-            .OrderBy(p => p.Method == PaymentMethod.Cash ? 0 : 1)
-            .Select(p => Amount(p.AmountMinor) + ":" + (p.Method == PaymentMethod.Cash ? "Bar" : "Unbar") + suffix);
+        // One entry per payment type: card and gift card payments are both "Unbar" and are summed.
+        var paid = payments.GroupBy(p => p.Method == PaymentMethod.Cash)
+            .Select(g => (Cash: g.Key, AmountMinor: g.Sum(p => p.AmountMinor)))
+            .Where(p => p.AmountMinor != 0)
+            .OrderBy(p => p.Cash ? 0 : 1)
+            .Select(p => Amount(p.AmountMinor) + ":" + (p.Cash ? "Bar" : "Unbar") + suffix);
         return ReceiptType + "^" + string.Join("_", buckets.Select(Amount)) + "^" + string.Join("_", paid);
     }
 

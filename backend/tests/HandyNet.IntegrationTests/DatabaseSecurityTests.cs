@@ -271,4 +271,52 @@ public sealed class DatabaseSecurityTests(HandyNetFixture fixture)
         Assert.Equal("23503", (await _pos.OwnerTryAsync($"UPDATE pos.customers SET pricelist_id = '{listA}' WHERE id = '{customerB}'"))?.SqlState);
         Assert.Equal(9_00L, await _pos.OwnerScalarAsync<long>($"SELECT price_minor FROM pos.pricelist_items WHERE pricelist_id = '{listA}'"));
     }
+
+    [Fact]
+    public async Task Gift_card_tables_are_tenant_isolated_and_a_code_only_works_in_its_own_organization()
+    {
+        var a = await _pos.ShopAsync("gutschein-a");
+        var b = await _pos.ShopAsync("gutschein-b");
+        var codes = new Dictionary<Guid, (string Code, Guid CardId, Guid Register)>();
+        foreach (var shop in new[] { a, b })
+        {
+            var register = await PosSupport.RegisterWithSessionAsync(shop);
+            var receipt = (await shop.PostAsync("/api/pos/sales", new
+            {
+                registerId = register, lines = new[] { new { quantity = 1, giftCardAmountMinor = 50_00 } }, payments = new[] { new { method = "Cash", amountMinor = 50_00 } },
+            }, PosSupport.Key())).Expect(HttpStatusCode.Created).Json;
+            var issued = receipt["issuedGiftCards"]!.AsArray().Single()!;
+            codes[shop.OrganizationId!.Value] = (issued["code"]!.GetValue<string>(), PosSupport.Id(issued), register);
+        }
+        var (orgA, orgB) = (a.OrganizationId!.Value, b.OrganizationId!.Value);
+        var (codeA, cardA, _) = codes[orgA];
+
+        await AssertIsolatedAsync("pos.gift_cards", orgA, orgB, foreignInsert: null, deletable: false, touch: "balance_minor = 0");
+        await AssertIsolatedAsync("pos.gift_card_transactions", orgA, orgB,
+            $"INSERT INTO pos.gift_card_transactions (id, organization_id, gift_card_id, type, amount_minor, balance_after_minor, created_at, created_by) "
+            + $"VALUES (gen_random_uuid(), '{orgA}', '{cardA}', 'Redeem', -100, 4900, now(), gen_random_uuid())",
+            deletable: false, touch: "amount_minor = 1");
+        // The application role cannot rewrite or delete history even in its own organization.
+        await using (var asA = await ConnectAsAppAsync(orgA))
+        {
+            Assert.Equal("42501", await PosSupport.TryAsync(asA, "UPDATE pos.gift_card_transactions SET amount_minor = 1"));
+            Assert.Equal("42501", await PosSupport.TryAsync(asA, "DELETE FROM pos.gift_card_transactions"));
+            Assert.Equal("42501", await PosSupport.TryAsync(asA, "DELETE FROM pos.gift_cards"));
+        }
+
+        // B cannot look up, read, void, reissue or pay with A's card — the code is unknown there.
+        Assert.Equal("pos.gift_card_not_found", (await b.GetAsync($"/api/pos/gift-cards/lookup?code={codeA}")).Code);
+        (await b.GetAsync($"/api/pos/gift-cards/{cardA}")).Expect(HttpStatusCode.NotFound);
+        (await b.PostAsync($"/api/pos/gift-cards/{cardA}/void", new { reason = "fremd" })).Expect(HttpStatusCode.NotFound);
+        (await b.PostAsync($"/api/pos/gift-cards/{cardA}/reissue", new { reason = "fremd" })).Expect(HttpStatusCode.NotFound);
+        var product = await PosSupport.StockProductAsync(b, 1);
+        var stolen = await b.PostAsync("/api/pos/sales", new
+        {
+            registerId = codes[orgB].Register, lines = new[] { new { productId = product, quantity = 1, unitPriceMinor = 10_00 } },
+            payments = new[] { new { method = "GiftCard", amountMinor = 10_00, giftCardCode = codeA } },
+        }, PosSupport.Key());
+        Assert.Equal((HttpStatusCode.NotFound, "pos.gift_card_not_found"), (stolen.Status, stolen.Code));
+        Assert.Equal(50_00L, await _pos.OwnerScalarAsync<long>($"SELECT balance_minor FROM pos.gift_cards WHERE id = '{cardA}'"));
+        Assert.Single((await b.GetAsync("/api/pos/gift-cards")).Expect(HttpStatusCode.OK).Json["items"]!.AsArray());
+    }
 }

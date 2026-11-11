@@ -72,17 +72,18 @@ internal sealed class DsfinvkExportService(
             var sessionReceipts = receipts.Where(r => r.SessionId == session.Id).ToList();
             var cash = sessionReceipts.SelectMany(r => r.Payments).Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.AmountMinor);
             var card = sessionReceipts.SelectMany(r => r.Payments).Where(p => p.Method == PaymentMethod.Card).Sum(p => p.AmountMinor);
+            var giftCard = sessionReceipts.SelectMany(r => r.Payments).Where(p => p.Method == PaymentMethod.GiftCard).Sum(p => p.AmountMinor);
 
             tables["cashpointclosing"].Add([.. Key(), BusinessDay(session.ClosedAt.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), TaxonomyVersion,
                 sessionReceipts.FirstOrDefault()?.Id.ToString() ?? "", sessionReceipts.LastOrDefault()?.Id.ToString() ?? "", seller.LegalName, seller.Street,
-                seller.PostalCode, seller.City, Country(seller.CountryCode), "", seller.VatId ?? "", Money(cash + card), Money(cash)]);
+                seller.PostalCode, seller.City, Country(seller.CountryCode), "", seller.VatId ?? "", Money(cash + card + giftCard), Money(cash)]);
             tables["location"].Add([.. Key(), seller.Name, seller.Street, seller.PostalCode, seller.City, Country(seller.CountryCode), seller.VatId ?? ""]);
             tables["cashregister"].Add([.. Key(), "SEHA", "SEHA Kasse", kasse, "SEHA", typeof(DsfinvkExportService).Assembly.GetName().Version?.ToString() ?? "",
                 "EUR", 0]);
             tables["vat"].Add([.. Key(), 1, "19.00", "Regelsteuersatz"]);
 
-            foreach (var group in sessionReceipts.SelectMany(r => r.Lines).GroupBy(l => (Key: VatKey(l), l.TaxTreatment)))
-                tables["businesscases"].Add([.. Key(), BusinessCase(group.Key.TaxTreatment), group.Key.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "",
+            foreach (var group in sessionReceipts.SelectMany(r => r.Lines).GroupBy(l => (Key: VatKey(l), l.TaxTreatment, Case: BusinessCase(l))))
+                tables["businesscases"].Add([.. Key(), group.Key.Case, group.Key.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "",
                     "", group.Key.Key, Money(group.Sum(l => l.LineGrossMinor)), Money(group.Sum(l => l.NetMinor)), Money(group.Sum(l => l.VatMinor))]);
             foreach (var group in movements.Where(m => m.SessionId == session.Id).GroupBy(BusinessCase))
             {
@@ -94,6 +95,8 @@ internal sealed class DsfinvkExportService(
                 tables["payment"].Add([.. Key(), "Bar", "Bar", Money(cash)]);
             if (card != 0)
                 tables["payment"].Add([.. Key(), "Unbar", "Karte", Money(card)]);
+            if (giftCard != 0)
+                tables["payment"].Add([.. Key(), "Unbar", "Gutschein", Money(giftCard)]);
             tables["cash_per_currency"].Add([.. Key(), "EUR", Money(cash)]);
 
             foreach (var receipt in sessionReceipts)
@@ -125,7 +128,7 @@ internal sealed class DsfinvkExportService(
                 }
 
                 foreach (var payment in receipt.Payments)
-                    tables["datapayment"].Add([.. BonKey(), payment.Method == PaymentMethod.Cash ? "Bar" : "Unbar", payment.Method == PaymentMethod.Cash ? "Bar" : "Karte",
+                    tables["datapayment"].Add([.. BonKey(), payment.Method == PaymentMethod.Cash ? "Bar" : "Unbar", PaymentName(payment.Method),
                         "EUR", Money(payment.AmountMinor), Money(payment.AmountMinor)]);
 
                 if (receipt.ReferencedReceiptId is { } refId && referenced.TryGetValue(refId, out var original))
@@ -135,7 +138,7 @@ internal sealed class DsfinvkExportService(
 
                 foreach (var line in receipt.Lines.OrderBy(l => l.LineNumber))
                 {
-                    tables["lines"].Add([.. BonKey(), line.LineNumber, "", Description(line), kasse, BusinessCase(line.TaxTreatment),
+                    tables["lines"].Add([.. BonKey(), line.LineNumber, "", Description(line), kasse, BusinessCase(line),
                         line.TaxTreatment == TaxTreatment.Margin25a ? "Differenzbesteuerung § 25a UStG" : "", 0, receipt.Kind == ReceiptKind.Storno ? 1 : 0,
                         "", line.ProductId?.ToString() ?? "", "", "", "", Quantity(line.Quantity), "1", "Stück", Money(line.UnitPriceMinor)]);
                     tables["lines_vat"].Add([.. BonKey(), line.LineNumber, VatKey(line), Money(line.LineGrossMinor), Money(line.NetMinor), Money(line.VatMinor)]);
@@ -216,6 +219,16 @@ internal sealed class DsfinvkExportService(
 
     /// <summary>GV_TYP: an invoice paid at the till settles a receivable ("Forderungsaufloesung", not taxable); everything else is turnover.</summary>
     private static string BusinessCase(TaxTreatment treatment) => treatment == TaxTreatment.NotTaxable ? "Forderungsaufloesung" : "Umsatz";
+
+    /// <summary>GV_TYP of a line: the sale of a gift card is "MehrzweckgutscheinKauf" (not taxable, ADR-0020).</summary>
+    private static string BusinessCase(ReceiptLine line) => line.GiftCardId is not null ? "MehrzweckgutscheinKauf" : BusinessCase(line.TaxTreatment);
+
+    private static string PaymentName(PaymentMethod method) => method switch
+    {
+        PaymentMethod.Cash => "Bar",
+        PaymentMethod.GiftCard => "Gutschein",
+        _ => "Karte",
+    };
 
     private static string Description(ReceiptLine line) => line.Imei is { } imei ? $"{line.Description} (IMEI {imei})" : line.Description;
 

@@ -585,5 +585,6 @@ public sealed class PosModel : IModuleModel
 
         PrinterProfileModel.Configure(modelBuilder);
         CardTerminalModel.Configure(modelBuilder);
+        GiftCardModel.Configure(modelBuilder);
     }
 }

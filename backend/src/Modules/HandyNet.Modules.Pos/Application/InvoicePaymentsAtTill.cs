@@ -24,6 +24,9 @@ internal sealed partial class SaleService
         if (await fiscal.CheckAsync(request.RegisterId, ct) is { } fiscalRefused)
             return fiscalRefused;
 
+        // An invoice is paid at the till in cash or by card; redeeming a gift card on an invoice is not supported.
+        if (request.Payments.Any(p => p.Method == PaymentMethod.GiftCard))
+            return Error.Validation("pos.gift_card_not_allowed", "An invoice cannot be paid with a gift card at the till.");
         var register = await db.Set<Register>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RegisterId && r.OrganizationId == OrganizationId, ct);
         if (register is null)
             return Error.NotFound("pos.register_not_found", "Register not found.");

@@ -31,11 +31,26 @@ public sealed class PosOptions
 
     public TerminalOptions Terminal { get; set; } = new();
 
+    public GiftCardOptions GiftCard { get; set; } = new();
+
     /// <summary>Validity of a remote customer display link in days (default 30).</summary>
     public int DisplayLinkDays { get; set; } = 30;
 
     /// <summary>How long the public display endpoint holds a long-poll request open when nothing changed (seconds, default 20).</summary>
     public int DisplayPollSeconds { get; set; } = 20;
+}
+
+/// <summary>Gift cards sold at the till (ADR-0020).</summary>
+public sealed class GiftCardOptions
+{
+    /// <summary>Smallest amount a gift card is sold for, in cents (default 5.00 €).</summary>
+    public long MinMinor { get; set; } = 500;
+
+    /// <summary>Largest amount a gift card is sold for, in cents (default 500.00 €).</summary>
+    public long MaxMinor { get; set; } = 50_000;
+
+    /// <summary>A card expires on 31 December of the issue year plus this many years (default 3).</summary>
+    public int ValidityYears { get; set; } = 3;
 }
 
 public sealed class TerminalOptions

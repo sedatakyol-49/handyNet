@@ -177,6 +177,14 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = builder.Configuration.GetValue("RateLimits:PublicReceiptsPerMinute", 30),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // Gift card lookup by code (ADR-0020): per signed-in user and minute.
+    options.AddPolicy(PosModule.GiftCardLookupRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Configuration.GetValue("RateLimits:GiftCardLookupPerMinute", 30),
+            Window = TimeSpan.FromMinutes(1),
+        }));
     // Customer display (anonymous long poll, ADR-0023): per client IP and minute. A display re-polls after every change of
     // the cart, and several displays of a shop share one IP.
     options.AddPolicy(PosModule.PublicDisplayRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(

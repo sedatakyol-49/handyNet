@@ -4124,6 +4124,172 @@ namespace HandyNet.Migrations.Migrations
                     b.ToTable("fiscal_records", "pos");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.GiftCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BalanceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("balance_minor");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("code_hash")
+                        .IsFixedLength();
+
+                    b.Property<string>("CodeLast4")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character(4)")
+                        .HasColumnName("code_last4")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expires_on");
+
+                    b.Property<long>("InitialMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("initial_minor");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<Guid>("IssuedReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("issued_receipt_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gift_cards");
+
+                    b.HasAlternateKey("OrganizationId", "Id")
+                        .HasName("ak_gift_cards_organization_id_id");
+
+                    b.HasIndex("IssuedReceiptId")
+                        .HasDatabaseName("ix_gift_cards_issued_receipt_id");
+
+                    b.HasIndex("OrganizationId", "CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gift_cards_organization_id_code_hash");
+
+                    b.HasIndex("OrganizationId", "CodeLast4")
+                        .HasDatabaseName("ix_gift_cards_organization_id_code_last4");
+
+                    b.HasIndex("OrganizationId", "CustomerId")
+                        .HasDatabaseName("ix_gift_cards_organization_id_customer_id");
+
+                    b.HasIndex("OrganizationId", "IssuedAt")
+                        .HasDatabaseName("ix_gift_cards_organization_id_issued_at");
+
+                    b.HasIndex("OrganizationId", "IssuedReceiptId")
+                        .HasDatabaseName("ix_gift_cards_organization_id_issued_receipt_id");
+
+                    b.ToTable("gift_cards", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_gift_cards_balance", "initial_minor > 0 AND balance_minor >= 0 AND balance_minor <= initial_minor");
+
+                            t.HasCheckConstraint("ck_gift_cards_code", "code_hash ~ '^[0-9a-f]{64}$' AND char_length(code_last4) = 4");
+
+                            t.HasCheckConstraint("ck_gift_cards_status", "status IN ('Active', 'Voided') AND (status = 'Active' OR balance_minor = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.GiftCardTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<long>("BalanceAfterMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("balance_after_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("GiftCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gift_card_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gift_card_transactions");
+
+                    b.HasIndex("ReceiptId")
+                        .HasDatabaseName("ix_gift_card_transactions_receipt_id")
+                        .HasFilter("receipt_id IS NOT NULL");
+
+                    b.HasIndex("GiftCardId", "CreatedAt")
+                        .HasDatabaseName("ix_gift_card_transactions_gift_card_id_created_at");
+
+                    b.HasIndex("OrganizationId", "GiftCardId")
+                        .HasDatabaseName("ix_gift_card_transactions_organization_id_gift_card_id");
+
+                    b.HasIndex("OrganizationId", "ReceiptId")
+                        .HasDatabaseName("ix_gift_card_transactions_organization_id_receipt_id");
+
+                    b.ToTable("gift_card_transactions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_gift_card_transactions_amount", "balance_after_minor >= 0 AND ((type IN ('Issue', 'Restore') AND amount_minor > 0) OR (type = 'Redeem' AND amount_minor < 0) OR (type = 'Void' AND amount_minor <= 0 AND balance_after_minor = 0) OR (type = 'Reissue' AND amount_minor = 0))");
+
+                            t.HasCheckConstraint("ck_gift_card_transactions_type", "type IN ('Issue', 'Redeem', 'Restore', 'Void', 'Reissue')");
+                        });
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5181,6 +5347,10 @@ namespace HandyNet.Migrations.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("discount_minor");
 
+                    b.Property<Guid?>("GiftCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gift_card_id");
+
                     b.Property<string>("Imei")
                         .HasMaxLength(15)
                         .HasColumnType("character(15)")
@@ -5244,6 +5414,10 @@ namespace HandyNet.Migrations.Migrations
 
                     b.HasKey("ReceiptId", "LineNumber")
                         .HasName("pk_receipt_lines");
+
+                    b.HasIndex("GiftCardId")
+                        .HasDatabaseName("ix_receipt_lines_gift_card_id")
+                        .HasFilter("gift_card_id IS NOT NULL");
 
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_receipt_lines_product_id");
@@ -7259,6 +7433,42 @@ namespace HandyNet.Migrations.Migrations
                         .HasConstraintName("fk_fiscal_records_cash_sessions_organization_id_session_id");
                 });
 
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.GiftCard", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "CustomerId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_gift_cards_customers_organization_id_customer_id");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "IssuedReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_gift_cards_receipts_organization_id_issued_receipt_id");
+                });
+
+            modelBuilder.Entity("HandyNet.Modules.Pos.Domain.GiftCardTransaction", b =>
+                {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.GiftCard", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "GiftCardId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_gift_card_transactions_gift_cards_organization_id_gift_card");
+
+                    b.HasOne("HandyNet.Modules.Pos.Domain.Receipt", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "ReceiptId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_gift_card_transactions_receipts_organization_id_receipt_id");
+                });
+
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.PosApproval", b =>
                 {
                     b.HasOne("HandyNet.Modules.Identity.Domain.User", null)
@@ -7439,6 +7649,12 @@ namespace HandyNet.Migrations.Migrations
 
             modelBuilder.Entity("HandyNet.Modules.Pos.Domain.ReceiptLine", b =>
                 {
+                    b.HasOne("HandyNet.Modules.Pos.Domain.GiftCard", null)
+                        .WithMany()
+                        .HasForeignKey("GiftCardId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_receipt_lines_gift_cards_gift_card_id");
+
                     b.HasOne("HandyNet.Modules.Catalog.Domain.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")

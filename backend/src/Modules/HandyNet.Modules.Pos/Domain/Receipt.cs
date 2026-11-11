@@ -27,8 +27,14 @@ public enum PaymentMethod
 {
     Cash,
 
-    /// <summary>Card payment confirmed on a separate terminal (no terminal integration yet).</summary>
+    /// <summary>Card payment: confirmed by the cashier, or settled by a card transaction of a terminal (ADR-0021).</summary>
     Card,
+
+    /// <summary>
+    /// Paid with a gift card (Mehrzweck-Gutschein, ADR-0020); as a refund method: refunded onto a new gift card. Non-cash
+    /// for the TSE and for cash rounding.
+    /// </summary>
+    GiftCard,
 }
 
 /// <summary>Stored as text.</summary>
@@ -74,8 +80,9 @@ public sealed record FiscalData(
     string? QrPayload = null,
     string? Error = null);
 
+/// <param name="ProductId">Null only for a gift card line (<paramref name="GiftCardId"/> set, treatment NotTaxable).</param>
 public sealed record SaleLineInput(
-    Guid ProductId,
+    Guid? ProductId,
     Guid? StockUnitId,
     string? Imei,
     string Description,
@@ -84,7 +91,8 @@ public sealed record SaleLineInput(
     long DiscountMinor,
     TaxTreatment Treatment,
     long? PurchasePriceMinor,
-    string? Note = null);
+    string? Note = null,
+    Guid? GiftCardId = null);
 
 public sealed record PaymentInput(PaymentMethod Method, long AmountMinor);
 
@@ -320,6 +328,10 @@ public sealed class Receipt
             var line = original.Lines.FirstOrDefault(l => l.LineNumber == originalLineNumber);
             if (line is null)
                 return Error.Validation("pos.line_not_found", $"Line {originalLineNumber} does not exist on the receipt.");
+                if (line.GiftCardId is not null)
+                return Error.Conflict("pos.gift_card_line_not_returnable",
+                        $"Line {originalLineNumber} is a gift card; gift cards cannot be returned. Cancel the whole receipt while the card is unused, or void the card.")
+                    .WithDetails(new Dictionary<string, object?> { ["lineNumber"] = originalLineNumber });
             var returned = alreadyReturned.GetValueOrDefault(originalLineNumber);
             if (quantity <= 0 || returned + quantity > line.Quantity)
                 return Error.Conflict("pos.return_exceeds_sold",
@@ -336,7 +348,7 @@ public sealed class Receipt
         receipt.SumLines();
         if (receipt.TotalGrossMinor < 0)
         {
-            // A cash refund on a rounding register pays out the amount rounded to 0.05 €.
+            // A cash refund on a rounding register pays out the amount rounded to 0.05 € (card and gift card refunds are exact).
             var refund = cashRounding && refundMethod == PaymentMethod.Cash ? -CashRounding.Round(-receipt.TotalGrossMinor) : receipt.TotalGrossMinor;
             if (refund != 0)
                 receipt._payments.Add(new ReceiptPayment(receipt, refundMethod, refund, null));
@@ -415,8 +427,8 @@ public sealed class Receipt
     }
 
     /// <summary>
-    /// Card payments may not exceed the total; cash may (the difference is change). Stored payments are the amounts
-    /// applied to the receipt; for cash also the amount tendered.
+    /// Card and gift card payments (non-cash) may not exceed the total; cash may (the difference is change). Gift cards
+    /// cannot pay for gift cards. Stored payments are the amounts applied to the receipt; for cash also the amount tendered.
     /// </summary>
     private Result SettleSale(IReadOnlyList<PaymentInput> payments, bool cashRounding)
     {
@@ -424,13 +436,22 @@ public sealed class Receipt
             return Error.Validation("pos.payment_amount", "Payment amounts must be positive.");
         var cash = checked(payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.AmountMinor));
         var card = checked(payments.Where(p => p.Method == PaymentMethod.Card).Sum(p => p.AmountMinor));
+        var giftCard = checked(payments.Where(p => p.Method == PaymentMethod.GiftCard).Sum(p => p.AmountMinor));
         if (card > TotalGrossMinor)
             return Error.Validation("pos.card_exceeds_total", "A card payment cannot exceed the receipt total.");
-        var paid = checked(cash + card);
-        // Cash rounding: the part paid in cash (total − card) is rounded to 0.05 €; card amounts are exact.
+        var payableByGiftCard = TotalGrossMinor - _lines.Where(l => l.GiftCardId is not null).Sum(l => l.LineGrossMinor);
+        if (giftCard > payableByGiftCard)
+            return Error.Validation("pos.gift_card_exceeds_total",
+                    "A gift card payment cannot exceed the receipt total, and gift cards cannot be paid for with a gift card.")
+                .WithDetails(new Dictionary<string, object?> { ["payableByGiftCardMinor"] = payableByGiftCard });
+        var nonCash = checked(card + giftCard);
+        if (nonCash > TotalGrossMinor)
+            return Error.Validation("pos.card_exceeds_total", "Card and gift card payments together cannot exceed the receipt total.");
+        var paid = checked(cash + nonCash);
+        // Cash rounding: the part paid in cash (total − non-cash) is rounded to 0.05 €; card and gift card amounts are exact.
         var target = TotalGrossMinor;
-        if (cashRounding && cash > 0 && CashRounding.Round(TotalGrossMinor - card) is > 0 and var roundedDue)
-            target = card + roundedDue;
+        if (cashRounding && cash > 0 && CashRounding.Round(TotalGrossMinor - nonCash) is > 0 and var roundedDue)
+            target = nonCash + roundedDue;
         if (paid < target)
             return Error.Validation("pos.payment_insufficient",
                     $"Payments ({paid / 100m:0.00} €) do not cover the total ({target / 100m:0.00} €).")
@@ -447,6 +468,8 @@ public sealed class Receipt
             _payments.Add(new ReceiptPayment(this, PaymentMethod.Cash, cashApplied, cash));
         if (card > 0)
             _payments.Add(new ReceiptPayment(this, PaymentMethod.Card, card, null));
+        if (giftCard > 0)
+            _payments.Add(new ReceiptPayment(this, PaymentMethod.GiftCard, giftCard, null));
         return Result.Success();
     }
 }
@@ -459,8 +482,11 @@ public sealed class ReceiptLine
     public Guid ReceiptId { get; private set; }
     public int LineNumber { get; private set; }
 
-    /// <summary>Null only on the not taxable line of an invoice payment receipt.</summary>
+    /// <summary>Null only on not taxable lines: the line of an invoice payment receipt, and gift card lines.</summary>
     public Guid? ProductId { get; private set; }
+
+    /// <summary>Gift card line (ADR-0020): the card this line sold (on refund lines: the card taken back by the storno).</summary>
+    public Guid? GiftCardId { get; private set; }
     public Guid? StockUnitId { get; private set; }
     public string? Imei { get; private set; }
     public string Description { get; private set; } = null!;
@@ -503,6 +529,10 @@ public sealed class ReceiptLine
             return Error.Validation("pos.line_note", $"Line {lineNumber}: the note is limited to {Receipt.MaxNoteLength} characters.");
         if (string.IsNullOrWhiteSpace(input.Description))
             return Error.Validation("pos.description", $"Line {lineNumber}: a description is required.");
+        // Exactly the gift card lines have no product; they are not taxable (multi-purpose voucher: VAT arises at redemption).
+        if ((input.ProductId is null) != (input.GiftCardId is not null) || (input.GiftCardId is not null) != (input.Treatment == TaxTreatment.NotTaxable)
+            || (input.GiftCardId is not null && (input.Quantity != 1 || input.DiscountMinor != 0 || input.StockUnitId is not null)))
+            return Error.Validation("pos.gift_card_line", $"Line {lineNumber}: a line is either a product or a gift card (quantity 1, no discount).");
 
         var lineGross = gross - input.DiscountMinor;
         var vat = VatCalculator.VatFor(input.Treatment, lineGross, input.PurchasePriceMinor);
@@ -513,6 +543,7 @@ public sealed class ReceiptLine
             ReceiptId = receipt.Id,
             LineNumber = lineNumber,
             ProductId = input.ProductId,
+            GiftCardId = input.GiftCardId,
             StockUnitId = input.StockUnitId,
             Imei = input.Imei,
             Description = description.Length > Receipt.MaxDescriptionLength ? description[..Receipt.MaxDescriptionLength] : description,
@@ -564,6 +595,7 @@ public sealed class ReceiptLine
             ReceiptId = receipt.Id,
             LineNumber = lineNumber,
             ProductId = original.ProductId,
+            GiftCardId = original.GiftCardId,
             StockUnitId = original.StockUnitId,
             Imei = original.Imei,
             Description = original.Description,

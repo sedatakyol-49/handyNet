@@ -34,6 +34,9 @@ public static class PosModule
             .Validate(o => o.ApprovalSeconds is >= 10 and <= 900, "Pos:ApprovalSeconds must be between 10 and 900.")
             .Validate(o => o.PublicReceiptLinkDays is >= 1 and <= 3650, "Pos:PublicReceiptLinkDays must be between 1 and 3650.")
             .Validate(o => o.OfflineMaxAgeHours is >= 1 and <= 720, "Pos:OfflineMaxAgeHours must be between 1 and 720.")
+            .Validate(o => o.GiftCard.MinMinor >= 1 && o.GiftCard.MaxMinor >= o.GiftCard.MinMinor && o.GiftCard.MaxMinor <= 100_000_000
+                           && o.GiftCard.ValidityYears is >= 1 and <= 30,
+                "Pos:GiftCard: MinMinor must be at least 1, MaxMinor between MinMinor and 100000000, ValidityYears 1–30.")
             .Validate(o => o.DisplayLinkDays is >= 1 and <= 3650, "Pos:DisplayLinkDays must be between 1 and 3650.")
             .Validate(o => o.DisplayPollSeconds is >= 1 and <= 55, "Pos:DisplayPollSeconds must be between 1 and 55.")
             .Validate(o => !environment.IsProduction() || o.FiscalSigner != FiscalMode.SimulatedTse || o.Fiscal.AllowSimulatedTseInProduction,
@@ -90,6 +93,7 @@ public static class PosModule
         services.AddSingleton<DisplayStateStore>();
         services.AddScoped<DisplayService>();
         services.AddScoped<PricelistService>();
+        services.AddScoped<GiftCardService>();
         services.AddScoped<HandyNet.Modules.Tenancy.Contracts.IOrganizationFactSource, PosOrganizationFacts>();
         // Fallback price source; the host replaces it with one composed from the Marketplace contract.
         services.TryAddScoped<IOfferPriceSource, NoOfferPrices>();
@@ -229,6 +233,7 @@ public static class PosModule
         CardTerminalEndpoints.Map(sell, manage); // card terminal profiles and card transactions (ADR-0021)
         DisplayEndpoints.Map(app, sell); // customer display link, state and public long poll (ADR-0023)
         PricelistEndpoints.Map(sell, manage); // price lists and customer-specific prices (ADR-0020)
+        GiftCardEndpoints.Map(sell, manage); // gift cards (ADR-0020)
         // ---- fiscal (TSE / KassenSichV, ADR-0012) -------------------------------------------------------------------------
         sell.MapGet("/registers/{id:guid}/fiscal", async (Guid id, FiscalStatusService service, CancellationToken ct) =>
             (await service.GetAsync(id, ct)).ToHttp(Results.Ok));
@@ -311,6 +316,9 @@ public static class PosModule
             })
             .WithMetadata(new IgnoreCashierTokenMetadata());
     }
+
+    /// <summary>Gift card lookup by code at the till: per signed-in user and minute (codes must not be guessable by trying).</summary>
+    public const string GiftCardLookupRateLimitPolicy = "pos-gift-card-lookup";
 
     /// <summary>Anonymous customer display (long poll): per client IP and minute.</summary>
     public const string PublicDisplayRateLimitPolicy = "pos-public-display";

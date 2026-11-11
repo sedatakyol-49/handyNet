@@ -112,6 +112,8 @@ public sealed class PosInvoice : IAuditable
             return Error.Conflict("pos.invoice_not_a_sale", "Invoices are issued for sale receipts only.");
         if (cancelledOrReturned)
             return Error.Conflict("pos.invoice_receipt_refunded", "The receipt was cancelled or items were returned; an invoice cannot be issued for it.");
+        if (receipt.Lines.Any(l => l.GiftCardId is not null))
+            return Error.Conflict("pos.invoice_gift_card", "A receipt that sold a gift card cannot be invoiced: the gift card is not a taxable supply.");
         if (string.IsNullOrWhiteSpace(seller.VatId))
             return Error.Conflict("pos.invoice_seller_vat_id_missing",
                 "The organization has no VAT id; an invoice (§14 UStG) needs the seller's VAT id or tax number. Add it to the organization profile.");
@@ -137,7 +139,7 @@ public sealed class PosInvoice : IAuditable
         if (margin > 0)
             notes.Add(MarginNote);
         notes.Add($"Der Betrag wurde an der Kasse bezahlt (Kassenbeleg Nr. {receipt.Number}, {registerName}).");
-        var payments = receipt.Payments.Select(p => $"{(p.Method == PaymentMethod.Cash ? "Bar" : "Karte")}: {Euro(p.AmountMinor)}").ToList();
+        var payments = receipt.Payments.Select(p => $"{(p.Method == PaymentMethod.Cash ? "Bar" : p.Method == PaymentMethod.GiftCard ? "Gutschein" : "Karte")}: {Euro(p.AmountMinor)}").ToList();
         if (receipt.RoundingMinor != 0)
             payments.Add($"Rundung Barzahlung (0,05 €): {Euro(receipt.RoundingMinor)}");
 

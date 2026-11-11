@@ -45,7 +45,9 @@ public sealed record SessionSummary(
     int InvoicePaymentCount = 0,
     long InvoicePaymentsMinor = 0,
     int AnkaufCount = 0,
-    long AnkaufPayoutsMinor = 0);
+    long AnkaufPayoutsMinor = 0,
+    int GiftCardsSoldCount = 0,
+    long GiftCardsSoldMinor = 0);
 
 public static class SessionCalculator
 {
@@ -91,7 +93,10 @@ public static class SessionCalculator
             receipts.Where(r => r.Kind == ReceiptKind.InvoicePayment).Sum(r => r.TotalGrossMinor),
             // Ankauf payouts are withdrawals (already part of WithdrawalsMinor); the Z-report shows them separately.
             movements.Count(m => m.ReasonCode == CashMovementReason.Ankauf),
-            movements.Where(m => m.ReasonCode == CashMovementReason.Ankauf).Sum(m => m.AmountMinor));
+            movements.Where(m => m.ReasonCode == CashMovementReason.Ankauf).Sum(m => m.AmountMinor),
+            // "Gutscheine verkauft": gift card lines, net of cancelled ones (a storno mirrors the line with quantity −1).
+            lines.Where(l => l.GiftCardId is not null).Sum(l => l.Quantity),
+            lines.Where(l => l.GiftCardId is not null).Sum(l => l.LineGrossMinor));
     }
 }
 
