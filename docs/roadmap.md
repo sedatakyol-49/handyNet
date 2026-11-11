@@ -121,7 +121,9 @@ are out of scope for phone shops unless requested.
   (price lists with general discount and item prices, list price = till price for the customer; gift cards sold as
   not-taxable lines with a one-time code, redeemed as a non-cash payment under a row lock, storno/return/void/reissue;
   loyalty points earned per euro and redeemed as a price reduction across lines, reversed by storno/returns; unit and
-  integration tests incl. concurrency and RLS), frontend being built separately — status not verified here. Not reviewed
+  integration tests incl. concurrency and RLS); frontend ✅ (pages "Preislisten", "Gutscheine", loyalty settings, pricelist
+  in the customer form, re-pricing on customer change, gift card sale/payment/refund with a one-time voucher slip, points
+  redemption in the payment dialog, loyalty history, Playwright e2e against the real API). Not reviewed
   by a tax adviser (gift card VAT treatment, points as a price reduction). Open: ⬜ coupons/promotions (not in scope),
   ⬜ discount tags, ✅ cash rounding to 0,05 € per register (receipt, Z-report; 2026-10-18),
   ⬜ customer retention/anonymization job; ✅ UI (customer picker, create/edit, on receipt).
@@ -136,13 +138,14 @@ are out of scope for phone shops unless requested.
 - 🟡 **G. Devices**: customer display (second screen / remote device), receipt printer (ESC/POS, browser print),
   cash drawer kick, barcode scanner, card terminal (ZVT/OPI), QR bank payment, offline mode with sync —
   offline and terminals only together with the TSE/KassenSichV work (no unsigned receipts in Production).
-  Backend ✅ 2026-11-11 for three items, frontend/bridge being built separately (status not verified here):
+  ✅ 2026-11-11 for three items (backend, frontend, bridge; Playwright e2e against the real API, ZVT only against a fake terminal):
   **customer display** (ADR-0023: revocable remote link per register, state in memory, anonymous long-poll endpoint),
   **card terminal** (ADR-0021: terminal profiles per register, card transactions recorded before the terminal starts,
-  linked to the receipt of the sale/return; the ZVT bridge and any test on a real terminal are ⬜ on the backend side —
-  the server never talks to a terminal), **offline mode** (ADR-0022: per-register switch; sales recorded offline are
+  linked to the receipt of the sale/return; ZVT in the SEHA bridge on the till PC (`tools/print-bridge/zvt.mjs`), byte
+  tests against a fake terminal only, ⬜ verified on a real terminal — the server never talks to a terminal), **offline mode** (ADR-0022: per-register switch; sales recorded offline are
   booked afterwards with server time, the next gapless number and the offline record on the receipt; the time until the
-  signature is without TSE protection — to be reviewed by a tax adviser). Open: ⬜ QR bank payment, ⬜ OPI.
+  signature is without TSE protection — to be reviewed by a tax adviser; IndexedDB queue on the device, no service worker,
+  so a reload needs the web server). Open: ⬜ QR bank payment, ⬜ OPI, ⬜ service worker for full offline reloads.
   🟡 Fiscal layer (ADR-0012, 2026-10-18): ✅ fiscal mode per organization/register set by the platform admin
   ("Kassen & TSE"), ✅ simulated test TSE (ECDSA, counters, idempotent retries, latency/failure/outage injection,
   "Test-TSE – nicht für den Echtbetrieb"), ✅ outage path ("Sicherheitseinrichtung ausgefallen", outages recorded),
