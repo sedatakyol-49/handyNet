@@ -662,7 +662,37 @@
       "pos.fiskaly_credentials_rejected": "fiskaly rechazó las credenciales.",
       "pos.fiskaly_not_found": "fiskaly no conoce la TSS o la caja solicitada.",
       "pos.tse_unavailable": "La TSE no está disponible en este momento. Inténtelo de nuevo.",
-      "pos.tse_rejected": "La TSE rechazó la solicitud."
+      "pos.tse_rejected": "La TSE rechazó la solicitud.",
+      "pos.terminal_not_found": "Perfil de terminal no encontrado.",
+      "pos.terminal_name": "Introduzca un nombre para el terminal (máx. 100 caracteres).",
+      "pos.terminal_connection": "Tipo de conexión del terminal desconocido.",
+      "pos.terminal_host": "Introduzca la dirección IP o el nombre de host del terminal sin http:// ni ruta.",
+      "pos.terminal_port": "El puerto del terminal debe estar entre 1 y 65535.",
+      "pos.terminal_bridge_url": "La dirección del puente debe ser una dirección http(s), p. ej. http://localhost:9123.",
+      "pos.terminal_password": "La contraseña ZVT tiene exactamente 6 dígitos.",
+      "pos.terminal_version": "El perfil del terminal se modificó entretanto. Vuelva a cargar.",
+      "pos.terminal_limit": "Una caja puede tener como máximo 20 perfiles de terminal.",
+      "pos.terminal_name_taken": "Esta caja ya tiene un terminal con este nombre.",
+      "pos.terminal_simulated_not_allowed": "El terminal simulado es solo para pruebas y no está permitido en producción.",
+      "pos.card_transaction_not_found": "Operación con tarjeta no encontrada.",
+      "pos.card_transaction_kind": "Tipo de operación con tarjeta desconocido.",
+      "pos.card_transaction_amount": "El importe de la operación con tarjeta debe ser mayor que cero.",
+      "pos.card_transaction_status": "Estado de la operación con tarjeta desconocido.",
+      "pos.card_transaction_final": "El resultado de esta operación con tarjeta ya es definitivo y no puede modificarse.",
+      "pos.card_transaction_invalid": "La operación con tarjeta no corresponde a este recibo (otro importe, otra caja, no aprobada o ya utilizada).",
+      "pos.card_transaction_linked": "Esta operación con tarjeta pertenece a un recibo. Anule el recibo o registre una devolución.",
+      "pos.card_transaction_not_approved": "Solo se puede anular una operación con tarjeta aprobada.",
+      "pos.card_transaction_payment": "Una operación del terminal liquida exactamente un pago con tarjeta del recibo.",
+      "pos.card_pan_not_masked": "El número de tarjeta debe estar enmascarado: como máximo los 6 primeros y los 4 últimos dígitos.",
+      "pos.card_result_field_length": "Un campo del resultado del terminal es demasiado largo.",
+      "pos.offline_not_enabled": "El modo sin conexión no está activado para esta caja; las ventas registradas sin conexión no pueden contabilizarse.",
+      "pos.offline_time_invalid": "La hora de registro de la venta sin conexión no es plausible (en el futuro o demasiado antigua).",
+      "pos.offline_reference": "El número sin conexión no es válido (de 1 a 40 caracteres: letras, dígitos, guion).",
+      "pos.offline_reference_used": "Este número sin conexión ya se contabilizó en esta caja.",
+      "pos.offline_payment_not_allowed": "Las ventas registradas sin conexión solo pueden pagarse en efectivo o con tarjeta.",
+      "pos.display_link_not_found": "Este enlace de pantalla no existe o ya no es válido.",
+      "pos.display_state_invalid": "Los datos para la pantalla del cliente no son válidos.",
+      "pos.display_state_too_large": "Los datos para la pantalla del cliente son demasiado grandes (16 KiB como máximo)."
     },
     "validation": {
       "required": "Este campo es obligatorio.",
@@ -2553,7 +2583,8 @@
       "invoices": "Facturas",
       "ankauf": "Compra de usados",
       "printers": "Impresoras",
-      "terminals": "Terminal de tarjetas"
+      "terminals": "Terminal de tarjetas",
+      "offline": "Offline"
     },
     "registers": {
       "title": "Caja",
@@ -3403,6 +3434,88 @@
         "refundKept": "La devolución no se registró: {reason} El abono de {amount} ya se realizó en el terminal y queda guardado; al confirmar de nuevo esta devolución se reutiliza. Si no funciona, informe al responsable («Pagos con tarjeta sin recibo»).",
         "refundAmountChanged": "Para esta devolución ya se realizó un abono de {amount} en el terminal. Vuelva a seleccionar exactamente las líneas de esa devolución o informe al responsable.",
         "refundUncertain": "Compruebe en el terminal si el abono se realizó. Si es así, confirme de nuevo la devolución: se registrará sin terminal. Si no, cierre el diálogo y empiece la devolución de nuevo."
+      }
+    },
+    "offline": {
+      "setting": "Modo sin conexión",
+      "settingHint": "Si falla la conexión, la caja guarda las ventas en el dispositivo y las contabiliza al reconectar. Hasta entonces el cliente recibe un recibo provisional sin número; la firma TSE se realiza después. El tiempo intermedio queda sin protección TSE: la revisión legal está pendiente, consulte antes con su asesor fiscal.",
+      "modeBadge": "Modo sin conexión",
+      "pill": "{count} en cola",
+      "pillLabel": "{count} ventas registradas sin conexión esperan en este dispositivo",
+      "banner": {
+        "title": "Sin conexión con el servidor.",
+        "text": "Las cajas con modo sin conexión guardan las ventas en este dispositivo y las contabilizan al reconectar (recibos provisionales). No es posible: devoluciones, anulaciones, cierre de sesión, facturas, recompra ni pagos mediante un terminal de tarjetas conectado."
+      },
+      "noStorage": "Este navegador no ofrece almacenamiento permanente (IndexedDB). Por eso no son posibles las ventas sin conexión: no sobrevivirían a un reinicio.",
+      "legal": "Las ventas registradas sin conexión son provisionales: el número de recibo y la firma TSE solo existen al contabilizarlas. La revisión legal de este procedimiento está pendiente.",
+      "customers": "Sin conexión: solo clientes en caché (nombre, empresa, ciudad). Crear y editar vuelve a ser posible cuando haya conexión.",
+      "gridNote": "Sin conexión: artículos, precios y existencias del {date}. Los dispositivos con IMEI no pueden venderse sin conexión.",
+      "gridNoteEmpty": "Sin conexión: aún no hay artículos de esta caja en la caché de este dispositivo.",
+      "payNote": "Sin conexión: la venta se guarda en este dispositivo y se contabiliza después. Cobre con tarjeta directamente en el terminal y confírmelo aquí.",
+      "blocked": {
+        "notEnabled": "Sin conexión con el servidor. El modo sin conexión no está activado para esta caja: la venta solo podrá finalizarse cuando vuelva la conexión. El tique se conserva.",
+        "noSession": "Solo se puede vender sin conexión si había una sesión de caja abierta en el último contacto con el servidor.",
+        "noStorage": "Este navegador no ofrece almacenamiento permanente. La venta no puede guardarse de forma segura sin conexión: espere a que vuelva.",
+        "payment": "Sin conexión solo se admite pago en efectivo o con tarjeta.",
+        "cardUnreported": "Hay un pago con tarjeta aprobado para este tique que el servidor aún no conoce. La venta solo podrá finalizarse con conexión: no vuelva a cobrar la tarjeta."
+      },
+      "storeFailed": "No se pudo guardar la venta en el dispositivo. El tique se conserva: inténtelo de nuevo.",
+      "lookup": {
+        "serialized": "Los dispositivos con IMEI no pueden venderse sin conexión.",
+        "notCached": "No encontrado sin conexión (solo artículos en caché con EAN)."
+      },
+      "done": {
+        "title": "Guardado sin conexión: aún no contabilizado",
+        "text": "La venta está guardada en este dispositivo y se contabilizará en cuanto el servidor vuelva a estar disponible. Solo entonces tendrá número de recibo y firma TSE.",
+        "print": "Imprimir recibo provisional"
+      },
+      "receipt": {
+        "title": "Recibo provisional sin conexión",
+        "notice": "No es un recibo de caja: sin n.º de recibo, TSE no disponible",
+        "reference": "N.º sin conexión",
+        "recordedAt": "Registrado el",
+        "footer": "Este recibo es provisional. La venta se contabilizará al restablecerse la conexión y se firmará después; el recibo de caja con número llevará este n.º sin conexión."
+      },
+      "receiptBadge": "Offline",
+      "receiptBadgeHint": "Registrado sin conexión, contabilizado y firmado después",
+      "closeBlockedTitle": "No se puede cerrar",
+      "closeBlocked": "En este dispositivo aún esperan {count} ventas de esta caja registradas sin conexión. Primero deben contabilizarse o ser descartadas por un responsable.",
+      "status": {
+        "queued": "Esperando conexión",
+        "syncing": "Contabilizando …",
+        "attention": "Rechazada: compruébela"
+      },
+      "queue": {
+        "title": "Ventas sin conexión",
+        "subtitle": "Ventas que este dispositivo registró sin conexión con el servidor. Se contabilizan por orden al reconectar. Las ventas rechazadas por el servidor permanecen aquí hasta reenviarlas o descartarlas.",
+        "syncNow": "Contabilizar ahora",
+        "offlineNow": "El servidor no está disponible en este momento. Las ventas siguen guardadas en este dispositivo.",
+        "emptyTitle": "No hay ventas sin conexión pendientes",
+        "emptyText": "Todas las ventas de este dispositivo para esta caja están contabilizadas.",
+        "refused": "Rechazada por el servidor:",
+        "lastTry": "Último intento:",
+        "provisional": "Recibo provisional",
+        "export": "Guardar como archivo",
+        "retry": "Reenviar",
+        "discard": "Descartar",
+        "manageHint": "Reenviar y descartar está reservado a los responsables.",
+        "syncedTitle": "Recién contabilizadas",
+        "syncedAs": "Recibo n.º {number}",
+        "openReceipt": "Abrir recibo",
+        "discardTitle": "Descartar venta sin conexión",
+        "discardText": "¿Eliminar definitivamente de este dispositivo la venta {reference} de {total}? Nunca se contabilizó. Antes se guarda como archivo con motivo, usuario y hora: conserve ese archivo.",
+        "discardReason": "Motivo",
+        "discardReasonError": {
+          "required": "Indique un motivo (3 caracteres como mínimo).",
+          "tooLong": "El motivo puede tener 500 caracteres como máximo."
+        },
+        "discardConfirm": "Guardar y descartar",
+        "discarded": "Venta sin conexión {reference} descartada. Se descargó el archivo de copia."
+      },
+      "toast": {
+        "booked": "Venta sin conexión {reference} contabilizada: recibo n.º {number}.",
+        "bookedMany": "{count} ventas sin conexión contabilizadas.",
+        "refused": "El servidor rechazó una venta sin conexión. Compruébela en «Ventas sin conexión»."
       }
     }
   },

@@ -12,6 +12,7 @@ import { UI } from '../../shared/ui';
 import { posErrorText } from './pos-error';
 import { PosContext } from './pos-context';
 import { POS_LIMITS } from './pos.logic';
+import { OfflineQueueService } from './offline/offline-queue.service';
 
 type Dialog = { kind: 'rename' | 'toggle'; register: PosRegister } | null;
 
@@ -67,6 +68,12 @@ export function autoLockInput(value: string): number | null {
                 <div class="mt-1 flex flex-wrap gap-1.5">
                   @if (!r.isActive) {
                     <span class="pos-pill bg-pos-key text-pos-muted">{{ 'Inactive' | tEnum: 'posRegisterStatus' }}</span>
+                  }
+                  @if (r.offlineMode) {
+                    <span class="pos-pill bg-pos-key text-pos-muted" data-testid="pos-register-offline-mode">{{ 'pos.offline.modeBadge' | t }}</span>
+                  }
+                  @if (queuedFor(r.id); as n) {
+                    <a class="pos-pill bg-pos-warn-soft text-pos-ink underline" [routerLink]="['/kasse', r.id, 'offline']" data-testid="pos-register-queued">{{ 'pos.offline.pill' | t: { count: n } }}</a>
                   }
                   @if (r.openSessionId) {
                     <span class="pos-pill bg-pos-ok-soft text-pos-ok-text"><span class="size-[7px] rounded-full bg-pos-ok" aria-hidden="true"></span>{{ 'Open' | tEnum: 'posSessionStatus' }}</span>
@@ -179,6 +186,13 @@ export function autoLockInput(value: string): number | null {
                 <span class="block text-xs text-slate-500">{{ 'pos.rounding.settingHint' | t }}</span>
               </span>
             </label>
+            <label class="mt-3 flex min-h-11 items-start gap-2 text-sm">
+              <input type="checkbox" class="hn-checkbox mt-1" name="offlineMode" [(ngModel)]="offlineModeValue" aria-describedby="pos-offline-mode-hint" data-testid="pos-offline-mode" />
+              <span>
+                <span class="font-medium">{{ 'pos.offline.setting' | t }}</span>
+                <span id="pos-offline-mode-hint" class="block text-xs text-slate-500">{{ 'pos.offline.settingHint' | t }}</span>
+              </span>
+            </label>
             <div class="mt-4 flex justify-end gap-2">
               <button hnButton class="min-h-11" type="button" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
               <button hnButton class="min-h-11" variant="primary" type="submit" [loading]="busy()" [disabled]="busy() || !renameValue.trim()" data-testid="pos-rename-save">{{ 'common.save' | t }}</button>
@@ -231,6 +245,13 @@ export class PosRegistersPage {
   protected renameValue = '';
   protected autoLockValue = '0';
   protected cashRoundingValue = false;
+  protected offlineModeValue = false;
+  private readonly queue = inject(OfflineQueueService);
+
+  /** Sales this device still holds for the register (not booked yet). */
+  protected queuedFor(registerId: string): number {
+    return this.queue.entries().filter((e) => e.registerId === registerId).length;
+  }
   protected readonly busy = signal(false);
   protected readonly nameError = signal<string | null>(null);
   protected readonly createError = signal<string | null>(null);
@@ -290,6 +311,7 @@ export class PosRegistersPage {
     this.renameValue = r.name;
     this.autoLockValue = String(r.autoLockMinutes ?? 0);
     this.cashRoundingValue = !!r.cashRounding;
+    this.offlineModeValue = !!r.offlineMode;
     this.dialogError.set(null);
     this.dialog.set({ kind: 'rename', register: r });
   }
@@ -309,14 +331,14 @@ export class PosRegistersPage {
       this.dialogError.set(this.i18n.t('pos.registers.autoLockInvalid'));
       return Promise.resolve();
     }
-    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive, autoLockMinutes: minutes, cashRounding: this.cashRoundingValue });
+    return this.update(r, { name: this.renameValue.trim(), isActive: r.isActive, autoLockMinutes: minutes, cashRounding: this.cashRoundingValue, offlineMode: this.offlineModeValue });
   }
 
   protected toggle(r: PosRegister): Promise<void> {
     return this.update(r, { name: r.name, isActive: !r.isActive });
   }
 
-  private async update(r: PosRegister, body: { name: string; isActive: boolean; autoLockMinutes?: number; cashRounding?: boolean }): Promise<void> {
+  private async update(r: PosRegister, body: { name: string; isActive: boolean; autoLockMinutes?: number; cashRounding?: boolean; offlineMode?: boolean }): Promise<void> {
     if (!body.name) return;
     this.busy.set(true);
     this.dialogError.set(null);

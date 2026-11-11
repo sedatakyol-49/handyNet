@@ -5,12 +5,13 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { posCashierInterceptor } from './features/pos/pos-cashier.store';
+import { reachabilityInterceptor } from './features/pos/offline/reachability.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, posCashierInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, posCashierInterceptor, reachabilityInterceptor])),
     provideClientHydration(withEventReplay()),
   ],
 };

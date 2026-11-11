@@ -306,6 +306,7 @@ export const routes: Routes = [
           { path: ':registerId/sitzungen', loadComponent: () => import('./features/pos/sessions.page').then((m) => m.PosSessionsPage) },
           { path: ':registerId/preise', loadComponent: () => import('./features/pos/prices.page').then((m) => m.PosPricesPage) },
           { path: ':registerId/drucker', loadComponent: () => import('./features/pos/printing/printers.page').then((m) => m.PosPrintersPage) },
+          { path: ':registerId/offline', loadComponent: () => import('./features/pos/offline/offline-queue.page').then((m) => m.PosOfflineQueuePage) },
           { path: ':registerId/kartenterminal', loadComponent: () => import('./features/pos/terminals/terminals.page').then((m) => m.PosTerminalsPage) },
         ],
       },

@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, 
 import { firstValueFrom } from 'rxjs';
 import { ApiProblem, fieldErrors, toApiProblem } from '../../core/api/api-problem';
 import { PosApi } from '../../core/api/handynet-api';
+import { PosOfflineData } from './offline/offline-data.service';
+import { ReachabilityService } from './offline/reachability.service';
 import { PosCustomer } from '../../core/api/models';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
@@ -30,6 +32,9 @@ const PAGE_SIZE = 30;
               [value]="search()" (input)="search.set($any($event.target).value)" data-testid="pos-cust-search" />
             <button hnButton variant="primary" type="button" class="min-h-12" (click)="startCreate()" data-testid="pos-cust-new">{{ 'pos.customers.new' | t }}</button>
           </div>
+          @if (!reach.online()) {
+            <p class="mt-3 rounded-[10px] bg-pos-warn-soft px-3 py-2 text-sm text-pos-ink" role="status" data-testid="pos-cust-offline">{{ 'pos.offline.customers' | t }}</p>
+          }
           @if (listError()) {
             <hn-banner class="mt-3" [error]="listError()" />
           }
@@ -91,6 +96,8 @@ const PAGE_SIZE = 30;
 })
 export class PosCustomerDialogComponent {
   private readonly api = inject(PosApi);
+  private readonly offlineData = inject(PosOfflineData);
+  protected readonly reach = inject(ReachabilityService);
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
 
@@ -180,7 +187,7 @@ export class PosCustomerDialogComponent {
     this.loading.set(true);
     this.listError.set(null);
     try {
-      const r = await firstValueFrom(this.api.customers({ search: this.appliedSearch() || null, page, pageSize: PAGE_SIZE }));
+      const r = await firstValueFrom(this.offlineData.customers({ search: this.appliedSearch() || null, page, pageSize: PAGE_SIZE }));
       if (token !== this.token || this.destroyed) return;
       const seen = new Set(page === 1 ? [] : this.items().map((c) => c.id));
       this.items.set(page === 1 ? r.items : [...this.items(), ...r.items.filter((c) => !seen.has(c.id))]);

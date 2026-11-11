@@ -13,14 +13,14 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Forwards /api/* to the HandyNet API so `npm run serve:ssr:handynet-web` works stand-alone
- * (same-origin like the dev proxy). In production a reverse proxy usually routes /api before
- * requests reach this server; set HN_API_URL to point elsewhere.
+ * Forwards /api/* and /health/* (the till's reachability probe) to the HandyNet API so
+ * `npm run serve:ssr:handynet-web` works stand-alone (same-origin like the dev proxy). In production a reverse proxy
+ * usually routes both before requests reach this server; set HN_API_URL to point elsewhere.
  */
 const apiUrl = process.env['HN_API_URL'] ?? 'http://localhost:5170';
 const HOP_BY_HOP = new Set(['connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'host', 'content-length']);
 
-app.use('/api', async (req, res, next) => {
+app.use(['/api', '/health'], async (req, res, next) => {
   try {
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {

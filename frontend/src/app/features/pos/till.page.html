@@ -236,6 +236,11 @@
       @if (scanError()) {
         <p class="mx-3.5 mb-2 shrink-0 rounded-[10px] bg-pos-danger-soft px-3 py-2 text-sm text-pos-danger" role="alert" data-testid="pos-scan-error">{{ scanError() }}</p>
       }
+      @if (offline() && offlineMode()) {
+        <p class="mx-3.5 mb-2 shrink-0 rounded-[10px] bg-pos-warn-soft px-3 py-2 text-xs text-pos-ink" role="status" data-testid="pos-offline-grid-note">
+          {{ (cacheDate() ? 'pos.offline.gridNote' : 'pos.offline.gridNoteEmpty') | t: { date: (cacheDate() | hnDate: 'datetime') } }}
+        </p>
+      }
 
       @if (hasInventory() && register.value(); as reg) {
         <hn-pos-product-grid class="min-h-0 flex-1" [registerId]="reg.id" [search]="code()" [canManagePrices]="rights().manage" (pick)="pickProduct($event)" (editPrice)="editPrice($event)" />
@@ -307,6 +312,11 @@
             </button>
           }
           <p class="pt-1 text-xs text-pos-muted">{{ 'pos.till.cardHint' | t }}</p>
+          @if (offline()) {
+            <p class="rounded-[10px] bg-pos-warn-soft px-3 py-2 text-xs text-pos-ink" role="status" data-testid="pos-offline-pay-note">
+              {{ (offlineMode() ? 'pos.offline.payNote' : 'pos.offline.blocked.notEnabled') | t }}
+            </p>
+          }
         </div>
 
         <!-- summary, payment lines, quick cash -->
@@ -416,7 +426,39 @@
     </section>
   } @else if (screen() === 'receipt') {
     <!-- ================================================================= receipt -->
-    @if (lastReceipt(); as r) {
+    @if (lastOffline(); as e) {
+      <!-- Sale recorded offline: provisional receipt, no receipt number and no TSE signature yet. -->
+      <section class="h-full overflow-y-auto p-4" aria-labelledby="pos-offline-done-heading" data-testid="pos-offline-receipt-screen">
+        <div class="mx-auto grid max-w-5xl items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+          <div class="hn-no-print space-y-3">
+            <div class="pos-card p-6 text-center" role="status" data-testid="pos-offline-sale-done">
+              <span class="mx-auto mb-2 grid size-12 place-items-center rounded-full bg-pos-warn-soft text-pos-warn" aria-hidden="true">
+                <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v6M12 17h.01M4.5 19h15L12 5z" stroke-linejoin="round" /></svg>
+              </span>
+              <h2 id="pos-offline-done-heading" class="text-lg font-bold">{{ 'pos.offline.done.title' | t }}</h2>
+              <p class="mt-1 font-mono text-base font-bold" dir="ltr" data-testid="pos-offline-reference">{{ e.reference }}</p>
+              <p class="mt-2 text-sm text-pos-muted">{{ 'pos.offline.done.text' | t }}</p>
+              @if (e.changeMinor) {
+                <div class="mx-auto mt-4 max-w-sm rounded-xl bg-pos-accent-soft px-4 py-3">
+                  <p class="text-sm font-semibold text-pos-accent-text">{{ 'pos.till.changeDue' | t }}</p>
+                  <p class="text-5xl font-bold tracking-tight text-pos-accent-text tabular-nums" data-testid="pos-change-due">{{ e.changeMinor | money }}</p>
+                </div>
+              } @else {
+                <p class="mt-3 text-3xl font-bold tracking-tight tabular-nums">{{ e.totalMinor | money }}</p>
+              }
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button type="button" class="pos-soft min-h-[60px] text-base" (click)="print()" data-testid="pos-print-provisional">{{ 'pos.offline.done.print' | t }}</button>
+              <button type="button" id="pos-new-sale" class="pos-pay-btn justify-center text-base" (click)="startNextOrder()" data-testid="pos-new-sale">
+                {{ 'pos.sell.newOrderAfterSale' | t }}
+              </button>
+            </div>
+            <p class="text-center text-xs text-pos-muted">{{ 'pos.sell.nextScanHint' | t }}</p>
+          </div>
+          <hn-provisional-receipt [entry]="e" />
+        </div>
+      </section>
+    } @else if (lastReceipt(); as r) {
       <section class="h-full overflow-y-auto p-4" aria-labelledby="pos-done-heading" data-testid="pos-receipt-screen">
         <div class="mx-auto grid max-w-5xl items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
           <div class="hn-no-print space-y-3">

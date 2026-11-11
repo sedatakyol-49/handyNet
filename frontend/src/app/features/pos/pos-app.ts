@@ -18,6 +18,7 @@ import { ToastService } from '../../core/ui-state/toast.service';
 import { CompanyBrandingStore } from '../../core/company/company-branding.store';
 import { PosDisplayDialogComponent } from './display/pos-display-dialog';
 import { PosTerminalDialogComponent } from './terminals/pos-terminal-dialog';
+import { OfflineQueueService } from './offline/offline-queue.service';
 
 /**
  * Standalone, full-screen POS app (route `/kasse`, outside the back-office shell): a minimal top bar with register,
@@ -77,6 +78,12 @@ import { PosTerminalDialogComponent } from './terminals/pos-terminal-dialog';
       <div class="ms-auto flex items-center gap-1 sm:gap-3.5">
         @if (ctx.registerId()) {
           <hn-pos-tse-pill />
+        }
+        @if (ctx.registerId(); as rid) {
+          @if (queuedHere(); as n) {
+            <a [routerLink]="['/kasse', rid, 'offline']" class="flex min-h-9 items-center rounded-full px-2.5 text-xs font-semibold" [class]="attentionHere() ? 'bg-pos-danger-soft text-pos-ink' : 'bg-pos-warn-soft text-pos-ink'"
+              [attr.aria-label]="'pos.offline.pillLabel' | t: { count: n }" data-testid="pos-offline-pill">{{ 'pos.offline.pill' | t: { count: n } }}</a>
+          }
         }
         <span class="flex items-center gap-1.5 text-xs" [class]="ctx.online() ? 'text-pos-muted' : 'font-semibold text-pos-danger'" role="status" data-testid="pos-online">
           <span class="inline-block size-2 rounded-full" [class]="ctx.online() ? 'bg-pos-ok' : 'bg-pos-danger'" aria-hidden="true"></span>
@@ -150,6 +157,9 @@ import { PosTerminalDialogComponent } from './terminals/pos-terminal-dialog';
                   <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'ankauf']" (click)="closeMenu()" data-testid="pos-menu-ankauf">{{ 'pos.app.ankauf' | t }}</a>
                 }
                 <button type="button" role="menuitem" class="pos-menu-item" (click)="closeMenu(); displayOpen.set(true)" data-testid="pos-menu-display">{{ 'pos.display.menu' | t }}</button>
+                @if (queuedHere()) {
+                  <a role="menuitem" class="pos-menu-item" [routerLink]="['/kasse', rid, 'offline']" (click)="closeMenu()" data-testid="pos-menu-offline">{{ 'pos.offline.queue.title' | t }} ({{ queuedHere() }})</a>
+                }
               }
               @if (session.can('reports.read')) {
                 <a role="menuitem" class="pos-menu-item" routerLink="/kasse/berichte/tag" (click)="closeMenu()" data-testid="pos-menu-daily">{{ 'pos.app.dailyReport' | t }}</a>
@@ -187,6 +197,17 @@ import { PosTerminalDialogComponent } from './terminals/pos-terminal-dialog';
       </div>
     </header>
     <hn-pos-tse-banner />
+    @if (!ctx.online()) {
+      <div class="hn-no-print flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-pos-line bg-pos-warn-soft px-3.5 py-2 text-sm text-pos-ink" role="status" data-testid="pos-offline-banner">
+        <p class="min-w-0 flex-1">
+          <strong>{{ 'pos.offline.banner.title' | t }}</strong>
+          {{ 'pos.offline.banner.text' | t }}
+        </p>
+        @if (ctx.registerId(); as rid) {
+          <a class="pos-soft min-h-9 shrink-0" [routerLink]="['/kasse', rid, 'offline']" data-testid="pos-offline-banner-link">{{ 'pos.offline.queue.title' | t }}</a>
+        }
+      </div>
+    }
 
     <main id="pos-main" class="min-h-0 flex-1 overflow-auto" tabindex="-1" [attr.inert]="pinRequired() || null">
       <router-outlet />
@@ -227,6 +248,11 @@ export class PosAppComponent {
   protected readonly menuOpen = signal(false);
   /** "Kundendisplay" dialog (local window, remote link). */
   protected readonly displayOpen = signal(false);
+
+  // ---- offline queue of this device
+  private readonly queue = inject(OfflineQueueService);
+  protected readonly queuedHere = computed(() => this.queue.entries().filter((e) => e.registerId === this.ctx.registerId()).length);
+  protected readonly attentionHere = computed(() => this.queue.entries().some((e) => e.registerId === this.ctx.registerId() && e.status === 'attention'));
 
   // ---- cashier switching / lock (shared device)
   protected readonly switchOpen = signal(false);
@@ -282,6 +308,23 @@ export class PosAppComponent {
       onCleanup(() => {
         if (timer) clearTimeout(timer);
         events.forEach((e) => document.removeEventListener(e, arm));
+      });
+    });
+    // Offline sales that were booked or refused after reconnecting: tell the cashier (the queue page has the details).
+    let bookedSeen = this.queue.synced().length;
+    let refusedSeen = this.queue.attention();
+    effect(() => {
+      const booked = this.queue.synced();
+      const refused = this.queue.attention();
+      untracked(() => {
+        if (booked.length > bookedSeen) {
+          const first = booked[0];
+          const count = booked.length - bookedSeen;
+          this.toast.success(count === 1 ? this.i18n.t('pos.offline.toast.booked', { reference: first.reference, number: first.receiptNumber }) : this.i18n.t('pos.offline.toast.bookedMany', { count }));
+        }
+        if (refused > refusedSeen) this.toast.error(this.i18n.t('pos.offline.toast.refused'));
+        bookedSeen = booked.length;
+        refusedSeen = refused;
       });
     });
     // The acting organization changed (switched or another user signed in in another tab): the open register belongs

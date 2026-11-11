@@ -125,7 +125,12 @@ import {
       @for (r of receipts.value()?.items ?? []; track r.id) {
         <li class="hn-card flex flex-col gap-1 p-4" [attr.data-receipt-card]="r.number">
           <div class="flex items-start justify-between gap-2">
-            <span class="font-semibold tabular-nums">{{ r.number }}</span>
+            <span class="font-semibold tabular-nums">
+              {{ r.number }}
+              @if (r.offline) {
+                <span class="pos-pill ms-1 bg-pos-key text-pos-muted">{{ 'pos.offline.receiptBadge' | t }}</span>
+              }
+            </span>
             <hn-status-badge [status]="r.kind" kind="receiptKind" [tone]="r.kind === 'Sale' ? 'success' : r.kind === 'Storno' ? 'danger' : 'warning'" />
           </div>
           <p class="text-xs text-slate-500">{{ r.createdAt | hnDate }} · {{ r.createdByName ?? '–' }}</p>
@@ -160,7 +165,12 @@ import {
         <tbody>
           @for (r of receipts.value()?.items ?? []; track r.id) {
             <tr [attr.data-receipt]="r.number">
-              <td class="num font-semibold">{{ r.number }}</td>
+              <td class="num font-semibold">
+                {{ r.number }}
+                @if (r.offline) {
+                  <span class="pos-pill ms-1 bg-pos-key text-pos-muted" [title]="'pos.offline.receiptBadgeHint' | t" data-testid="pos-receipt-offline">{{ 'pos.offline.receiptBadge' | t }}</span>
+                }
+              </td>
               <td><hn-status-badge [status]="r.kind" kind="receiptKind" [tone]="r.kind === 'Sale' ? 'success' : r.kind === 'Storno' ? 'danger' : 'warning'" /></td>
               <td class="text-xs whitespace-nowrap">{{ r.createdAt | hnDate }}</td>
               <td class="text-sm">{{ r.createdByName ?? '–' }}</td>

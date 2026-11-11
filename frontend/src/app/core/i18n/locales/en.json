@@ -662,7 +662,37 @@
       "pos.fiskaly_credentials_rejected": "fiskaly rejected the credentials.",
       "pos.fiskaly_not_found": "fiskaly does not know the requested TSS or till.",
       "pos.tse_unavailable": "The TSE is currently not reachable. Please try again.",
-      "pos.tse_rejected": "The TSE rejected the request."
+      "pos.tse_rejected": "The TSE rejected the request.",
+      "pos.terminal_not_found": "Terminal profile not found.",
+      "pos.terminal_name": "Please enter a name for the terminal (max. 100 characters).",
+      "pos.terminal_connection": "Unknown terminal connection type.",
+      "pos.terminal_host": "Please enter the terminal’s IP address or host name without http:// and path.",
+      "pos.terminal_port": "The terminal port must be between 1 and 65535.",
+      "pos.terminal_bridge_url": "The bridge address must be an http(s) address, e.g. http://localhost:9123.",
+      "pos.terminal_password": "The ZVT password has exactly 6 digits.",
+      "pos.terminal_version": "The terminal profile was changed in the meantime. Please reload.",
+      "pos.terminal_limit": "A till can have at most 20 terminal profiles.",
+      "pos.terminal_name_taken": "This till already has a terminal with this name.",
+      "pos.terminal_simulated_not_allowed": "The simulated terminal is for testing only and not allowed in production.",
+      "pos.card_transaction_not_found": "Card transaction not found.",
+      "pos.card_transaction_kind": "Unknown kind of card transaction.",
+      "pos.card_transaction_amount": "The amount of the card transaction must be greater than zero.",
+      "pos.card_transaction_status": "Unknown status of the card transaction.",
+      "pos.card_transaction_final": "The result of this card transaction is already final and cannot be changed.",
+      "pos.card_transaction_invalid": "The card transaction does not fit this receipt (different amount, other till, not approved or already used).",
+      "pos.card_transaction_linked": "This card transaction belongs to a receipt. Cancel the receipt or book a return instead.",
+      "pos.card_transaction_not_approved": "Only an approved card transaction can be reversed.",
+      "pos.card_transaction_payment": "A terminal card transaction settles exactly one card payment of the receipt.",
+      "pos.card_pan_not_masked": "The card number must be masked: at most the first 6 and the last 4 digits.",
+      "pos.card_result_field_length": "A field of the terminal result is too long.",
+      "pos.offline_not_enabled": "Offline mode is not enabled for this till; sales recorded offline cannot be booked.",
+      "pos.offline_time_invalid": "The recording time of the offline sale is not plausible (in the future or too old).",
+      "pos.offline_reference": "The offline number is invalid (1 to 40 characters: letters, digits, hyphen).",
+      "pos.offline_reference_used": "This offline number was already booked on this till.",
+      "pos.offline_payment_not_allowed": "Sales recorded offline can only be paid in cash or by card.",
+      "pos.display_link_not_found": "This display link does not exist or is no longer valid.",
+      "pos.display_state_invalid": "The data for the customer display is invalid.",
+      "pos.display_state_too_large": "The data for the customer display is too large (at most 16 KiB)."
     },
     "validation": {
       "required": "This field is required.",
@@ -2553,7 +2583,8 @@
       "invoices": "Invoices",
       "ankauf": "Buyback",
       "printers": "Printers",
-      "terminals": "Card terminal"
+      "terminals": "Card terminal",
+      "offline": "Offline"
     },
     "registers": {
       "title": "Till",
@@ -3403,6 +3434,88 @@
         "refundKept": "The return was not booked: {reason} The refund of {amount} already went through on the terminal and stays stored – confirming this return again reuses it. If that does not work, tell the manager (“Card payments without a receipt”).",
         "refundAmountChanged": "A refund of {amount} already went through on the terminal for this return. Select exactly the items of that return again or tell the manager.",
         "refundUncertain": "Check on the terminal whether the refund went through. If yes: confirm the return again – it is then booked without the terminal. If no: close the dialog and start the return again."
+      }
+    },
+    "offline": {
+      "setting": "Offline mode",
+      "settingHint": "When the connection fails the till stores sales on the device and books them after reconnecting. Until then the customer gets a provisional receipt without a receipt number; the TSE signature is made afterwards. The time in between is without TSE protection – the legal review is pending, clarify the use with your tax adviser first.",
+      "modeBadge": "Offline mode",
+      "pill": "{count} queued",
+      "pillLabel": "{count} sales recorded offline are waiting on this device",
+      "banner": {
+        "title": "No connection to the server.",
+        "text": "Tills in offline mode store sales on this device and book them after reconnecting (provisional receipts). Not possible: returns, cancellations, closing the session, invoices, buyback and payments through a connected card terminal."
+      },
+      "noStorage": "This browser offers no permanent storage (IndexedDB). Offline sales are therefore not possible – they would not survive a restart.",
+      "legal": "Sales recorded offline are provisional: receipt number and TSE signature exist only once they are booked. The legal review of this procedure is pending.",
+      "customers": "Offline: only cached customers (name, company, city). Creating and editing works again once the connection is back.",
+      "gridNote": "Offline: items, prices and stock as of {date}. Devices with an IMEI cannot be sold offline.",
+      "gridNoteEmpty": "Offline: no items of this till are cached on this device yet.",
+      "payNote": "Offline: the sale is stored on this device and booked later. Take card payments directly on the terminal and confirm them here.",
+      "blocked": {
+        "notEnabled": "No connection to the server. Offline mode is not enabled for this till – the sale can only be finished once the connection is back. The ticket is kept.",
+        "noSession": "Selling offline is only possible if a cash session was open when the server was last reached.",
+        "noStorage": "This browser offers no permanent storage. The sale cannot be stored safely offline – please wait for the connection.",
+        "payment": "Offline only cash and card payments are possible.",
+        "cardUnreported": "A card payment is approved for this ticket that the server does not know yet. The sale can only be finished once the connection is back – do not charge the card again."
+      },
+      "storeFailed": "The sale could not be stored on the device. The ticket is kept – please try again.",
+      "lookup": {
+        "serialized": "Devices with an IMEI cannot be sold offline.",
+        "notCached": "Not found offline (only cached items with an EAN)."
+      },
+      "done": {
+        "title": "Stored offline – not booked yet",
+        "text": "The sale is stored on this device and is booked as soon as the server can be reached again. Only then does it get a receipt number and a TSE signature.",
+        "print": "Print provisional receipt"
+      },
+      "receipt": {
+        "title": "Provisional offline receipt",
+        "notice": "Not a till receipt – no receipt no., TSE not reachable",
+        "reference": "Offline no.",
+        "recordedAt": "Recorded on",
+        "footer": "This receipt is provisional. The sale is booked once the connection is restored and signed afterwards; the till receipt with its number will carry this offline no."
+      },
+      "receiptBadge": "Offline",
+      "receiptBadgeHint": "Recorded offline, booked and signed afterwards",
+      "closeBlockedTitle": "Closing not possible",
+      "closeBlocked": "{count} sales of this till recorded offline are still waiting on this device. They must be booked or discarded by a manager first.",
+      "status": {
+        "queued": "Waiting for the connection",
+        "syncing": "Being booked …",
+        "attention": "Refused – please check"
+      },
+      "queue": {
+        "title": "Offline sales",
+        "subtitle": "Sales this device recorded without a connection to the server. They are booked in order after reconnecting. Sales the server refused stay here until they are sent again or discarded.",
+        "syncNow": "Book now",
+        "offlineNow": "The server cannot be reached right now. The sales stay stored on this device.",
+        "emptyTitle": "No open offline sales",
+        "emptyText": "All sales of this device for this till are booked.",
+        "refused": "Refused by the server:",
+        "lastTry": "Last attempt:",
+        "provisional": "Provisional receipt",
+        "export": "Save as file",
+        "retry": "Send again",
+        "discard": "Discard",
+        "manageHint": "Sending again and discarding is reserved for managers.",
+        "syncedTitle": "Just booked",
+        "syncedAs": "Receipt no. {number}",
+        "openReceipt": "Open receipt",
+        "discardTitle": "Discard offline sale",
+        "discardText": "Remove sale {reference} of {total} from this device for good? It was never booked. Before that it is saved as a file with reason, user and time – keep that file.",
+        "discardReason": "Reason",
+        "discardReasonError": {
+          "required": "Please give a reason (at least 3 characters).",
+          "tooLong": "The reason may be at most 500 characters long."
+        },
+        "discardConfirm": "Save and discard",
+        "discarded": "Offline sale {reference} discarded. The backup file was downloaded."
+      },
+      "toast": {
+        "booked": "Offline sale {reference} booked: receipt no. {number}.",
+        "bookedMany": "{count} offline sales booked.",
+        "refused": "The server refused an offline sale. Please check under “Offline sales”."
       }
     }
   },

@@ -7,6 +7,7 @@ import { CashMovementKind, CashMovementReason, CashSession } from '../../core/ap
 import { SessionStore } from '../../core/auth/session.store';
 import { PosCashierStore } from './pos-cashier.store';
 import { PosContext } from './pos-context';
+import { OfflineQueueService } from './offline/offline-queue.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../core/ui-state/toast.service';
 import { createQuery } from '../../shared/data/query';
@@ -110,7 +111,13 @@ export function reasonKey(r: Pick<CashMovementReason, 'code' | 'kind'>): string 
             }
 
             <!-- ======================================================== closing -->
-            @if (rights().closeSession) {
+            @if (unsynced(s.registerId); as n) {
+              <div class="rounded-xl border border-transparent bg-pos-warn-soft p-4 text-sm text-pos-ink" role="status" data-testid="pos-close-blocked">
+                <p class="font-semibold">{{ 'pos.offline.closeBlockedTitle' | t }}</p>
+                <p class="mt-1">{{ 'pos.offline.closeBlocked' | t: { count: n } }}</p>
+                <a class="pos-soft pos-soft-accent mt-2 min-h-11" [routerLink]="['/kasse', s.registerId, 'offline']" data-testid="pos-close-blocked-link">{{ 'pos.offline.queue.title' | t }}</a>
+              </div>
+            } @else if (rights().closeSession) {
               <section class="pos-card p-4" aria-labelledby="pos-close-heading" data-testid="pos-close">
                 <h2 id="pos-close-heading" class="mb-1 text-sm">{{ 'pos.session.closeTitle' | t }}</h2>
                 <p class="mb-3 text-xs text-slate-600">{{ 'pos.session.closeText' | t }}</p>
@@ -225,6 +232,12 @@ export class PosSessionPage {
   protected readonly cashiers = inject(PosCashierStore);
   /** Inside the POS app: a manager can approve a missing right on the spot. */
   protected readonly ctx = inject(PosContext, { optional: true });
+  private readonly queue = inject(OfflineQueueService);
+
+  /** Sales of this register that this device recorded offline and that are not booked yet (0 = none). */
+  protected unsynced(registerId: string): number {
+    return this.queue.entries().filter((e) => e.registerId === registerId).length;
+  }
   private readonly i18n = inject(I18nService);
   private readonly toast = inject(ToastService);
   private readonly subnav = viewChild(PosSubnavComponent);
@@ -316,6 +329,8 @@ export class PosSessionPage {
 
   /** Re-reads the session first so the confirmation shows the current expected cash (sales may have happened). */
   protected async askClose(s: CashSession): Promise<void> {
+    await this.queue.ready();
+    if (this.unsynced(s.registerId)) return; // the form is hidden then; never close over unsynced sales
     if (this.countedMinor() === null) {
       this.countedError.set(this.i18n.t('pos.session.countedInvalid'));
       return;
@@ -334,7 +349,7 @@ export class PosSessionPage {
 
   protected async close(s: CashSession): Promise<void> {
     const counted = this.countedMinor();
-    if (counted === null) return;
+    if (counted === null || this.unsynced(s.registerId)) return;
     this.busy.set('close');
     this.closeError.set(null);
     const note = this.note.trim() || null;

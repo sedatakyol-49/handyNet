@@ -1412,6 +1412,8 @@ export interface PosRegister {
   autoLockMinutes?: number | null;
   /** Round cash totals to 0.05 € on this register. */
   cashRounding?: boolean;
+  /** The till may record sales while the API is unreachable and book them on reconnect. */
+  offlineMode?: boolean;
 }
 
 export interface CashMovement {
@@ -1690,11 +1692,19 @@ export interface SalePayment {
   cardTransactionId?: string | null;
 }
 
+/** A sale the till recorded while the API was unreachable: device time and device reference (`OFF-<device>-<n>`). */
+export interface OfflineSale {
+  recordedAt: string;
+  reference: string;
+}
+
 export interface CreateSaleRequest {
   registerId: string;
   lines: SaleLineRequest[];
   payments: SalePayment[];
   customerId?: string | null;
+  /** Only for sales recorded offline (the register needs offline mode). */
+  offline?: OfflineSale | null;
 }
 
 export interface ReturnRequest {
@@ -1850,6 +1860,8 @@ export interface Receipt {
   /** Manager approval used for this receipt (who approved), if any. */
   approval?: PosApprovalInfo | null;
   roundingMinor?: number;
+  /** Recorded offline on the till and booked (numbered, signed) later. */
+  offline?: OfflineSale | null;
 }
 
 export interface ReceiptSummary {
@@ -1872,6 +1884,8 @@ export interface ReceiptSummary {
   fiscalIsTest?: boolean;
   invoiceId?: string | null;
   invoiceNumber?: string | null;
+  /** Recorded offline on the till and booked later. */
+  offline?: boolean;
 }
 
 // ---------------------------------------------------------------- Invoicing (commission invoices, ADR-0009)

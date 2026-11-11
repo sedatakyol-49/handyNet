@@ -89,6 +89,13 @@ import { DisplayPublisher } from './display/display-publisher';
 import { displayStateFromTill, idleDisplayState, messageFromReceiptText } from './display/display-state';
 import { afterSaleFailure, cardAmount, cardLabel, cardStep, withCardTransaction } from './terminals/card-flow';
 import { TerminalService } from './terminals/terminal.service';
+import { OfflineLookupError, PosOfflineData } from './offline/offline-data.service';
+import { PaymentLinesSettlementLike, QueueEntry, offlineBlock } from './offline/offline-queue.logic';
+import { OfflineQueueService } from './offline/offline-queue.service';
+import { ProvisionalReceiptComponent, provisionalLayout } from './offline/provisional-receipt';
+import { ReachabilityService, isUnreachable } from './offline/reachability.service';
+import { germanT } from './printing/printer.service';
+import { receiptLines } from '../company/company.logic';
 
 /** Codes after which the current session may have changed (closed elsewhere etc.) → reload it. */
 const RELOAD_SESSION_CODES = new Set(['pos.no_open_session', 'pos.session_closed', 'pos.register_inactive']);
@@ -113,6 +120,7 @@ type Screen = 'products' | 'payment' | 'receipt';
     PosProductGridComponent,
     ReceiptViewComponent,
     PosEReceiptComponent,
+    ProvisionalReceiptComponent,
     ...UI,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,6 +139,9 @@ export class TillPage {
   private readonly fiscalStatus = inject(PosFiscalStatus, { optional: true });
   private readonly display = inject(DisplayPublisher);
   private readonly terminals = inject(TerminalService);
+  private readonly offlineData = inject(PosOfflineData);
+  private readonly queue = inject(OfflineQueueService);
+  private readonly reach = inject(ReachabilityService);
   private readonly branding = inject(CompanyBrandingStore);
 
   readonly registerId = input.required<string>();
@@ -155,12 +166,12 @@ export class TillPage {
   // ---- data
   protected readonly register = createQuery(
     () => this.registerId(),
-    (id) => this.api.register(id),
+    (id) => this.offlineData.register(id),
   );
-  /** Current open session, or null when the register has none. */
+  /** Current open session, or null when the register has none (offline: the session open when the API was last reached). */
   protected readonly sessionQuery = createQuery(
     () => this.registerId(),
-    (id) => this.api.currentSession(id).pipe(finalize(() => this.sessionAnswered.set(true))),
+    (id) => this.offlineData.currentSession(id).pipe(finalize(() => this.sessionAnswered.set(true))),
   );
   protected readonly session = computed(() => this.sessionQuery.value());
   private readonly sessionAnswered = signal(false);
@@ -246,6 +257,15 @@ export class TillPage {
   protected readonly paying = signal(false);
   protected readonly methods: PosPaymentMethod[] = ['Cash', 'Card'];
 
+  // ---- offline mode
+  /** The API is unreachable right now. */
+  protected readonly offline = computed(() => !this.reach.online());
+  protected readonly offlineMode = computed(() => !!this.register.value()?.offlineMode);
+  /** The sale just recorded on this device (provisional receipt on the receipt screen). */
+  protected readonly lastOffline = signal<QueueEntry | null>(null);
+  /** When the cached products and prices of this register were last refreshed (shown while offline). */
+  protected readonly cacheDate = signal<string | null>(null);
+
   // ---- card terminal
   /** Card payment the terminal approved for this ticket and that no receipt uses yet. */
   protected readonly attachedCard = computed(() => this.order().card ?? null);
@@ -296,7 +316,7 @@ export class TillPage {
         screen: this.screen(),
         lines: this.lines(),
         settlement: this.screen() === 'payment' ? this.settlement() : null,
-        receipt: this.lastReceipt(),
+        receipt: this.lastReceipt() ?? this.offlineDone(),
         receiptUrl: this.receiptUrl(),
         idleMessage: messageFromReceiptText(texts?.receiptHeader),
         doneMessage: messageFromReceiptText(texts?.receiptFooter),
@@ -312,6 +332,30 @@ export class TillPage {
       if (typeof window !== 'undefined') window.removeEventListener('pagehide', displayIdle);
       displayIdle();
       this.display.release(this.registerId());
+    });
+    // Registers in offline mode keep a copy of their products, prices and customers on this device.
+    effect(() => {
+      const reg = this.register.value();
+      const online = this.reach.online();
+      if (reg?.offlineMode && online && this.session()) untracked(() => void this.offlineData.refresh(reg));
+    });
+    effect(() => {
+      const id = this.registerId();
+      if (this.offline()) untracked(() => void this.offlineData.cachedAt(id).then((at) => this.cacheDate.set(at)));
+    });
+    // Back online: the register, its session and the stock may have changed; queued sales were booked meanwhile.
+    let wasOffline = false;
+    effect(() => {
+      const offline = this.offline();
+      const booked = this.queue.synced().length;
+      if ((wasOffline && !offline) || booked) {
+        untracked(() => {
+          this.register.reload();
+          this.sessionQuery.reload();
+          this.grid()?.reload();
+        });
+      }
+      wasOffline = offline;
     });
     // Scanner-ready as soon as the session is known.
     effect(() => {
@@ -444,9 +488,10 @@ export class TillPage {
     this.scanError.set(null);
     this.lookups.update((n) => n + 1);
     try {
-      this.addLookup(await firstValueFrom(this.api.lookup(code, this.registerId())));
+      this.addLookup(await firstValueFrom(this.offlineData.lookup(code, this.registerId())));
     } catch (e) {
-      this.scanError.set(this.i18n.t('pos.till.scanFailed', { code }) + ' ' + posErrorText(this.i18n, e));
+      const reason = e instanceof OfflineLookupError ? this.i18n.t('pos.offline.lookup.' + e.reason) : posErrorText(this.i18n, e);
+      this.scanError.set(this.i18n.t('pos.till.scanFailed', { code }) + ' ' + reason);
     } finally {
       this.lookups.update((n) => n - 1);
     }
@@ -774,13 +819,81 @@ export class TillPage {
     this.paying.set(true);
     this.checkoutError.set(null);
     try {
+      // No connection to the API: record the sale on this device (registers in offline mode).
+      if (this.offline()) return await this.sellOffline(order.id, s);
       // Card amount: run the terminal first (or reuse the payment it already approved for this ticket).
       const payments = await this.settleCard(order.id, s.payments);
       if (!payments) return;
-      await this.sendSale(order.id, payments);
+      await this.sendSale(order.id, payments, s);
     } finally {
       this.paying.set(false);
     }
+  }
+
+  /**
+   * Records the sale in the offline queue of this device (IndexedDB) instead of sending it. The customer gets a
+   * provisional receipt; receipt number and TSE signature exist only once the queue has synced. Card amounts are
+   * confirmed by the cashier (the terminal runs on its own), unless a terminal payment was already approved online.
+   */
+  private async sellOffline(orderId: string, s: PaymentLinesSettlementLike): Promise<void> {
+    const order = this.order();
+    const reg = this.register.value();
+    const block = offlineBlock({
+      offlineMode: this.offlineMode(),
+      sessionOpen: !!this.session(),
+      persistent: this.queue.persistent(),
+      methods: s.payments.map((p) => p.method),
+      cardUnreported: !!order.card && !order.card.reported,
+    });
+    if (block || !reg) {
+      this.checkoutError.set(this.i18n.t('pos.offline.blocked.' + (block ?? 'noSession')));
+      return;
+    }
+    const card = order.card ?? null;
+    if (card && card.amountMinor !== cardAmount(s.payments)) {
+      this.checkoutError.set(this.i18n.t('pos.terminals.flow.amountChanged', { amount: formatMoney(card.amountMinor), card: cardLabel(card) }));
+      return;
+    }
+    const payments = card ? withCardTransaction(s.payments, card.transactionId) : s.payments;
+    const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null);
+    const online = JSON.stringify(body);
+    // A request of exactly this sale may already have reached the API (its answer was lost): keep its key, so the
+    // sync cannot book the sale twice.
+    const sentOnline = order.pending && order.pending.body === online ? order.pending : null;
+    try {
+      const entry = await this.queue.enqueue({
+        id: sentOnline?.key ?? newIdempotencyKey(),
+        organizationId: this.store.organizationId() ?? '',
+        registerId: this.registerId(),
+        registerName: reg.name,
+        recordedAt: new Date().toISOString(),
+        body,
+        onlineBody: sentOnline ? online : null,
+        lines: order.lines,
+        payments,
+        tenderedCashMinor: s.cashMinor,
+        changeMinor: s.changeMinor,
+        roundingMinor: s.roundingMinor ?? 0,
+        cashierName: this.cashiers.actingName() ?? null,
+      });
+      void this.offlineData.sold(this.registerId(), body.lines).then(() => this.grid()?.reload());
+      this.lastPrices.remember(Object.fromEntries(body.lines.filter((l) => l.productId).map((l) => [l.productId!, l.unitPriceMinor])));
+      this.receiptUrl.set(null);
+      this.lastReceipt.set(null);
+      this.lastOffline.set(entry);
+      this.finishOrder(orderId);
+      this.screen.set('receipt');
+      this.focusId('pos-new-sale');
+    } catch {
+      // Nothing was stored: the ticket stays as it is.
+      this.checkoutError.set(this.i18n.t('pos.offline.storeFailed'));
+    }
+  }
+
+  /** The provisional receipt as the customer display's "done" screen. */
+  private offlineDone() {
+    const e = this.lastOffline();
+    return e ? { totalGrossMinor: e.totalMinor, changeMinor: e.changeMinor, roundingMinor: e.roundingMinor, lines: e.lines, payments: e.payments } : null;
   }
 
   /**
@@ -879,7 +992,7 @@ export class TillPage {
     }
   }
 
-  private async sendSale(orderId: string, payments: SalePayment[]): Promise<void> {
+  private async sendSale(orderId: string, payments: SalePayment[], s: PaymentLinesSettlementLike): Promise<void> {
     const order = this.order();
     const body = buildSaleRequest(this.registerId(), order.lines, payments, order.customer?.id ?? null);
     const attempt = attemptFor(order.pending, JSON.stringify(body), newIdempotencyKey);
@@ -888,7 +1001,9 @@ export class TillPage {
       const receipt = await firstValueFrom(this.api.sell(body, attempt.key));
       this.lastPrices.remember(Object.fromEntries(body.lines.filter((l) => l.productId).map((l) => [l.productId!, l.unitPriceMinor])));
       this.receiptUrl.set(null);
+      this.lastOffline.set(null);
       this.lastReceipt.set(receipt);
+      void this.offlineData.sold(this.registerId(), body.lines); // keeps the offline copy of the stock roughly right
       void this.fiscalStatus?.refresh(); // a signed receipt ends a TSE outage; a failed one starts it
       this.finishOrder(order.id);
       this.screen.set('receipt');
@@ -900,6 +1015,9 @@ export class TillPage {
     } catch (e) {
       const keep = keepAttemptAfter(problemStatus(e));
       if (!keep) this.orders.update((st) => updateOrder(st, order.id, { pending: null }));
+      // The API did not answer: if the till is offline now and may sell offline, the sale goes into the queue with
+      // the key of this attempt (should the request have arrived after all, the sync replays it instead of selling twice).
+      if (isUnreachable(problemStatus(e)) && this.offlineMode() && !(await this.reach.check())) return this.sellOffline(orderId, s);
       const problem = toApiProblem(e);
       const reason = posErrorText(this.i18n, e) + (keep ? ' ' + this.i18n.t('pos.till.retryHint') : '');
       this.checkoutError.set(reason);
@@ -945,6 +1063,7 @@ export class TillPage {
   // =============================================================== receipt
   protected startNextOrder(): void {
     this.lastReceipt.set(null);
+    this.lastOffline.set(null);
     this.pane.set('products');
     this.screen.set('products');
     this.focusCode();
@@ -953,7 +1072,16 @@ export class TillPage {
   /** Prints with the device's printer profile; without one (or after a printer error) the browser print dialog opens. */
   protected print(): void {
     const receipt = this.lastReceipt();
-    if (receipt) void this.printer.printReceipt(receipt);
+    if (receipt) return void this.printer.printReceipt(receipt);
+    const entry = this.lastOffline();
+    if (entry) void this.printProvisional(entry);
+  }
+
+  /** Provisional receipt of an offline sale: thermal printer profile when the device knows one, else the print dialog. */
+  private printProvisional(entry: QueueEntry): Promise<unknown> {
+    const p = this.branding.profile();
+    const sellerLines = p ? [...receiptLines(p.receiptHeader), p.name, p.street, `${p.postalCode} ${p.city}`.trim()].filter(Boolean) : [];
+    return this.printer.printOther(entry.registerId, (profile) => provisionalLayout(entry, { width: profile.charsPerLine, codepage: profile.codepage, t: germanT, locale: 'de-DE', sellerLines }));
   }
 
   // =============================================================== keyboard
